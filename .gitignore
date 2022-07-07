@@ -1,0 +1,8 @@
+**/venv
+**/.idea
+*.log
+**/__pycache__
+.DS_Store
+**/out
+**/.vscode
+**/.pytest_cache

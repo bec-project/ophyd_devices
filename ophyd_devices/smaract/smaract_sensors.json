@@ -1,0 +1,303 @@
+[
+    {
+        "symbol": "S",
+        "type_code": 1,
+        "positioner_series": "SLCxxxxs",
+        "comment": "linear positioner with nano sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SR",
+        "type_code": 2,
+        "positioner_series": "SR36xxs, SR3511s, SR5714s, SR7021s, SR2812s, SR7012s, SR4513s, SR5018s",
+        "comment": "rotary positioner with nano sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SP",
+        "type_code": 5,
+        "positioner_series": "SLCxxxxrs",
+        "comment": "linear positioner with nano sensor, large actuator",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SC",
+        "type_code": 6,
+        "positioner_series": "SLCxxxxsc",
+        "comment": "linear positioner with nano sensor, distance coded reference marks",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "SR20",
+        "type_code": 8,
+        "positioner_series": "SR2013s, SR1612s",
+        "comment": "rotary positioner with nano sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "M",
+        "type_code": 9,
+        "positioner_series": "SLCxxxxm",
+        "comment": "linear positioner with micro sensor",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "GD",
+        "type_code": 11,
+        "positioner_series": "SGO60.5m",
+        "comment": "goniometer with micro sensor (60.5mm radius)",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "GE",
+        "type_code": 12,
+        "positioner_series": "SGO77.5m",
+        "comment": "goniometer with micro sensor (77.5mm radius)",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "GF",
+        "type_code": 14,
+        "positioner_series": "SR1209m",
+        "comment": "rotary positioner with micro sensor",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "G605S",
+        "type_code": 16,
+        "positioner_series": "SGO60.5s",
+        "comment": "goniometer with nano sensor (60.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "G775S",
+        "type_code": 17,
+        "positioner_series": "SGO77.5s",
+        "comment": "goniometer with nano sensor (77.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SC500",
+        "type_code": 18,
+        "positioner_series": "SLLxxsc",
+        "comment": "linear positioner with nano sensor, distance coded reference marks",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "G955S",
+        "type_code": 19,
+        "positioner_series": "SGO95.5s",
+        "comment": "goniometer with nano sensor (95.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SR77",
+        "type_code": 20,
+        "positioner_series": "SR77xxs",
+        "comment": "rotary positioner with nano sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SD",
+        "type_code": 21,
+        "positioner_series": "SLCxxxxds, SLLxxs",
+        "comment": "like S, but with extended scanning Range",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "R20ME",
+        "type_code": 22,
+        "positioner_series": "SR2013sx, SR1410sx",
+        "comment": "rotary positioner with MicroE sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SR2",
+        "type_code": 23,
+        "positioner_series": "SR36xxs, SR3511s, SR5714s, SR7021s, SR2812s",
+        "comment": "like SR, for high applied masses",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SCD",
+        "type_code": 24,
+        "positioner_series": "SLCxxxxdsc",
+        "comment": "like SP, but with distance coded reference marks",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "SRC",
+        "type_code": 25,
+        "positioner_series": "SR7021sc",
+        "comment": "like SR, but with distance coded reference marks",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "SR36M",
+        "type_code": 26,
+        "positioner_series": "SR3610m",
+        "comment": "rotary positioner, no end stops",
+        "reference_type": "none"
+    },
+    {
+        "symbol": "SR36ME",
+        "type_code": 27,
+        "positioner_series": "SR3610m",
+        "comment": "rotary positioner with end stops",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "SR50M",
+        "type_code": 28,
+        "positioner_series": "SR5018m",
+        "comment": "rotary positioner, no end stops",
+        "reference_type": "none"
+    },
+    {
+        "symbol": "SR50ME",
+        "type_code": 29,
+        "positioner_series": "SR5018m",
+        "comment": "rotary positioner with end stops",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "G1045S",
+        "type_code": 30,
+        "positioner_series": "SGO104.5s",
+        "comment": "goniometer with nano sensor (104.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "G1395S",
+        "type_code": 31,
+        "positioner_series": "SGO139.5s",
+        "comment": "goniometer with nano sensor (139.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "MD",
+        "type_code": 32,
+        "positioner_series": "SLCxxxxdme",
+        "comment": "like M, but with large actuator",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "G935M",
+        "type_code": 33,
+        "positioner_series": "SGO93.5me",
+        "comment": "goniometer with micro sensor (93.5mm radius)",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "SHL20",
+        "type_code": 34,
+        "positioner_series": "SHL-20",
+        "comment": "high load vertical positioner",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SCT",
+        "type_code": 35,
+        "positioner_series": "SLCxxxxscu",
+        "comment": "like SCD, but with even larger actuator",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "SR77T",
+        "type_code": 36,
+        "positioner_series": "SR7021s",
+        "comment": "like SR77, but with larger actuator",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "SR120",
+        "type_code": 37,
+        "positioner_series": "SR120xxs",
+        "comment": "large rotary positioner",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "LC",
+        "type_code": 38,
+        "positioner_series": "SLCxxxxl",
+        "comment": "linear positioner with improved micro sensor",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "LR",
+        "type_code": 39,
+        "positioner_series": "SRxxxxl",
+        "comment": "rotary positioner with improved micro sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "LCD",
+        "type_code": 40,
+        "positioner_series": "SLCxxxxdl",
+        "comment": "like LC, but with large actuator",
+        "reference_type": "mark*"
+    },
+    {
+        "symbol": "L",
+        "type_code": 41,
+        "positioner_series": "SLCxxxxl",
+        "comment": "linear positioner with improved micro sensor",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "LD",
+        "type_code": 42,
+        "positioner_series": "SLCxxxxdl",
+        "comment": "like L, but with large actuator",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "LE",
+        "type_code": 43,
+        "positioner_series": "SLCxxxxl",
+        "comment": "Linear positioner with improved micro sensor",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "LED",
+        "type_code": 44,
+        "positioner_series": "SLCxxxxdl",
+        "comment": "Like L, but with large actuator",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "GDD",
+        "type_code": 45,
+        "positioner_series": "SGO60.5md",
+        "comment": "goniometer with micro sensor (60.5mm radius), large actuator",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "GED",
+        "type_code": 46,
+        "positioner_series": "SGO77.5md",
+        "comment": "goniometer with micro sensor (77.5mm radius), large actuator",
+        "reference_type": "end stop"
+    },
+    {
+        "symbol": "G935S",
+        "type_code": 47,
+        "positioner_series": "SGO96.5s",
+        "comment": "goniometer with nano sensor (93.5mm radius)",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "G605DS",
+        "type_code": 48,
+        "positioner_series": "SGO60.5ds",
+        "comment": "goniometer with nano sensor (60.5mm radius), large actuator",
+        "reference_type": "mark"
+    },
+    {
+        "symbol": "G775DS",
+        "type_code": 49,
+        "positioner_series": "SGO77.5ds",
+        "comment": "goniometer with nano sensor (77.5mm radius), large actuator",
+        "reference_type": "mark"
+    }
+]

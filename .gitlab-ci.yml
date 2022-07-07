@@ -1,0 +1,15 @@
+# This file is a template, and might need editing before it works on your project.
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: "python:3.9" 
+#commands to run in the Docker container before starting each job.
+before_script:
+  - pip install -r ./requirements.txt
+  - pip install -e . 
+# different stages in the pipeline
+stages:
+  - Test
+pytest:
+  stage: Test
+  script:
+  - pytest -v ./tests
