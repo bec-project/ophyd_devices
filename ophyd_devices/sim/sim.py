@@ -371,7 +371,7 @@ class SynAxisOPAAS(Device, PositionerBase):
                     updates = np.ceil(
                         np.abs(old_setpoint - move_val) / self.speed * self.update_frequency
                     )
-                    for ii in np.linspace(old_setpoint, move_val - 5, int(updates)):
+                    for ii in np.linspace(old_setpoint, move_val, int(updates)):
                         ttime.sleep(1 / self.update_frequency)
                         update_state(ii)
                     update_state(move_val)
