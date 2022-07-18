@@ -322,6 +322,7 @@ class SynAxisOPAAS(Device, PositionerBase):
             raise LimitError(f"position={pos} not within limits {self.limits}")
 
     def set(self, value):
+        self._stopped = False
         self.check_value(value)
         old_setpoint = self.sim_state["setpoint"]
         self.sim_state["is_moving"] = 1
@@ -384,8 +385,9 @@ class SynAxisOPAAS(Device, PositionerBase):
                         timestamp=self.sim_state["is_moving_ts"],
                     )
                 except DeviceStop:
-                    self._stopped = False
                     success = False
+                finally:
+                    self._stopped = False
                 self._done_moving(success=success)
                 st.set_finished()
 
