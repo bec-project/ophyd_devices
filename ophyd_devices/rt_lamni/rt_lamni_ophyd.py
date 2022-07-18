@@ -192,7 +192,7 @@ class RtLamniController(Controller):
             logger.info(f"LamNI resetting interferometer inclusive angular interferomter.")
         else:
             self.feedback_disable(self)
-             logger.info(f"LamNI resetting interferomter except angular interferometer which is already running.")
+            logger.info(f"LamNI resetting interferomter except angular interferometer which is already running.")
 
         #set these as closed loop target position
         #discuss: after this the current target position in lamni is 0, while the latest target position in ophyd might be different
@@ -238,8 +238,8 @@ class RtLamniController(Controller):
 
 #}
 
- global ptychography_alignment_done
- ptychography_alignment_done = 0
+global ptychography_alignment_done
+ptychography_alignment_done = 0
 
 
 
