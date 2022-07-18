@@ -148,6 +148,11 @@ class GalilController(Controller):
     def stop_all_axes(self) -> str:
         return self.socket_put_and_receive(f"XQ#STOP,1")
 
+    def lgalil_is_air_off_and_orchestra_enabled(self) -> bool:
+        rt_not_blocked_by_galil=bool(self.socket_put_and_receive(f"MG@OUT[9]"))
+        air_off=bool(self.socket_put_and_receive(f"MG@OUT[13]"))
+        return (rt_not_blocked_by_galil and air_off)
+
     def axis_is_referenced(self, axis_Id_numeric) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG axisref[{axis_Id_numeric}]").strip()))
 

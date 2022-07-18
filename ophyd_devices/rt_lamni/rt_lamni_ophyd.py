@@ -52,7 +52,9 @@ def retry_once(fcn):
 class RtLamniController(Controller):
     USER_ACCESS = [
         "socket_put_and_receive",
-        "set_rotation_angle"
+        "set_rotation_angle",
+        "feedback_disable",
+        "feedback_enable_without_reset"
     ]
     def __init__(
         self,
@@ -141,6 +143,105 @@ class RtLamniController(Controller):
     def stop_all_axes(self) -> str:
         return 0 #self.socket_put_and_receive(f"XQ#STOP,1")
 
+    def feedback_disable(self):
+        self.socket_put("J0")
+        logger.info("LamNI Feedback disabled.")
+        #motor_par("lsamx","disable",0)
+        #motor_par("lsamy","disable",0)
+        #motor_par("loptx","disable",0)
+        #motor_par("lopty","disable",0)
+        #motor_par("loptz","disable",0)
+
+    def feedback_enable_without_reset(self):
+        #read current interferometer position
+        return_table = (self.socket_put_and_receive(f"J4")).split(",")
+        x_curr=float(return_table[2])
+        y_curr=float(return_table[1])
+        #set these as closed loop target position
+        self.socket_put(f"pa0,{x_curr:.4f}")
+        self.socket_put(f"pa1,{y_curr:.4f}")
+        self.socket_put("J5")
+        logger.info("LamNI Feedback enabled (without reset).")
+        #motor_par("lsamx","disable",1)
+        #motor_par("lsamy","disable",1)
+        #motor_par("loptx","disable",1)
+        #motor_par("lopty","disable",1)
+        #motor_par("loptz","disable",1)
+
+    def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
+        self.socket_put("J6")
+        logger.info("LamNI Feedback disabled including the angular interferometer.")
+        #motor_par("lsamx","disable",0)
+        #motor_par("lsamy","disable",0)
+        #motor_par("loptx","disable",0)
+        #motor_par("lopty","disable",0)
+        #motor_par("loptz","disable",0)
+
+    def clear_trajectory_generator(self):
+        self.socket_put("sc")
+        logger.info("LamNI scan stopped and deleted, moving to start position")
+
+    def feedback_status_angle_lamni(self) -> bool:
+        return_table = (self.socket_put_and_receive(f"J7")).split(",")
+        logger.debug(f"LamNI angle interferomter status {bool(return_table[0])}, position {float(return_table[1])}, signal {float(return_table[2])}")
+        return bool(return_table[0])
+
+    def feedback_enable_with_reset(self):
+        if not self.feedback_status_angle_lamni(self):
+            self.rt_feedback_disable_and_even_reset_lamni_angle_interferometer(self)
+            logger.info(f"LamNI resetting interferometer inclusive angular interferomter.")
+        else:
+            self.feedback_disable(self)
+             logger.info(f"LamNI resetting interferomter except angular interferometer which is already running.")
+
+        #set these as closed loop target position
+        #discuss: after this the current target position in lamni is 0, while the latest target position in ophyd might be different
+        #the same is after moving to a different scan region with the coarse stages. maybe issue a move command later to have them match?
+        #that is only possible with runnign feedback. or change user setpoint in a different way?
+        self.socket_put(f"pa0,0")
+        self.socket_put(f"pa1,0")
+        self.socket_put(f"pa2,0") #we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
+        self.clear_trajectory_generator(self)
+
+        ####
+        #here umv lsamrot 0
+        ####
+        #!lgalil_is_air_off_and_orchestra_enabled:
+        #Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller.
+        #exit with failure
+
+        time.sleep(0.03)
+        #global _lsamx_center
+        #global _lsamy_center
+        #umv lsamx _lsamx_center
+        #umv lsamy _lsamy_center
+
+        self.socket_put("J1")
+        #set_lm rtx -50 50
+        #set_lm rty -50 50
+        _waitforfeedbackctr=0
+
+        #this is implemented as class and not function. why? RtLamniFeedbackRunning
+
+#        while self.RtLamniFeedbackRunning _rt_status_feedback(self) == 1 && _waitforfeedbackctr<100)
+# {
+#   sleep(0.01)
+#   _waitforfeedbackctr++
+#   #p _waitforfeedbackctr
+# }
+# motor_par("lsamx","disable",1)
+# motor_par("lsamy","disable",1)
+# motor_par("loptx","disable",1)
+# motor_par("lopty","disable",1)
+# motor_par("loptz","disable",1)
+# rt_feedback_status
+
+#}
+
+ global ptychography_alignment_done
+ ptychography_alignment_done = 0
+
+
 
 class RtLamniSignalBase(SocketSignal):
     def __init__(self, signal_name, **kwargs):
@@ -221,7 +322,7 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
 
 class RtLamniMotorIsMoving(RtLamniSignalRO):
     def _socket_get(self):
-        return 0 
+        return self.controller.is_axis_moving(self.parent.axis_Id_numeric)
 
     def get(self):
         val = super().get()
@@ -345,14 +446,14 @@ class RtLamniMotor(Device, PositionerBase):
 
         def move_and_finish():
             while self.motor_is_moving.get():
-                logger.info("motor is moving")
+                print("motor is moving")
                 val = self.readback.read()
                 self._run_subs(sub_type=self.SUB_READBACK,
                     value=val,
                     timestamp=time.time(),
                 )
                 time.sleep(0.01)
-            logger.info("Move finished")
+            print("Move finished")
             self._done_moving()
 
         threading.Thread(target=move_and_finish, daemon=True).start()
