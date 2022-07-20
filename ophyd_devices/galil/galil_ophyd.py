@@ -365,14 +365,14 @@ class GalilMotor(Device, PositionerBase):
         self.controller = GalilController(socket=socket_cls(host=host, port=port))
         self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
         self.tolerance = kwargs.pop("tolerance", 0.5)
-        self.device_access = kwargs.pop("device_access", {})
+        self.device_mapping = kwargs.pop("device_mapping", {})
         self.device_manager = device_manager
 
-        if len(self.device_access) > 0 and self.device_manager is None:
+        if len(self.device_mapping) > 0 and self.device_manager is None:
             raise BECConfigError(
-                "device_access has been specified but the device_manager cannot be accessed."
+                "device_mapping has been specified but the device_manager cannot be accessed."
             )
-        self.rt = self.device_access.get("rt")
+        self.rt = self.device_mapping.get("rt")
 
         super().__init__(
             prefix,
