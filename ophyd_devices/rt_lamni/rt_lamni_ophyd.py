@@ -54,7 +54,8 @@ class RtLamniController(Controller):
         "socket_put_and_receive",
         "set_rotation_angle",
         "feedback_disable",
-        "feedback_enable_without_reset"
+        "feedback_enable_without_reset",
+        "clear_trajectory_generator"
     ]
     def __init__(
         self,
@@ -167,6 +168,7 @@ class RtLamniController(Controller):
         #motor_par("loptx","disable",1)
         #motor_par("lopty","disable",1)
         #motor_par("loptz","disable",1)
+        #umv rtx x_curr rty y_curr
 
     def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
         self.socket_put("J6")
@@ -180,6 +182,9 @@ class RtLamniController(Controller):
     def clear_trajectory_generator(self):
         self.socket_put("sc")
         logger.info("LamNI scan stopped and deleted, moving to start position")
+
+    def add_pos_to_scan(self, posx, posy) -> int:
+        return(self.socket_put_and_receive(f"s{posx},{posy},0"))
 
     def feedback_status_angle_lamni(self) -> bool:
         return_table = (self.socket_put_and_receive(f"J7")).split(",")
@@ -202,10 +207,17 @@ class RtLamniController(Controller):
         self.socket_put(f"pa1,0")
         self.socket_put(f"pa2,0") #we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
         self.clear_trajectory_generator(self)
-
-        ####
+    ####
         #here umv lsamrot 0
         ####
+        #try:
+        #    self.parent.device_manager.devices[
+        #        self.parent.galil
+        #    ].obj.controller.set_rotation_angle(val[self.parent.name]["value"])
+        #except KeyError:
+        #        logger.warning("Failed to set RT value during readback.")
+
+    
         #!lgalil_is_air_off_and_orchestra_enabled:
         #Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller.
         #exit with failure
@@ -235,6 +247,7 @@ class RtLamniController(Controller):
 # motor_par("lopty","disable",1)
 # motor_par("loptz","disable",1)
 # rt_feedback_status
+#umv rtx 0 rty 0
 
 #}
 
