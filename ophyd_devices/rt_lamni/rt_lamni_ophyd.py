@@ -34,6 +34,8 @@ class RtLamniCommunicationError(Exception):
 class RtLamniError(Exception):
     pass
 
+class BECConfigError(Exception):
+    pass
 
 def retry_once(fcn):
     """Decorator to rerun a function in case a CommunicationError was raised. This may happen if the buffer was not empty."""
@@ -55,6 +57,9 @@ class RtLamniController(Controller):
         "set_rotation_angle",
         "feedback_disable",
         "feedback_enable_without_reset",
+        "feedback_disable_and_even_reset_lamni_angle_interferometer",
+        "feedback_enable_with_reset",
+        "add_pos_to_scan",
         "clear_trajectory_generator"
     ]
     def __init__(
@@ -179,12 +184,69 @@ class RtLamniController(Controller):
         #motor_par("lopty","disable",0)
         #motor_par("loptz","disable",0)
 
+    def get_device_manager(self):
+        for axis in self._axis:
+            if hasattr(axis, 'device_manager') and axis.device_manager:
+                return axis.device_manager
+        raise BECConfigError('Could not access the device_manager')
+
+    def get_axis_by_name(self, name):
+        for axis in self._axis:
+            if axis:
+                if axis.name == name:
+                    return axis
+        raise RuntimeError(f'Could not find an axis with name {name}')
+
     def clear_trajectory_generator(self):
         self.socket_put("sc")
         logger.info("LamNI scan stopped and deleted, moving to start position")
 
     def add_pos_to_scan(self, posx, posy) -> int:
-        return(self.socket_put_and_receive(f"s{posx},{posy},0"))
+        self.socket_put_and_receive(f"s{posx},{posy},0")
+
+    def get_scan_status(self):
+        return_table = (self.socket_put_and_receive(f"sr")).split(",")
+        mode=int(return_table[0])
+        #mode 0: direct positioning
+        #mode 1: running internal timer (not tested/used anymore)
+        #mode 2: rt point scan running
+        #mode 3: rt point scan starting
+        #mode 5/6: rt continuous scanning (not available in LamNI)
+        number_of_positions_planned=int(return_table[1])
+        current_position_in_scan=int(return_table[2])
+        return (mode,number_of_positions_planned,current_position_in_scan)
+
+    def start_scan(self, posx, posy) -> int:
+        interferometer_feedback_not_running = int((self.controller.socket_put_and_receive("J2")).split(",")[0])
+        if interferometer_feedback_not_running == 1:
+            logger.info("Cannot start scan because feedback loop is not running or there is an interferometer error.")
+            #here exception
+        (mode,number_of_positions_planned,current_position_in_scan)=self.get_scan_status()
+
+        if number_of_positions_planned == 0:
+            logger.info("Cannot start scan because no target positions are planned.")
+            #hier exception
+        # start a point-by-point scan (for cont scan in flomni it would be "sa")
+        self.controller.socket_put_and_receive("sd")
+        
+    def read_positions_from_sampler(self):
+        number_of_samples_to_read = 1  #number of valid samples, will be updated upon first data read
+        read_counter = 0
+        average_stdeviations_x_st_fzp = 0
+        average_stdeviations_y_st_fzp = 0
+
+        while number_of_samples_to_read > read_counter:
+            #fprintf(dname,"DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST\n")
+            #              0         1           3        4                5              6        7                8              9            10          11           12         13           14         15           16         17           18         19                      20
+            return_table = (self.socket_put_and_receive(f"r{read_counter}")).split(",")
+
+            average_stdeviations_x_st_fzp=average_stdeviations_x_st_fzp+double(return_table[5])
+            average_stdeviations_y_st_fzp=average_stdeviations_y_st_fzp+return_table[8]
+            average_lamni_angle = average_lamni_angle+return_table[19]
+            number_of_samples_to_read = int(return_table[1])
+            read_counter=read_counter+1
+        logger.info(f"LamNI statistics: Average of all standard deviations: x {average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {average_lamni_angle/number_of_samples_to_read}.")
+        
 
     def feedback_status_angle_lamni(self) -> bool:
         return_table = (self.socket_put_and_receive(f"J7")).split(",")
@@ -192,33 +254,33 @@ class RtLamniController(Controller):
         return bool(return_table[0])
 
     def feedback_enable_with_reset(self):
-        if not self.feedback_status_angle_lamni(self):
-            self.rt_feedback_disable_and_even_reset_lamni_angle_interferometer(self)
+        if not self.feedback_status_angle_lamni():
+            self.rt_feedback_disable_and_even_reset_lamni_angle_interferometer()
             logger.info(f"LamNI resetting interferometer inclusive angular interferomter.")
         else:
-            self.feedback_disable(self)
+            self.feedback_disable()
             logger.info(f"LamNI resetting interferomter except angular interferometer which is already running.")
 
         #set these as closed loop target position
-        #discuss: after this the current target position in lamni is 0, while the latest target position in ophyd might be different
-        #the same is after moving to a different scan region with the coarse stages. maybe issue a move command later to have them match?
-        #that is only possible with runnign feedback. or change user setpoint in a different way?
-        self.socket_put(f"pa0,0")
-        self.socket_put(f"pa1,0")
-        self.socket_put(f"pa2,0") #we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
-        self.clear_trajectory_generator(self)
-    ####
-        #here umv lsamrot 0
-        ####
-        #try:
-        #    self.parent.device_manager.devices[
-        #        self.parent.galil
-        #    ].obj.controller.set_rotation_angle(val[self.parent.name]["value"])
-        #except KeyError:
-        #        logger.warning("Failed to set RT value during readback.")
 
+        self.socket_put(f"pa0,0")
+        self.get_axis_by_name('rtx').user_setpoint.setpoint = 0
+        self.socket_put(f"pa1,0")
+        self.get_axis_by_name('rty').user_setpoint.setpoint = 0
+        self.socket_put(f"pa2,0") #we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
+        self.clear_trajectory_generator()
+    
+        self.get_device_manager().devices.lsamrot.obj.move(0, wait=True)
     
         #!lgalil_is_air_off_and_orchestra_enabled:
+
+       # try:
+       ###     self.parent.device_manager.devices[
+       #         self.parent.galil
+      #      ].obj.controller.set_rotation_angle(val[self.parent.name]["value"])
+    #    except KeyError:
+  #          logger.warning("Failed to set RT value during readback.")
+   #     lgalil_is_air_off_and_orchestra_enabled
         #Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller.
         #exit with failure
 
@@ -227,10 +289,10 @@ class RtLamniController(Controller):
         #global _lsamy_center
         #umv lsamx _lsamx_center
         #umv lsamy _lsamy_center
-
+        self.get_device_manager().devices.lsamx.obj.move(8.866, wait=True)
+        self.get_device_manager().devices.lsamy.obj.move(10.18, wait=True)
         self.socket_put("J1")
-        #set_lm rtx -50 50
-        #set_lm rty -50 50
+
         _waitforfeedbackctr=0
 
         #this is implemented as class and not function. why? RtLamniFeedbackRunning
@@ -247,12 +309,11 @@ class RtLamniController(Controller):
 # motor_par("lopty","disable",1)
 # motor_par("loptz","disable",1)
 # rt_feedback_status
-#umv rtx 0 rty 0
 
-#}
 
-global ptychography_alignment_done
-ptychography_alignment_done = 0
+
+
+#ptychography_alignment_done = 0
 
 
 
@@ -387,12 +448,14 @@ class RtLamniMotor(Device, PositionerBase):
         port=3333,
         sign=1,
         socket_cls=SocketIO,
+        device_manager=None,
         **kwargs,
     ):
         self.axis_Id = axis_Id
         self.sign = sign
         self.controller = RtLamniController(socket=socket_cls(host=host, port=port))
         self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
+        self.device_manager = device_manager
         self.tolerance = kwargs.pop("tolerance", 0.5)
 
         super().__init__(

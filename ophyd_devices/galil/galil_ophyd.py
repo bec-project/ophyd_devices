@@ -132,7 +132,7 @@ class GalilController(Controller):
             )
 
     def is_axis_moving(self, axis_Id) -> bool:
-        return bool(float(self.socket_put_and_receive(f"MG _BG{axis_Id}")))
+        return bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")))
 
     def is_thread_active(self, thread_id: int) -> bool:
         val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
@@ -287,6 +287,15 @@ class GalilSetpointSignal(GalilSignalBase):
         if axes_referenced:
             while self.controller.is_thread_active(0):
                 time.sleep(0.1)
+            
+            ##########################################
+ # HERE ADD CHECK OF ANGLE INTERF RUNNING
+ # if(rt_feedback_status_lamni_anlge()) {
+ #       _lgalil_put_confirmed( 0,"angintf=1")
+ #     }
+
+
+
             self.controller.socket_put_confirmed(f"naxis={self.parent.axis_Id_numeric}")
             self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")
             self.controller.socket_put_confirmed("movereq=1")
