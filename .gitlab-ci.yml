@@ -12,5 +12,5 @@ stages:
 pytest:
   stage: Test
   script:
-  - pip install git
+  - apt-get update && apt-get install -y git
   - pytest -v ./tests
