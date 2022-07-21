@@ -13,4 +13,6 @@ pytest:
   stage: Test
   script:
   - apt-get update && apt-get install -y git
+  - git clone https://oauth2:$ci_bec@gitlab.psi.ch/bec/bec.git
+  - pip install -e ./bec/bec_utils
   - pytest -v ./tests
