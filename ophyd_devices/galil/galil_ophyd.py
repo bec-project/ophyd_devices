@@ -288,13 +288,13 @@ class GalilSetpointSignal(GalilSignalBase):
             while self.controller.is_thread_active(0):
                 time.sleep(0.1)
             
-            ##########################################
- # HERE ADD CHECK OF ANGLE INTERF RUNNING
- # if(rt_feedback_status_lamni_anlge()) {
- #       _lgalil_put_confirmed( 0,"angintf=1")
- #     }
+            if self.parent.axis_Id_numeric == 2:
+                angle_status = self.parent.device_manager.devices[
+                    self.parent.rt
+                ].obj.controller.feedback_status_angle_lamni()
 
-
+                if angle_status:
+                    self.controller.socket_put_confirmed("angintf=1")
 
             self.controller.socket_put_confirmed(f"naxis={self.parent.axis_Id_numeric}")
             self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")

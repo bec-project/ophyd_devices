@@ -11,11 +11,11 @@ from ophyd_devices.utils.socket import (
     raise_if_disconnected,
     SocketSignal,
 )
-import logging
+from bec_utils import bec_logger
 from ophyd.utils import ReadOnlyError
 from ophyd.status import wait as status_wait
 
-logger = logging.getLogger("rtlamni")
+logger = bec_logger.logger
 
 def threadlocked(fcn):
     """Ensure that thread acquires and releases the lock."""
@@ -216,8 +216,8 @@ class RtLamniController(Controller):
         current_position_in_scan=int(return_table[2])
         return (mode,number_of_positions_planned,current_position_in_scan)
 
-    def start_scan(self, posx, posy) -> int:
-        interferometer_feedback_not_running = int((self.controller.socket_put_and_receive("J2")).split(",")[0])
+    def start_scan(self):
+        interferometer_feedback_not_running = int((self.socket_put_and_receive("J2")).split(",")[0])
         if interferometer_feedback_not_running == 1:
             logger.info("Cannot start scan because feedback loop is not running or there is an interferometer error.")
             #here exception
@@ -227,23 +227,34 @@ class RtLamniController(Controller):
             logger.info("Cannot start scan because no target positions are planned.")
             #hier exception
         # start a point-by-point scan (for cont scan in flomni it would be "sa")
-        self.controller.socket_put_and_receive("sd")
+        self.socket_put_and_receive("sd")
+
+    def start_readout(self):
+        readout = threading.Thread(target=self.read_positions_from_sampler)
+        readout.start()
+
+
+    def kickoff(self):
+        time.sleep(0.3)
+        self.start_scan()
+        while self.get_scan_status()[0]!=0:
+            time.sleep(0.1)
+        self.start_readout()
         
     def read_positions_from_sampler(self):
-        number_of_samples_to_read = 1  #number of valid samples, will be updated upon first data read
+        number_of_samples_to_read = self.get_scan_status()[1]  #number of valid samples, will be updated upon first data read
         read_counter = 0
         average_stdeviations_x_st_fzp = 0
         average_stdeviations_y_st_fzp = 0
-
+        average_lamni_angle = 0
         while number_of_samples_to_read > read_counter:
             #fprintf(dname,"DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST\n")
             #              0         1           3        4                5              6        7                8              9            10          11           12         13           14         15           16         17           18         19                      20
             return_table = (self.socket_put_and_receive(f"r{read_counter}")).split(",")
-
-            average_stdeviations_x_st_fzp=average_stdeviations_x_st_fzp+double(return_table[5])
-            average_stdeviations_y_st_fzp=average_stdeviations_y_st_fzp+return_table[8]
-            average_lamni_angle = average_lamni_angle+return_table[19]
-            number_of_samples_to_read = int(return_table[1])
+            logger.info(f"{return_table}")
+            average_stdeviations_x_st_fzp=average_stdeviations_x_st_fzp+float(return_table[5])
+            average_stdeviations_y_st_fzp=average_stdeviations_y_st_fzp+float(return_table[8])
+            average_lamni_angle = average_lamni_angle+float(return_table[19])
             read_counter=read_counter+1
         logger.info(f"LamNI statistics: Average of all standard deviations: x {average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {average_lamni_angle/number_of_samples_to_read}.")
         
