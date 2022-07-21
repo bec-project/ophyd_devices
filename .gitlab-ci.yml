@@ -12,5 +12,5 @@ stages:
 pytest:
   stage: Test
   script:
-  - apk update; apk upgrade; apk add git
+  - pip install git
   - pytest -v ./tests
