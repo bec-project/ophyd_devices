@@ -5,9 +5,9 @@ from typing import List
 
 import numpy as np
 from ophyd import Component as Cpt
-from ophyd import Device, PositionerBase
+from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
-from ophyd.utils import ReadOnlyError
+from ophyd.utils import ReadOnlyError, LimitError
 from ophyd_devices.smaract.smaract_controller import SmaractController
 from ophyd_devices.smaract.smaract_errors import SmaractCommunicationError, SmaractError
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
@@ -93,7 +93,8 @@ class SmaractMotor(Device, PositionerBase):
     # )
 
     motor_is_moving = Cpt(SmaractMotorIsMoving, signal_name="motor_is_moving", kind="normal")
-
+    high_limit_travel = Cpt(Signal, value=0, kind="omitted")
+    low_limit_travel = Cpt(Signal, value=0, kind="omitted")
     # all_axes_referenced = Cpt(
     #    SmaractAxesReferenced, signal_name="all_axes_referenced", kind="config"
     # )
@@ -114,6 +115,7 @@ class SmaractMotor(Device, PositionerBase):
         parent=None,
         host="mpc2680.psi.ch",
         port=8085,
+        limits=None,
         sign=1,
         socket_cls=SocketIO,
         **kwargs,
@@ -138,6 +140,29 @@ class SmaractMotor(Device, PositionerBase):
             self._update_connection_state, event_type=self.SUB_CONNECTION_CHANGE
         )
         self._update_connection_state()
+        if limits is not None:
+            assert len(limits) == 2
+            self.low_limit_travel.put(limits[0])
+            self.high_limit_travel.put(limits[1])
+
+    @property
+    def limits(self):
+        return (self.low_limit_travel.get(), self.high_limit_travel.get())
+
+    @property
+    def low_limit(self):
+        return self.limits[0]
+
+    @property
+    def high_limit(self):
+        return self.limits[1]
+
+    def check_value(self, pos):
+        """Check that the position is within the soft limits"""
+        low_limit, high_limit = self.limits
+
+        if low_limit < high_limit and not (low_limit <= pos <= high_limit):
+            raise LimitError(f"position={pos} not within limits {self.limits}")
 
     def _update_connection_state(self, **kwargs):
         for walk in self.walk_signals():
