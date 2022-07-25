@@ -334,10 +334,9 @@ class RtLamniController(Controller):
                         return_table[8]
                     )
                     average_lamni_angle = average_lamni_angle + float(return_table[19])
-                    #DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST
+                    # DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST
                     # TODO!!
                     signals = {
-                        "target_x": 
                         "average_stdeviations_x_st_fzp": {"value": average_stdeviations_x_st_fzp},
                         "average_stdeviations_y_st_fzp": {"value": average_stdeviations_y_st_fzp},
                         "average_lamni_angle": {"value": average_lamni_angle},
