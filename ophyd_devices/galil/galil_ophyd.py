@@ -6,9 +6,9 @@ from typing import List
 
 import numpy as np
 from ophyd import Component as Cpt
-from ophyd import Device, PositionerBase
+from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
-from ophyd.utils import ReadOnlyError
+from ophyd.utils import ReadOnlyError, LimitError
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
 from prettytable import PrettyTable
@@ -29,7 +29,7 @@ class BECConfigError(Exception):
 
 
 def retry_once(fcn):
-    """Decorator to rerun a function in case a SmaractCommunicationError was raised. This may happen if the buffer was not empty."""
+    """Decorator to rerun a function in case a Galil communication error was raised. This may happen if the buffer was not empty."""
 
     @functools.wraps(fcn)
     def wrapper(self, *args, **kwargs):
@@ -49,6 +49,7 @@ class GalilController(Controller):
         "galil_show_all",
         "socket_put_and_receive",
         "socket_put_confirmed",
+        "lgalil_is_air_off_and_orchestra_enabled"
     ]
 
     def __init__(
@@ -347,6 +348,8 @@ class GalilMotor(Device, PositionerBase):
     motor_resolution = Cpt(GalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
     all_axes_referenced = Cpt(GalilAxesReferenced, signal_name="all_axes_referenced", kind="config")
+    high_limit_travel = Cpt(Signal, value=0, kind="omitted")
+    low_limit_travel = Cpt(Signal, value=0, kind="omitted")
 
     SUB_READBACK = "readback"
     SUB_CONNECTION_CHANGE = "connection_change"
@@ -364,6 +367,7 @@ class GalilMotor(Device, PositionerBase):
         parent=None,
         host="mpc2680.psi.ch",
         port=8081,
+        limits=None,
         sign=1,
         socket_cls=SocketIO,
         device_manager=None,
@@ -398,6 +402,30 @@ class GalilMotor(Device, PositionerBase):
         )
         self._update_connection_state()
         # self.readback.subscribe(self._forward_readback, event_type=self.readback.SUB_VALUE)
+
+        if limits is not None:
+            assert len(limits) == 2
+            self.low_limit_travel.put(limits[0])
+            self.high_limit_travel.put(limits[1])
+
+    @property
+    def limits(self):
+        return (self.low_limit_travel.get(), self.high_limit_travel.get())
+
+    @property
+    def low_limit(self):
+        return self.limits[0]
+
+    @property
+    def high_limit(self):
+        return self.limits[1]
+
+    def check_value(self, pos):
+        """Check that the position is within the soft limits"""
+        low_limit, high_limit = self.limits
+
+        if low_limit < high_limit and not (low_limit <= pos <= high_limit):
+            raise LimitError(f"position={pos} not within limits {self.limits}")
 
     def _update_connection_state(self, **kwargs):
         for walk in self.walk_signals():
@@ -438,7 +466,7 @@ class GalilMotor(Device, PositionerBase):
             If motion fails other than timing out
         """
         self._started_moving = False
-        timeout = kwargs.pop("timeout", 4)
+        timeout = kwargs.pop("timeout", 100)
         status = super().move(position, timeout=timeout, **kwargs)
         self.user_setpoint.put(position, wait=False)
 
