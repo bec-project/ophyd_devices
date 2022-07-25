@@ -1,23 +1,20 @@
 import functools
 import threading
 import time
-import numpy as np
 from typing import List
-from ophyd import PositionerBase, Device, Component as Cpt
-from prettytable import PrettyTable
-from ophyd_devices.utils.controller import Controller
-from ophyd_devices.utils.socket import (
-    SocketIO,
-    raise_if_disconnected,
-    SocketSignal,
-)
-from bec_utils import bec_logger
-from ophyd.utils import ReadOnlyError,LimitError
-from ophyd.status import wait as status_wait
-from ophyd import Signal
 
+import numpy as np
+from bec_utils import BECMessage, MessageEndpoints, bec_logger
+from ophyd import Component as Cpt
+from ophyd import Device, PositionerBase, Signal
+from ophyd.status import wait as status_wait
+from ophyd.utils import LimitError, ReadOnlyError
+from ophyd_devices.utils.controller import Controller
+from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from prettytable import PrettyTable
 
 logger = bec_logger.logger
+
 
 def threadlocked(fcn):
     """Ensure that thread acquires and releases the lock."""
@@ -29,6 +26,7 @@ def threadlocked(fcn):
 
     return wrapper
 
+
 class RtLamniCommunicationError(Exception):
     pass
 
@@ -36,8 +34,10 @@ class RtLamniCommunicationError(Exception):
 class RtLamniError(Exception):
     pass
 
+
 class BECConfigError(Exception):
     pass
+
 
 def retry_once(fcn):
     """Decorator to rerun a function in case a CommunicationError was raised. This may happen if the buffer was not empty."""
@@ -66,8 +66,9 @@ class RtLamniController(Controller):
         "_set_axis_velocity",
         "_set_axis_velocity_maximum_speed",
         "_position_sampling_single_read",
-        "_position_sampling_single_reset_and_start_sampling"
+        "_position_sampling_single_reset_and_start_sampling",
     ]
+
     def __init__(
         self,
         *,
@@ -90,14 +91,14 @@ class RtLamniController(Controller):
                 labels=labels,
                 kind=kind,
             )
-        
+        self.readout_metadata = {}
 
     def on(self, controller_num=0) -> None:
         """Open a new socket connection to the controller"""
         if not self.connected:
             try:
                 self.sock.open()
-                #discuss - after disconnect takes a while for the server to be ready again
+                # discuss - after disconnect takes a while for the server to be ready again
                 welcome_message = self.sock.receive()
                 self.connected = True
             except ConnectionRefusedError as conn_error:
@@ -140,22 +141,22 @@ class RtLamniController(Controller):
         return self.socket_get()
 
     def is_axis_moving(self, axis_Id) -> bool:
-        #this checks that axis is on target
-        axis_is_on_target = bool(float(self.socket_put_and_receive(f"o"))) 
+        # this checks that axis is on target
+        axis_is_on_target = bool(float(self.socket_put_and_receive(f"o")))
         return not axis_is_on_target
 
-#    def is_thread_active(self, thread_id: int) -> bool:
-#        val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
-#        if val == -1:
-#            return False
-#        return True
+    #    def is_thread_active(self, thread_id: int) -> bool:
+    #        val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
+    #        if val == -1:
+    #            return False
+    #        return True
 
     def _remove_trailing_characters(self, var) -> str:
         if len(var) > 1:
             return var.split("\r\n")[0]
         return var
 
-    def set_rotation_angle(self, val:float):
+    def set_rotation_angle(self, val: float):
         self.socket_put(f"a{(val-300+30.538)/180*np.pi}")
 
     def stop_all_axes(self):
@@ -164,11 +165,11 @@ class RtLamniController(Controller):
     def feedback_disable(self):
         self.socket_put("J0")
         logger.info("LamNI Feedback disabled.")
-        #motor_par("lsamx","disable",0)
-        #motor_par("lsamy","disable",0)
-        #motor_par("loptx","disable",0)
-        #motor_par("lopty","disable",0)
-        #motor_par("loptz","disable",0)
+        # motor_par("lsamx","disable",0)
+        # motor_par("lsamy","disable",0)
+        # motor_par("loptx","disable",0)
+        # motor_par("lopty","disable",0)
+        # motor_par("loptz","disable",0)
 
     def _set_axis_velocity(self, um_per_s):
         self.socket_put(f"V{um_per_s}")
@@ -176,57 +177,64 @@ class RtLamniController(Controller):
     def _set_axis_velocity_maximum_speed(self):
         self.socket_put(f"V0")
 
-    #for developement of soft continuous scanning
+    # for developement of soft continuous scanning
     def _position_sampling_single_reset_and_start_sampling(self):
         self.socket_put(f"Ss")
 
     def _position_sampling_single_read(self):
-        (number_of_samples,sum0,sum0_2,sum1,sum1_2,sum2,sum2_2) = self.socket_put_and_receive(f"Sr").split(",")
-        avg_x = float(sum1)/int(number_of_samples)
-        avg_y = float(sum0)/int(number_of_samples)
-        stdev_x = np.sqrt(float(sum1_2)/int(number_of_samples)-np.power(float(sum1)/int(number_of_samples),2))
-        stdev_y = np.sqrt(float(sum0_2)/int(number_of_samples)-np.power(float(sum0)/int(number_of_samples),2))
-        return(avg_x,avg_y,stdev_x,stdev_y)
-
+        (number_of_samples, sum0, sum0_2, sum1, sum1_2, sum2, sum2_2) = self.socket_put_and_receive(
+            f"Sr"
+        ).split(",")
+        avg_x = float(sum1) / int(number_of_samples)
+        avg_y = float(sum0) / int(number_of_samples)
+        stdev_x = np.sqrt(
+            float(sum1_2) / int(number_of_samples)
+            - np.power(float(sum1) / int(number_of_samples), 2)
+        )
+        stdev_y = np.sqrt(
+            float(sum0_2) / int(number_of_samples)
+            - np.power(float(sum0) / int(number_of_samples), 2)
+        )
+        return (avg_x, avg_y, stdev_x, stdev_y)
 
     def feedback_enable_without_reset(self):
-        #read current interferometer position
+        # read current interferometer position
         return_table = (self.socket_put_and_receive(f"J4")).split(",")
-        x_curr=float(return_table[2])
-        y_curr=float(return_table[1])
-        #set these as closed loop target position
+        x_curr = float(return_table[2])
+        y_curr = float(return_table[1])
+        # set these as closed loop target position
         self.socket_put(f"pa0,{x_curr:.4f}")
         self.socket_put(f"pa1,{y_curr:.4f}")
         self.socket_put("J5")
         logger.info("LamNI Feedback enabled (without reset).")
-        #motor_par("lsamx","disable",1)
-        #motor_par("lsamy","disable",1)
-        #motor_par("loptx","disable",1)
-        #motor_par("lopty","disable",1)
-        #motor_par("loptz","disable",1)
-        #umv rtx x_curr rty y_curr
+        # motor_par("lsamx","disable",1)
+        # motor_par("lsamy","disable",1)
+        # motor_par("loptx","disable",1)
+        # motor_par("lopty","disable",1)
+        # motor_par("loptz","disable",1)
+        # umv rtx x_curr rty y_curr
 
     def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
         self.socket_put("J6")
         logger.info("LamNI Feedback disabled including the angular interferometer.")
-        #motor_par("lsamx","disable",0)
-        #motor_par("lsamy","disable",0)
-        #motor_par("loptx","disable",0)
-        #motor_par("lopty","disable",0)
-        #motor_par("loptz","disable",0)
+        # motor_par("lsamx","disable",0)
+        # motor_par("lsamy","disable",0)
+        # motor_par("loptx","disable",0)
+        # motor_par("lopty","disable",0)
+        # motor_par("loptz","disable",0)
 
     def get_device_manager(self):
         for axis in self._axis:
-            if hasattr(axis, 'device_manager') and axis.device_manager:
+            if hasattr(axis, "device_manager") and axis.device_manager:
                 return axis.device_manager
-        raise BECConfigError('Could not access the device_manager')
+        raise BECConfigError("Could not access the device_manager")
 
     def get_axis_by_name(self, name):
         for axis in self._axis:
             if axis:
                 if axis.name == name:
                     return axis
-        raise RuntimeError(f'Could not find an axis with name {name}')
+        raise RuntimeError(f"Could not find an axis with name {name}")
 
     def clear_trajectory_generator(self):
         self.socket_put("sc")
@@ -240,35 +248,42 @@ class RtLamniController(Controller):
                 if pos_index > 100:
                     parent._min_scan_buffer_reached = True
             parent._min_scan_buffer_reached = True
+
         threading.Thread(target=send_positions, args=(self, positions), daemon=True).start()
 
     @retry_once
     def get_scan_status(self):
         return_table = (self.socket_put_and_receive(f"sr")).split(",")
-        if len(return_table)!=3:
-            raise RtLamniCommunicationError(f"Expected to receive 3 return values. Instead received {return_table}")
-        mode=int(return_table[0])
-        #mode 0: direct positioning
-        #mode 1: running internal timer (not tested/used anymore)
-        #mode 2: rt point scan running
-        #mode 3: rt point scan starting
-        #mode 5/6: rt continuous scanning (not available in LamNI)
-        number_of_positions_planned=int(return_table[1])
-        current_position_in_scan=int(return_table[2])
-        return (mode,number_of_positions_planned,current_position_in_scan)
+        if len(return_table) != 3:
+            raise RtLamniCommunicationError(
+                f"Expected to receive 3 return values. Instead received {return_table}"
+            )
+        mode = int(return_table[0])
+        # mode 0: direct positioning
+        # mode 1: running internal timer (not tested/used anymore)
+        # mode 2: rt point scan running
+        # mode 3: rt point scan starting
+        # mode 5/6: rt continuous scanning (not available in LamNI)
+        number_of_positions_planned = int(return_table[1])
+        current_position_in_scan = int(return_table[2])
+        return (mode, number_of_positions_planned, current_position_in_scan)
 
     def start_scan(self):
         interferometer_feedback_not_running = int((self.socket_put_and_receive("J2")).split(",")[0])
         if interferometer_feedback_not_running == 1:
-            logger.error("Cannot start scan because feedback loop is not running or there is an interferometer error.")
-            raise RtLamniError("Cannot start scan because feedback loop is not running or there is an interferometer error.")
-            #here exception
-        (mode,number_of_positions_planned,current_position_in_scan)=self.get_scan_status()
+            logger.error(
+                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+            )
+            raise RtLamniError(
+                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+            )
+            # here exception
+        (mode, number_of_positions_planned, current_position_in_scan) = self.get_scan_status()
 
         if number_of_positions_planned == 0:
             logger.error("Cannot start scan because no target positions are planned.")
             raise RtLamniError("Cannot start scan because no target positions are planned.")
-            #hier exception
+            # hier exception
         # start a point-by-point scan (for cont scan in flomni it would be "sa")
         self.socket_put_and_receive("sd")
 
@@ -276,18 +291,17 @@ class RtLamniController(Controller):
         readout = threading.Thread(target=self.read_positions_from_sampler)
         readout.start()
 
-
-    def kickoff(self):
+    def kickoff(self, metadata):
+        self.readout_metadata = metadata
         while not self._min_scan_buffer_reached:
             time.sleep(0.001)
         self.start_scan()
         time.sleep(0.1)
         self.start_readout()
 
-
     def read_positions_from_sampler(self):
-        #this was for reading after the scan completed
-        number_of_samples_to_read = 1 #self.get_scan_status()[1]  #number of valid samples, will be updated upon first data read
+        # this was for reading after the scan completed
+        number_of_samples_to_read = 1  # self.get_scan_status()[1]  #number of valid samples, will be updated upon first data read
 
         read_counter = 0
         previous_point_in_scan = 0
@@ -296,46 +310,70 @@ class RtLamniController(Controller):
         average_stdeviations_y_st_fzp = 0
         average_lamni_angle = 0
 
-        mode,number_of_positions_planned,current_position_in_scan = self.get_scan_status()
+        mode, number_of_positions_planned, current_position_in_scan = self.get_scan_status()
 
-        #if not (mode==2 or mode==3):
+        # if not (mode==2 or mode==3):
         #    error
 
-        #while scan is running
-        while mode>0:
-            #logger.info(f"Current scan position {current_position_in_scan} out of {number_of_positions_planned}")
-            mode,number_of_positions_planned,current_position_in_scan = self.get_scan_status()
-            time.sleep(.01)
-            if (current_position_in_scan>5):
+        # while scan is running
+        while mode > 0:
+            # logger.info(f"Current scan position {current_position_in_scan} out of {number_of_positions_planned}")
+            mode, number_of_positions_planned, current_position_in_scan = self.get_scan_status()
+            time.sleep(0.01)
+            if current_position_in_scan > 5:
                 while current_position_in_scan > read_counter:
                     return_table = (self.socket_put_and_receive(f"r{read_counter}")).split(",")
-                    #logger.info(f"{return_table}")
+                    # logger.info(f"{return_table}")
                     logger.info(f"Read {read_counter} out of {number_of_positions_planned}")
 
-                    read_counter = read_counter+1
-                    average_stdeviations_x_st_fzp=average_stdeviations_x_st_fzp+float(return_table[5])
-                    average_stdeviations_y_st_fzp=average_stdeviations_y_st_fzp+float(return_table[8])
-                    average_lamni_angle = average_lamni_angle+float(return_table[19])
-    
-        time.sleep(.05)
+                    read_counter = read_counter + 1
+                    average_stdeviations_x_st_fzp = average_stdeviations_x_st_fzp + float(
+                        return_table[5]
+                    )
+                    average_stdeviations_y_st_fzp = average_stdeviations_y_st_fzp + float(
+                        return_table[8]
+                    )
+                    average_lamni_angle = average_lamni_angle + float(return_table[19])
+                    #DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST
+                    # TODO!!
+                    signals = {
+                        "target_x": 
+                        "average_stdeviations_x_st_fzp": {"value": average_stdeviations_x_st_fzp},
+                        "average_stdeviations_y_st_fzp": {"value": average_stdeviations_y_st_fzp},
+                        "average_lamni_angle": {"value": average_lamni_angle},
+                    }
+                    self.publish_device_data(signals=signals, pointID=current_position_in_scan)
 
-        #read the last samples even though scan is finished already 
+        time.sleep(0.05)
+
+        # read the last samples even though scan is finished already
         while number_of_positions_planned > read_counter:
             return_table = (self.socket_put_and_receive(f"r{read_counter}")).split(",")
             logger.info(f"Read {read_counter} out of {number_of_positions_planned}")
-            #logger.info(f"{return_table}")
-            read_counter = read_counter+1
-            average_stdeviations_x_st_fzp=average_stdeviations_x_st_fzp+float(return_table[5])
-            average_stdeviations_y_st_fzp=average_stdeviations_y_st_fzp+float(return_table[8])
-            average_lamni_angle = average_lamni_angle+float(return_table[19])
+            # logger.info(f"{return_table}")
+            read_counter = read_counter + 1
+            average_stdeviations_x_st_fzp = average_stdeviations_x_st_fzp + float(return_table[5])
+            average_stdeviations_y_st_fzp = average_stdeviations_y_st_fzp + float(return_table[8])
+            average_lamni_angle = average_lamni_angle + float(return_table[19])
 
-        logger.info(f"LamNI statistics: Average of all standard deviations: x {average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {average_lamni_angle/number_of_samples_to_read}.")
-    
-        
+        logger.info(
+            f"LamNI statistics: Average of all standard deviations: x {average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {average_lamni_angle/number_of_samples_to_read}."
+        )
+
+    def publish_device_data(self, signals, pointID):
+        self.get_device_manager().producer.send(
+            MessageEndpoints.device_read("rt_lamni"),
+            BECMessage.DeviceMessage(
+                signals=signals,
+                metadata={"pointID": pointID, **self.readout_metadata},
+            ).dumps(),
+        )
 
     def feedback_status_angle_lamni(self) -> bool:
         return_table = (self.socket_put_and_receive(f"J7")).split(",")
-        logger.debug(f"LamNI angle interferomter status {bool(return_table[0])}, position {float(return_table[1])}, signal {float(return_table[2])}")
+        logger.debug(
+            f"LamNI angle interferomter status {bool(return_table[0])}, position {float(return_table[1])}, signal {float(return_table[2])}"
+        )
         return bool(return_table[0])
 
     def feedback_enable_with_reset(self):
@@ -344,39 +382,51 @@ class RtLamniController(Controller):
             logger.info(f"LamNI resetting interferometer inclusive angular interferomter.")
         else:
             self.feedback_disable()
-            logger.info(f"LamNI resetting interferomter except angular interferometer which is already running.")
+            logger.info(
+                f"LamNI resetting interferomter except angular interferometer which is already running."
+            )
 
-        #set these as closed loop target position
+        # set these as closed loop target position
 
         self.socket_put(f"pa0,0")
-        self.get_axis_by_name('rtx').user_setpoint.setpoint = 0
+        self.get_axis_by_name("rtx").user_setpoint.setpoint = 0
         self.socket_put(f"pa1,0")
-        self.get_axis_by_name('rty').user_setpoint.setpoint = 0
-        self.socket_put(f"pa2,0") #we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
+        self.get_axis_by_name("rty").user_setpoint.setpoint = 0
+        self.socket_put(
+            f"pa2,0"
+        )  # we set all three outputs of the traj. gen. although in LamNI case only 0,1 are used
         self.clear_trajectory_generator()
-    
+
         self.get_device_manager().devices.lsamrot.obj.move(0, wait=True)
-    
-        galil_controller_rt_status = self.get_device_manager().devices.lsamx.obj.controller.lgalil_is_air_off_and_orchestra_enabled()
-    
+
+        galil_controller_rt_status = (
+            self.get_device_manager().devices.lsamx.obj.controller.lgalil_is_air_off_and_orchestra_enabled()
+        )
+
         if galil_controller_rt_status == 0:
-            logger.error("Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller.")
-            raise RtLamniError("Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller.")
-       
+            logger.error(
+                "Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller."
+            )
+            raise RtLamniError(
+                "Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller."
+            )
+
         time.sleep(0.03)
-        #needs to be changed to configurable center psoition
+        # needs to be changed to configurable center psoition
         self.get_device_manager().devices.lsamx.obj.move(8.866, wait=True)
         self.get_device_manager().devices.lsamy.obj.move(10.18, wait=True)
         self.socket_put("J1")
 
-        _waitforfeedbackctr=0
+        _waitforfeedbackctr = 0
 
         interferometer_feedback_not_running = int((self.socket_put_and_receive("J2")).split(",")[0])
 
-        while interferometer_feedback_not_running == 1 and _waitforfeedbackctr<100:
+        while interferometer_feedback_not_running == 1 and _waitforfeedbackctr < 100:
             time.sleep(0.01)
             _waitforfeedbackctr = _waitforfeedbackctr + 1
-            interferometer_feedback_not_running = int((self.socket_put_and_receive("J2")).split(",")[0])
+            interferometer_feedback_not_running = int(
+                (self.socket_put_and_receive("J2")).split(",")[0]
+            )
 
         # motor_par("lsamx","disable",1)
         # motor_par("lsamy","disable",1)
@@ -384,13 +434,16 @@ class RtLamniController(Controller):
         # motor_par("lopty","disable",1)
         # motor_par("loptz","disable",1)
         if interferometer_feedback_not_running == 1:
-            logger.error("Cannot start scan because feedback loop is not running or there is an interferometer error.")
-            raise RtLamniError("Cannot start scan because feedback loop is not running or there is an interferometer error.")
+            logger.error(
+                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+            )
+            raise RtLamniError(
+                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+            )
 
         time.sleep(0.01)
 
-        #ptychography_alignment_done = 0
-
+        # ptychography_alignment_done = 0
 
 
 class RtLamniSignalBase(SocketSignal):
@@ -442,10 +495,6 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
 
         Returns:
             float: setpoint / target value
-
-
-
-
         """
         return self.setpoint
 
@@ -463,11 +512,15 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
         """
         target_val = val * self.parent.sign
         self.setpoint = target_val
-        interferometer_feedback_not_running = int((self.controller.socket_put_and_receive("J2")).split(",")[0])
+        interferometer_feedback_not_running = int(
+            (self.controller.socket_put_and_receive("J2")).split(",")[0]
+        )
         if interferometer_feedback_not_running == 0:
             self.controller.socket_put(f"pa{self.parent.axis_Id_numeric},{target_val:.4f}")
         else:
-           raise RtLamniError("The interferometer feedback is not running. Either it is turned off or and interferometer error occured.")
+            raise RtLamniError(
+                "The interferometer feedback is not running. Either it is turned off or and interferometer error occured."
+            )
 
 
 class RtLamniMotorIsMoving(RtLamniSignalRO):
@@ -477,7 +530,8 @@ class RtLamniMotorIsMoving(RtLamniSignalRO):
     def get(self):
         val = super().get()
         if val is not None:
-            self._run_subs(sub_type=self.SUB_VALUE,
+            self._run_subs(
+                sub_type=self.SUB_VALUE,
                 value=val,
                 timestamp=time.time(),
             )
@@ -489,22 +543,19 @@ class RtLamniFeedbackRunning(RtLamniSignalRO):
         if int((self.controller.socket_put_and_receive("J2")).split(",")[0]) == 0:
             return 1
         else:
-	        return 0
+            return 0
+
 
 class RtLamniMotor(Device, PositionerBase):
-    USER_ACCESS = [
-        "controller"
-    ]
+    USER_ACCESS = ["controller"]
     readback = Cpt(
         RtLamniReadbackSignal,
         signal_name="readback",
         kind="hinted",
     )
     user_setpoint = Cpt(RtLamniSetpointSignal, signal_name="setpoint")
-   
-    motor_is_moving = Cpt(
-        RtLamniMotorIsMoving, signal_name="motor_is_moving", kind="normal"
-    )
+
+    motor_is_moving = Cpt(RtLamniMotorIsMoving, signal_name="motor_is_moving", kind="normal")
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
     low_limit_travel = Cpt(Signal, value=0, kind="omitted")
 
@@ -527,7 +578,7 @@ class RtLamniMotor(Device, PositionerBase):
         sign=1,
         socket_cls=SocketIO,
         device_manager=None,
-        limits = None,
+        limits=None,
         **kwargs,
     ):
         self.axis_Id = axis_Id
@@ -581,11 +632,9 @@ class RtLamniMotor(Device, PositionerBase):
         for walk in self.walk_signals():
             walk.item._metadata["connected"] = self.controller.connected
 
-
     def _forward_readback(self, **kwargs):
         kwargs.pop("sub_type")
         self._run_subs(sub_type="readback", **kwargs)
-
 
     @raise_if_disconnected
     def move(self, position, wait=True, **kwargs):
@@ -626,7 +675,8 @@ class RtLamniMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 print("motor is moving")
                 val = self.readback.read()
-                self._run_subs(sub_type=self.SUB_READBACK,
+                self._run_subs(
+                    sub_type=self.SUB_READBACK,
                     value=val,
                     timestamp=time.time(),
                 )
@@ -672,12 +722,15 @@ class RtLamniMotor(Device, PositionerBase):
         else:
             raise TypeError(f"Expected value of type int but received {type(val)}")
 
+    def kickoff(self, metadata) -> None:
+        self.controller.kickoff(metadata)
+
     @property
     def egu(self):
         """The engineering units (EGU) for positions"""
         return "um"
 
-	# how is this used later?
+    # how is this used later?
 
     def stage(self) -> List[object]:
         self.controller.on()
@@ -710,12 +763,7 @@ if __name__ == "__main__":
     else:
         from ophyd_devices.utils.socket import SocketMock
 
-        rtx = RtLamniMotor(
-            "A", name="rtx", host="mpc2680.psi.ch", port=3333, socket_cls=SocketMock
-        )
-        rty = RtLamniMotor(
-            "B", name="rty", host="mpc2680.psi.ch", port=3333, socket_cls=SocketMock
-        )
+        rtx = RtLamniMotor("A", name="rtx", host="mpc2680.psi.ch", port=3333, socket_cls=SocketMock)
+        rty = RtLamniMotor("B", name="rty", host="mpc2680.psi.ch", port=3333, socket_cls=SocketMock)
         rtx.stage()
         # rty.stage()
-

@@ -1,5 +1,4 @@
 import functools
-import logging
 import threading
 import time
 from typing import List
@@ -12,9 +11,9 @@ from ophyd.utils import ReadOnlyError, LimitError
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
 from prettytable import PrettyTable
+from bec_utils import bec_logger
 
-logger = logging.getLogger("galil")
-
+logger = bec_logger.logger
 
 class GalilCommunicationError(Exception):
     pass
@@ -546,7 +545,6 @@ class GalilMotor(Device, PositionerBase):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
 
     mock = False
     if not mock:

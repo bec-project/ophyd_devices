@@ -3,12 +3,13 @@ import time as ttime
 import warnings
 
 import numpy as np
-from bec_utils import BECMessage, MessageEndpoints
+from bec_utils import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, PositionerBase, Signal
 from ophyd.sim import _ReadbackSignal, _SetpointSignal
 from ophyd.utils import LimitError, ReadOnlyError
 
+logger = bec_logger.logger
 
 class DeviceStop(Exception):
     pass

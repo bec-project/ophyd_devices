@@ -11,8 +11,9 @@ from ophyd.utils import ReadOnlyError, LimitError
 from ophyd_devices.smaract.smaract_controller import SmaractController
 from ophyd_devices.smaract.smaract_errors import SmaractCommunicationError, SmaractError
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from bec_utils import bec_logger
 
-logger = logging.getLogger("smaract")
+logger = bec_logger.logger
 
 
 class SmaractSignalBase(SocketSignal):
