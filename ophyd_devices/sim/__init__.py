@@ -1,1 +1,1 @@
-from .sim import SynAxisMonitor, SynAxisOPAAS
+from .sim import SynAxisMonitor, SynAxisOPAAS, SynFlyer
