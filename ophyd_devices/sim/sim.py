@@ -266,7 +266,7 @@ class SynFlyer(Device, PositionerBase):
                         metadata={"pointID": ii, **metadata},
                     ).dumps(),
                 )
-                ttime.sleep(0.05)
+                ttime.sleep(0.005)
                 if ii % 100 == 0:
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),

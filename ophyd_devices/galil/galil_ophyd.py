@@ -270,6 +270,7 @@ class GalilSetpointSignal(GalilSignalBase):
         return self.setpoint
 
     @retry_once
+    @threadlocked
     def _socket_set(self, val: float) -> None:
         """Set a new target value / setpoint value. Before submission, the target value is adjusted for the axis' sign.
         Furthermore, it is ensured that all axes are referenced before a new setpoint is submitted.
@@ -486,6 +487,8 @@ class GalilMotor(Device, PositionerBase):
                 atol=self.tolerance,
             )
             self._done_moving(success=success)
+            if not success:
+                print(" stop")
             logger.info("Move finished")
 
         threading.Thread(target=move_and_finish, daemon=True).start()
