@@ -10,6 +10,7 @@ from ophyd.status import wait as status_wait
 from ophyd.utils import ReadOnlyError, LimitError
 from ophyd_devices.smaract.smaract_controller import SmaractController
 from ophyd_devices.smaract.smaract_errors import SmaractCommunicationError, SmaractError
+from ophyd_devices.utils.controller import threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
 from bec_utils import bec_logger
 
@@ -29,11 +30,13 @@ class SmaractSignalRO(SmaractSignalBase):
         super().__init__(signal_name, **kwargs)
         self._metadata["write_access"] = False
 
+    @threadlocked
     def _socket_set(self, val):
         raise ReadOnlyError("Read-only signals cannot be set")
 
 
 class SmaractReadbackSignal(SmaractSignalRO):
+    @threadlocked
     def _socket_get(self):
         return self.controller.get_position(self.parent.axis_Id_numeric)*self.parent.sign
 
@@ -41,9 +44,11 @@ class SmaractReadbackSignal(SmaractSignalRO):
 class SmaractSetpointSignal(SmaractSignalBase):
     setpoint = 0
 
+    @threadlocked
     def _socket_get(self):
         return self.setpoint
 
+    @threadlocked
     def _socket_set(self, val):
         target_val = val * self.parent.sign
         self.setpoint = target_val
@@ -56,16 +61,19 @@ class SmaractSetpointSignal(SmaractSignalBase):
 
 
 class SmaractMotorIsMoving(SmaractSignalRO):
+    @threadlocked
     def _socket_get(self):
         return self.controller.is_axis_moving(self.parent.axis_Id_numeric)
 
 
 class SmaractAxisReferenced(SmaractSignalRO):
+    @threadlocked
     def _socket_get(self):
         return self.parent.controller.axis_is_referenced(self.parent.axis_Id_numeric)
 
 
 class SmaractAxisLimits(SmaractSignalBase):
+    @threadlocked
     def _socket_get(self):
         limits_msg = self.controller.socket_put_and_receive(f"GPL{self.parent.axis_Id_numeric}")
         if limits_msg.startswith(":PL"):

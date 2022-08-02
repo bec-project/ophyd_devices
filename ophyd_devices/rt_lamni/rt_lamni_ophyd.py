@@ -148,12 +148,15 @@ class RtLamniController(Controller):
             return var.split("\r\n")[0]
         return var
 
+    @threadlocked
     def set_rotation_angle(self, val: float):
         self.socket_put(f"a{(val-300+30.538)/180*np.pi}")
 
+    @threadlocked
     def stop_all_axes(self):
         self.socket_put("sc")
-
+    
+    @threadlocked
     def feedback_disable(self):
         self.socket_put("J0")
         logger.info("LamNI Feedback disabled.")
@@ -163,16 +166,20 @@ class RtLamniController(Controller):
         # motor_par("lopty","disable",0)
         # motor_par("loptz","disable",0)
 
+    @threadlocked
     def _set_axis_velocity(self, um_per_s):
         self.socket_put(f"V{um_per_s}")
 
+    @threadlocked
     def _set_axis_velocity_maximum_speed(self):
         self.socket_put(f"V0")
 
     # for developement of soft continuous scanning
+    @threadlocked
     def _position_sampling_single_reset_and_start_sampling(self):
         self.socket_put(f"Ss")
 
+    @threadlocked
     def _position_sampling_single_read(self):
         (number_of_samples, sum0, sum0_2, sum1, sum1_2, sum2, sum2_2) = self.socket_put_and_receive(
             f"Sr"
@@ -189,6 +196,7 @@ class RtLamniController(Controller):
         )
         return (avg_x, avg_y, stdev_x, stdev_y)
 
+    @threadlocked
     def feedback_enable_without_reset(self):
         # read current interferometer position
         return_table = (self.socket_put_and_receive(f"J4")).split(",")
@@ -206,6 +214,7 @@ class RtLamniController(Controller):
         # motor_par("loptz","disable",1)
         # umv rtx x_curr rty y_curr
 
+    @threadlocked
     def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
         self.socket_put("J6")
         logger.info("LamNI Feedback disabled including the angular interferometer.")
@@ -228,6 +237,7 @@ class RtLamniController(Controller):
                     return axis
         raise RuntimeError(f"Could not find an axis with name {name}")
 
+    @threadlocked
     def clear_trajectory_generator(self):
         self.socket_put("sc")
         logger.info("LamNI scan stopped and deleted, moving to start position")
@@ -244,6 +254,7 @@ class RtLamniController(Controller):
         threading.Thread(target=send_positions, args=(self, positions), daemon=True).start()
 
     @retry_once
+    @threadlocked
     def get_scan_status(self):
         return_table = (self.socket_put_and_receive(f"sr")).split(",")
         if len(return_table) != 3:
@@ -260,6 +271,7 @@ class RtLamniController(Controller):
         current_position_in_scan = int(return_table[2])
         return (mode, number_of_positions_planned, current_position_in_scan)
 
+    @threadlocked
     def start_scan(self):
         interferometer_feedback_not_running = int((self.socket_put_and_receive("J2")).split(",")[0])
         if interferometer_feedback_not_running == 1:
@@ -478,6 +490,7 @@ class RtLamniSignalRO(RtLamniSignalBase):
 
 class RtLamniReadbackSignal(RtLamniSignalRO):
     @retry_once
+    @threadlocked
     def _socket_get(self) -> float:
         """Get command for the readback signal
 
@@ -512,6 +525,7 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
         return self.setpoint
 
     @retry_once
+    @threadlocked
     def _socket_set(self, val: float) -> None:
         """Set a new target value / setpoint value. Before submission, the target value is adjusted for the axis' sign.
         Furthermore, it is ensured that all axes are referenced before a new setpoint is submitted.
@@ -552,6 +566,7 @@ class RtLamniMotorIsMoving(RtLamniSignalRO):
 
 
 class RtLamniFeedbackRunning(RtLamniSignalRO):
+    @threadlocked
     def _socket_get(self):
         if int((self.controller.socket_put_and_receive("J2")).split(",")[0]) == 0:
             return 1

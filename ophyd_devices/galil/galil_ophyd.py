@@ -235,6 +235,7 @@ class GalilSignalRO(GalilSignalBase):
 
 class GalilReadbackSignal(GalilSignalRO):
     @retry_once
+    @threadlocked
     def _socket_get(self) -> float:
         """Get command for the readback signal
 
@@ -309,6 +310,7 @@ class GalilSetpointSignal(GalilSignalBase):
 
 class GalilMotorResolution(GalilSignalRO):
     @retry_once
+    @threadlocked
     def _socket_get(self):
         return float(
             self.controller.socket_put_and_receive(f"MG stppermm[{self.parent.axis_Id_numeric}]")
@@ -316,6 +318,7 @@ class GalilMotorResolution(GalilSignalRO):
 
 
 class GalilMotorIsMoving(GalilSignalRO):
+    @threadlocked
     def _socket_get(self):
         return (
             self.controller.is_axis_moving(self.parent.axis_Id)
@@ -335,6 +338,7 @@ class GalilMotorIsMoving(GalilSignalRO):
 
 
 class GalilAxesReferenced(GalilSignalRO):
+    @threadlocked
     def _socket_get(self):
         return self.controller.socket_put_and_receive("MG allaxref")
 
