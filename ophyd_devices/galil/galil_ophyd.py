@@ -100,9 +100,11 @@ class GalilController(Controller):
         """
         self._axis[axis_nr] = axis
 
+    @threadlocked
     def socket_put(self, val: str) -> None:
         self.sock.put(f"{val}\r".encode())
 
+    @threadlocked
     def socket_get(self) -> str:
         return self.sock.receive().decode()
 

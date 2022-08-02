@@ -9,7 +9,7 @@ from ophyd import PositionerBase, Signal
 from ophyd.device import Device, Component as Cpt
 from prettytable import PrettyTable
 from ophyd_devices.utils.socket import raise_if_disconnected
-from ophyd_devices.utils.controller import SingletonController
+from ophyd_devices.utils.controller import SingletonController, threadlocked
 
 
 def channel_checked(fcn):
@@ -21,18 +21,6 @@ def channel_checked(fcn):
         return fcn(self, *args, **kwargs)
 
     return wrapper
-
-
-def threadlocked(fcn):
-    """Ensure that thread acquires and releases the lock."""
-
-    @functools.wraps(fcn)
-    def wrapper(self, *args, **kwargs):
-        with self._lock:
-            return fcn(self, *args, **kwargs)
-
-    return wrapper
-
 
 class NPointController(SingletonController):
     NUM_CHANNELS = 3

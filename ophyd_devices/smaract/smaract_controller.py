@@ -9,7 +9,7 @@ from ophyd_devices.smaract.smaract_errors import (
     SmaractCommunicationError,
     SmaractErrorCode,
 )
-from ophyd_devices.utils.controller import Controller
+from ophyd_devices.utils.controller import Controller, threadlocked
 from typeguard import typechecked
 
 logger = logging.getLogger("smaract_controller")
@@ -131,12 +131,15 @@ class SmaractController(Controller):
     def set_axis(self, axis_nr, axis):
         self._axis[axis_nr] = axis
 
+    @threadlocked
     def socket_put(self, val: str):
         self.sock.put(f":{val}\n".encode())
 
+    @threadlocked
     def socket_get(self):
         return self.sock.receive().decode()
 
+    @threadlocked
     def socket_put_and_receive(
         self,
         val: str,

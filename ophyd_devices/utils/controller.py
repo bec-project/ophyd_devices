@@ -7,7 +7,7 @@ from ophyd_devices.utils.socket import SocketIO
 
 
 def threadlocked(fcn):
-    """Ensure that thread acquires and releases the lock."""
+    """Ensure that the thread acquires and releases the lock."""
 
     @functools.wraps(fcn)
     def wrapper(self, *args, **kwargs):

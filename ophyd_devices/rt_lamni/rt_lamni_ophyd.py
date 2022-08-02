@@ -9,22 +9,11 @@ from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
-from ophyd_devices.utils.controller import Controller
+from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
 from prettytable import PrettyTable
 
 logger = bec_logger.logger
-
-
-def threadlocked(fcn):
-    """Ensure that thread acquires and releases the lock."""
-
-    @functools.wraps(fcn)
-    def wrapper(self, *args, **kwargs):
-        with self._lock:
-            return fcn(self, *args, **kwargs)
-
-    return wrapper
 
 
 class RtLamniCommunicationError(Exception):
@@ -126,9 +115,11 @@ class RtLamniController(Controller):
         """
         self._axis[axis_nr] = axis
 
+    @threadlocked
     def socket_put(self, val: str) -> None:
         self.sock.put(f"{val}\n".encode())
 
+    @threadlocked
     def socket_get(self) -> str:
         return self.sock.receive().decode()
 
@@ -721,7 +712,7 @@ class RtLamniMotor(Device, PositionerBase):
         else:
             raise TypeError(f"Expected value of type int but received {type(val)}")
 
-    def kickoff(self, metadata) -> None:
+    def kickoff(self, metadata, **kwargs) -> None:
         self.controller.kickoff(metadata)
 
     @property
