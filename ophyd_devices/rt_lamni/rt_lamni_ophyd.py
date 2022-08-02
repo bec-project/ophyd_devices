@@ -92,6 +92,7 @@ class RtLamniController(Controller):
                 self.connected = True
             except ConnectionRefusedError as conn_error:
                 logger.error("Failed to open a connection to RTLamNI.")
+                raise RtLamniCommunicationError from conn_error
 
         else:
             logger.info("The connection has already been established.")
@@ -290,6 +291,35 @@ class RtLamniController(Controller):
         time.sleep(0.1)
         self.start_readout()
 
+    def _get_signals_from_table(self, return_table) ->dict:
+        self.average_stdeviations_x_st_fzp  += float(return_table[5])
+        self.average_stdeviations_y_st_fzp += float(return_table[8])
+        self.average_lamni_angle += float(return_table[19])
+        signals = {
+            "target_x": {"value": float(return_table[3])},
+            "average_x_st_fzp": {"value": float(return_table[4])},
+            "stdev_x_st_fzp": {"value": float(return_table[5])},
+            "target_y": {"value": float(return_table[6])},
+            "average_y_st_fzp": {"value": float(return_table[7])},
+            "stdev_y_st_fzp": {"value": float(return_table[8])},
+            "average_cap1": {"value": float(return_table[9])},
+            "stdev_cap1": {"value": float(return_table[10])},
+            "average_cap2": {"value": float(return_table[11])},
+            "stdev_cap2": {"value": float(return_table[12])},
+            "average_cap3": {"value": float(return_table[13])},
+            "stdev_cap3": {"value": float(return_table[14])},
+            "average_cap4": {"value": float(return_table[15])},
+            "stdev_cap4": {"value": float(return_table[16])},
+            "average_cap5": {"value": float(return_table[17])},
+            "stdev_cap5": {"value": float(return_table[18])},
+            "average_angle_interf_ST": {"value": float(return_table[19])},
+            "stdev_angle_interf_ST": {"value": float(return_table[20])},
+            "average_stdeviations_x_st_fzp": {"value": self.average_stdeviations_x_st_fzp/(int(return_table[0])+1)},
+            "average_stdeviations_y_st_fzp": {"value": self.average_stdeviations_y_st_fzp/(int(return_table[0])+1)},
+            "average_lamni_angle": {"value": self.average_lamni_angle/(int(return_table[0])+1)},
+        }
+        return signals
+
     def read_positions_from_sampler(self):
         # this was for reading after the scan completed
         number_of_samples_to_read = 1  # self.get_scan_status()[1]  #number of valid samples, will be updated upon first data read
@@ -297,15 +327,15 @@ class RtLamniController(Controller):
         read_counter = 0
         previous_point_in_scan = 0
 
-        average_stdeviations_x_st_fzp = 0
-        average_stdeviations_y_st_fzp = 0
-        average_lamni_angle = 0
+        self.average_stdeviations_x_st_fzp = 0
+        self.average_stdeviations_y_st_fzp = 0
+        self.average_lamni_angle = 0
 
         mode, number_of_positions_planned, current_position_in_scan = self.get_scan_status()
 
         # if not (mode==2 or mode==3):
         #    error
-
+        self.get_device_manager().producer.set_and_publish(MessageEndpoints.device_status("rt_scan"), BECMessage.DeviceStatusMessage(device="rt_scan", status=1, metadata=self.readout_metadata).dumps())
         # while scan is running
         while mode > 0:
             # logger.info(f"Current scan position {current_position_in_scan} out of {number_of_positions_planned}")
@@ -318,21 +348,11 @@ class RtLamniController(Controller):
                     logger.info(f"Read {read_counter} out of {number_of_positions_planned}")
 
                     read_counter = read_counter + 1
-                    average_stdeviations_x_st_fzp = average_stdeviations_x_st_fzp + float(
-                        return_table[5]
-                    )
-                    average_stdeviations_y_st_fzp = average_stdeviations_y_st_fzp + float(
-                        return_table[8]
-                    )
-                    average_lamni_angle = average_lamni_angle + float(return_table[19])
-                    # DataPoint TotalPoints Target_x Average_x_st_fzp Stdev_x_st_fzp Target_y Average_y_st_fzp Stdev_y_st_fzp Average_cap1 Stdev_cap1  Average_cap2 Stdev_cap2 Average_cap3 Stdev_cap3 Average_cap4 Stdev_cap4 Average_cap5 Stdev_cap5 Average_angle_interf_ST Stdev_angle_interf_ST
-                    # TODO!!
-                    signals = {
-                        "average_stdeviations_x_st_fzp": {"value": average_stdeviations_x_st_fzp},
-                        "average_stdeviations_y_st_fzp": {"value": average_stdeviations_y_st_fzp},
-                        "average_lamni_angle": {"value": average_lamni_angle},
-                    }
-                    self.publish_device_data(signals=signals, pointID=current_position_in_scan)
+
+                    
+                    signals = self._get_signals_from_table(return_table)
+                    
+                    self.publish_device_data(signals=signals, pointID=int(return_table[0]))
 
         time.sleep(0.05)
 
@@ -342,12 +362,15 @@ class RtLamniController(Controller):
             logger.info(f"Read {read_counter} out of {number_of_positions_planned}")
             # logger.info(f"{return_table}")
             read_counter = read_counter + 1
-            average_stdeviations_x_st_fzp = average_stdeviations_x_st_fzp + float(return_table[5])
-            average_stdeviations_y_st_fzp = average_stdeviations_y_st_fzp + float(return_table[8])
-            average_lamni_angle = average_lamni_angle + float(return_table[19])
+
+            signals = self._get_signals_from_table(return_table)        
+            self.publish_device_data(signals=signals, pointID=int(return_table[0]))
+
+        self.get_device_manager().producer.set_and_publish(MessageEndpoints.device_status("rt_scan"), BECMessage.DeviceStatusMessage(device="rt_scan", status=0, metadata=self.readout_metadata).dumps())
+
 
         logger.info(
-            f"LamNI statistics: Average of all standard deviations: x {average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {average_lamni_angle/number_of_samples_to_read}."
+            f"LamNI statistics: Average of all standard deviations: x {self.average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {self.average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {self.average_lamni_angle/number_of_samples_to_read}."
         )
 
     def publish_device_data(self, signals, pointID):
