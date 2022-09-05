@@ -11,6 +11,7 @@ from ophyd.utils import LimitError, ReadOnlyError
 
 logger = bec_logger.logger
 
+
 class DeviceStop(Exception):
     pass
 
@@ -253,21 +254,31 @@ class SynFlyer(Device, PositionerBase):
 
         super().__init__(name=name, parent=parent, labels=labels, kind=kind, **kwargs)
 
-    def kickoff(self, metadata, num_pos):
+    def kickoff(self, metadata, num_pos, positions, exp_time: float = 0):
+        positions = np.asarray(positions)
+
         def produce_data(device, metadata):
+            buffer_time = 1
+            elapsed_time = 0
+            bundle = BECMessage.BundleMessage()
             for ii in range(num_pos):
-                device.device_manager.producer.send(
-                    MessageEndpoints.device_read(device.name),
+                bundle.append(
                     BECMessage.DeviceMessage(
                         signals={
-                            "flyer_samx": {"value": ii * 1.22, "timestamp": 0},
-                            "flyer_samy": {"value": ii * 1.45, "timestamp": 0},
+                            "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
+                            "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
                         },
                         metadata={"pointID": ii, **metadata},
-                    ).dumps(),
+                    ).dumps()
                 )
-                ttime.sleep(0.005)
-                if ii % 100 == 0:
+                ttime.sleep(exp_time)
+                elapsed_time += exp_time
+                if elapsed_time > buffer_time:
+                    elapsed_time = 0
+                    device.device_manager.producer.send(
+                        MessageEndpoints.device_read(device.name), bundle.dumps()
+                    )
+                    bundle = BECMessage.BundleMessage()
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         BECMessage.DeviceStatusMessage(
@@ -276,6 +287,9 @@ class SynFlyer(Device, PositionerBase):
                             metadata={"pointID": ii, **metadata},
                         ).dumps(),
                     )
+            device.device_manager.producer.send(
+                MessageEndpoints.device_read(device.name), bundle.dumps()
+            )
             device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 BECMessage.DeviceStatusMessage(
