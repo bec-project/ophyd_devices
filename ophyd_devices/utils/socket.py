@@ -19,8 +19,7 @@ def raise_if_disconnected(fcn):
     def wrapper(self, *args, **kwargs):
         if self.connected:
             return fcn(self, *args, **kwargs)
-        else:
-            raise DisconnectedError("{} is not connected".format(self.name))
+        raise DisconnectedError(f"{self.name} is not connected")
 
     return wrapper
 
