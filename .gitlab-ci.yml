@@ -8,7 +8,13 @@ before_script:
   - pip install -e . 
 # different stages in the pipeline
 stages:
+  - Formatter
   - Test
+formatter:
+  stage: Formatter
+  script:
+    - pip install black
+    - black --check --diff --color --line-length=100 ./
 pytest:
   stage: Test
   script:

@@ -81,11 +81,7 @@ class SmaractSensors:
 
 
 class SmaractController(Controller):
-    USER_ACCESS = [
-        "socket_put_and_receive",
-        "smaract_show_all",
-        "move_open_loop_steps"
-    ]
+    USER_ACCESS = ["socket_put_and_receive", "smaract_show_all", "move_open_loop_steps"]
 
     def __init__(
         self,
@@ -265,7 +261,7 @@ class SmaractController(Controller):
     @axis_checked
     @typechecked
     def move_open_loop_steps(
-        self, axis_Id_numeric: int, steps: int, amplitude: int=2000, frequency:int=500
+        self, axis_Id_numeric: int, steps: int, amplitude: int = 2000, frequency: int = 500
     ) -> None:
         """Move open loop steps
 
@@ -466,7 +462,6 @@ class SmaractController(Controller):
             else:
                 t.add_row([None for t in t.field_names])
         print(t)
-
 
     def _check_axis_number(self, axis_Id_numeric: int) -> None:
         if axis_Id_numeric >= self._Smaract_axis_per_controller:

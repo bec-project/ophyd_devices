@@ -22,6 +22,7 @@ def channel_checked(fcn):
 
     return wrapper
 
+
 class NPointController(SingletonController):
     NUM_CHANNELS = 3
     _read_single_loc_bit = "A0"
@@ -84,9 +85,7 @@ class NPointController(SingletonController):
         if not self.socket.is_open:
             self.socket.open()
         try:
-            self.socket.connect(
-                self._server_and_port_name[0], self._server_and_port_name[1]
-            )
+            self.socket.connect(self._server_and_port_name[0], self._server_and_port_name[1])
         except socket.timeout:
             raise TimeoutError(
                 f"Failed to connect to the specified server and port {self._server_and_port_name}."
@@ -96,9 +95,7 @@ class NPointController(SingletonController):
             self.socket.close()
             time.sleep(0.5)
             self.socket.open()
-            self.socket.connect(
-                self._server_and_port_name[0], self._server_and_port_name[1]
-            )
+            self.socket.connect(self._server_and_port_name[0], self._server_and_port_name[1])
         self.connected = True
 
     @threadlocked

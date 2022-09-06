@@ -15,6 +15,7 @@ from bec_utils import bec_logger
 
 logger = bec_logger.logger
 
+
 class GalilCommunicationError(Exception):
     pass
 
@@ -48,7 +49,7 @@ class GalilController(Controller):
         "galil_show_all",
         "socket_put_and_receive",
         "socket_put_confirmed",
-        "lgalil_is_air_off_and_orchestra_enabled"
+        "lgalil_is_air_off_and_orchestra_enabled",
     ]
 
     def __init__(
@@ -151,9 +152,9 @@ class GalilController(Controller):
         return self.socket_put_and_receive(f"XQ#STOP,1")
 
     def lgalil_is_air_off_and_orchestra_enabled(self) -> bool:
-        rt_not_blocked_by_galil=bool(self.socket_put_and_receive(f"MG@OUT[9]"))
-        air_off=bool(self.socket_put_and_receive(f"MG@OUT[13]"))
-        return (rt_not_blocked_by_galil and air_off)
+        rt_not_blocked_by_galil = bool(self.socket_put_and_receive(f"MG@OUT[9]"))
+        air_off = bool(self.socket_put_and_receive(f"MG@OUT[13]"))
+        return rt_not_blocked_by_galil and air_off
 
     def axis_is_referenced(self, axis_Id_numeric) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG axisref[{axis_Id_numeric}]").strip()))
@@ -291,7 +292,7 @@ class GalilSetpointSignal(GalilSignalBase):
         if axes_referenced:
             while self.controller.is_thread_active(0):
                 time.sleep(0.1)
-            
+
             if self.parent.axis_Id_numeric == 2:
                 angle_status = self.parent.device_manager.devices[
                     self.parent.rt

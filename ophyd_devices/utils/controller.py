@@ -11,7 +11,7 @@ def threadlocked(fcn):
 
     @functools.wraps(fcn)
     def wrapper(self, *args, **kwargs):
-        lock = self._lock if hasattr(self, "_lock") else self.controller._lock 
+        lock = self._lock if hasattr(self, "_lock") else self.controller._lock
         with lock:
             return fcn(self, *args, **kwargs)
 

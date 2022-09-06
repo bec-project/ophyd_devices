@@ -121,10 +121,7 @@ def test_set_axis_out_of_range():
     ],
 )
 def test_hex_list_to_int(in_buffer, byteorder, signed, val):
-    assert (
-        NPointController._hex_list_to_int(in_buffer, byteorder=byteorder, signed=signed)
-        == val
-    )
+    assert NPointController._hex_list_to_int(in_buffer, byteorder=byteorder, signed=signed) == val
 
 
 @pytest.mark.parametrize(

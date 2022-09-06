@@ -38,7 +38,7 @@ class SmaractSignalRO(SmaractSignalBase):
 class SmaractReadbackSignal(SmaractSignalRO):
     @threadlocked
     def _socket_get(self):
-        return self.controller.get_position(self.parent.axis_Id_numeric)*self.parent.sign
+        return self.controller.get_position(self.parent.axis_Id_numeric) * self.parent.sign
 
 
 class SmaractSetpointSignal(SmaractSignalBase):

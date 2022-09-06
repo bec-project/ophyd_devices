@@ -155,7 +155,7 @@ class RtLamniController(Controller):
     @threadlocked
     def stop_all_axes(self):
         self.socket_put("sc")
-    
+
     @threadlocked
     def feedback_disable(self):
         self.socket_put("J0")
@@ -303,8 +303,8 @@ class RtLamniController(Controller):
         time.sleep(0.1)
         self.start_readout()
 
-    def _get_signals_from_table(self, return_table) ->dict:
-        self.average_stdeviations_x_st_fzp  += float(return_table[5])
+    def _get_signals_from_table(self, return_table) -> dict:
+        self.average_stdeviations_x_st_fzp += float(return_table[5])
         self.average_stdeviations_y_st_fzp += float(return_table[8])
         self.average_lamni_angle += float(return_table[19])
         signals = {
@@ -326,9 +326,13 @@ class RtLamniController(Controller):
             "stdev_cap5": {"value": float(return_table[18])},
             "average_angle_interf_ST": {"value": float(return_table[19])},
             "stdev_angle_interf_ST": {"value": float(return_table[20])},
-            "average_stdeviations_x_st_fzp": {"value": self.average_stdeviations_x_st_fzp/(int(return_table[0])+1)},
-            "average_stdeviations_y_st_fzp": {"value": self.average_stdeviations_y_st_fzp/(int(return_table[0])+1)},
-            "average_lamni_angle": {"value": self.average_lamni_angle/(int(return_table[0])+1)},
+            "average_stdeviations_x_st_fzp": {
+                "value": self.average_stdeviations_x_st_fzp / (int(return_table[0]) + 1)
+            },
+            "average_stdeviations_y_st_fzp": {
+                "value": self.average_stdeviations_y_st_fzp / (int(return_table[0]) + 1)
+            },
+            "average_lamni_angle": {"value": self.average_lamni_angle / (int(return_table[0]) + 1)},
         }
         return signals
 
@@ -347,7 +351,12 @@ class RtLamniController(Controller):
 
         # if not (mode==2 or mode==3):
         #    error
-        self.get_device_manager().producer.set_and_publish(MessageEndpoints.device_status("rt_scan"), BECMessage.DeviceStatusMessage(device="rt_scan", status=1, metadata=self.readout_metadata).dumps())
+        self.get_device_manager().producer.set_and_publish(
+            MessageEndpoints.device_status("rt_scan"),
+            BECMessage.DeviceStatusMessage(
+                device="rt_scan", status=1, metadata=self.readout_metadata
+            ).dumps(),
+        )
         # while scan is running
         while mode > 0:
             # logger.info(f"Current scan position {current_position_in_scan} out of {number_of_positions_planned}")
@@ -361,9 +370,8 @@ class RtLamniController(Controller):
 
                     read_counter = read_counter + 1
 
-                    
                     signals = self._get_signals_from_table(return_table)
-                    
+
                     self.publish_device_data(signals=signals, pointID=int(return_table[0]))
 
         time.sleep(0.05)
@@ -375,11 +383,15 @@ class RtLamniController(Controller):
             # logger.info(f"{return_table}")
             read_counter = read_counter + 1
 
-            signals = self._get_signals_from_table(return_table)        
+            signals = self._get_signals_from_table(return_table)
             self.publish_device_data(signals=signals, pointID=int(return_table[0]))
 
-        self.get_device_manager().producer.set_and_publish(MessageEndpoints.device_status("rt_scan"), BECMessage.DeviceStatusMessage(device="rt_scan", status=0, metadata=self.readout_metadata).dumps())
-
+        self.get_device_manager().producer.set_and_publish(
+            MessageEndpoints.device_status("rt_scan"),
+            BECMessage.DeviceStatusMessage(
+                device="rt_scan", status=0, metadata=self.readout_metadata
+            ).dumps(),
+        )
 
         logger.info(
             f"LamNI statistics: Average of all standard deviations: x {self.average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {self.average_stdeviations_y_st_fzp/number_of_samples_to_read}, angle {self.average_lamni_angle/number_of_samples_to_read}."

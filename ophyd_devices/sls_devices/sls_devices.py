@@ -14,11 +14,10 @@ class SLSOperatorMessages(Device):
     message5 = Cpt(EpicsSignalRO, f"ACOAU-ACCU:OP-MSG5", auto_monitor=True)
     message_date5 = Cpt(EpicsSignalRO, f"ACOAU-ACCU:OP-DATE5", auto_monitor=True)
 
+
 # class SLSOperatorMessages(Device):
 #     pass
 
 # for i in range(5):
 #     setattr(SLSOperatorMessages, f"message{i}", Cpt(EpicsSignalRO, f"ACOAU-ACCU:OP-MSG{i}", auto_monitor=True))
 #     setattr(SLSOperatorMessages, f"message_date{i}", Cpt(EpicsSignalRO, f"ACOAU-ACCU:OP-DATE{i}", auto_monitor=True))
-
-
