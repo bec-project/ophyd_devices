@@ -203,7 +203,7 @@ def test_move_axis(pos, get_msg, return_msg):
         sign=1,
         socket_cls=SocketMock,
     )
-    lsmarA.stage()
+    lsmarA.controller.on()
     controller = lsmarA.controller
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg

@@ -21,7 +21,7 @@ def test_axis_get(pos, msg, sign):
         socket_cls=SocketMock,
     )
     leyey.controller.sock.flush_buffer()
-    leyey.stage()
+    leyey.controller.on()
     leyey.controller.sock.buffer_recv = msg
     val = leyey.read()
     assert val["leyey"]["value"] == pos
