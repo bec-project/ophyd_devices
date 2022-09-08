@@ -4,14 +4,14 @@ import time
 from typing import List
 
 import numpy as np
+from bec_utils import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
-from ophyd.utils import ReadOnlyError, LimitError
+from ophyd.utils import LimitError, ReadOnlyError
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
 from prettytable import PrettyTable
-from bec_utils import bec_logger
 
 logger = bec_logger.logger
 
@@ -542,11 +542,9 @@ class GalilMotor(Device, PositionerBase):
         return "mm"
 
     def stage(self) -> List[object]:
-        self.controller.on()
         return super().stage()
 
     def unstage(self) -> List[object]:
-        self.controller.off()
         return super().unstage()
 
     def stop(self, *, success=False):

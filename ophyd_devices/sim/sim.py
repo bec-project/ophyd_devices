@@ -1,6 +1,8 @@
+import os
 import threading
 import time as ttime
 import warnings
+from email.message import Message
 from typing import List
 
 import numpy as np
@@ -194,16 +196,6 @@ class SynAxisMonitor(Device):
         self.readback.name = self.name
 
 
-class _SLSDetectorAcquireSignal(Signal):
-    def put(self, value, *, timestamp=None, force=False):
-        self._readback = value
-        self.parent.set(value)
-
-    def get(self):
-        self._readback = self.parent.sim_state["acquire"]
-        return self.parent.sim_state["acquire"]
-
-
 class _SLSDetectorConfigSignal(Signal):
     def put(self, value, *, timestamp=None, force=False):
         self._readback = value
@@ -216,24 +208,27 @@ class _SLSDetectorConfigSignal(Signal):
 
 class SynSLSDetector(Device):
     USER_ACCESS = []
-    acquire = Cpt(_SLSDetectorAcquireSignal, value=0, kind="hinted")
     exp_time = Cpt(_SLSDetectorConfigSignal, name="exp_time", value=1, kind="config")
     file_path = Cpt(_SLSDetectorConfigSignal, name="file_path", value="", kind="config")
     file_pattern = Cpt(_SLSDetectorConfigSignal, name="file_pattern", value="", kind="config")
     frames = Cpt(_SLSDetectorConfigSignal, name="frames", value=1, kind="config")
+    burst = Cpt(_SLSDetectorConfigSignal, name="burst", value=1, kind="config")
     save_file = Cpt(_SLSDetectorConfigSignal, name="save_file", value=False, kind="config")
 
-    def __init__(self, *, name, kind=None, parent=None, **kwargs):
+    def __init__(self, *, name, kind=None, parent=None, device_manager=None, **kwargs):
+        self.device_manager = device_manager
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim_state = {
-            "acquire": 0,
-            f"{self.name}_file_path": "",
-            f"{self.name}_file_pattern": "",
+            f"{self.name}_file_path": "~/Data10/data/",
+            f"{self.name}_file_pattern": f"{self.name}_{{:05d}}.h5",
             f"{self.name}_frames": 1,
+            f"{self.name}_burst": 1,
             f"{self.name}_save_file": False,
-            f"{self.name}_exp_time": 1,
+            f"{self.name}_exp_time": 0,
         }
         self._stopped = False
+        self.file_name = ""
+        self.metadata = {}
 
     def trigger(self):
         status = DeviceStatus(self)
@@ -242,7 +237,7 @@ class SynSLSDetector(Device):
 
         def acquire():
             try:
-                for _ in range(self.frames.get()):
+                for _ in range(self.burst.get()):
                     ttime.sleep(self.exp_time.get())
                     if self._stopped:
                         raise DeviceStop
@@ -256,9 +251,27 @@ class SynSLSDetector(Device):
         return status
 
     def stage(self) -> List[object]:
+        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
+        scan_msg = BECMessage.ScanStatusMessage.loads(msg)
+        self.metadata = {
+            "scanID": scan_msg.content["scanID"],
+            "RID": scan_msg.content["info"]["RID"],
+            "RID": scan_msg.content["info"]["RID"],
+            "queueID": scan_msg.content["info"]["queueID"],
+        }
+        scan_number = scan_msg.content["info"]["scan_number"]
+        self.frames.set(scan_msg.content["info"]["num_points"])
+        self.file_name = os.path.join(
+            self.file_path.get(), self.file_pattern.get().format(scan_number)
+        )
         return super().stage()
 
     def unstage(self) -> List[object]:
+        signals = {"config": self.sim_state, "data": self.file_name}
+        msg = BECMessage.DeviceMessage(signals=signals, metadata=self.metadata)
+        self.device_manager.producer.set_and_publish(
+            MessageEndpoints.device_read(self.name), msg.dumps()
+        )
         return super().unstage()
 
     def stop(self, *, success=False):
@@ -331,7 +344,7 @@ class SynFlyer(Device, PositionerBase):
         positions = np.asarray(positions)
 
         def produce_data(device, metadata):
-            buffer_time = 1
+            buffer_time = 0.5
             elapsed_time = 0
             bundle = BECMessage.BundleMessage()
             for ii in range(num_pos):

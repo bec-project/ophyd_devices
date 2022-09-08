@@ -773,11 +773,9 @@ class RtLamniMotor(Device, PositionerBase):
     # how is this used later?
 
     def stage(self) -> List[object]:
-        self.controller.on()
         return super().stage()
 
     def unstage(self) -> List[object]:
-        self.controller.off()
         return super().unstage()
 
     def stop(self, *, success=False):
