@@ -250,6 +250,7 @@ class GalilReadbackSignal(GalilSignalRO):
         return current_pos / step_mm
 
     def read(self):
+        self._metadata["timestamp"] = time.time()
         val = super().read()
         if self.parent.axis_Id_numeric == 2:
             try:
