@@ -2,7 +2,6 @@ import os
 import threading
 import time as ttime
 import warnings
-from email.message import Message
 from typing import List
 
 import numpy as np
@@ -17,6 +16,22 @@ logger = bec_logger.logger
 
 class DeviceStop(Exception):
     pass
+
+
+class SynSignalRO(Signal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._metadata.update(
+            write_access=False,
+        )
+
+    def wait_for_connection(self, timeout=0):
+        super().wait_for_connection(timeout)
+        self._metadata.update(connected=True)
+
+    def get(self, **kwargs):
+        self._readback = np.random.rand()
+        return self._readback
 
 
 class _ReadbackSignal(Signal):
@@ -284,6 +299,12 @@ class DummyController:
     some_var = 10
     another_var = 20
 
+    def on(self):
+        self._connected = True
+
+    def off(self):
+        self._connected = False
+
     def controller_show_all(self):
         """dummy controller show all
 
@@ -295,6 +316,10 @@ class DummyController:
             _type_: _description_
         """
         print(self.some_var)
+
+
+class DummyControllerDevice(Device):
+    USER_ACCESS = ["controller"]
 
 
 class SynFlyer(Device, PositionerBase):
