@@ -363,7 +363,7 @@ class RtLamniController(Controller):
             mode, number_of_positions_planned, current_position_in_scan = self.get_scan_status()
             time.sleep(0.01)
             if current_position_in_scan > 5:
-                while current_position_in_scan > read_counter:
+                while current_position_in_scan > read_counter + 1:
                     return_table = (self.socket_put_and_receive(f"r{read_counter}")).split(",")
                     # logger.info(f"{return_table}")
                     logger.info(f"Read {read_counter} out of {number_of_positions_planned}")

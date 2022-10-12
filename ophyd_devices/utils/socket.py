@@ -6,10 +6,12 @@ import time
 import typing
 
 import numpy as np
+from bec_utils import bec_logger
 from ophyd import Signal
 from ophyd.utils.errors import DisconnectedError
 
-logger = logging.getLogger("socket")
+logger = bec_logger.logger
+# logger = bec_logger.logger("socket")
 
 
 def raise_if_disconnected(fcn):

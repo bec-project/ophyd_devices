@@ -40,6 +40,7 @@ def test_axis_get(pos, msg, sign):
                 b"ntarget=0.000\r",
                 b"movereq=1\r",
                 b"XQ#NEWPAR\r",
+                b"MG_XQ0\r",
             ],
             [
                 b"1.00",
@@ -48,6 +49,7 @@ def test_axis_get(pos, msg, sign):
                 b":",
                 b":",
                 b":",
+                b"-1",
             ],
         ),
     ],

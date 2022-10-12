@@ -1,11 +1,12 @@
 # This file is a template, and might need editing before it works on your project.
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: "python:3.8" 
+image: python:3.8
+
 #commands to run in the Docker container before starting each job.
 before_script:
   - pip install -r ./requirements.txt
-  - pip install -e . 
+  - pip install -e .
 # different stages in the pipeline
 stages:
   - Formatter
@@ -18,7 +19,6 @@ formatter:
 pytest:
   stage: Test
   script:
-  - apt-get update && apt-get install -y git
-  - git clone https://oauth2:$CI_BEC_KEY@gitlab.psi.ch/bec/bec.git
-  - pip install -e ./bec/bec_utils
-  - pytest -v ./tests
+    - git clone https://oauth2:$CI_BEC_KEY@gitlab.psi.ch/bec/bec.git
+    - pip install -e ./bec/bec_utils
+    - pytest -v ./tests

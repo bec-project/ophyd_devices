@@ -134,8 +134,10 @@ class GalilController(Controller):
                 f"Expected return value of ':' but instead received {return_val}"
             )
 
-    def is_axis_moving(self, axis_Id) -> bool:
-        return bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")))
+    def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
+        is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
+        backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
+        return bool(is_moving or backlash_is_active)
 
     def is_thread_active(self, thread_id: int) -> bool:
         val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
@@ -250,12 +252,13 @@ class GalilReadbackSignal(GalilSignalRO):
         return current_pos / step_mm
 
     def read(self):
+        self._metadata["timestamp"] = time.time()
         val = super().read()
         if self.parent.axis_Id_numeric == 2:
             try:
-                self.parent.device_manager.devices[
-                    self.parent.rt
-                ].obj.controller.set_rotation_angle(val[self.parent.name]["value"])
+                rt = self.parent.device_manager.devices[self.parent.rt]
+                if rt.enabled:
+                    rt.obj.controller.set_rotation_angle(val[self.parent.name]["value"])
             except KeyError:
                 logger.warning("Failed to set RT value during readback.")
         return val
@@ -305,6 +308,8 @@ class GalilSetpointSignal(GalilSignalBase):
             self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")
             self.controller.socket_put_confirmed("movereq=1")
             self.controller.socket_put_confirmed("XQ#NEWPAR")
+            while self.controller.is_thread_active(0):
+                time.sleep(0.005)
         else:
             raise GalilError("Not all axes are referenced.")
 
@@ -322,7 +327,7 @@ class GalilMotorIsMoving(GalilSignalRO):
     @threadlocked
     def _socket_get(self):
         return (
-            self.controller.is_axis_moving(self.parent.axis_Id)
+            self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
             or self.controller.is_thread_active(0)
             or self.controller.is_thread_active(2)
         )
@@ -493,9 +498,10 @@ class GalilMotor(Device, PositionerBase):
                 position,
                 atol=self.tolerance,
             )
-            self._done_moving(success=success)
+
             if not success:
                 print(" stop")
+            self._done_moving(success=success)
             logger.info("Move finished")
 
         threading.Thread(target=move_and_finish, daemon=True).start()
