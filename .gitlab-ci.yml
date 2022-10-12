@@ -5,6 +5,9 @@ image: python:3.8
 variables:
   DOCKER_BUILDKIT: 0
 
+services:
+  - docker:18.09-dind
+
 #commands to run in the Docker container before starting each job.
 before_script:
   - pip install -r ./requirements.txt
