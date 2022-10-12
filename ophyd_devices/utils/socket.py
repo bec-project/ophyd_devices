@@ -8,8 +8,10 @@ import typing
 import numpy as np
 from ophyd import Signal
 from ophyd.utils.errors import DisconnectedError
+from bec_utils import bec_logger
 
-logger = logging.getLogger("socket")
+logger = bec_logger.logger
+#logger = bec_logger.logger("socket")
 
 
 def raise_if_disconnected(fcn):
