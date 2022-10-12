@@ -1,5 +1,5 @@
-import pytest
 import socket
+
 from ophyd_devices.utils.socket import SocketIO
 
 
