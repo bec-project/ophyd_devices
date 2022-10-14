@@ -160,11 +160,11 @@ class RtLamniController(Controller):
     def feedback_disable(self):
         self.socket_put("J0")
         logger.info("LamNI Feedback disabled.")
-        # motor_par("lsamx","disable",0)
-        # motor_par("lsamy","disable",0)
-        # motor_par("loptx","disable",0)
-        # motor_par("lopty","disable",0)
-        # motor_par("loptz","disable",0)
+        self.get_device_manager().devices.lsamx.enabled = True
+        self.get_device_manager().devices.lsamy.enabled = True
+        self.get_device_manager().devices.loptx.enabled = True
+        self.get_device_manager().devices.lopty.enabled = True
+        self.get_device_manager().devices.loptz.enabled = True
 
     @threadlocked
     def _set_axis_velocity(self, um_per_s):
@@ -205,24 +205,25 @@ class RtLamniController(Controller):
         # set these as closed loop target position
         self.socket_put(f"pa0,{x_curr:.4f}")
         self.socket_put(f"pa1,{y_curr:.4f}")
+        self.get_device_manager().devices.rtx.setpoint.set_with_feedback_disabled(x_curr)
+        self.get_device_manager().devices.rty.setpoint.set_with_feedback_disabled(y_curr)
         self.socket_put("J5")
         logger.info("LamNI Feedback enabled (without reset).")
-        # motor_par("lsamx","disable",1)
-        # motor_par("lsamy","disable",1)
-        # motor_par("loptx","disable",1)
-        # motor_par("lopty","disable",1)
-        # motor_par("loptz","disable",1)
-        # umv rtx x_curr rty y_curr
+        self.get_device_manager().devices.lsamx.enabled = False
+        self.get_device_manager().devices.lsamy.enabled = False
+        self.get_device_manager().devices.loptx.enabled = False
+        self.get_device_manager().devices.lopty.enabled = False
+        self.get_device_manager().devices.loptz.enabled = False
 
     @threadlocked
     def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
         self.socket_put("J6")
         logger.info("LamNI Feedback disabled including the angular interferometer.")
-        # motor_par("lsamx","disable",0)
-        # motor_par("lsamy","disable",0)
-        # motor_par("loptx","disable",0)
-        # motor_par("lopty","disable",0)
-        # motor_par("loptz","disable",0)
+        self.get_device_manager().devices.lsamx.enabled = True
+        self.get_device_manager().devices.lsamy.enabled = True
+        self.get_device_manager().devices.loptx.enabled = True
+        self.get_device_manager().devices.lopty.enabled = True
+        self.get_device_manager().devices.loptz.enabled = True
 
     def get_device_manager(self):
         for axis in self._axis:
@@ -465,11 +466,12 @@ class RtLamniController(Controller):
                 (self.socket_put_and_receive("J2")).split(",")[0]
             )
 
-        # motor_par("lsamx","disable",1)
-        # motor_par("lsamy","disable",1)
-        # motor_par("loptx","disable",1)
-        # motor_par("lopty","disable",1)
-        # motor_par("loptz","disable",1)
+        self.get_device_manager().devices.lsamx.enabled = False
+        self.get_device_manager().devices.lsamy.enabled = False
+        self.get_device_manager().devices.loptx.enabled = False
+        self.get_device_manager().devices.lopty.enabled = False
+        self.get_device_manager().devices.loptz.enabled = False
+
         if interferometer_feedback_not_running == 1:
             logger.error(
                 "Cannot start scan because feedback loop is not running or there is an interferometer error."
@@ -549,17 +551,19 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
             RtLamniError: Raised if interferometer feedback is disabled.
 
         """
-        target_val = val * self.parent.sign
-        self.setpoint = target_val
         interferometer_feedback_not_running = int(
             (self.controller.socket_put_and_receive("J2")).split(",")[0]
         )
-        if interferometer_feedback_not_running == 0:
-            self.controller.socket_put(f"pa{self.parent.axis_Id_numeric},{target_val:.4f}")
-        else:
+        if interferometer_feedback_not_running != 0:
             raise RtLamniError(
                 "The interferometer feedback is not running. Either it is turned off or and interferometer error occured."
             )
+        self.set_with_feedback_disabled(val)
+
+    def set_with_feedback_disabled(self, val):
+        target_val = val * self.parent.sign
+        self.setpoint = target_val
+        self.controller.socket_put(f"pa{self.parent.axis_Id_numeric},{target_val:.4f}")
 
 
 class RtLamniMotorIsMoving(RtLamniSignalRO):
