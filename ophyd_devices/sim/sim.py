@@ -344,7 +344,7 @@ class SynFlyer(Device, PositionerBase):
         positions = np.asarray(positions)
 
         def produce_data(device, metadata):
-            buffer_time = 0.5
+            buffer_time = 0.2
             elapsed_time = 0
             bundle = BECMessage.BundleMessage()
             for ii in range(num_pos):
