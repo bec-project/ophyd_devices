@@ -160,11 +160,11 @@ class RtLamniController(Controller):
     def feedback_disable(self):
         self.socket_put("J0")
         logger.info("LamNI Feedback disabled.")
-        self.get_device_manager().devices.lsamx.enabled = True
-        self.get_device_manager().devices.lsamy.enabled = True
-        self.get_device_manager().devices.loptx.enabled = True
-        self.get_device_manager().devices.lopty.enabled = True
-        self.get_device_manager().devices.loptz.enabled = True
+        self.set_device_enabled("lsamx", True)
+        self.set_device_enabled("lsamy", True)
+        self.set_device_enabled("loptx", True)
+        self.set_device_enabled("lopty", True)
+        self.set_device_enabled("loptz", True)
 
     @threadlocked
     def _set_axis_velocity(self, um_per_s):
@@ -205,25 +205,25 @@ class RtLamniController(Controller):
         # set these as closed loop target position
         self.socket_put(f"pa0,{x_curr:.4f}")
         self.socket_put(f"pa1,{y_curr:.4f}")
-        self.get_device_manager().devices.rtx.setpoint.set_with_feedback_disabled(x_curr)
-        self.get_device_manager().devices.rty.setpoint.set_with_feedback_disabled(y_curr)
+        self.get_device_manager().devices.rtx.obj.user_setpoint.set_with_feedback_disabled(x_curr)
+        self.get_device_manager().devices.rty.obj.user_setpoint.set_with_feedback_disabled(y_curr)
         self.socket_put("J5")
         logger.info("LamNI Feedback enabled (without reset).")
-        self.get_device_manager().devices.lsamx.enabled = False
-        self.get_device_manager().devices.lsamy.enabled = False
-        self.get_device_manager().devices.loptx.enabled = False
-        self.get_device_manager().devices.lopty.enabled = False
-        self.get_device_manager().devices.loptz.enabled = False
+        self.set_device_enabled("lsamx", False)
+        self.set_device_enabled("lsamy", False)
+        self.set_device_enabled("loptx", False)
+        self.set_device_enabled("lopty", False)
+        self.set_device_enabled("loptz", False)
 
     @threadlocked
     def feedback_disable_and_even_reset_lamni_angle_interferometer(self):
         self.socket_put("J6")
         logger.info("LamNI Feedback disabled including the angular interferometer.")
-        self.get_device_manager().devices.lsamx.enabled = True
-        self.get_device_manager().devices.lsamy.enabled = True
-        self.get_device_manager().devices.loptx.enabled = True
-        self.get_device_manager().devices.lopty.enabled = True
-        self.get_device_manager().devices.loptz.enabled = True
+        self.set_device_enabled("lsamx", True)
+        self.set_device_enabled("lsamy", True)
+        self.set_device_enabled("loptx", True)
+        self.set_device_enabled("lopty", True)
+        self.set_device_enabled("loptz", True)
 
     def get_device_manager(self):
         for axis in self._axis:
@@ -474,11 +474,11 @@ class RtLamniController(Controller):
                 (self.socket_put_and_receive("J2")).split(",")[0]
             )
 
-        self.get_device_manager().devices.lsamx.enabled = False
-        self.get_device_manager().devices.lsamy.enabled = False
-        self.get_device_manager().devices.loptx.enabled = False
-        self.get_device_manager().devices.lopty.enabled = False
-        self.get_device_manager().devices.loptz.enabled = False
+        self.set_device_enabled("lsamx", False)
+        self.set_device_enabled("lsamy", False)
+        self.set_device_enabled("loptx", False)
+        self.set_device_enabled("lopty", False)
+        self.set_device_enabled("loptz", False)
 
         if interferometer_feedback_not_running == 1:
             logger.error(
@@ -491,6 +491,15 @@ class RtLamniController(Controller):
         time.sleep(0.01)
 
         # ptychography_alignment_done = 0
+
+    def set_device_enabled(self, device_name: str, enabled: bool) -> None:
+        """enable / disable a device"""
+        if device_name not in self.get_device_manager().devices:
+            logger.warning(
+                f"Device {device_name} is not configured and cannot be enabled/disabled."
+            )
+            return
+        self.get_device_manager().devices[device_name].enabled_set = enabled
 
 
 class RtLamniSignalBase(SocketSignal):

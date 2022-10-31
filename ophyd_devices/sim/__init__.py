@@ -1,1 +1,1 @@
-from .sim import SynAxisMonitor, SynAxisOPAAS, SynFlyer, SynSLSDetector
+from .sim import SynAxisMonitor, SynAxisOPAAS, SynFlyer, SynSignalRO, SynSLSDetector
