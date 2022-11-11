@@ -450,9 +450,18 @@ class RtLamniController(Controller):
             )
 
         time.sleep(0.03)
-        # needs to be changed to configurable center psoition
-        self.get_device_manager().devices.lsamx.obj.move(8.866, wait=True)
-        self.get_device_manager().devices.lsamy.obj.move(10.18, wait=True)
+
+        lsamx_user_params = self.get_device_manager().devices.lsamx.user_parameter
+        if lsamx_user_params is None or lsamx_user_params.get("center") is None:
+            raise RuntimeError("lsamx center is not defined")
+        lsamy_user_params = self.get_device_manager().devices.lsamy.user_parameter
+        if lsamy_user_params is None or lsamy_user_params.get("center") is None:
+            raise RuntimeError("lsamy center is not defined")
+        lsamx_center = lsamx_user_params.get("center")
+        lsamy_center = lsamy_user_params.get("center")
+
+        self.get_device_manager().devices.lsamx.obj.move(lsamx_center, wait=True)
+        self.get_device_manager().devices.lsamy.obj.move(lsamy_center, wait=True)
         self.socket_put("J1")
 
         _waitforfeedbackctr = 0

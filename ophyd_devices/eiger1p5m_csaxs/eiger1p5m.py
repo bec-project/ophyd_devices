@@ -4,7 +4,7 @@ from typing import List
 
 from bec_utils import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, EpicsSignal, Signal
+from ophyd import Device, DeviceStatus, EpicsSignal, Signal, EpicsSignalRO
 
 logger = bec_logger.logger
 
@@ -49,22 +49,21 @@ class _SLSDetectorConfigSignal(Signal):
 
 class Eiger1p5MDetector(Device):
     USER_ACCESS = []
-    file_path = Cpt(
-        EpicsSignal, name="file_path", read_pv="XOMNYI-DET-OUTDIR:0.DESC", kind="config"
-    )
+    file_path = Cpt(EpicsSignal, name="file_path", read_pv="XOMNYI-DET-OUTDIR:0.DESC")
     detector_out_scan_dir = Cpt(
-        EpicsSignal, name="detector_out_scan_dir", read_pv="XOMNYI-DET-OUTDIR:1.DESC", kind="config"
+        EpicsSignal, name="detector_out_scan_dir", read_pv="XOMNYI-DET-OUTDIR:1.DESC"
     )
-    frames = Cpt(EpicsSignal, name="frames", read_pv="XOMNYI-DET-CYCLES:0", kind="config")
-    exp_time = Cpt(EpicsSignal, name="exp_time", read_pv="XOMNYI-DET-EXPTIME:0", kind="config")
-    index = Cpt(EpicsSignal, name="index", read_pv="XOMNYI-DET-INDEX:0", kind="config")
+    frames = Cpt(EpicsSignal, name="frames", read_pv="XOMNYI-DET-CYCLES:0")
+    exp_time = Cpt(EpicsSignal, name="exp_time", read_pv="XOMNYI-DET-EXPTIME:0")
+    index = Cpt(EpicsSignal, name="index", read_pv="XOMNYI-DET-INDEX:0")
     detector_control = Cpt(
-        EpicsSignal, name="detector_control", read_pv="XOMNYI-DET-CONTROL:0.DESC", kind="config"
+        EpicsSignal, name="detector_control", read_pv="XOMNYI-DET-CONTROL:0.DESC"
     )
+    framescaught = Cpt(EpicsSignalRO, name="framescaught", read_pv="XOMNYI-DET-CONTROL:0.VAL")
 
-    file_pattern = Cpt(_SLSDetectorConfigSignal, name="file_pattern", value="", kind="config")
-    burst = Cpt(_SLSDetectorConfigSignal, name="burst", value=1, kind="config")
-    save_file = Cpt(_SLSDetectorConfigSignal, name="save_file", value=False, kind="config")
+    file_pattern = Cpt(_SLSDetectorConfigSignal, name="file_pattern", value="")
+    burst = Cpt(_SLSDetectorConfigSignal, name="burst", value=1)
+    save_file = Cpt(_SLSDetectorConfigSignal, name="save_file", value=False)
 
     def __init__(self, *, name, kind=None, parent=None, device_manager=None, **kwargs):
         self.device_manager = device_manager
@@ -81,26 +80,6 @@ class Eiger1p5MDetector(Device):
         self.file_name = ""
         self.metadata = {}
         self.username = "e20588"  # TODO get from config
-
-    def trigger(self):
-        status = DeviceStatus(self)
-
-        self.subscribe(status._finished, event_type=self.SUB_ACQ_DONE, run=False)
-
-        # def acquire():
-        #     try:
-        #         for _ in range(self.burst.get()):
-        #             ttime.sleep(self.exp_time.get())
-        #             if self._stopped:
-        #                 raise DeviceStop
-        #     except DeviceStop:
-        #         pass
-        #     finally:
-        #         self._stopped = False
-        #         self._done_acquiring()
-
-        # threading.Thread(target=acquire, daemon=True).start()
-        return status
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
@@ -146,7 +125,7 @@ class Eiger1p5MDetector(Device):
         # wait for detector to be "armed"
         logger.info("Waiting for detector setup")
         while True:
-            det_ctrl = self.detector_control.get()["detector_control"]["value"]
+            det_ctrl = self.detector_control.get()
             if det_ctrl == "armed":
                 break
             time.sleep(0.005)
@@ -156,7 +135,21 @@ class Eiger1p5MDetector(Device):
         return super().stage()
 
     def unstage(self) -> List[object]:
-        signals = {"config": self.read_configuration(), "data": self.file_name}
+        time_waited = 0
+        sleep_time = 0.2
+        framesexpected = self.frames.get()
+        while True:
+            framescaught = self.framescaught.get()
+            if self.framescaught.get() < framesexpected:
+                logger.info(
+                    f"Waiting for frames: Transferred {framescaught} out of {framesexpected}"
+                )
+                time_waited += sleep_time
+                time.sleep(sleep_time)
+                continue
+            break
+        self.detector_control.put("stop")
+        signals = {"config": self.read(), "data": self.file_name}
         msg = BECMessage.DeviceMessage(signals=signals, metadata=self.metadata)
         self.device_manager.producer.set_and_publish(
             MessageEndpoints.device_read(self.name), msg.dumps()
@@ -167,3 +160,8 @@ class Eiger1p5MDetector(Device):
         self.detector_control.put("stop")
         super().stop(success=success)
         self._stopped = True
+
+
+if __name__ == "__main__":
+    eiger = Eiger1p5MDetector(name="eiger1p5m", label="eiger1p5m")
+    breakpoint()
