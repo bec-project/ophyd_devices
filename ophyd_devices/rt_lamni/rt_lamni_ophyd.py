@@ -9,9 +9,9 @@ from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
+
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
-from prettytable import PrettyTable
 
 logger = bec_logger.logger
 
@@ -416,7 +416,7 @@ class RtLamniController(Controller):
 
     def feedback_enable_with_reset(self):
         if not self.feedback_status_angle_lamni():
-            self.rt_feedback_disable_and_even_reset_lamni_angle_interferometer()
+            self.feedback_disable_and_even_reset_lamni_angle_interferometer()
             logger.info(f"LamNI resetting interferometer inclusive angular interferomter.")
         else:
             self.feedback_disable()
@@ -459,7 +459,6 @@ class RtLamniController(Controller):
             raise RuntimeError("lsamy center is not defined")
         lsamx_center = lsamx_user_params.get("center")
         lsamy_center = lsamy_user_params.get("center")
-
         self.get_device_manager().devices.lsamx.obj.move(lsamx_center, wait=True)
         self.get_device_manager().devices.lsamy.obj.move(lsamy_center, wait=True)
         self.socket_put("J1")
