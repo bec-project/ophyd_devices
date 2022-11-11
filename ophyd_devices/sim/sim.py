@@ -271,7 +271,6 @@ class SynSLSDetector(Device):
         self.metadata = {
             "scanID": scan_msg.content["scanID"],
             "RID": scan_msg.content["info"]["RID"],
-            "RID": scan_msg.content["info"]["RID"],
             "queueID": scan_msg.content["info"]["queueID"],
         }
         scan_number = scan_msg.content["info"]["scan_number"]
