@@ -1,10 +1,10 @@
 idgap:
   desc: 'Undulator gap size [mm]'
   acquisition: {schedule: sync}
-  config: {name: idgap, read_pv: 'X12SA-ID-GAP:READ'}
+  config: {name: idgap, prefix: 'X12SA-ID'}
   deviceGroup: monitor
   status: {enabled: true}
-  type: EpicsSignalRO
+  type: InsertionDevice
 bm1trx:
   desc: 'FrontEnd XBPM 1 horizontal movement'
   acquisition: {schedule: sync}
