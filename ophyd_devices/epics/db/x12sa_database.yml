@@ -566,14 +566,21 @@ led:
   status: {enabled: true}
   type: EpicsSignalRO
 bpm3:
-  desc: 'XBPM 3: White beam before mono'
+  desc: 'XBPM 3: White beam before mono (VME)'
   acquisition: {schedule: sync}
-  config: {name: bpm3, prefix: 'X12SA-OP-BPM3:'}
+  config: {name: bpm3, prefix: 'X12SA-OP-BPM1:'}
   deviceGroup: monitor
   status: {enabled: true}
-  type: QuadEM
+  type: XbpmCsaxsOp
+bpm4:
+  desc: 'XBPM 4: Somewhere around mono (VME)'
+  acquisition: {schedule: sync}
+  config: {name: bpm4, prefix: 'X12SA-OP-BPM2:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: XbpmCsaxsOp
 bpm5:
-  desc: 'XBPM 5: After mirror'
+  desc: 'XBPM 5: Not commissioned'
   acquisition: {schedule: sync}
   config: {name: bpm5, prefix: 'X12SA-OP-BPM5:'}
   deviceGroup: monitor
