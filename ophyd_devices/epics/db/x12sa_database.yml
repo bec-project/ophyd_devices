@@ -43,7 +43,7 @@ di2trx:
 di2try:
   desc: 'FrontEnd diaphragm 2 vertical movement'
   acquisition: {schedule: sync}
-  config: {name: di2try, prefix: 'X12SA-FE-BM2:TRY1'}
+  config: {name: di2try, prefix: 'X12SA-FE-DI2:TRY1'}
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor
@@ -194,24 +194,24 @@ mopush2:
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor
-monot:
-  desc: 'Monochromator temperature'
-  acquisition: {schedule: sync}
-  config: {name: monot, read_pv: 'X12SA-OP-MO:TC3'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
+#monot:
+#  desc: 'Monochromator temperature'
+#  acquisition: {schedule: sync}
+#  config: {name: monot, read_pv: 'X12SA-OP-MO:TC3'}
+#  deviceGroup: monitor
+#  status: {enabled: true}
+#  type: EpicsSignalRO
 moyaw2:
   desc: 'Monochromator crystal 2 yaw movement'
   acquisition: {schedule: sync}
-  config: {name: moyaw2, prefix: 'X12SA-OP-MO:ROTY2'}
+  config: {name: moyaw2, prefix: 'X12SA-OP-MO:ROY2'}
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor
 moroll2:
   desc: 'Monochromator crystal 2 roll movement'
   acquisition: {schedule: sync}
-  config: {name: moroll2, prefix: 'X12SA-OP-MO:ROTZ2'}
+  config: {name: moroll2, prefix: 'X12SA-OP-MO:ROZ2'}
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor

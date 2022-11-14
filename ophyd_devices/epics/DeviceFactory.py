@@ -9,6 +9,7 @@ import os
 import yaml
 from ophyd.ophydobj import OphydObject
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsMotor
+from ophyd.sim import SynAxis, SynSignal, SynPeriodicSignal
 from ophyd.quadem import QuadEM
 import pathlib
 
@@ -23,9 +24,9 @@ from proxies import *
 fp = open(f"{path}/db/test_database.yml", "r")
 lut_db = yaml.load(fp, Loader=yaml.Loader)
 
-# Load SLS common database
-fp = open(f"{path}/db/machine_database.yml", "r")
-lut_db = yaml.load(fp, Loader=yaml.Loader)
+# Load SLS common database (already in DB)
+#fp = open(f"{path}/db/machine_database.yml", "r")
+#lut_db = yaml.load(fp, Loader=yaml.Loader)
 
 # Load beamline specific database
 bl = os.getenv('BEAMLINE_XNAME', "X12SA")
@@ -61,7 +62,10 @@ def createProxy(name: str, connect=True) -> OphydObject:
 
 
 if __name__ == "__main__":
-    pass
+    for key in lut_db:
+        print(key)
+        dut = createProxy(str(key))
+
 
 
 
