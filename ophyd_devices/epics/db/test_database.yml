@@ -1,0 +1,35 @@
+motor1:
+  desc: 'Simulated axis 1'
+  acquisition: {schedule: sync}
+  config: {name: motor1}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SynAxis
+motor2:
+  desc: 'Simulated axis 2'
+  acquisition: {schedule: sync}
+  config: {name: motor2}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SynAxis
+det1:
+  desc: 'Simulated signal 1'
+  acquisition: {schedule: sync}
+  config: {name: det1}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SynSignal
+det2:
+  desc: 'Simulated signal 2'
+  acquisition: {schedule: sync}
+  config: {name: det2}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SynSignal
+per1:
+  desc: 'Simulated periodic signal 1'
+  acquisition: {schedule: sync}
+  config: {name: per1}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SynPeriodicSignal
