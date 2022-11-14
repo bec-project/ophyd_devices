@@ -1,15 +1,15 @@
 from ophyd import Device, Component, EpicsMotor, PseudoPositioner, PseudoSingle
-from ophyd.pseudopos import pseudo_position_argument,real_position_argument
+from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 
 
 class SlitH(PseudoPositioner):
     """Python wrapper for virtual slits
 
-       These devices should be implemented as an EPICS SoftMotor IOC,
-       but thats not the case for all slits. So here is a pure ophyd
-       implementation. Uses standard naming convention!
+    These devices should be implemented as an EPICS SoftMotor IOC,
+    but thats not the case for all slits. So here is a pure ophyd
+    implementation. Uses standard naming convention!
 
-       NOTE: The real and virtual axes are wrapped together.
+    NOTE: The real and virtual axes are wrapped together.
     """
     # Motor interface
     x1 = Component(EpicsMotor, "TRX1")
@@ -20,13 +20,13 @@ class SlitH(PseudoPositioner):
 
     @pseudo_position_argument
     def forward(self, pseudo_pos):
-        '''Run a forward (pseudo -> real) calculation'''
+        """Run a forward (pseudo -> real) calculation"""
         return self.RealPosition(x1=pseudo_pos.cenx-pseudo_pos.gapx/2,
                                  x2=pseudo_pos.cenx+pseudo_pos.gapx/2)
 
     @real_position_argument
     def inverse(self, real_pos):
-        '''Run an inverse (real -> pseudo) calculation'''
+        """Run an inverse (real -> pseudo) calculation"""
         return self.PseudoPosition(cenx=(real_pos.x1+real_pos.x2)/2,
                                    gapx=real_pos.x2-real_pos.x1)
 
@@ -34,11 +34,11 @@ class SlitH(PseudoPositioner):
 class SlitV(PseudoPositioner):
     """Python wrapper for virtual slits
 
-       These devices should be implemented as an EPICS SoftMotor IOC,
-       but thats not the case for all slits. So here is a pure ophyd
-       implementation. Uses standard naming convention!
+    These devices should be implemented as an EPICS SoftMotor IOC,
+    but thats not the case for all slits. So here is a pure ophyd
+    implementation. Uses standard naming convention!
 
-       NOTE: The real and virtual axes are wrapped together.
+    NOTE: The real and virtual axes are wrapped together.
     """
     # Motor interface
     y1 = Component(EpicsMotor, "TRY1")

@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 class XbpmCsaxsOp(Device):
     """Python wrapper for custom XBPMs in the cSAXS optics hutch
 
-       This is  completely custom XBPM with templates directly in the
-       VME repo. Thus it needs a custom ophyd template as well...
+    This is  completely custom XBPM with templates directly in the
+    VME repo. Thus it needs a custom ophyd template as well...
 
-       WARN: The x and y are not updated by the IOC
+    WARN: The x and y are not updated by the IOC
     """
     sum = Component(EpicsSignalRO, "SUM", auto_monitor=True)
     x = Component(EpicsSignalRO, "POSH", auto_monitor=True)
@@ -23,14 +23,14 @@ class XbpmCsaxsOp(Device):
 class XbpmBase(Device):
     """Python wrapper for X-ray Beam Position Monitors
 
-       XBPM's consist of a metal-coated diamond window that ejects
-       photoelectrons from the incoming X-ray beam. These electons
-       are collected and their current is measured. Effectively
-       they act as four quadrant photodiodes and are used as BPMs
-       at the undulator beamlines of SLS.
+    XBPM's consist of a metal-coated diamond window that ejects
+    photoelectrons from the incoming X-ray beam. These electons
+    are collected and their current is measured. Effectively
+    they act as four quadrant photodiodes and are used as BPMs
+    at the undulator beamlines of SLS.
 
-       Note: EPICS provided signals are read only, but the user can
-       change the beam position offset.
+    Note: EPICS provided signals are read only, but the user can
+    change the beam position offset.
     """
     # Motor interface
     s1 = Component(EpicsSignalRO, "Current1", auto_monitor=True)
@@ -51,17 +51,17 @@ class XbpmBase(Device):
 class XbpmSim(XbpmBase):
     """Python wrapper for simulated X-ray Beam Position Monitors
 
-       XBPM's consist of a metal-coated diamond window that ejects
-       photoelectrons from the incoming X-ray beam. These electons
-       are collected and their current is measured. Effectively
-       they act as four quadrant photodiodes and are used as BPMs
-       at the undulator beamlines of SLS.
+    XBPM's consist of a metal-coated diamond window that ejects
+    photoelectrons from the incoming X-ray beam. These electons
+    are collected and their current is measured. Effectively
+    they act as four quadrant photodiodes and are used as BPMs
+    at the undulator beamlines of SLS.
 
-       Note: EPICS provided signals are read only, but the user can
+    Note: EPICS provided signals are read only, but the user can
        change the beam position offset.
 
-       This simulation device extends the basic proxy with a script that
-       fills signals with quasi-randomized values.
+    This simulation device extends the basic proxy with a script that
+    fills signals with quasi-randomized values.
     """
     # Motor interface
     s1w = Component(EpicsSignal, "Current1:RAW.VAL", auto_monitor=False)
@@ -118,16 +118,16 @@ class XbpmSim(XbpmBase):
 
 # Automatically start simulation if directly invoked
 if __name__ == "__main__":
-	xbpm1 = XbpmSim("X01DA-FE-XBPM1:", name="xbpm1")
-	xbpm2 = XbpmSim("X01DA-FE-XBPM2:", name="xbpm2")
+    xbpm1 = XbpmSim("X01DA-FE-XBPM1:", name="xbpm1")
+    xbpm2 = XbpmSim("X01DA-FE-XBPM2:", name="xbpm2")
 
-	xbpm1.wait_for_connection(timeout=5)
-	xbpm2.wait_for_connection(timeout=5)
+    xbpm1.wait_for_connection(timeout=5)
+    xbpm2.wait_for_connection(timeout=5)
 
-	xbpm1.rangew.set(1).wait()
-	xbpm2.rangew.set(1).wait()
+    xbpm1.rangew.set(1).wait()
+    xbpm2.rangew.set(1).wait()
 
-	while True:
-	    print("---")
-	    xbpm1.sim()
-	    xbpm2.sim()
+    while True:
+        print("---")
+        xbpm1.sim()
+        xbpm2.sim()
