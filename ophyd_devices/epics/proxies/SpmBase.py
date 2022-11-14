@@ -10,7 +10,7 @@ class SpmBase(Device):
    used to monitor the beam height (only Y) for the bending magnet 
    beamlines of SLS. 
 
-   Note: EPICS provided signals are read only, but the user can 
+   Note: EPICS provided signals are read only, but the users can 
    change the beam position offset.
     """
     # Motor interface
