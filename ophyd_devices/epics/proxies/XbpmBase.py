@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 
 
 class XbpmCsaxsOp(Device):
-    """ Python wrapper for custom XBPMs in the cSAXS optics hutch
-    
-    This is  completely custom XBPM with templates directly in the 
-    VME repo. Thus it needs a custom ophyd template as well...
+    """Python wrapper for custom XBPMs in the cSAXS optics hutch
 
-    WARN: The x and y are not updated by the IOC
+       This is  completely custom XBPM with templates directly in the
+       VME repo. Thus it needs a custom ophyd template as well...
+
+       WARN: The x and y are not updated by the IOC
     """
     sum = Component(EpicsSignalRO, "SUM", auto_monitor=True)
     x = Component(EpicsSignalRO, "POSH", auto_monitor=True)
@@ -21,16 +21,16 @@ class XbpmCsaxsOp(Device):
 
 
 class XbpmBase(Device):
-    """ Python wrapper for X-ray Beam Position Monitors
-    
-    XBPM's consist of a metal-coated diamond window that ejects 
-    photoelectrons from the incoming X-ray beam. These electons 
-    are collected and their current is measured. Effectively 
-    they act as four quadrant photodiodes and are used as BPMs
-    at the undulator beamlines of SLS.
-    
-    Note: EPICS provided signals are read only, but the user can 
-    change the beam position offset.
+    """Python wrapper for X-ray Beam Position Monitors
+
+       XBPM's consist of a metal-coated diamond window that ejects
+       photoelectrons from the incoming X-ray beam. These electons
+       are collected and their current is measured. Effectively
+       they act as four quadrant photodiodes and are used as BPMs
+       at the undulator beamlines of SLS.
+
+       Note: EPICS provided signals are read only, but the user can
+       change the beam position offset.
     """
     # Motor interface
     s1 = Component(EpicsSignalRO, "Current1", auto_monitor=True)
@@ -48,23 +48,20 @@ class XbpmBase(Device):
     offsetV = Component(EpicsSignal, "PositionOffsetY", auto_monitor=False)
 
 
-
-
-
 class XbpmSim(XbpmBase):
-    """ Python wrapper for simulated X-ray Beam Position Monitors
-    
-    XBPM's consist of a metal-coated diamond window that ejects 
-    photoelectrons from the incoming X-ray beam. These electons 
-    are collected and their current is measured. Effectively 
-    they act as four quadrant photodiodes and are used as BPMs
-    at the undulator beamlines of SLS.
-    
-    Note: EPICS provided signals are read only, but the user can 
-    change the beam position offset.
+    """Python wrapper for simulated X-ray Beam Position Monitors
 
-    This simulation device extends the basic proxy with a script that 
-    fills signals with quasi-randomized values.
+       XBPM's consist of a metal-coated diamond window that ejects
+       photoelectrons from the incoming X-ray beam. These electons
+       are collected and their current is measured. Effectively
+       they act as four quadrant photodiodes and are used as BPMs
+       at the undulator beamlines of SLS.
+
+       Note: EPICS provided signals are read only, but the user can
+       change the beam position offset.
+
+       This simulation device extends the basic proxy with a script that
+       fills signals with quasi-randomized values.
     """
     # Motor interface
     s1w = Component(EpicsSignal, "Current1:RAW.VAL", auto_monitor=False)
@@ -75,25 +72,25 @@ class XbpmSim(XbpmBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         self._MX = 0
         self._MY = 0
-        self._I0 = 255.0       
+        self._I0 = 255.0
         self._x = np.linspace(-5, 5, 64)
         self._y = np.linspace(-5, 5, 64)
-        self._x, self._y = np.meshgrid(self._x, self._y)     
-    
+        self._x, self._y = np.meshgrid(self._x, self._y)
+
     def _simFrame(self):
         """Generator to simulate a jumping gaussian"""
         # define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
             return np.exp(-((x - mx)**2. / (2. * sx**2.) + (y - my)**2. / (2. * sy**2.)))
-        
+
         #Generator for dynamic values
         self._MX = 0.75 * self._MX + 0.25 * (10.0 * np.random.random()-5.0)
         self._MY = 0.75 * self._MY + 0.25 * (10.0 * np.random.random()-5.0)
         self._I0 = 0.75 * self._I0 + 0.25 * (255.0 * np.random.random())
-        
+
         arr = self._I0 * gaus2d(self._x, self._y, self._MX, self._MY)
         return arr
 
@@ -117,7 +114,7 @@ class XbpmSim(XbpmBase):
         #plt.imshow(beam)
         #plt.show(block=False)
         plt.pause(0.5)
-        
+
 
 # Automatically start simulation if directly invoked
 if __name__ == "__main__":
@@ -134,20 +131,3 @@ if __name__ == "__main__":
 	    print("---")
 	    xbpm1.sim()
 	    xbpm2.sim()
-	    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
