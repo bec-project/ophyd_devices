@@ -10,6 +10,7 @@ class InsertionDevice(PVPositioner):
 
     WARN: The x and y are not updated by the IOC
     """
+
     status = Component(EpicsSignalRO, "-USER:STATUS", auto_monitor=True)
     errorSource = Component(EpicsSignalRO, "-USER:ERROR-SOURCE", auto_monitor=True)
     isOpen = Component(EpicsSignalRO, "-GAP:ISOPEN", auto_monitor=True)
@@ -19,6 +20,7 @@ class InsertionDevice(PVPositioner):
     readback = Component(EpicsSignalRO, "-GAP:READ", auto_monitor=True, kind=Kind.hinted)
     done = Component(EpicsSignalRO, ":DONE", auto_monitor=True)
     stop_signal = Component(EpicsSignal, "-GAP:STOP", kind=Kind.omitted)
+
 
 # Automatically start simulation if directly invoked
 # (NA for important devices)

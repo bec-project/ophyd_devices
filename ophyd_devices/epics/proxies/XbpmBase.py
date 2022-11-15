@@ -11,6 +11,7 @@ class XbpmCsaxsOp(Device):
 
     WARN: The x and y are not updated by the IOC
     """
+
     sum = Component(EpicsSignalRO, "SUM", auto_monitor=True)
     x = Component(EpicsSignalRO, "POSH", auto_monitor=True)
     y = Component(EpicsSignalRO, "POSV", auto_monitor=True)
@@ -32,6 +33,7 @@ class XbpmBase(Device):
     Note: EPICS provided signals are read only, but the user can
     change the beam position offset.
     """
+
     # Motor interface
     s1 = Component(EpicsSignalRO, "Current1", auto_monitor=True)
     s2 = Component(EpicsSignalRO, "Current2", auto_monitor=True)
@@ -42,9 +44,9 @@ class XbpmBase(Device):
     asymV = Component(EpicsSignalRO, "asymV", auto_monitor=True)
     x = Component(EpicsSignalRO, "X", auto_monitor=True)
     y = Component(EpicsSignalRO, "Y", auto_monitor=True)
-    scaleH  = Component(EpicsSignal, "PositionScaleX", auto_monitor=False)
+    scaleH = Component(EpicsSignal, "PositionScaleX", auto_monitor=False)
     offsetH = Component(EpicsSignal, "PositionOffsetX", auto_monitor=False)
-    scaleV  = Component(EpicsSignal, "PositionScaleY", auto_monitor=False)
+    scaleV = Component(EpicsSignal, "PositionScaleY", auto_monitor=False)
     offsetV = Component(EpicsSignal, "PositionOffsetY", auto_monitor=False)
 
 
@@ -63,6 +65,7 @@ class XbpmSim(XbpmBase):
     This simulation device extends the basic proxy with a script that
     fills signals with quasi-randomized values.
     """
+
     # Motor interface
     s1w = Component(EpicsSignal, "Current1:RAW.VAL", auto_monitor=False)
     s2w = Component(EpicsSignal, "Current2:RAW.VAL", auto_monitor=False)
@@ -84,11 +87,13 @@ class XbpmSim(XbpmBase):
         """Generator to simulate a jumping gaussian"""
         # define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
-            return np.exp(-((x - mx)**2. / (2. * sx**2.) + (y - my)**2. / (2. * sy**2.)))
+            return np.exp(
+                -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
+            )
 
-        #Generator for dynamic values
-        self._MX = 0.75 * self._MX + 0.25 * (10.0 * np.random.random()-5.0)
-        self._MY = 0.75 * self._MY + 0.25 * (10.0 * np.random.random()-5.0)
+        # Generator for dynamic values
+        self._MX = 0.75 * self._MX + 0.25 * (10.0 * np.random.random() - 5.0)
+        self._MY = 0.75 * self._MY + 0.25 * (10.0 * np.random.random() - 5.0)
         self._I0 = 0.75 * self._I0 + 0.25 * (255.0 * np.random.random())
 
         arr = self._I0 * gaus2d(self._x, self._y, self._MX, self._MY)
@@ -98,11 +103,11 @@ class XbpmSim(XbpmBase):
         # Get next frame
         beam = self._simFrame()
         total = np.sum(beam)
-        rnge = np.floor(np.log10(total) - 0.0 )
-        s1 = np.sum(beam[32:64,32:64]) / 10**rnge
-        s2 = np.sum(beam[0:32,32:64]) / 10**rnge
-        s3 = np.sum(beam[32:64,0:32]) / 10**rnge
-        s4 = np.sum(beam[0:32,0:32]) / 10**rnge
+        rnge = np.floor(np.log10(total) - 0.0)
+        s1 = np.sum(beam[32:64, 32:64]) / 10**rnge
+        s2 = np.sum(beam[0:32, 32:64]) / 10**rnge
+        s3 = np.sum(beam[32:64, 0:32]) / 10**rnge
+        s4 = np.sum(beam[0:32, 0:32]) / 10**rnge
 
         self.s1w.set(s1).wait()
         self.s2w.set(s2).wait()
@@ -111,8 +116,8 @@ class XbpmSim(XbpmBase):
         self.rangew.set(rnge).wait()
         # Print debug info
         print(f"Raw signals: R={rnge}\t{s1}\t{s2}\t{s3}\t{s4}")
-        #plt.imshow(beam)
-        #plt.show(block=False)
+        # plt.imshow(beam)
+        # plt.show(block=False)
         plt.pause(0.5)
 
 

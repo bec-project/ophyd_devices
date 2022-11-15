@@ -36,7 +36,7 @@ lut_db.update(yaml.load(fp, Loader=yaml.Loader))
 
 def createProxy(name: str, connect=True) -> OphydObject:
     """Factory routine to create an ophyd device with a pre-defined schema.
-       Does nothing if the device is already an OphydObject!
+    Does nothing if the device is already an OphydObject!
     """
     if issubclass(type(name), OphydObject):
         return name
@@ -51,7 +51,7 @@ def createProxy(name: str, connect=True) -> OphydObject:
             ret.wait_for_connection(timeout=5)
         return ret
     else:
-        raise RuntimeError(f"Unsupported return class: {entry["type"]}")
+        raise RuntimeError(f"Unsupported return class: {entry['type']}")
 
 
 if __name__ == "__main__":

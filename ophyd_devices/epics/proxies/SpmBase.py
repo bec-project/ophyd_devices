@@ -6,13 +6,14 @@ import matplotlib.pyplot as plt
 class SpmBase(Device):
     """Python wrapper for the Staggered Blade Pair Monitors
 
-   SPM's consist of a set of four horizontal tungsten blades and are 
-   used to monitor the beam height (only Y) for the bending magnet 
-   beamlines of SLS. 
+    SPM's consist of a set of four horizontal tungsten blades and are
+    used to monitor the beam height (only Y) for the bending magnet
+    beamlines of SLS.
 
-   Note: EPICS provided signals are read only, but the users can 
-   change the beam position offset.
+    Note: EPICS provided signals are read only, but the users can
+    change the beam position offset.
     """
+
     # Motor interface
     s1 = Component(EpicsSignalRO, "Current1", auto_monitor=True)
     s2 = Component(EpicsSignalRO, "Current2", auto_monitor=True)
@@ -20,20 +21,21 @@ class SpmBase(Device):
     s4 = Component(EpicsSignalRO, "Current4", auto_monitor=True)
     sum = Component(EpicsSignalRO, "SumAll", auto_monitor=True)
     y = Component(EpicsSignalRO, "Y", auto_monitor=True)
-    scale  = Component(EpicsSignal, "PositionScaleY", auto_monitor=True)
+    scale = Component(EpicsSignal, "PositionScaleY", auto_monitor=True)
     offset = Component(EpicsSignal, "PositionOffsetY", auto_monitor=True)
 
 
 class SpmSim(SpmBase):
     """Python wrapper for simulated Staggered Blade Pair Monitors
 
-   SPM's consist of a set of four horizontal tungsten blades and are 
-   used to monitor the beam height (only Y) for the bending magnet 
-   beamlines of SLS. 
+    SPM's consist of a set of four horizontal tungsten blades and are
+    used to monitor the beam height (only Y) for the bending magnet
+    beamlines of SLS.
 
-   This simulation device extends the basic proxy with a script that 
-   fills signals with quasi-randomized values.
+    This simulation device extends the basic proxy with a script that
+    fills signals with quasi-randomized values.
     """
+
     # Motor interface
     s1w = Component(EpicsSignal, "Current1:RAW.VAL", auto_monitor=False)
     s2w = Component(EpicsSignal, "Current2:RAW.VAL", auto_monitor=False)
@@ -46,16 +48,18 @@ class SpmSim(SpmBase):
 
         self._MX = 0
         self._MY = 0
-        self._I0 = 255.0       
+        self._I0 = 255.0
         self._x = np.linspace(-5, 5, 64)
         self._y = np.linspace(-5, 5, 64)
-        self._x, self._y = np.meshgrid(self._x, self._y)     
+        self._x, self._y = np.meshgrid(self._x, self._y)
 
     def _simFrame(self):
         """Generator to simulate a jumping gaussian"""
         # Define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
-            return np.exp(-((x - mx)**2. / (2. * sx**2.) + (y - my)**2. / (2. * sy**2.)))
+            return np.exp(
+                -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
+            )
 
         # Generator for dynamic values
         self._MX = 0.75 * self._MX + 0.25 * (10.0 * np.random.random() - 5.0)
