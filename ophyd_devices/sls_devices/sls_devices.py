@@ -1,5 +1,9 @@
-from ophyd import Component as Cpt, DynamicDeviceComponent as Dcpt
-from ophyd import Device, EpicsSignalRO
+import time
+
+from ophyd import Component as Cpt
+from ophyd import Device
+from ophyd import DynamicDeviceComponent as Dcpt
+from ophyd import EpicsSignalRO
 
 
 class SLSOperatorMessages(Device):
@@ -12,6 +16,8 @@ class SLSOperatorMessages(Device):
 
 
 class SLSInfo(Device):
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
     # eh_t02_avg_temperature = Cpt(EpicsSignalRO, "ILUUL-02AV:TEMP", auto_monitor=True)
     # eh_t02_temperature_t0204_axis_16 = Cpt(
     #     EpicsSignalRO, "ILUUL-0200-EB104:TEMP", auto_monitor=True
@@ -33,3 +39,12 @@ class SLSInfo(Device):
     crane_usage = Cpt(
         EpicsSignalRO, "IBWKR-0101-QH10003:D01_H_D-WA", auto_monitor=True, string=True
     )
+
+    def __init__(self, prefix="", *, name, **kwargs):
+        super().__init__(prefix, name=name, **kwargs)
+        self.ring_current.subscribe(self._emit_value)
+
+    def _emit_value(self, **kwargs):
+        timestamp = kwargs.pop("timestamp", time.time())
+        value = self.read()
+        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, value=value, **kwargs)
