@@ -19,14 +19,17 @@ class SLSInfo(Device):
     # eh_t02_temperature_t0205_axis_18 = Cpt(
     #     EpicsSignalRO, "ILUUL-0200-EB105:TEMP", auto_monitor=True
     # )
-    operation = Cpt(EpicsSignalRO, "ACOAU-ACCU:OP-MODE.VAL", auto_monitor=True)
-    injection_mode = Cpt(EpicsSignalRO, "ALIRF-GUN:INJ-MODE", auto_monitor=True)
+    injection_mode = Cpt(EpicsSignalRO, "ALIRF-GUN:INJ-MODE", auto_monitor=True, string=True)
     current_threshold = Cpt(EpicsSignalRO, "ALIRF-GUN:CUR-LOWLIM", auto_monitor=True)
     current_deadband = Cpt(EpicsSignalRO, "ALIRF-GUN:CUR-DBAND", auto_monitor=True)
-    filling_pattern = Cpt(EpicsSignalRO, "ACORF-FILL:PAT-SELECT", auto_monitor=True)
+    filling_pattern = Cpt(EpicsSignalRO, "ACORF-FILL:PAT-SELECT", auto_monitor=True, string=True)
     filling_life_time = Cpt(EpicsSignalRO, "ARIDI-PCT:TAU-HOUR", auto_monitor=True)
-    orbit_feedback_mode = Cpt(EpicsSignalRO, "ARIDI-BPM:OFB-MODE", auto_monitor=True)
-    fast_orbit_feedback = Cpt(EpicsSignalRO, "ARIDI-BPM:FOFBSTATUS-G", auto_monitor=True)
+    orbit_feedback_mode = Cpt(EpicsSignalRO, "ARIDI-BPM:OFB-MODE", auto_monitor=True, string=True)
+    fast_orbit_feedback = Cpt(
+        EpicsSignalRO, "ARIDI-BPM:FOFBSTATUS-G", auto_monitor=True, string=True
+    )
     ring_current = Cpt(EpicsSignalRO, "ARIDI-PCT:CURRENT", auto_monitor=True)
-    machine_status = Cpt(EpicsSignalRO, "ACOAU-ACCU:OP-MODE", auto_monitor=True)
-    crane_usage = Cpt(EpicsSignalRO, "IBWKR-0101-QH10003:D01_H_D-WA", auto_monitor=True)
+    machine_status = Cpt(EpicsSignalRO, "ACOAU-ACCU:OP-MODE", auto_monitor=True, string=True)
+    crane_usage = Cpt(
+        EpicsSignalRO, "IBWKR-0101-QH10003:D01_H_D-WA", auto_monitor=True, string=True
+    )
