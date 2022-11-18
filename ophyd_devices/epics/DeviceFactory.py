@@ -56,5 +56,7 @@ def createProxy(name: str, connect=True) -> OphydObject:
 
 if __name__ == "__main__":
     for key in lut_db:
-        print(key)
+        print("")
         dut = createProxy(str(key))
+        print(f"{key}\t:\t{dut.read()}")
+ 
