@@ -7,6 +7,8 @@ from ophyd import EpicsSignalRO
 
 
 class SLSOperatorMessages(Device):
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
     messages_info = {
         f"message{i}": (EpicsSignalRO, f"ACOAU-ACCU:OP-MSG{i}", {}) for i in range(1, 6)
     }
@@ -14,6 +16,14 @@ class SLSOperatorMessages(Device):
     date_info = {f"message{i}": (EpicsSignalRO, f"ACOAU-ACCU:OP-DATE{i}", {}) for i in range(1, 6)}
     date = Dcpt(date_info)
 
+    def __init__(self, prefix="", *, name, **kwargs):
+        super().__init__(prefix, name=name, **kwargs)
+        self.messages.message1.subscribe(self._emit_value)
+
+    def _emit_value(self, **kwargs):
+        timestamp = kwargs.pop("timestamp", time.time())
+        self.wait_for_connection()
+        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
 
 class SLSInfo(Device):
     SUB_VALUE = "value"
@@ -46,5 +56,5 @@ class SLSInfo(Device):
 
     def _emit_value(self, **kwargs):
         timestamp = kwargs.pop("timestamp", time.time())
-        value = self.read()
-        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, value=value, **kwargs)
+        self.wait_for_connection()
+        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
