@@ -565,34 +565,191 @@ led:
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO
+fal0:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal0, read_pv: X12SA-ES1-SCALER.S4}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+fal1:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal1, read_pv: X12SA-ES1-SCALER.S5}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+fal2:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal2, read_pv: X12SA-ES1-SCALER.S6}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+bpm1i:
+  desc: 'Some VME XBPM...'
+  acquisition: {schedule: sync}
+  config: {name: bpm1i, read_pv: X12SA-OP-BPM1:SUM}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm1:
+  desc: 'XBPM 1: Somewhere around mono (VME)'
+  acquisition: {schedule: sync}
+  config: {name: bpm1, prefix: 'X12SA-OP-BPM2:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: XbpmCsaxsOp
+bpm2i:
+  desc: 'Some VME  XBPM...'
+  acquisition: {schedule: sync}
+  config: {name: bpm2i, read_pv: X12SA-OP-BPM2:SUM}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm2:
+  desc: 'XBPM 2: Somewhere around mono (VME)'
+  acquisition: {schedule: sync}
+  config: {name: bpm2, prefix: 'X12SA-OP-BPM2:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: XbpmCsaxsOp
+
 bpm3:
-  desc: 'XBPM 3: White beam before mono (VME)'
+  desc: 'XBPM 3: White beam AH501 before mono'
   acquisition: {schedule: sync}
-  config: {name: bpm3, prefix: 'X12SA-OP-BPM1:'}
+  config: {name: bpm3, prefix: 'X12SA-OP-BPM3:'}
   deviceGroup: monitor
   status: {enabled: true}
-  type: XbpmCsaxsOp
-bpm4:
-  desc: 'XBPM 4: Somewhere around mono (VME)'
+  type: QuadEM
+bpm3a:
+  desc: 'XBPM 3: White beam AH501 before mono'
   acquisition: {schedule: sync}
-  config: {name: bpm4, prefix: 'X12SA-OP-BPM2:'}
+  config: {name: bpm3a, read_pv: 'X12SA-OP-BPM3:Current1:MeanValue_RBV'}
   deviceGroup: monitor
   status: {enabled: true}
-  type: XbpmCsaxsOp
+  type: EpicsSignalRO
+bpm3b:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3b, read_pv: 'X12SA-OP-BPM3:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm3c:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3c, read_pv: 'X12SA-OP-BPM3:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm3d:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3d, read_pv: 'X12SA-OP-BPM3:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+bpm4a:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4a, read_pv: 'X12SA-OP1-SCALER.S2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4b:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4b, read_pv: 'X12SA-OP1-SCALER.S3'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4c:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4c, read_pv: 'X12SA-OP1-SCALER.S4'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4d:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4d, read_pv: 'X12SA-OP1-SCALER.S5'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 bpm5:
-  desc: 'XBPM 5: Not commissioned'
+  desc: 'XBPM 5: AH501 past the mirror'
   acquisition: {schedule: sync}
   config: {name: bpm5, prefix: 'X12SA-OP-BPM5:'}
   deviceGroup: monitor
   status: {enabled: true}
   type: QuadEM
+bpm5a:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5a, read_pv: 'X12SA-OP-BPM5:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5b:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5b, read_pv: 'X12SA-OP-BPM5:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5c:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5c, read_pv: 'X12SA-OP-BPM5:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5d:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5d, read_pv: 'X12SA-OP-BPM5:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 bpm6:
-  desc: 'XBPM 6: Not commissioned'
+  desc: 'XBPM 6: Xbox, not commissioned'
   acquisition: {schedule: sync}
   config: {name: bpm6, prefix: 'X12SA-OP-BPM6:'}
   deviceGroup: monitor
   status: {enabled: true}
   type: QuadEM
+bpm6a:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6a, read_pv: 'X12SA-OP-BPM6:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6b:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6b, read_pv: 'X12SA-OP-BPM6:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6c:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6c, read_pv: 'X12SA-OP-BPM6:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6d:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6d, read_pv: 'X12SA-OP-BPM6:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 ftp:
   desc: 'Flight tube pressure'
   acquisition: {schedule: sync}
