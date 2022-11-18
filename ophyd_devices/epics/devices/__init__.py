@@ -8,4 +8,3 @@ from .InsertionDevice import InsertionDevice
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsMotor
 from ophyd.sim import SynAxis, SynSignal, SynPeriodicSignal
 from ophyd.quadem import QuadEM
-

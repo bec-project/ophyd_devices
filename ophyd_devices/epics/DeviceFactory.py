@@ -23,17 +23,16 @@ lut_db = yaml.load(fp, Loader=yaml.Loader)
 
 # Load beamline specific database
 bl = os.getenv("BEAMLINE_XNAME", "TESTENV")
-if bl!="TESTENV":
+if bl != "TESTENV":
     fp = open(f"{path}/db/{bl.lower()}_database.yml", "r")
     lut_db.update(yaml.load(fp, Loader=yaml.Loader))
 
 
 def createProxy(name: str, connect=True) -> OphydObject:
-    """ Create an ophyd device from its alias
+    """Create an ophyd device from its alias
 
     Factory routine that uses the beamline database to instantiate
-    instantiate ophyd devices from their alias and pre-defined 
-    configuration parameters.
+    ophyd devices from their alias and pre-defined configuration.
     Does nothing if the device is already an OphydObject!
     """
     if issubclass(type(name), OphydObject):
@@ -42,7 +41,7 @@ def createProxy(name: str, connect=True) -> OphydObject:
     entry = lut_db[name]
     # Yeah, using global namespace
     cls_candidate = globals()[entry["type"]]
-    #print(f"Class candidate: {cls_candidate}")
+    # print(f"Class candidate: {cls_candidate}")
 
     if issubclass(cls_candidate, OphydObject):
         ret = cls_candidate(**entry["config"])
@@ -57,11 +56,7 @@ if __name__ == "__main__":
     for key in lut_db:
         try:
             dut = createProxy(str(key))
-            #print(f"{key}\t: {type(dut)}\t{dut.read()}")
+            # print(f"{key}\t: {type(dut)}\t{dut.read()}")
             print(f"{key}\t: {type(dut)}")
         except Exception as ex:
             print(ex)
-
-
-
- 
