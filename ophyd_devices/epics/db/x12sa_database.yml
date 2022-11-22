@@ -162,7 +162,7 @@ motrz1:
 motrz1e:
   desc: 'Monochromator crystal 1 axial movement encoder'
   acquisition: {schedule: sync}
-  config: {name: motrz1e, prefix: 'X12SA-OP-MO:ECZ1'}
+  config: {name: motrz1e, read_pv: 'X12SA-OP-MO:ECZ1'}
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO
@@ -176,7 +176,7 @@ motrz1e:
 moth1e:
   desc: 'Monochromator crystal 1 theta encoder'
   acquisition: {schedule: sync}
-  config: {name: moth1e, prefix: 'X12SA-OP-MO:ECX1'}
+  config: {name: moth1e, read_pv: 'X12SA-OP-MO:ECX1'}
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO
@@ -211,7 +211,7 @@ motry2:
 moth2e:
   desc: 'Monochromator crystal 2 theta encoder'
   acquisition: {schedule: sync}
-  config: {name: moth2e, prefix: 'X12SA-OP-MO:ECX2'}
+  config: {name: moth2e, read_pv: 'X12SA-OP-MO:ECX2'}
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO

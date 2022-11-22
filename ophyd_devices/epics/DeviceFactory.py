@@ -53,10 +53,14 @@ def createProxy(name: str, connect=True) -> OphydObject:
 
 
 if __name__ == "__main__":
+    num_errors = 0
     for key in lut_db:
         try:
             dut = createProxy(str(key))
             # print(f"{key}\t: {type(dut)}\t{dut.read()}")
             print(f"{key}\t: {type(dut)}")
         except Exception as ex:
+            num_errors += 1
+            print(key)
             print(ex)
+    print(f"\nTotal number of errors: {num_errors}")

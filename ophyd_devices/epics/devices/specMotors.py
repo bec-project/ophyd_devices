@@ -8,7 +8,7 @@ IMPORTANT: Virtual monochromator axes should be implemented already in EPICS!!!
 """
 
 import numpy as np
-from math import isclose
+from math import isclose, tan, atan
 from ophyd import (
     EpicsSignal,
     EpicsSignalRO,
@@ -20,7 +20,7 @@ from ophyd import (
     Kind,
 )
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
-from ophyd.sim import SynAxis, Syn2DGauss
+
 
 
 class PmMonoBender(PseudoPositioner):
