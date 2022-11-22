@@ -166,13 +166,13 @@ motrz1e:
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO
-#mopush1:
-#  desc: 'Monochromator crystal 1 angle'
-#  acquisition: {schedule: sync}
-#  config: {name: mopush1, prefix: 'X12SA-OP-MO:ROX1'}
-#  deviceGroup: beamlineMotor
-#  status: {enabled: true}
-#  type: EpicsMotor
+mopush1:
+  desc: 'Monochromator crystal 1 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush1, read_pv: 'X12SA-OP-MO:ROX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 moth1e:
   desc: 'Monochromator crystal 1 theta encoder'
   acquisition: {schedule: sync}
@@ -201,13 +201,13 @@ motry2:
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor
-#mopush2:
-#  desc: 'Monochromator crystal 2 angle'
-#  acquisition: {schedule: sync}
-#  config: {name: mopush2, prefix: 'X12SA-OP-MO:ROX2'}
-#  deviceGroup: beamlineMotor
-#  status: {enabled: true}
-#  type: EpicsMotor
+mopush2:
+  desc: 'Monochromator crystal 2 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush2, read_pv: 'X12SA-OP-MO:ROX2.VAL'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 moth2e:
   desc: 'Monochromator crystal 2 theta encoder'
   acquisition: {schedule: sync}
@@ -877,4 +877,64 @@ FBPMUY:
   deviceGroup: monitor
   status: {enabled: true}
   type: EpicsSignalRO
+
+sttrx:
+  desc: 'Girder X translation'
+  acquisition: {schedule: sync}
+  config: {name: sttrx, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorX1
+sttry:
+  desc: 'Girder Y translation'
+  acquisition: {schedule: sync}
+  config: {name: sttry, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorY1
+strox:
+  desc: 'Girder virtual pitch'
+  acquisition: {schedule: sync}
+  config: {name: strox, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorPITCH
+stroy:
+  desc: 'Girder virtual yaw'
+  acquisition: {schedule: sync}
+  config: {name: stroy, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorYAW
+stroz:
+  desc: 'Girder virtual roll'
+  acquisition: {schedule: sync}
+  config: {name: stroz, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorROLL
+mokev:
+  desc: 'Monochromator energy in keV'
+  acquisition: {schedule: sync}
+  config: {name: mokev, read_pv: 'X12SA-OP-MO:ROX2.VAL'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EnergyKev
+moth1:
+  desc: 'Monochromator Theta 1'
+  acquisition: {schedule: sync}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ECX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: MonoTheta1
+moth2:
+  desc: 'Monochromator Theta 2'
+  acquisition: {schedule: sync}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ECX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: MonoTheta2
+
+
+
 

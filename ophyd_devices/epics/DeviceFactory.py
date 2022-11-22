@@ -57,8 +57,8 @@ if __name__ == "__main__":
     for key in lut_db:
         try:
             dut = createProxy(str(key))
-            # print(f"{key}\t: {type(dut)}\t{dut.read()}")
-            print(f"{key}\t: {type(dut)}")
+            print(f"{key}\t: {type(dut)}\t{dut.read()}")
+            # print(f"{key}\t: {type(dut)}")
         except Exception as ex:
             num_errors += 1
             print(key)
