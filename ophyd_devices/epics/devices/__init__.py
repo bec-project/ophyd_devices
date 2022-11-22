@@ -3,6 +3,8 @@ from .slits import SlitH, SlitV
 from .XbpmBase import XbpmBase, XbpmCsaxsOp
 from .SpmBase import SpmBase
 from .InsertionDevice import InsertionDevice
+from .specMotors import PmMonoBender, PmDetectorRotation
+
 
 # Standard ophyd classes
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsMotor
