@@ -6,3 +6,5 @@
 **/out
 **/.vscode
 **/.pytest_cache
+*.egg-info
+
