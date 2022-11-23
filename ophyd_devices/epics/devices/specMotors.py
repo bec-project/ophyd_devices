@@ -97,34 +97,43 @@ class PmDetectorRotation(PseudoPositioner):
 class GirderMotorX1(PVPositioner):
     """Girder X translation pseudo motor
     """
+
     setpoint = Component(EpicsSignal, ":X_SET", name="sp")
     readback = Component(EpicsSignalRO, ":X1", name="rbv")
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
 
+
 class GirderMotorY1(PVPositioner):
     """Girder Y translation pseudo motor
     """
+
     setpoint = Component(EpicsSignal, ":Y_SET", name="sp")
     readback = Component(EpicsSignalRO, ":Y1", name="rbv")
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
 
+
 class GirderMotorYAW(PVPositioner):
     """Girder YAW pseudo motor
     """
+
     setpoint = Component(EpicsSignal, ":YAW_SET", name="sp")
     readback = Component(EpicsSignalRO, ":YAW1", name="rbv")
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
 
+
 class GirderMotorROLL(PVPositioner):
     """Girder ROLL pseudo motor
     """
+
     setpoint = Component(EpicsSignal, ":ROLL_SET", name="sp")
     readback = Component(EpicsSignalRO, ":ROLL1", name="rbv")
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
 
+
 class GirderMotorPITCH(PVPositioner):
     """Girder YAW pseudo motor
     """
+
     setpoint = Component(EpicsSignal, ":PITCH_SET", name="sp")
     readback = Component(EpicsSignalRO, ":PITCH1", name="rbv")
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
@@ -134,6 +143,7 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
     """This is a test class to create derives signals from one or 
     multiple original signals...
     """
+
     def calc(self, val):
         return val
 
@@ -141,27 +151,34 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
         raw = super().get(*args, **kwargs)
         return self.calc(raw)
 
-    #def describe(self):
+    # def describe(self):
     #    val = self.get()
     #    d = super().describe()
     #    d[self.name]["dtype"] = data_type(val)
     #    return d
 
+
 class MonoTheta1(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle
     """
+
     _mono_a0_enc_scale1 = -1.0
     _mono_a1_lever_length1 = 206.706
     _mono_a2_pusher_offs1 = 6.85858
     _mono_a3_enc_offs1 = -16.9731
+
     def calc(self, val):
         asin_arg = (val - self._mono_a2_pusher_offs1) / self._mono_a1_lever_length1
-        theta1 = self._mono_a0_enc_scale1 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs1
+        theta1 = (
+            self._mono_a0_enc_scale1 * asin(asin_arg) / 3.141592 * 180.0 + self._mono_a3_enc_offs1
+        )
         return theta1
+
 
 class MonoTheta2(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle
     """
+
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
     _mono_a1_lever_length2 = 206.572
@@ -169,37 +186,27 @@ class MonoTheta2(VirtualEpicsSignalRO):
 
     def calc(self, val):
         asin_arg = (val - self._mono_a2_pusher_offs2) / self._mono_a1_lever_length2
-        theta2 = self._mono_a0_enc_scale2 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
+        theta2 = (
+            self._mono_a0_enc_scale2 * asin(asin_arg) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
+        )
         return theta2
+
 
 class EnergyKev(VirtualEpicsSignalRO):
     """Converts the pusher motor position to energy in keV
     """
+
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
     _mono_a1_lever_length2 = 206.572
     _mono_a0_enc_scale2 = -1.0
     _mono_hce = 12.39852066
-    _mono_2d2 = 2*5.43102/sqrt(3)
+    _mono_2d2 = 2 * 5.43102 / sqrt(3)
+
     def calc(self, val):
         asin_arg = (val - self._mono_a2_pusher_offs2) / self._mono_a1_lever_length2
-        theta2_deg = self._mono_a0_enc_scale2 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
-        E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg/180.0*3.14152)
+        theta2_deg = (
+            self._mono_a0_enc_scale2 * asin(asin_arg) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
+        )
+        E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg / 180.0 * 3.14152)
         return E_keV
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
