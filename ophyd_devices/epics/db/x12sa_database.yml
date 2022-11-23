@@ -145,97 +145,7 @@ fi3try:
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: EpicsMotor
-motry:
-  desc: 'OpticsHutch optical table vertical movement'
-  acquisition: {schedule: sync}
-  config: {name: motry, prefix: 'X12SA-OP-OT:TRY'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-motrz1:
-  desc: 'Monochromator crystal 1 axial movement'
-  acquisition: {schedule: sync}
-  config: {name: motrz1, prefix: 'X12SA-OP-MO:TRZ1'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-motrz1e:
-  desc: 'Monochromator crystal 1 axial movement encoder'
-  acquisition: {schedule: sync}
-  config: {name: motrz1e, read_pv: 'X12SA-OP-MO:ECZ1'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
-mopush1:
-  desc: 'Monochromator crystal 1 angle'
-  acquisition: {schedule: sync}
-  config: {name: mopush1, read_pv: 'X12SA-OP-MO:ROX1'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
-moth1e:
-  desc: 'Monochromator crystal 1 theta encoder'
-  acquisition: {schedule: sync}
-  config: {name: moth1e, read_pv: 'X12SA-OP-MO:ECX1'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
-moroll1:
-  desc: 'Monochromator crystal 1 roll'
-  acquisition: {schedule: sync}
-  config: {name: moroll1, prefix: 'X12SA-OP-MO:ROZ1'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-motrx2:
-  desc: 'Monochromator crystal 2 horizontal movement'
-  acquisition: {schedule: sync}
-  config: {name: motrx2, prefix: 'X12SA-OP-MO:TRX2'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-motry2:
-  desc: 'Monochromator crystal 2 vertical movement'
-  acquisition: {schedule: sync}
-  config: {name: motry2, prefix: 'X12SA-OP-MO:TRY2'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-mopush2:
-  desc: 'Monochromator crystal 2 angle'
-  acquisition: {schedule: sync}
-  config: {name: mopush2, read_pv: 'X12SA-OP-MO:ROX2.VAL'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
-moth2e:
-  desc: 'Monochromator crystal 2 theta encoder'
-  acquisition: {schedule: sync}
-  config: {name: moth2e, read_pv: 'X12SA-OP-MO:ECX2'}
-  deviceGroup: monitor
-  status: {enabled: true}
-  type: EpicsSignalRO
-#monot:
-#  desc: 'Monochromator temperature'
-#  acquisition: {schedule: sync}
-#  config: {name: monot, read_pv: 'X12SA-OP-MO:TC3'}
-#  deviceGroup: monitor
-#  status: {enabled: true}
-#  type: EpicsSignalRO
-moyaw2:
-  desc: 'Monochromator crystal 2 yaw movement'
-  acquisition: {schedule: sync}
-  config: {name: moyaw2, prefix: 'X12SA-OP-MO:ROY2'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
-moroll2:
-  desc: 'Monochromator crystal 2 roll movement'
-  acquisition: {schedule: sync}
-  config: {name: moroll2, prefix: 'X12SA-OP-MO:ROZ2'}
-  deviceGroup: beamlineMotor
-  status: {enabled: true}
-  type: EpicsMotor
+
 mobdai:
   desc: 'Monochromator bender inner motor'
   acquisition: {schedule: sync}
@@ -913,28 +823,122 @@ stroz:
   deviceGroup: beamlineMotor
   status: {enabled: true}
   type: GirderMotorROLL
-mokev:
-  desc: 'Monochromator energy in keV'
+motry:
+  desc: 'OpticsHutch optical table vertical movement'
   acquisition: {schedule: sync}
-  config: {name: mokev, read_pv: 'X12SA-OP-MO:ROX2.VAL'}
+  config: {name: motry, prefix: 'X12SA-OP-OT:TRY'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrz1:
+  desc: 'Monochromator crystal 1 axial movement'
+  acquisition: {schedule: sync}
+  config: {name: motrz1, prefix: 'X12SA-OP-MO:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrz1e:
+  desc: 'Monochromator crystal 1 axial movement encoder'
+  acquisition: {schedule: sync}
+  config: {name: motrz1e, read_pv: 'X12SA-OP-MO:ECZ1'}
   deviceGroup: monitor
   status: {enabled: true}
-  type: EnergyKev
+  type: EpicsSignalRO
+
+
+moroll1:
+  desc: 'Monochromator crystal 1 roll'
+  acquisition: {schedule: sync}
+  config: {name: moroll1, prefix: 'X12SA-OP-MO:ROZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrx2:
+  desc: 'Monochromator crystal 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: motrx2, prefix: 'X12SA-OP-MO:TRX2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motry2:
+  desc: 'Monochromator crystal 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: motry2, prefix: 'X12SA-OP-MO:TRY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+
+
+#monot:
+#  desc: 'Monochromator temperature'
+#  acquisition: {schedule: sync}
+#  config: {name: monot, read_pv: 'X12SA-OP-MO:TC3'}
+#  deviceGroup: monitor
+#  status: {enabled: true}
+#  type: EpicsSignalRO
+moyaw2:
+  desc: 'Monochromator crystal 2 yaw movement'
+  acquisition: {schedule: sync}
+  config: {name: moyaw2, prefix: 'X12SA-OP-MO:ROY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+moroll2:
+  desc: 'Monochromator crystal 2 roll movement'
+  acquisition: {schedule: sync}
+  config: {name: moroll2, prefix: 'X12SA-OP-MO:ROZ2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+
+mopush1:
+  desc: 'Monochromator crystal 1 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush1, read_pv: 'X12SA-OP-MO:ROX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 moth1:
   desc: 'Monochromator Theta 1'
   acquisition: {schedule: sync}
-  config: {name: moth1, read_pv: 'X12SA-OP-MO:ECX1'}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ROX1'}
   deviceGroup: monitor
   status: {enabled: true}
   type: MonoTheta1
+moth1e:
+  desc: 'Monochromator crystal 1 theta encoder'
+  acquisition: {schedule: sync}
+  config: {name: moth1e, read_pv: 'X12SA-OP-MO:ECX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+mopush2:
+  desc: 'Monochromator crystal 2 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush2, read_pv: 'X12SA-OP-MO:ROX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
 moth2:
   desc: 'Monochromator Theta 2'
   acquisition: {schedule: sync}
-  config: {name: moth1, read_pv: 'X12SA-OP-MO:ECX2'}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ROX2'}
   deviceGroup: monitor
   status: {enabled: true}
   type: MonoTheta2
-
-
+moth2e:
+  desc: 'Monochromator crystal 2 theta encoder'
+  acquisition: {schedule: sync}
+  config: {name: moth2e, read_pv: 'X12SA-OP-MO:ECX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+mokev:
+  desc: 'Monochromator energy in keV'
+  acquisition: {schedule: sync}
+  config: {name: mokev, read_pv: 'X12SA-OP-MO:ROX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EnergyKev
 
 

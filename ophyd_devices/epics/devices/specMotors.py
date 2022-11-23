@@ -130,7 +130,7 @@ class GirderMotorPITCH(PVPositioner):
     done = Component(EpicsSignal, ":M-DMOV", name="dmov")
 
 
-class VirtualSignalBase(EpicsSignalRO):
+class VirtualEpicsSignalRO(EpicsSignalRO):
     """This is a test class to create derives signals from one or 
     multiple original signals...
     """
@@ -141,13 +141,13 @@ class VirtualSignalBase(EpicsSignalRO):
         raw = super().get(*args, **kwargs)
         return self.calc(raw)
 
-    def describe(self):
-        val = self.get()
-        d = super().describe()
-        d[self.name]["dtype"] = data_type(val)
-        return d
+    #def describe(self):
+    #    val = self.get()
+    #    d = super().describe()
+    #    d[self.name]["dtype"] = data_type(val)
+    #    return d
 
-class MonoTheta1(VirtualSignalBase):
+class MonoTheta1(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle
     """
     _mono_a0_enc_scale1 = -1.0
@@ -159,7 +159,7 @@ class MonoTheta1(VirtualSignalBase):
         theta1 = self._mono_a0_enc_scale1 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs1
         return theta1
 
-class MonoTheta2(VirtualSignalBase):
+class MonoTheta2(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle
     """
     _mono_a3_enc_offs2 = -19.7072
@@ -172,14 +172,19 @@ class MonoTheta2(VirtualSignalBase):
         theta2 = self._mono_a0_enc_scale2 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
         return theta2
 
-class EnergyKev(VirtualSignalBase):
+class EnergyKev(VirtualEpicsSignalRO):
     """Converts the pusher motor position to energy in keV
     """
+    _mono_a3_enc_offs2 = -19.7072
+    _mono_a2_pusher_offs2 = 5.93905
+    _mono_a1_lever_length2 = 206.572
+    _mono_a0_enc_scale2 = -1.0
     _mono_hce = 12.39852066
     _mono_2d2 = 2*5.43102/sqrt(3)
     def calc(self, val):
-        theta_deg = atan(50 / val) / 2.0 * 180.0 / 3.141592
-        E_keV = -self._mono_hce / self._mono_2d2 / sin(theta_deg/180.0*3.14152)
+        asin_arg = (val - self._mono_a2_pusher_offs2) / self._mono_a1_lever_length2
+        theta2_deg = self._mono_a0_enc_scale2 * asin( asin_arg ) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
+        E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg/180.0*3.14152)
         return E_keV
 
 
