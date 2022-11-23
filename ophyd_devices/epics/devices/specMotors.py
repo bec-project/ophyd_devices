@@ -95,8 +95,7 @@ class PmDetectorRotation(PseudoPositioner):
 
 
 class GirderMotorX1(PVPositioner):
-    """Girder X translation pseudo motor
-    """
+    """Girder X translation pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":X_SET", name="sp")
     readback = Component(EpicsSignalRO, ":X1", name="rbv")
@@ -104,8 +103,7 @@ class GirderMotorX1(PVPositioner):
 
 
 class GirderMotorY1(PVPositioner):
-    """Girder Y translation pseudo motor
-    """
+    """Girder Y translation pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":Y_SET", name="sp")
     readback = Component(EpicsSignalRO, ":Y1", name="rbv")
@@ -113,8 +111,7 @@ class GirderMotorY1(PVPositioner):
 
 
 class GirderMotorYAW(PVPositioner):
-    """Girder YAW pseudo motor
-    """
+    """Girder YAW pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":YAW_SET", name="sp")
     readback = Component(EpicsSignalRO, ":YAW1", name="rbv")
@@ -122,8 +119,7 @@ class GirderMotorYAW(PVPositioner):
 
 
 class GirderMotorROLL(PVPositioner):
-    """Girder ROLL pseudo motor
-    """
+    """Girder ROLL pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":ROLL_SET", name="sp")
     readback = Component(EpicsSignalRO, ":ROLL1", name="rbv")
@@ -131,8 +127,7 @@ class GirderMotorROLL(PVPositioner):
 
 
 class GirderMotorPITCH(PVPositioner):
-    """Girder YAW pseudo motor
-    """
+    """Girder YAW pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":PITCH_SET", name="sp")
     readback = Component(EpicsSignalRO, ":PITCH1", name="rbv")
@@ -140,7 +135,7 @@ class GirderMotorPITCH(PVPositioner):
 
 
 class VirtualEpicsSignalRO(EpicsSignalRO):
-    """This is a test class to create derives signals from one or 
+    """This is a test class to create derives signals from one or
     multiple original signals...
     """
 
@@ -159,8 +154,7 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
 
 
 class MonoTheta1(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to theta angle
-    """
+    """Converts the pusher motor position to theta angle"""
 
     _mono_a0_enc_scale1 = -1.0
     _mono_a1_lever_length1 = 206.706
@@ -176,8 +170,7 @@ class MonoTheta1(VirtualEpicsSignalRO):
 
 
 class MonoTheta2(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to theta angle
-    """
+    """Converts the pusher motor position to theta angle"""
 
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
@@ -193,8 +186,7 @@ class MonoTheta2(VirtualEpicsSignalRO):
 
 
 class EnergyKev(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to energy in keV
-    """
+    """Converts the pusher motor position to energy in keV"""
 
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
