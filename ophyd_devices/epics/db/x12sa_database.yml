@@ -1,0 +1,944 @@
+idgap:
+  desc: 'Undulator gap size [mm]'
+  acquisition: {schedule: sync}
+  config: {name: idgap, prefix: 'X12SA-ID'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: InsertionDevice
+bm1trx:
+  desc: 'FrontEnd XBPM 1 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: bm1trx, prefix: 'X12SA-FE-BM1:TRH'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm1try:
+  desc: 'FrontEnd XBPM 1 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: bm1try, prefix: 'X12SA-FE-BM1:TRV'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm2trx:
+  desc: 'FrontEnd XBPM 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: bm2trx, prefix: 'X12SA-FE-BM2:TRH'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm2try:
+  desc: 'FrontEnd XBPM 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: bm2try, prefix: 'X12SA-FE-BM2:TRV'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+di2trx:
+  desc: 'FrontEnd diaphragm 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: di2trx, prefix: 'X12SA-FE-DI2:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+di2try:
+  desc: 'FrontEnd diaphragm 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: di2try, prefix: 'X12SA-FE-DI2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl0trxo:
+  desc: 'FrontEnd slit outer blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl0trxo, prefix: 'X12SA-FE-SH1:TRX2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl0trxi:
+  desc: 'FrontEnd slit inner blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl0trxi, prefix: 'X12SA-FE-SH1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl0h:
+  desc: 'FrontEnd slit virtual movement'
+  acquisition: {schedule: sync}
+  config: {name: sl0h, prefix: 'X12SA-FE-SH1:'}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlitH
+bm3trx:
+  desc: 'OpticsHutch XBPM 1 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: bm3trx, prefix: 'X12SA-OP-BM1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm3try:
+  desc: 'OpticsHutch XBPM 1 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: bm3try, prefix: 'X12SA-OP-BM1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl1trxo:
+  desc: 'OpticsHutch slit outer blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1trxo, prefix: 'X12SA-OP-SH1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl1trxi:
+  desc: 'OpticsHutch slit inner blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1trxi, prefix: 'X12SA-OP-SH1:TRX2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl1tryt:
+  desc: 'OpticsHutch slit top blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1tryt, prefix: 'X12SA-OP-SV1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl1tryb:
+  desc: 'OpticsHutch slit bottom blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1tryb, prefix: 'X12SA-OP-SV1:TRY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl1h:
+  desc: 'OpticsHutch slit virtual movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1h, prefix: 'X12SA-OP-SH1:'}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlitH
+sl1v:
+  desc: 'OpticsHutch slit virtual movement'
+  acquisition: {schedule: sync}
+  config: {name: sl1v, prefix: 'X12SA-OP-SV1:'}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlitV
+fi1try:
+  desc: 'OpticsHutch filter 1 movement'
+  acquisition: {schedule: sync}
+  config: {name: fi1try, prefix: 'X12SA-OP-FI1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fi2try:
+  desc: 'OpticsHutch filter 2 movement'
+  acquisition: {schedule: sync}
+  config: {name: fi2try, prefix: 'X12SA-OP-FI2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fi3try:
+  desc: 'OpticsHutch filter 3 movement'
+  acquisition: {schedule: sync}
+  config: {name: fi3try, prefix: 'X12SA-OP-FI3:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+
+mobdai:
+  desc: 'Monochromator bender inner motor'
+  acquisition: {schedule: sync}
+  config: {name: mobdai, prefix: 'X12SA-OP-MO:TRYA'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mobdbo:
+  desc: 'Monochromator bender outer motor'
+  acquisition: {schedule: sync}
+  config: {name: mobdbo, prefix: 'X12SA-OP-MO:TRYB'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mobdco:
+  desc: 'Monochromator bender outer motor'
+  acquisition: {schedule: sync}
+  config: {name: mobdco, prefix: 'X12SA-OP-MO:TRYC'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mobddi:
+  desc: 'Monochromator bender inner motor'
+  acquisition: {schedule: sync}
+  config: {name: mobddi, prefix: 'X12SA-OP-MO:TRYD'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mobd:
+  desc: 'Monochromator bender virtual motor'
+  acquisition: {schedule: sync}
+  config: {name: mobd, prefix: 'X12SA-OP-MO:'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: PmMonoBender
+  
+bm4trx:
+  desc: 'OpticsHutch XBPM 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: bm4trx, prefix: 'X12SA-OP-BM2:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm4try:
+  desc: 'OpticsHutch XBPM 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: bm4try, prefix: 'X12SA-OP-BM2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mitrx:
+  desc: 'Mirror horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: mitrx, prefix: 'X12SA-OP-MI:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mitry1:
+  desc: 'Mirror vertical movement 1'
+  acquisition: {schedule: sync}
+  config: {name: mitry1, prefix: 'X12SA-OP-MI:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mitry2:
+  desc: 'Mirror vertical movement 2'
+  acquisition: {schedule: sync}
+  config: {name: mitry2, prefix: 'X12SA-OP-MI:TRY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mitry3:
+  desc: 'Mirror vertical movement 3'
+  acquisition: {schedule: sync}
+  config: {name: mitry3, prefix: 'X12SA-OP-MI:TRY3'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mibd1:
+  desc: 'Mirror bender 1'
+  acquisition: {schedule: sync}
+  config: {name: mibd1, prefix: 'X12SA-OP-MI:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+mibd2:
+  desc: 'Mirror bender 2'
+  acquisition: {schedule: sync}
+  config: {name: mibd2, prefix: 'X12SA-OP-MI:TRZ2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm5trx:
+  desc: 'OpticsHutch XBPM 3 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: bm5trx, prefix: 'X12SA-OP-BM3:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bm5try:
+  desc: 'OpticsHutch XBPM 3 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: bm5try, prefix: 'X12SA-OP-BM3:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl2trxo:
+  desc: 'OpticsHutch slit 2 outer blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2trxo, prefix: 'X12SA-OP-SH2:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl2trxi:
+  desc: 'OpticsHutch slit 2 inner blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2trxi, prefix: 'X12SA-OP-SH2:TRX2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl2tryt:
+  desc: 'OpticsHutch slit 2 top blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2tryt, prefix: 'X12SA-OP-SV2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl2tryb:
+  desc: 'OpticsHutch slit 2 bottom blade movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2tryb, prefix: 'X12SA-OP-SV2:TRY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+sl2h:
+  desc: 'OpticsHutch slit 2 virtual movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2h, prefix: 'X12SA-OP-SH2:'}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlitH
+sl2v:
+  desc: 'OpticsHutch slit 2 virtual movement'
+  acquisition: {schedule: sync}
+  config: {name: sl2v, prefix: 'X12SA-OP-SV2:'}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlitV
+aptrx:
+  desc: 'ES aperture horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: aptrx, prefix: 'X12SA-ES1-PIN1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+aptry:
+  desc: 'ES aperture vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: aptry, prefix: 'X12SA-ES1-PIN1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+ebtrx:
+  desc: 'Exposure box 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: ebtrx, prefix: 'X12SA-ES1-EB:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+ebtry:
+  desc: 'Exposure box 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: ebtry, prefix: 'X12SA-ES1-EB:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+ebtrz:
+  desc: 'Exposure box 2 axial movement'
+  acquisition: {schedule: sync}
+  config: {name: ebtrz, prefix: 'X12SA-ES1-EB:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fttrx1:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: fttrx1, prefix: 'X12SA-ES1-FTS1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fttry1:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: fttry1, prefix: 'X12SA-ES1-FTS1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fttrz:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: fttrz, prefix: 'X12SA-ES1-FTS1:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fttrx2:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: fttrx2, prefix: 'X12SA-ES1-FTS2:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+fttry2:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: fttry2, prefix: 'X12SA-ES1-FTS2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bs1x:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: bs1x, prefix: 'X12SA-ES1-BS1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bs1y:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: bs1y, prefix: 'X12SA-ES1-BS1:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bs2x:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: bs2x, prefix: 'X12SA-ES1-BS2:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+bs2y:
+  desc: 'Dunno these motors???'
+  acquisition: {schedule: sync}
+  config: {name: bs2y, prefix: 'X12SA-ES1-BS2:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+dttrx:
+  desc: 'Detector tower motion'
+  acquisition: {schedule: sync}
+  config: {name: dttrx, prefix: 'X12SA-ES1-DETT:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+dttry:
+  desc: 'Detector tower motion, no encoder'
+  acquisition: {schedule: sync}
+  config: {name: dttry, prefix: 'X12SA-ES1-DETT:TRY1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+dttrz:
+  desc: 'Detector tower motion'
+  acquisition: {schedule: sync}
+  config: {name: dttrz, prefix: 'X12SA-ES1-DETT:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+dtpush:
+  desc: 'Detector tower tilt pusher'
+  acquisition: {schedule: sync}
+  config: {name: dtpush, prefix: 'X12SA-ES1-DETT:ROX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+dtth:
+  desc: 'Detector tower tilt rotation'
+  acquisition: {schedule: sync}
+  config: {name: dtth, prefix: 'X12SA-ES1-DETT:ROX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: PmDetectorRotation
+dettrx:
+  desc: 'Detector tower motion'
+  acquisition: {schedule: sync}
+  config: {name: dettrx, prefix: 'X12SA-ES1-DET1:TRX1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+eyex:
+  desc: 'X-ray eye motion'
+  acquisition: {schedule: sync}
+  config: {name: eyex, prefix: X12SA-ES2-ES01}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+eyey:
+  desc: 'X-ray eye motion'
+  acquisition: {schedule: sync}
+  config: {name: eyey, prefix: X12SA-ES2-ES02}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+eyefoc:
+  desc: 'X-ray eye focusing motor'
+  acquisition: {schedule: sync}
+  config: {name: eyefoc, prefix: X12SA-ES2-ES25}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+micfoc:
+  desc: 'Microscope focusing motor'
+  acquisition: {schedule: sync}
+  config: {name: micfoc, prefix: X12SA-ES2-ES03}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+samx:
+  desc: 'Sample motion'
+  acquisition: {schedule: sync}
+  config: {name: samx, prefix: X12SA-ES2-ES04}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+samy:
+  desc: 'Sample motion'
+  acquisition: {schedule: sync}
+  config: {name: samy, prefix: X12SA-ES2-ES05}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+curr:
+  desc: 'SLS ring current'
+  acquisition: {schedule: sync}
+  config: {name: curr, read_pv: 'ARIDI-PCT:CURRENT'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+sec:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: sec, read_pv: X12SA-ES1-SCALER.S1}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+cyb:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: cyb, read_pv: X12SA-ES1-SCALER.S2}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+diode:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: diode, read_pv: X12SA-ES1-SCALER.S3}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+led:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: led, read_pv: X12SA-ES1-SCALER.S4}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+fal0:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal0, read_pv: X12SA-ES1-SCALER.S4}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+fal1:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal1, read_pv: X12SA-ES1-SCALER.S5}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+fal2:
+  desc: 'Some scaler...'
+  acquisition: {schedule: sync}
+  config: {name: fal2, read_pv: X12SA-ES1-SCALER.S6}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+bpm1i:
+  desc: 'Some VME XBPM...'
+  acquisition: {schedule: sync}
+  config: {name: bpm1i, read_pv: X12SA-OP-BPM1:SUM}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm1:
+  desc: 'XBPM 1: Somewhere around mono (VME)'
+  acquisition: {schedule: sync}
+  config: {name: bpm1, prefix: 'X12SA-OP-BPM2:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: XbpmCsaxsOp
+bpm2i:
+  desc: 'Some VME  XBPM...'
+  acquisition: {schedule: sync}
+  config: {name: bpm2i, read_pv: X12SA-OP-BPM2:SUM}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm2:
+  desc: 'XBPM 2: Somewhere around mono (VME)'
+  acquisition: {schedule: sync}
+  config: {name: bpm2, prefix: 'X12SA-OP-BPM2:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: XbpmCsaxsOp
+
+bpm3:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3, prefix: 'X12SA-OP-BPM3:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: QuadEM
+bpm3a:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3a, read_pv: 'X12SA-OP-BPM3:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm3b:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3b, read_pv: 'X12SA-OP-BPM3:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm3c:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3c, read_pv: 'X12SA-OP-BPM3:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm3d:
+  desc: 'XBPM 3: White beam AH501 before mono'
+  acquisition: {schedule: sync}
+  config: {name: bpm3d, read_pv: 'X12SA-OP-BPM3:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+bpm4a:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4a, read_pv: 'X12SA-OP1-SCALER.S2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4b:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4b, read_pv: 'X12SA-OP1-SCALER.S3'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4c:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4c, read_pv: 'X12SA-OP1-SCALER.S4'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm4d:
+  desc: 'XBPM 4: VME between mono and mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm4d, read_pv: 'X12SA-OP1-SCALER.S5'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5, prefix: 'X12SA-OP-BPM5:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: QuadEM
+bpm5a:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5a, read_pv: 'X12SA-OP-BPM5:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5b:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5b, read_pv: 'X12SA-OP-BPM5:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5c:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5c, read_pv: 'X12SA-OP-BPM5:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm5d:
+  desc: 'XBPM 5: AH501 past the mirror'
+  acquisition: {schedule: sync}
+  config: {name: bpm5d, read_pv: 'X12SA-OP-BPM5:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6, prefix: 'X12SA-OP-BPM6:'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: QuadEM
+bpm6a:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6a, read_pv: 'X12SA-OP-BPM6:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6b:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6b, read_pv: 'X12SA-OP-BPM6:Current2:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6c:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6c, read_pv: 'X12SA-OP-BPM6:Current3:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+bpm6d:
+  desc: 'XBPM 6: Xbox, not commissioned'
+  acquisition: {schedule: sync}
+  config: {name: bpm6d, read_pv: 'X12SA-OP-BPM6:Current4:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+ftp:
+  desc: 'Flight tube pressure'
+  acquisition: {schedule: sync}
+  config: {name: ftp, read_pv: 'X12SA-ES1-FT1MT1:PRESSURE'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+eyecenx:
+  desc: 'X-ray eye intensit math'
+  acquisition: {schedule: sync}
+  config: {name: eyecenx, read_pv: 'XOMNYI-XEYE-XCEN:0'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+eyeceny:
+  desc: 'X-ray eye intensit math'
+  acquisition: {schedule: sync}
+  config: {name: eyeceny, read_pv: 'XOMNYI-XEYE-YCEN:0'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+eyeint:
+  desc: 'X-ray eye intensit math'
+  acquisition: {schedule: sync}
+  config: {name: eyeint, read_pv: 'XOMNYI-XEYE-INT_MEAN:0'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+transd:
+  desc: 'Transmission diode'
+  acquisition: {schedule: sync}
+  config: {name: transd, read_pv: 'X12SA-OP-BPM1:Current1:MeanValue_RBV'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+YASYM:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: YASYM, read_pv: 'X12SA-LBB:Y-ASYM'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+YSYM:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: YSYM, read_pv: 'X12SA-LBB:Y-SYM'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+XASYM:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: XASYM, read_pv: 'X12SA-LBB:X-ASYM'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+XSYM:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: XSYM, read_pv: 'X12SA-LBB:X-SYM'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+FBPMDX:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: FBPMDX, read_pv: 'X12SA-ID-FBPMD:X'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+FBPMDY:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: FBPMDY, read_pv: 'X12SA-ID-FBPMD:Y'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+FBPMUX:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: FBPMUX, read_pv: 'X12SA-ID-FBPMU:X'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+FBPMUY:
+  desc: 'FOFB reference'
+  acquisition: {schedule: sync}
+  config: {name: FBPMUY, read_pv: 'X12SA-ID-FBPMU:Y'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+sttrx:
+  desc: 'Girder X translation'
+  acquisition: {schedule: sync}
+  config: {name: sttrx, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorX1
+sttry:
+  desc: 'Girder Y translation'
+  acquisition: {schedule: sync}
+  config: {name: sttry, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorY1
+strox:
+  desc: 'Girder virtual pitch'
+  acquisition: {schedule: sync}
+  config: {name: strox, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorPITCH
+stroy:
+  desc: 'Girder virtual yaw'
+  acquisition: {schedule: sync}
+  config: {name: stroy, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorYAW
+stroz:
+  desc: 'Girder virtual roll'
+  acquisition: {schedule: sync}
+  config: {name: stroz, prefix: 'X12SA-HG'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: GirderMotorROLL
+motry:
+  desc: 'OpticsHutch optical table vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: motry, prefix: 'X12SA-OP-OT:TRY'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrz1:
+  desc: 'Monochromator crystal 1 axial movement'
+  acquisition: {schedule: sync}
+  config: {name: motrz1, prefix: 'X12SA-OP-MO:TRZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrz1e:
+  desc: 'Monochromator crystal 1 axial movement encoder'
+  acquisition: {schedule: sync}
+  config: {name: motrz1e, read_pv: 'X12SA-OP-MO:ECZ1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+
+
+moroll1:
+  desc: 'Monochromator crystal 1 roll'
+  acquisition: {schedule: sync}
+  config: {name: moroll1, prefix: 'X12SA-OP-MO:ROZ1'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motrx2:
+  desc: 'Monochromator crystal 2 horizontal movement'
+  acquisition: {schedule: sync}
+  config: {name: motrx2, prefix: 'X12SA-OP-MO:TRX2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+motry2:
+  desc: 'Monochromator crystal 2 vertical movement'
+  acquisition: {schedule: sync}
+  config: {name: motry2, prefix: 'X12SA-OP-MO:TRY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+
+
+#monot:
+#  desc: 'Monochromator temperature'
+#  acquisition: {schedule: sync}
+#  config: {name: monot, read_pv: 'X12SA-OP-MO:TC3'}
+#  deviceGroup: monitor
+#  status: {enabled: true}
+#  type: EpicsSignalRO
+moyaw2:
+  desc: 'Monochromator crystal 2 yaw movement'
+  acquisition: {schedule: sync}
+  config: {name: moyaw2, prefix: 'X12SA-OP-MO:ROY2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+moroll2:
+  desc: 'Monochromator crystal 2 roll movement'
+  acquisition: {schedule: sync}
+  config: {name: moroll2, prefix: 'X12SA-OP-MO:ROZ2'}
+  deviceGroup: beamlineMotor
+  status: {enabled: true}
+  type: EpicsMotor
+
+mopush1:
+  desc: 'Monochromator crystal 1 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush1, read_pv: 'X12SA-OP-MO:ROX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+moth1:
+  desc: 'Monochromator Theta 1'
+  acquisition: {schedule: sync}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ROX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: MonoTheta1
+moth1e:
+  desc: 'Monochromator crystal 1 theta encoder'
+  acquisition: {schedule: sync}
+  config: {name: moth1e, read_pv: 'X12SA-OP-MO:ECX1'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+mopush2:
+  desc: 'Monochromator crystal 2 angle'
+  acquisition: {schedule: sync}
+  config: {name: mopush2, read_pv: 'X12SA-OP-MO:ROX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+moth2:
+  desc: 'Monochromator Theta 2'
+  acquisition: {schedule: sync}
+  config: {name: moth1, read_pv: 'X12SA-OP-MO:ROX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: MonoTheta2
+moth2e:
+  desc: 'Monochromator crystal 2 theta encoder'
+  acquisition: {schedule: sync}
+  config: {name: moth2e, read_pv: 'X12SA-OP-MO:ECX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EpicsSignalRO
+mokev:
+  desc: 'Monochromator energy in keV'
+  acquisition: {schedule: sync}
+  config: {name: mokev, read_pv: 'X12SA-OP-MO:ROX2'}
+  deviceGroup: monitor
+  status: {enabled: true}
+  type: EnergyKev
+
+

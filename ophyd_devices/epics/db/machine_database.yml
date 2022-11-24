@@ -1,0 +1,21 @@
+ring:
+  desc: 'SLS storage ring status'
+  acquisition: {schedule: sync}
+  config: {name: ring, prefix: ''}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: SlsStatus
+frontendstatus:
+  desc: 'Minimal beamline frontend status'
+  acquisition: {schedule: sync}
+  config: {name: frontendstatus, prefix: X06DA}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: FrontEndStatus
+opticshutchstatus:
+  desc: 'Minimal beamline optics hutch status'
+  acquisition: {schedule: sync}
+  config: {name: opticshutchstatus, prefix: X06DA}
+  deviceGroup: epicsDevice
+  status: {enabled: true}
+  type: OpticsHutchStatus
