@@ -25,6 +25,7 @@ class SLSOperatorMessages(Device):
         self.wait_for_connection()
         self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
 
+
 class SLSInfo(Device):
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
