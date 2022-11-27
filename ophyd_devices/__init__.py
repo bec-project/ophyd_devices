@@ -1,4 +1,5 @@
 from .eiger1p5m_csaxs.eiger1p5m import Eiger1p5MDetector
+from .epics import *
 from .galil.galil_ophyd import GalilMotor
 from .npoint.npoint import NPointAxis
 from .rt_lamni import RtLamniMotor
