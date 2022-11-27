@@ -1,6 +1,5 @@
 import numpy as np
-from ophyd import Device, Component, EpicsSignal, EpicsSignalRO
-import matplotlib.pyplot as plt
+from ophyd import Component, Device, EpicsSignal, EpicsSignalRO
 
 
 class XbpmCsaxsOp(Device):
@@ -118,7 +117,7 @@ class XbpmSim(XbpmBase):
         print(f"Raw signals: R={rnge}\t{s1}\t{s2}\t{s3}\t{s4}")
         # plt.imshow(beam)
         # plt.show(block=False)
-        plt.pause(0.5)
+        # plt.pause(0.5)
 
 
 # Automatically start simulation if directly invoked
