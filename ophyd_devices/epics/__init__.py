@@ -7,6 +7,7 @@ from .devices.DelayGeneratorDG645 import DelayGeneratorDG645
 from .devices.InsertionDevice import InsertionDevice
 from .devices.slits import SlitH, SlitV
 from .devices.specMotors import (
+    Bpm4i,
     EnergyKev,
     GirderMotorPITCH,
     GirderMotorROLL,

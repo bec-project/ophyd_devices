@@ -8,6 +8,7 @@ IMPORTANT: Virtual monochromator axes should be implemented already in EPICS!!!
 """
 
 import numpy as np
+import time
 from math import isclose, tan, atan, sqrt, sin, asin
 from ophyd import (
     EpicsSignal,
@@ -17,11 +18,11 @@ from ophyd import (
     PseudoSingle,
     PVPositioner,
     Device,
+    Signal,
     Component,
     Kind,
 )
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
-from ophyd.utils.epics_pvs import data_type
 
 
 class PmMonoBender(PseudoPositioner):
@@ -146,12 +147,6 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
         raw = super().get(*args, **kwargs)
         return self.calc(raw)
 
-    # def describe(self):
-    #    val = self.get()
-    #    d = super().describe()
-    #    d[self.name]["dtype"] = data_type(val)
-    #    return d
-
 
 class MonoTheta1(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle"""
@@ -202,3 +197,47 @@ class EnergyKev(VirtualEpicsSignalRO):
         )
         E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg / 180.0 * 3.14152)
         return E_keV
+
+
+class CurrentSum(Signal):
+    """Adds up four current signals from the parent"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent.ch1.subscribe(self._emit_value)
+
+    def _emit_value(self, **kwargs):
+        timestamp = kwargs.pop("timestamp", time.time())
+        self.wait_for_connection()
+        self._run_subs(sub_type="value", timestamp=timestamp, obj=self)
+
+    def get(self, *args, **kwargs):
+        total = (
+            self.parent.ch1.get()
+            + self.parent.ch2.get()
+            + self.parent.ch3.get()
+            + self.parent.ch4.get()
+        )
+        return total
+
+
+class Bpm4i(Device):
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
+
+    ch1 = Component(EpicsSignalRO, "S2", auto_monitor=True, kind=Kind.omitted, name="ch1")
+    ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
+    ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
+    ch4 = Component(EpicsSignalRO, "S5", auto_monitor=True, kind=Kind.omitted, name="ch4")
+    sum = Component(
+        CurrentSum,
+        kind=Kind.hinted,
+        name="sum",
+    )
+
+
+if __name__ == "__main__":
+    dut = Bpm4i("X12SA-OP1-SCALER.", name="bpm4")
+    dut.wait_for_connection()
+    print(dut.read())
+    print(dut.describe())
