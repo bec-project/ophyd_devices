@@ -119,6 +119,13 @@ class Eiger1p5MDetector(Device):
         # set the exposure time
         self.exp_time.set(exp_time)
 
+        # wait for detector control to become "ready"
+        while True:
+            det_ctrl = self.detector_control.get()
+            if det_ctrl == "ready":
+                break
+            time.sleep(0.005)
+
         # send the "begin" flag to start processing the above commands
         self.detector_control.set("begin")
 
@@ -146,6 +153,8 @@ class Eiger1p5MDetector(Device):
                 )
                 time_waited += sleep_time
                 time.sleep(sleep_time)
+                if self._stopped:
+                    break
                 continue
             break
         self.detector_control.put("stop")
@@ -154,6 +163,7 @@ class Eiger1p5MDetector(Device):
         self.device_manager.producer.set_and_publish(
             MessageEndpoints.device_read(self.name), msg.dumps()
         )
+        self._stopped = False
         return super().unstage()
 
     def stop(self, *, success=False):
