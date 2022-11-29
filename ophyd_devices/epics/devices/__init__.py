@@ -3,7 +3,7 @@ from .slits import SlitH, SlitV
 from .XbpmBase import XbpmBase, XbpmCsaxsOp
 from .SpmBase import SpmBase
 from .InsertionDevice import InsertionDevice
-from .devices.specMotors import (
+from .specMotors import (
     Bpm4i,
     EnergyKev,
     GirderMotorPITCH,
