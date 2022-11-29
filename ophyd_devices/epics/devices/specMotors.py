@@ -97,8 +97,7 @@ class PmDetectorRotation(PseudoPositioner):
 
 
 class GirderMotorX1(PVPositioner):
-    """Girder X translation pseudo motor
-    """
+    """Girder X translation pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":X_SET", name="sp")
     readback = Component(EpicsSignalRO, ":X1", name="rbv")
@@ -106,8 +105,7 @@ class GirderMotorX1(PVPositioner):
 
 
 class GirderMotorY1(PVPositioner):
-    """Girder Y translation pseudo motor
-    """
+    """Girder Y translation pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":Y_SET", name="sp")
     readback = Component(EpicsSignalRO, ":Y1", name="rbv")
@@ -115,8 +113,7 @@ class GirderMotorY1(PVPositioner):
 
 
 class GirderMotorYAW(PVPositioner):
-    """Girder YAW pseudo motor
-    """
+    """Girder YAW pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":YAW_SET", name="sp")
     readback = Component(EpicsSignalRO, ":YAW1", name="rbv")
@@ -124,8 +121,7 @@ class GirderMotorYAW(PVPositioner):
 
 
 class GirderMotorROLL(PVPositioner):
-    """Girder ROLL pseudo motor
-    """
+    """Girder ROLL pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":ROLL_SET", name="sp")
     readback = Component(EpicsSignalRO, ":ROLL1", name="rbv")
@@ -133,8 +129,7 @@ class GirderMotorROLL(PVPositioner):
 
 
 class GirderMotorPITCH(PVPositioner):
-    """Girder YAW pseudo motor
-    """
+    """Girder YAW pseudo motor"""
 
     setpoint = Component(EpicsSignal, ":PITCH_SET", name="sp")
     readback = Component(EpicsSignalRO, ":PITCH1", name="rbv")
@@ -142,7 +137,7 @@ class GirderMotorPITCH(PVPositioner):
 
 
 class VirtualEpicsSignalRO(EpicsSignalRO):
-    """This is a test class to create derives signals from one or 
+    """This is a test class to create derives signals from one or
     multiple original signals...
     """
 
@@ -161,8 +156,7 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
 
 
 class MonoTheta1(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to theta angle
-    """
+    """Converts the pusher motor position to theta angle"""
 
     _mono_a0_enc_scale1 = -1.0
     _mono_a1_lever_length1 = 206.706
@@ -178,8 +172,7 @@ class MonoTheta1(VirtualEpicsSignalRO):
 
 
 class MonoTheta2(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to theta angle
-    """
+    """Converts the pusher motor position to theta angle"""
 
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
@@ -195,8 +188,7 @@ class MonoTheta2(VirtualEpicsSignalRO):
 
 
 class EnergyKev(VirtualEpicsSignalRO):
-    """Converts the pusher motor position to energy in keV
-    """
+    """Converts the pusher motor position to energy in keV"""
 
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
@@ -213,10 +205,12 @@ class EnergyKev(VirtualEpicsSignalRO):
         E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg / 180.0 * 3.14152)
         return E_keV
 
+
 class CombinedEpicsSignalRO(EpicsSignalRO):
     """This is a test class to create derives signals from one or
     multiple original signals...
     """
+
     def __init__(self, *args, **kwargs):
         if "pvs" in kwargs:
             self._private_signals = []
@@ -225,19 +219,24 @@ class CombinedEpicsSignalRO(EpicsSignalRO):
                 self._private_signals.append(key)
             del kwargs["pvs"]
         super().__init__(*args, **kwargs)
+
     def wait_for_connection(self, *args, **kwargs):
         for key in self._private_signals:
             print(key)
             self.__dict__[key].wait_for_connection()
+
     def calc(self, vals: list):
         return vals
+
     def get(self, *args, **kwargs):
         raw = [self.__dict__[key].value for key in self._private_signals]
         print(raw)
         return self.calc(raw)
-        
+
+
 class SumPvs(CombinedEpicsSignalRO):
     """Adds up four current signals"""
+
     def calc(self, vals):
         total = 0
         for vv in vals:
@@ -267,25 +266,13 @@ class Bpm4i(Device):
         return self.ch1.get() + self.ch2.get() + self.ch3.get() + self.ch4.get()
 
     def read(self, *args, **kwargs):
-        return {self.name: {'value': self.get(), 'timestamp': time.time()}}
-
-
-
-
-
+        return {self.name: {"value": self.get(), "timestamp": time.time()}}
 
 
 if __name__ == "__main__":
-    #dut = SumPvs("X12SA-OP1-SCALER.S2", pvs={"q1": "X12SA-OP1-SCALER.S2", "q2": "X12SA-OP1-SCALER.S3", "q3": "X12SA-OP1-SCALER.S4", "q4": "X12SA-OP1-SCALER.S5"}, name="sum_all")
-    #dut.wait_for_connection()
-    #print(dut.read())
+    # dut = SumPvs("X12SA-OP1-SCALER.S2", pvs={"q1": "X12SA-OP1-SCALER.S2", "q2": "X12SA-OP1-SCALER.S3", "q3": "X12SA-OP1-SCALER.S4", "q4": "X12SA-OP1-SCALER.S5"}, name="sum_all")
+    # dut.wait_for_connection()
+    # print(dut.read())
     dut = Bpm4i("X12SA-OP1-SCALER.", name="bpm4i")
     dut.wait_for_connection()
     print(dut.read())
-
-
-
-
-
-
-
