@@ -20,11 +20,9 @@ from ophyd import (
     Device,
     Signal,
     Component,
-    DynamicDeviceComponent,
     Kind,
 )
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
-from ophyd.utils.epics_pvs import data_type
 
 
 class PmMonoBender(PseudoPositioner):
@@ -149,12 +147,6 @@ class VirtualEpicsSignalRO(EpicsSignalRO):
         raw = super().get(*args, **kwargs)
         return self.calc(raw)
 
-    # def describe(self):
-    #    val = self.get()
-    #    d = super().describe()
-    #    d[self.name]["dtype"] = data_type(val)
-    #    return d
-
 
 class MonoTheta1(VirtualEpicsSignalRO):
     """Converts the pusher motor position to theta angle"""
@@ -237,7 +229,11 @@ class Bpm4i(Device):
     ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
     ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
     ch4 = Component(EpicsSignalRO, "S5", auto_monitor=True, kind=Kind.omitted, name="ch4")
-    sum = Component(CurrentSum, kind=Kind.hinted, name="sum",)
+    sum = Component(
+        CurrentSum,
+        kind=Kind.hinted,
+        name="sum",
+    )
 
 
 if __name__ == "__main__":
