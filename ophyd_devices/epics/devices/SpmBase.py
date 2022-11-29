@@ -57,7 +57,7 @@ class SpmSim(SpmBase):
         # Define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
             return np.exp(
-                -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
+                -((x - mx) ** 2.0 / (2.0 * sx ** 2.0) + (y - my) ** 2.0 / (2.0 * sy ** 2.0))
             )
 
         # Generator for dynamic values
@@ -73,10 +73,10 @@ class SpmSim(SpmBase):
         beam = self._simFrame()
         total = np.sum(beam) - np.sum(beam[24:48, :])
         rnge = np.floor(np.log10(total) - 0.0)
-        s1 = np.sum(beam[0:16, :]) / 10**rnge
-        s2 = np.sum(beam[16:24, :]) / 10**rnge
-        s3 = np.sum(beam[40:48, :]) / 10**rnge
-        s4 = np.sum(beam[48:64, :]) / 10**rnge
+        s1 = np.sum(beam[0:16, :]) / 10 ** rnge
+        s2 = np.sum(beam[16:24, :]) / 10 ** rnge
+        s3 = np.sum(beam[40:48, :]) / 10 ** rnge
+        s4 = np.sum(beam[48:64, :]) / 10 ** rnge
 
         self.s1w.set(s1).wait()
         self.s2w.set(s2).wait()

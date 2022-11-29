@@ -17,7 +17,8 @@ from ophyd import (
     PseudoPositioner,
     PseudoSingle,
     PVPositioner,
-    Device, Signal,
+    Device,
+    Signal,
     Component,
     DynamicDeviceComponent,
     Kind,
@@ -208,6 +209,7 @@ class EnergyKev(VirtualEpicsSignalRO):
 
 class CurrentSum(Signal):
     """Adds up four current signals from the parent"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.parent.ch1.subscribe(self._emit_value)
@@ -215,10 +217,15 @@ class CurrentSum(Signal):
     def _emit_value(self, **kwargs):
         timestamp = kwargs.pop("timestamp", time.time())
         self.wait_for_connection()
-        self._run_subs(sub_type='value', timestamp=timestamp, obj=self)
+        self._run_subs(sub_type="value", timestamp=timestamp, obj=self)
 
     def get(self, *args, **kwargs):
-        total = self.parent.ch1.get() + self.parent.ch2.get() + self.parent.ch3.get() + self.parent.ch4.get() 
+        total = (
+            self.parent.ch1.get()
+            + self.parent.ch2.get()
+            + self.parent.ch3.get()
+            + self.parent.ch4.get()
+        )
         return total
 
 
@@ -230,9 +237,7 @@ class Bpm4i(Device):
     ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
     ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
     ch4 = Component(EpicsSignalRO, "S5", auto_monitor=True, kind=Kind.omitted, name="ch4")
-    sum = Component(CurrentSum, kind=Kind.hinted, name="sum", )
-
-
+    sum = Component(CurrentSum, kind=Kind.hinted, name="sum",)
 
 
 if __name__ == "__main__":
@@ -240,4 +245,3 @@ if __name__ == "__main__":
     dut.wait_for_connection()
     print(dut.read())
     print(dut.describe())
-
