@@ -212,6 +212,7 @@ class CurrentSum(Signal):
         self._run_subs(sub_type="value", timestamp=timestamp, obj=self)
 
     def get(self, *args, **kwargs):
+        # self.parent._cnt.set(1).wait()
         total = (
             self.parent.ch1.get()
             + self.parent.ch2.get()
@@ -224,7 +225,8 @@ class CurrentSum(Signal):
 class Bpm4i(Device):
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
-
+    _cont = Component(EpicsSignal, "CONT", put_complete=True, kind=Kind.omitted)
+    _cnt = Component(EpicsSignal, "CNT", put_complete=True, kind=Kind.omitted)
     ch1 = Component(EpicsSignalRO, "S2", auto_monitor=True, kind=Kind.omitted, name="ch1")
     ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
     ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
@@ -234,6 +236,37 @@ class Bpm4i(Device):
         kind=Kind.hinted,
         name="sum",
     )
+
+    def __init__(
+        self,
+        prefix="",
+        *,
+        name,
+        kind=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        **kwargs
+    ):
+        super().__init__(
+            prefix,
+            name=name,
+            kind=kind,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            **kwargs
+        )
+        self.sum.name = self.name
+        # Ensure the scaler counts automatically
+        self._cont.wait_for_connection()
+        self._cont.set(1).wait()
+        self.ch1.subscribe(self._emit_value)
+
+    def _emit_value(self, **kwargs):
+        timestamp = kwargs.pop("timestamp", time.time())
+        self.wait_for_connection()
+        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
 
 
 if __name__ == "__main__":
