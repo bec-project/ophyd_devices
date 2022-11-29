@@ -17,7 +17,7 @@ from ophyd import (
     PseudoPositioner,
     PseudoSingle,
     PVPositioner,
-    Device,
+    Device, Signal,
     Component,
     DynamicDeviceComponent,
     Kind,
@@ -206,41 +206,19 @@ class EnergyKev(VirtualEpicsSignalRO):
         return E_keV
 
 
-class CombinedEpicsSignalRO(EpicsSignalRO):
-    """This is a test class to create derives signals from one or
-    multiple original signals...
-    """
-
+class CurrentSum(Signal):
+    """Adds up four current signals from the parent"""
     def __init__(self, *args, **kwargs):
-        if "pvs" in kwargs:
-            self._private_signals = []
-            for key in kwargs["pvs"]:
-                self.__dict__[key] = EpicsSignalRO(kwargs["pvs"][key], auto_monitor=True)
-                self._private_signals.append(key)
-            del kwargs["pvs"]
         super().__init__(*args, **kwargs)
+        self.parent.ch1.subscribe(self._emit_value)
 
-    def wait_for_connection(self, *args, **kwargs):
-        for key in self._private_signals:
-            print(key)
-            self.__dict__[key].wait_for_connection()
-
-    def calc(self, vals: list):
-        return vals
+    def _emit_value(self, **kwargs):
+        timestamp = kwargs.pop("timestamp", time.time())
+        self.wait_for_connection()
+        self._run_subs(sub_type='value', timestamp=timestamp, obj=self)
 
     def get(self, *args, **kwargs):
-        raw = [self.__dict__[key].value for key in self._private_signals]
-        print(raw)
-        return self.calc(raw)
-
-
-class SumPvs(CombinedEpicsSignalRO):
-    """Adds up four current signals"""
-
-    def calc(self, vals):
-        total = 0
-        for vv in vals:
-            total += vv
+        total = self.parent.ch1.get() + self.parent.ch2.get() + self.parent.ch3.get() + self.parent.ch4.get() 
         return total
 
 
@@ -252,27 +230,14 @@ class Bpm4i(Device):
     ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
     ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
     ch4 = Component(EpicsSignalRO, "S5", auto_monitor=True, kind=Kind.omitted, name="ch4")
+    sum = Component(CurrentSum, kind=Kind.hinted, name="sum", )
 
-    def __init__(self, prefix="", *, name, **kwargs):
-        super().__init__(prefix, name=name, **kwargs)
-        self.ch1.subscribe(self._emit_value)
 
-    def _emit_value(self, **kwargs):
-        timestamp = kwargs.pop("timestamp", time.time())
-        self.wait_for_connection()
-        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
-
-    def get(self, *args, **kwargs):
-        return self.ch1.get() + self.ch2.get() + self.ch3.get() + self.ch4.get()
-
-    def read(self, *args, **kwargs):
-        return {self.name: {"value": self.get(), "timestamp": time.time()}}
 
 
 if __name__ == "__main__":
-    # dut = SumPvs("X12SA-OP1-SCALER.S2", pvs={"q1": "X12SA-OP1-SCALER.S2", "q2": "X12SA-OP1-SCALER.S3", "q3": "X12SA-OP1-SCALER.S4", "q4": "X12SA-OP1-SCALER.S5"}, name="sum_all")
-    # dut.wait_for_connection()
-    # print(dut.read())
-    dut = Bpm4i("X12SA-OP1-SCALER.", name="bpm4i")
+    dut = Bpm4i("X12SA-OP1-SCALER.", name="bpm4")
     dut.wait_for_connection()
     print(dut.read())
+    print(dut.describe())
+
