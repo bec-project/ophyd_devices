@@ -88,8 +88,17 @@ class RtLamniController(Controller):
             try:
                 self.sock.open()
                 # discuss - after disconnect takes a while for the server to be ready again
-                welcome_message = self.sock.receive()
-                self.connected = True
+                max_retries = 10
+                tries = 0
+                while not self.connected:
+                    try:
+                        welcome_message = self.sock.receive()
+                        self.connected = True
+                    except ConnectionResetError as conn_reset:
+                        if tries > max_retries:
+                            raise conn_reset
+                        tries += 1
+                        time.sleep(2)
             except ConnectionRefusedError as conn_error:
                 logger.error("Failed to open a connection to RTLamNI.")
                 raise RtLamniCommunicationError from conn_error
