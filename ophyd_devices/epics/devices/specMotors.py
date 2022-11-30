@@ -213,6 +213,7 @@ class CurrentSum(Signal):
 
     def get(self, *args, **kwargs):
         # self.parent._cnt.set(1).wait()
+        self._metadata["timestamp"] = time.time()
         total = (
             self.parent.ch1.get()
             + self.parent.ch2.get()
