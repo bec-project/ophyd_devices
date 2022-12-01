@@ -180,9 +180,15 @@ class MonoTheta2(VirtualEpicsSignalRO):
         return theta2
 
 
+MONO_THETA2_OFFSETS_FILENAME = (
+    "/import/work/sls/spec/local/X12SA/macros/spec_data/mono_th2_offsets.txt"
+)
+
+
 class EnergyKev(VirtualEpicsSignalRO):
     """Converts the pusher motor position to energy in keV"""
 
+    _mono_add_offs = True
     _mono_a3_enc_offs2 = -19.7072
     _mono_a2_pusher_offs2 = 5.93905
     _mono_a1_lever_length2 = 206.572
@@ -190,12 +196,36 @@ class EnergyKev(VirtualEpicsSignalRO):
     _mono_hce = 12.39852066
     _mono_2d2 = 2 * 5.43102 / sqrt(3)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._th2_offsets = np.loadtxt(MONO_THETA2_OFFSETS_FILENAME)
+
+    def _mono_get_th2_offs(self, energy_keV):
+        if self._th2_offsets is None:
+            return 0.0
+
+        max_offs = np.max(self._th2_offsets[:, 1])
+
+        if max_offs > 0.2:
+            raise ValueError(
+                f"\nThe empirical moth2 corrections are as high as {max_offs} deg\nThis is unreasonable and the corrections will not be used.\n\n***PLEASE INFORM BEAMLINE SCIENTISTS***\n"
+            )
+
+        offs = np.interp(energy_keV, self._th2_offsets[:, 0], self._th2_offsets[:, 1])
+        print(offs)
+        return offs
+
     def calc(self, val):
+        _mono_sintheta2_to_Ekev = -self._mono_hce / self._mono_2d2
         asin_arg = (val - self._mono_a2_pusher_offs2) / self._mono_a1_lever_length2
         theta2_deg = (
             self._mono_a0_enc_scale2 * asin(asin_arg) / 3.141592 * 180.0 + self._mono_a3_enc_offs2
         )
-        E_keV = -self._mono_hce / self._mono_2d2 / sin(theta2_deg / 180.0 * 3.14152)
+        E_keV = _mono_sintheta2_to_Ekev / sin(theta2_deg / 180.0 * 3.141592)
+
+        if self._mono_add_offs:
+            theta2_deg -= self._mono_get_th2_offs(E_keV)
+            E_keV = _mono_sintheta2_to_Ekev / sin(theta2_deg / 180.0 * 3.141592)
         return E_keV
 
 
@@ -247,7 +277,7 @@ class Bpm4i(Device):
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             prefix,
@@ -256,7 +286,7 @@ class Bpm4i(Device):
             read_attrs=read_attrs,
             configuration_attrs=configuration_attrs,
             parent=parent,
-            **kwargs
+            **kwargs,
         )
         self.sum.name = self.name
         # Ensure the scaler counts automatically
