@@ -89,7 +89,7 @@ signals:
 manipulator:
   desc: 'Sample Manipulator'
   deviceClass: X07MASampleManipulator
-  deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG'}
+  deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: raise
   status: {enabled: true}
