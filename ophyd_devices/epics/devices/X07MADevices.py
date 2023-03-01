@@ -33,7 +33,6 @@ class X07MAUndulator(PVPositioner):
     pol_mode = Cpt(EpicsSignal, "MODE")
     pol_angle = Cpt(EpicsSignal, "ALPHA")
     harmonic = Cpt(EpicsSignal, "HARMONIC")
-    error = Cpt(EpicsSignal, "ERROR", auto_monitor=True)
 
 class PGMMonochromator(PVPositioner):
     """
@@ -42,7 +41,7 @@ class PGMMonochromator(PVPositioner):
     setpoint = Cpt(EpicsSignal, "PHS-E:GO.A", auto_monitor=True)
     readback = Cpt(EpicsSignalRO, "PGM:CERBK",  kind=Kind.hinted, auto_monitor=True)
     done = Cpt(EpicsSignalRO, "PHS:alldone", kind=Kind.omitted, auto_monitor=True)
-    stop_signal = Cpt(EpicsSignal, "STOP", kind=Kind.omitted)
+    stop_signal = Cpt(EpicsSignal, "PGM:stop", kind=Kind.omitted)
 
     cff = Cpt(EpicsSignal, "PGM:rbkcff", write_pv="PGM:cff.A", kind=Kind.config)
     with_undulator = Cpt(EpicsSignal, "PHS-E:OPT", kind=Kind.config)
@@ -128,7 +127,6 @@ class X07MAAnalogSignals(Device):
     s5 = Cpt(EpicsSignalRO, "SIGNAL4")
     s6 = Cpt(EpicsSignalRO, "SIGNAL5")
     s7 = Cpt(EpicsSignalRO, "SIGNAL6")
-    s8 = Cpt(EpicsSignalRO, "SIGNAL7")
 
     # Aliases
     tey = s1
@@ -149,7 +147,7 @@ class X07MATemperatureController(Device):
     """
     Temperature controller
     """
-    manual_output = Cpt(EpicsSignal, 'STS:LOOP2:MANUAL', write_pv='DMD:LOOP2:MANUAL')
+    needle_valve = Cpt(EpicsSignal, 'STS:LOOP2:MANUAL', write_pv='DMD:LOOP2:MANUAL')
     setpoint = Cpt(EpicsSignal, 'STS:LOOP1:SETPOINT', write_pv='DMD:LOOP1:SETPOINT')
     readback = Cpt(EpicsSignalRO, 'STS:T1', kind=Kind.hinted, auto_monitor=True)
 
@@ -158,4 +156,4 @@ class X07MAAutoTemperatureControl(Device):
     Automatic temperature control.
     """
     control = Cpt(EpicsSignal, 'CONTROL')
-    status = Cpt(EpicsSignalRO, 'STATUS', kind=Kind.hinted, auto_monitor=True)
+    status = Cpt(EpicsSignalRO, 'STATUS', kind=Kind.hinted, string=True, auto_monitor=True)
