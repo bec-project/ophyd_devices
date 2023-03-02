@@ -1,111 +1,111 @@
 slsinfo:
-  desc: 'SLS beam info'
+  description: 'SLS beam info'
   deviceClass: SLSInfo
   deviceConfig: {name: slsinfo}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: buffer
   status: {enabled: true}
 
 undulator:
-  desc: 'Undulator'
+  description: 'Undulator'
   deviceClass: X07MAUndulator
   deviceConfig: {name: undulator, prefix: 'X07MA-ID:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 aperture:
-  desc: 'Frontend aperture'
+  description: 'Frontend aperture'
   deviceClass: EpicsSignal
   deviceConfig: {name: aperture, read_pv: 'X07MA-FE-DSAPER'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 mono:
-  desc: 'PGM Monochromator'
+  description: 'PGM Monochromator'
   deviceClass: PGMMonochromator
   deviceConfig: {name: mono, prefix: 'X07MA-'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 otf:
-  desc: 'PGM on-the-fly scan'
+  description: 'PGM on-the-fly scan'
   deviceClass: PGMOtFScan
-  deviceConfig: {name: temperature}
+  deviceConfig: {name: otf}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 valve:
-  desc: 'Endstation valve'
+  description: 'Endstation valve'
   deviceClass: VacuumValve
   deviceConfig: {name: valve, prefix: 'X07MA-OP-VG13:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 exit_slit:
-  desc: 'Exit slit'
+  description: 'Exit slit'
   deviceClass: X07MAExitSlit
   deviceConfig: {name: exit_slit, prefix: 'X07MA-OP-SL1SV1:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 goldmesh1:
-  desc: 'Gold mesh 1'
+  description: 'Gold mesh 1'
   deviceClass: EpicsMotor
   deviceConfig: {name: goldmesh1, prefix: 'X07MA-OP-IO1:TR1'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 goldmesh2:
-  desc: 'Gold mesh 2'
+  description: 'Gold mesh 2'
   deviceClass: EpicsMotor
   deviceConfig: {name: goldmesh2, prefix: 'X07MA-OP-IO2:TR1'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 field:
-  desc: 'Magnetic field'
+  description: 'Magnetic field'
   deviceClass: X07MAMagnet
   deviceConfig: {name: field, prefix: 'X07MA-PC-MAG:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 signals:
-  desc: 'ADC signals'
+  description: 'ADC signals'
   deviceClass: X07MAAnalogSignals
   deviceConfig: {name: signals, prefix: 'X07MA-ES1-AI:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 manipulator:
-  desc: 'Sample Manipulator'
+  description: 'Sample Manipulator'
   deviceClass: X07MASampleManipulator
   deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 temperature:
-  desc: 'Temperature controller'
+  description: 'Temperature controller'
   deviceClass: X07MATemperatureController
   deviceConfig: {name: temperature, prefix: 'X07MA-PC-TC:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
 
 TControl:
-  desc: 'Automatic temperature control'
+  description: 'Automatic temperature control'
   deviceClass: X07MAAutoTemperatureControl
   deviceConfig: {name: 'TControl', prefix: 'X07MA-ES1-TEMP:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-  onFailure: raise
+  onFailure: retry
   status: {enabled: true}
