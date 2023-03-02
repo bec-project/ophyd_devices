@@ -51,7 +51,6 @@ class Controller(OphydObject):
         labels=None,
         kind=None,
     ):
-
         if not hasattr(self, "_initialized"):
             super().__init__(
                 name=name, attr_name=attr_name, parent=parent, labels=labels, kind=kind

@@ -137,7 +137,6 @@ class NPointController(SingletonController):
 
     @channel_checked
     def _get_current_pos(self, channel: int) -> float:
-
         # for first channel: 0x11 83 13 34
         addr = self._channel_base.copy()
         addr.extend([f"{19 + 16 * channel:x}", "34"])

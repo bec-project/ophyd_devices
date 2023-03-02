@@ -27,7 +27,6 @@ def is_serializable(f) -> bool:
 
 
 def get_user_interface(obj, obj_interface):
-
     # user_funcs = get_user_functions(obj)
     for f in [f for f in dir(obj) if f in obj.USER_ACCESS]:
         if f == "controller" or f == "on":

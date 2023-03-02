@@ -21,3 +21,6 @@ from .devices.specMotors import (
 )
 from .devices.SpmBase import SpmBase
 from .devices.XbpmBase import XbpmBase, XbpmCsaxsOp
+
+# X07MA specific devices
+from .devices.X07MADevices import *

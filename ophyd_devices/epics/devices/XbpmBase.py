@@ -84,6 +84,7 @@ class XbpmSim(XbpmBase):
 
     def _simFrame(self):
         """Generator to simulate a jumping gaussian"""
+
         # define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
             return np.exp(
