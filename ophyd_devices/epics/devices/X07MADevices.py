@@ -1,0 +1,159 @@
+"""
+ophyd device classes for X07MA beamline
+"""
+from typing import Any
+
+from ophyd import Component as Cpt
+from ophyd import FormattedComponent as FCpt
+
+from ophyd import (
+    Device,
+    EpicsSignal,
+    EpicsSignalRO,
+    Kind,
+    PVPositioner,
+    EpicsMotor
+)
+from ophyd.pv_positioner import PVPositionerComparator
+
+__all__ = ["X07MAUndulator", "PGMMonochromator", "PGMOtFScan", "VacuumValve", "X07MAExitSlit",
+        "X07MAMagnet", "X07MAAnalogSignals", "X07MASampleManipulator",
+        "X07MATemperatureController", "X07MAAutoTemperatureControl"]
+
+class X07MAUndulator(PVPositioner):
+    """
+    X07MA undulator
+    """
+    setpoint = Cpt(EpicsSignal, "ENERGY", auto_monitor=True)
+    readback = Cpt(EpicsSignalRO, "ENERGY-READ",  kind=Kind.hinted, auto_monitor=True)
+    done = Cpt(EpicsSignalRO, "DONE", kind=Kind.omitted, auto_monitor=True)
+    stop_signal = Cpt(EpicsSignal, "STOP", kind=Kind.omitted)
+    
+    energy_offset = Cpt(EpicsSignal, "ENERGY-OFFS", kind=Kind.config)
+    pol_mode = Cpt(EpicsSignal, "MODE")
+    pol_angle = Cpt(EpicsSignal, "ALPHA")
+    harmonic = Cpt(EpicsSignal, "HARMONIC")
+
+class PGMMonochromator(PVPositioner):
+    """
+    PGM monochromator
+    """
+    setpoint = Cpt(EpicsSignal, "PHS-E:GO.A", auto_monitor=True)
+    readback = Cpt(EpicsSignalRO, "PGM:CERBK",  kind=Kind.hinted, auto_monitor=True)
+    done = Cpt(EpicsSignalRO, "PHS:alldone", kind=Kind.omitted, auto_monitor=True)
+    stop_signal = Cpt(EpicsSignal, "PGM:stop", kind=Kind.omitted)
+
+    cff = Cpt(EpicsSignal, "PGM:rbkcff", write_pv="PGM:cff.A", kind=Kind.config)
+    with_undulator = Cpt(EpicsSignal, "PHS-E:OPT", kind=Kind.config)
+
+class PGMOtFScan(Device):
+    """
+    PGM on-the-fly scan
+    """
+    e1 = Cpt(EpicsSignal, "E1")
+    e2 = Cpt(EpicsSignal, "E2")
+    time = Cpt(EpicsSignal, 'TIME')
+    folder = Cpt(EpicsSignal, 'FOLDER')
+    file = Cpt(EpicsSignal, 'FILE')
+    start = Cpt(EpicsSignal, 'START')
+
+class VacuumValve(PVPositionerComparator):
+    """
+    EPS vacuum valve.
+
+    The setpoint is of 2 choices
+       0 - Close
+       1 - Try open
+
+    The readback is of 8 choices
+       0 - TO CONNECT
+	   1 - MAN OPEN
+	   2 - CLOSED
+	   3 - ERROR
+	   4 - MOVING
+	   5 - OPEN
+	   6 - ERROR
+	   7 - ERROR
+    """
+    setpoint = Cpt(EpicsSignal, "WT_SET")
+    readback = Cpt(EpicsSignalRO, "POSITION")
+
+    def __init__(self, prefix: str, *, name: str, **kwargs):
+        kwargs.update({"limits": (0, 1)})
+        super().__init__(prefix, name=name, **kwargs)
+
+    def done_comparator(self, readback:Any, setpoint:Any) -> bool:
+        return readback != 4
+
+class X07MAExitSlit(PVPositioner):
+    """
+    Exit slit
+    """
+    setpoint = Cpt(EpicsSignal, "TR_AP")
+    readback = Cpt(EpicsSignalRO, "TR_ISAP", kind=Kind.hinted, auto_monitor=True)
+    done = Cpt(EpicsSignalRO, "TR.DMOV", kind=Kind.omitted, auto_monitor=True)
+
+class X07MAMagnet(Device):
+    """
+    Magnet fields.
+    """
+    class MagnetAxis(PVPositioner):
+        """
+        A single magnet field axis.
+        """
+        done_value = 2
+        actuate_value = 1
+        setpoint = FCpt(EpicsSignal, "{prefix}{_axis_id}:DMD")
+        readback = FCpt(EpicsSignalRO, "{prefix}{_axis_id}:RBV", kind=Kind.hinted, auto_monitor=True)
+        actuate = Cpt(EpicsSignal, "STARTRAMP.PROC", kind=Kind.omitted)
+        done = FCpt(EpicsSignalRO, '{_ps_prefix}STS:RAMP:MADE', kind=Kind.omitted, auto_monitor=True)
+        ramprate =  FCpt(EpicsSignal, "{_ps_prefix}STS:RAMPRATE:TPM", write_pv="{_ps_prefix}SET:DMD:RAMPRATE:TPM")
+        def __init__(self, prefix="", axis_id="", ps_prefix="", *, name=None, **kwargs):
+            self._axis_id = axis_id
+            self._ps_prefix = ps_prefix
+            super().__init__(prefix, name=name, **kwargs)
+
+    x = Cpt(MagnetAxis, '', axis_id='X', ps_prefix='X07MA-PC-PS2:', name='x')
+    z = Cpt(MagnetAxis, '', axis_id='Z', ps_prefix='X07MA-PC-PS1:', name='z')
+
+class X07MAAnalogSignals(Device):
+    """
+    ADC inputs
+    """
+    s1 = Cpt(EpicsSignalRO, "SIGNAL0")
+    s2 = Cpt(EpicsSignalRO, "SIGNAL1")
+    s3 = Cpt(EpicsSignalRO, "SIGNAL2")
+    s4 = Cpt(EpicsSignalRO, "SIGNAL3")
+    s5 = Cpt(EpicsSignalRO, "SIGNAL4")
+    s6 = Cpt(EpicsSignalRO, "SIGNAL5")
+    s7 = Cpt(EpicsSignalRO, "SIGNAL6")
+
+    # Aliases
+    tey = s1
+    i0 = s2
+    trans = s3
+    field_z = s4
+    field_x = s5
+
+class X07MASampleManipulator(Device):
+    """
+    Sample manipulator
+    """
+    hor = Cpt(EpicsMotor, "TRZS")
+    vert = Cpt(EpicsMotor, "TRY1")
+    rot = Cpt(EpicsMotor, "ROY1")
+
+class X07MATemperatureController(Device):
+    """
+    Temperature controller
+    """
+    needle_valve = Cpt(EpicsSignal, 'STS:LOOP2:MANUAL', write_pv='DMD:LOOP2:MANUAL')
+    setpoint = Cpt(EpicsSignal, 'STS:LOOP1:SETPOINT', write_pv='DMD:LOOP1:SETPOINT')
+    readback = Cpt(EpicsSignalRO, 'STS:T1', kind=Kind.hinted, auto_monitor=True)
+
+class X07MAAutoTemperatureControl(Device):
+    """
+    Automatic temperature control.
+    """
+    control = Cpt(EpicsSignal, 'CONTROL')
+    status = Cpt(EpicsSignalRO, 'STATUS', kind=Kind.hinted, string=True, auto_monitor=True)
