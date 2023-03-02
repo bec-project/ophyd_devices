@@ -559,7 +559,6 @@ class GalilMotor(Device, PositionerBase):
 
 
 if __name__ == "__main__":
-
     mock = False
     if not mock:
         leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
