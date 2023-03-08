@@ -294,7 +294,14 @@ class SynSLSDetector(Device):
 
 
 class DummyController:
-    USER_ACCESS = ["some_var", "controller_show_all"]
+    USER_ACCESS = [
+        "some_var",
+        "controller_show_all",
+        "_func_with_args",
+        "_func_with_args_and_kwargs",
+        "_func_with_kwargs",
+        "_func_without_args_kwargs",
+    ]
     some_var = 10
     another_var = 20
 
@@ -303,6 +310,18 @@ class DummyController:
 
     def off(self):
         self._connected = False
+
+    def _func_with_args(self, *args):
+        return args
+
+    def _func_with_args_and_kwargs(self, *args, **kwargs):
+        return args, kwargs
+
+    def _func_with_kwargs(self, **kwargs):
+        return kwargs
+
+    def _func_without_args_kwargs(self):
+        return None
 
     def controller_show_all(self):
         """dummy controller show all
