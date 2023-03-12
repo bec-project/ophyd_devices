@@ -144,13 +144,13 @@ class X07MAAnalogSignals(Device):
     ADC inputs
     """
 
-    s1 = Cpt(EpicsSignalRO, "SIGNAL0")
-    s2 = Cpt(EpicsSignalRO, "SIGNAL1")
-    s3 = Cpt(EpicsSignalRO, "SIGNAL2")
-    s4 = Cpt(EpicsSignalRO, "SIGNAL3")
-    s5 = Cpt(EpicsSignalRO, "SIGNAL4")
-    s6 = Cpt(EpicsSignalRO, "SIGNAL5")
-    s7 = Cpt(EpicsSignalRO, "SIGNAL6")
+    s1 = Cpt(EpicsSignalRO, "SIGNAL0", kind=Kind.hinted, auto_monitor=True)
+    s2 = Cpt(EpicsSignalRO, "SIGNAL1", kind=Kind.hinted, auto_monitor=True)
+    s3 = Cpt(EpicsSignalRO, "SIGNAL2", kind=Kind.hinted, auto_monitor=True)
+    s4 = Cpt(EpicsSignalRO, "SIGNAL3", kind=Kind.hinted, auto_monitor=True)
+    s5 = Cpt(EpicsSignalRO, "SIGNAL4", kind=Kind.hinted, auto_monitor=True)
+    s6 = Cpt(EpicsSignalRO, "SIGNAL5", kind=Kind.hinted, auto_monitor=True)
+    s7 = Cpt(EpicsSignalRO, "SIGNAL6", kind=Kind.hinted, auto_monitor=True)
 
     # Aliases
     tey = s1
@@ -186,4 +186,4 @@ class X07MAAutoTemperatureControl(Device):
     """
 
     control = Cpt(EpicsSignal, "CONTROL")
-    status = Cpt(EpicsSignalRO, "STATUS", kind=Kind.hinted, string=True, auto_monitor=True)
+    status = Cpt(EpicsSignalRO, "STATUS", string=True, auto_monitor=True)
