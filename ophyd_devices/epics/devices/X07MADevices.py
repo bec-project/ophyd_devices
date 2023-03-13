@@ -61,6 +61,7 @@ class PGMOtFScan(FlyerInterface, Device):
     """
     PGM on-the-fly scan
     """
+    SUB_VALUE = "value"
 
     e1 = Cpt(EpicsSignal, "E1")
     e2 = Cpt(EpicsSignal, "E2")
@@ -72,6 +73,12 @@ class PGMOtFScan(FlyerInterface, Device):
     data = Cpt(EpicsSignalRO, "DATA", kind=Kind.hinted, auto_monitor=True)
     idata = Cpt(EpicsSignalRO, "IDATA", kind=Kind.hinted, auto_monitor=True)
     fdata = Cpt(EpicsSignalRO, "FDATA", kind=Kind.hinted, auto_monitor=True)
+    count = Cpt(EpicsSignalRO, "COUNT", kind=Kind.omitted, auto_monitor=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.acquire.subscribe(self._update_status, run=False)
+        self.count.subscribe(self._update_data, run=False)
 
     def kickoff(self):
         self._start_time = time.time()
@@ -95,8 +102,8 @@ class PGMOtFScan(FlyerInterface, Device):
         }
         for attr in ("edata", "data", "idata", "fdata"):
             obj = getattr(self, attr)
-            data["data"][attr] = obj.value
-            data["timestamps"][attr] = obj.timestamp
+            data["data"][obj.name] = obj.get()
+            data["timestamps"][obj.name] = obj.timestamp
 
         return data
 
@@ -105,6 +112,17 @@ class PGMOtFScan(FlyerInterface, Device):
         for attr in ("edata", "data", "idata", "fdata"):
             desc.update(getattr(self, attr).describe())
         return desc
+
+    def _update_status(self, *, old_value, value, **kwargs):
+        if old_value == 1 and value == 0:
+            self._done_acquiring()
+
+    def _update_data(self, value, **kwargs):
+        if value == 0:
+            return
+        data = self.collect()
+        self._run_subs(sub_type=self.SUB_VALUE, value=data)
+
 
 class VacuumValve(PVPositionerComparator):
     """
