@@ -100,11 +100,10 @@ class PGMOtFScan(FlyerInterface, Device):
 
         return data
 
-    def describe(self):
+    def describe_collect(self):
         desc = OrderedDict()
         for attr in ("edata", "data", "idata", "fdata"):
             desc.update(getattr(self, attr).describe())
-            desc[attr]["dtype"] = "array"
         return desc
 
 class VacuumValve(PVPositionerComparator):
