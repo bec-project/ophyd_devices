@@ -63,11 +63,11 @@ class PGMOtFScan(FlyerInterface, Device):
     """
     SUB_VALUE = "value"
 
-    e1 = Cpt(EpicsSignal, "E1")
-    e2 = Cpt(EpicsSignal, "E2")
-    time = Cpt(EpicsSignal, "TIME")
-    folder = Cpt(EpicsSignal, "FOLDER")
-    file = Cpt(EpicsSignal, "FILE")
+    e1 = Cpt(EpicsSignal, "E1", kind=Kind.config)
+    e2 = Cpt(EpicsSignal, "E2", kind=Kind.config)
+    time = Cpt(EpicsSignal, "TIME", kind=Kind.config)
+    folder = Cpt(EpicsSignal, "FOLDER", kind=Kind.config)
+    file = Cpt(EpicsSignal, "FILE", kind=Kind.config)
     acquire = Cpt(EpicsSignal, "START", auto_monitor=True)
     edata = Cpt(EpicsSignalRO, "EDATA", kind=Kind.hinted, auto_monitor=True)
     data = Cpt(EpicsSignalRO, "DATA", kind=Kind.hinted, auto_monitor=True)
@@ -77,6 +77,7 @@ class PGMOtFScan(FlyerInterface, Device):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._start_time = 0
         self.acquire.subscribe(self._update_status, run=False)
         self.count.subscribe(self._update_data, run=False)
 
