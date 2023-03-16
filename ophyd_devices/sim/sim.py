@@ -624,6 +624,7 @@ class SynAxisOPAAS(Device, PositionerBase):
         else:
             update_state(value)
             self._done_moving()
+            st.set_finished()
         return st
 
     def stop(self, *, success=False):
@@ -636,6 +637,16 @@ class SynAxisOPAAS(Device, PositionerBase):
 
     def egu(self):
         return "mm"
+
+
+class SynDeviceSubOPAAS(Device):
+    zsub = Cpt(SynAxisOPAAS, name="zsub")
+
+
+class SynDeviceOPAAS(Device):
+    x = Cpt(SynAxisOPAAS, name="x")
+    y = Cpt(SynAxisOPAAS, name="y")
+    z = Cpt(SynDeviceSubOPAAS, name="z")
 
 
 if __name__ == "__main__":
