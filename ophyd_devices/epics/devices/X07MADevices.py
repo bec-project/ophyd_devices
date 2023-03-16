@@ -1,12 +1,16 @@
 """
 ophyd device classes for X07MA beamline
 """
+from collections import OrderedDict
+import time
 from typing import Any
 
 from ophyd import Component as Cpt
 from ophyd import FormattedComponent as FCpt
 
 from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind, PVPositioner, EpicsMotor
+from ophyd.flyers import FlyerInterface
+from ophyd.status import DeviceStatus, SubscriptionStatus
 from ophyd.pv_positioner import PVPositionerComparator
 
 __all__ = [
@@ -53,17 +57,72 @@ class PGMMonochromator(PVPositioner):
     with_undulator = Cpt(EpicsSignal, "PHS-E:OPT", kind=Kind.config)
 
 
-class PGMOtFScan(Device):
+class PGMOtFScan(FlyerInterface, Device):
     """
     PGM on-the-fly scan
     """
+    SUB_VALUE = "value"
 
-    e1 = Cpt(EpicsSignal, "E1")
-    e2 = Cpt(EpicsSignal, "E2")
-    time = Cpt(EpicsSignal, "TIME")
-    folder = Cpt(EpicsSignal, "FOLDER")
-    file = Cpt(EpicsSignal, "FILE")
-    start = Cpt(EpicsSignal, "START")
+    e1 = Cpt(EpicsSignal, "E1", kind=Kind.config)
+    e2 = Cpt(EpicsSignal, "E2", kind=Kind.config)
+    time = Cpt(EpicsSignal, "TIME", kind=Kind.config)
+    folder = Cpt(EpicsSignal, "FOLDER", kind=Kind.config)
+    file = Cpt(EpicsSignal, "FILE", kind=Kind.config)
+    acquire = Cpt(EpicsSignal, "START", auto_monitor=True)
+    edata = Cpt(EpicsSignalRO, "EDATA", kind=Kind.hinted, auto_monitor=True)
+    data = Cpt(EpicsSignalRO, "DATA", kind=Kind.hinted, auto_monitor=True)
+    idata = Cpt(EpicsSignalRO, "IDATA", kind=Kind.hinted, auto_monitor=True)
+    fdata = Cpt(EpicsSignalRO, "FDATA", kind=Kind.hinted, auto_monitor=True)
+    count = Cpt(EpicsSignalRO, "COUNT", kind=Kind.omitted, auto_monitor=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._start_time = 0
+        self.acquire.subscribe(self._update_status, run=False)
+        self.count.subscribe(self._update_data, run=False)
+
+    def kickoff(self):
+        self._start_time = time.time()
+        self.acquire.put(1, use_complete=True)
+        status = DeviceStatus(self)
+        status.set_finished()
+        return status
+
+    def complete(self):
+        def check_value(*, old_value, value, **kwargs):
+            return (old_value == 1 and value == 0)
+
+        status = SubscriptionStatus(self.acquire, check_value, event_type=self.acquire.SUB_VALUE)
+        return status
+
+    def collect(self):
+        data = {
+            "time": self._start_time,
+            "data": {},
+            "timestamps": {}
+        }
+        for attr in ("edata", "data", "idata", "fdata"):
+            obj = getattr(self, attr)
+            data["data"][obj.name] = obj.get()
+            data["timestamps"][obj.name] = obj.timestamp
+
+        return data
+
+    def describe_collect(self):
+        desc = OrderedDict()
+        for attr in ("edata", "data", "idata", "fdata"):
+            desc.update(getattr(self, attr).describe())
+        return desc
+
+    def _update_status(self, *, old_value, value, **kwargs):
+        if old_value == 1 and value == 0:
+            self._done_acquiring()
+
+    def _update_data(self, value, **kwargs):
+        if value == 0:
+            return
+        data = self.collect()
+        self._run_subs(sub_type=self.SUB_VALUE, value=data)
 
 
 class VacuumValve(PVPositionerComparator):
@@ -144,13 +203,13 @@ class X07MAAnalogSignals(Device):
     ADC inputs
     """
 
-    s1 = Cpt(EpicsSignalRO, "SIGNAL0")
-    s2 = Cpt(EpicsSignalRO, "SIGNAL1")
-    s3 = Cpt(EpicsSignalRO, "SIGNAL2")
-    s4 = Cpt(EpicsSignalRO, "SIGNAL3")
-    s5 = Cpt(EpicsSignalRO, "SIGNAL4")
-    s6 = Cpt(EpicsSignalRO, "SIGNAL5")
-    s7 = Cpt(EpicsSignalRO, "SIGNAL6")
+    s1 = Cpt(EpicsSignalRO, "SIGNAL0", kind=Kind.hinted, auto_monitor=True)
+    s2 = Cpt(EpicsSignalRO, "SIGNAL1", kind=Kind.hinted, auto_monitor=True)
+    s3 = Cpt(EpicsSignalRO, "SIGNAL2", kind=Kind.hinted, auto_monitor=True)
+    s4 = Cpt(EpicsSignalRO, "SIGNAL3", kind=Kind.hinted, auto_monitor=True)
+    s5 = Cpt(EpicsSignalRO, "SIGNAL4", kind=Kind.hinted, auto_monitor=True)
+    s6 = Cpt(EpicsSignalRO, "SIGNAL5", kind=Kind.hinted, auto_monitor=True)
+    s7 = Cpt(EpicsSignalRO, "SIGNAL6", kind=Kind.hinted, auto_monitor=True)
 
     # Aliases
     tey = s1
@@ -186,4 +245,4 @@ class X07MAAutoTemperatureControl(Device):
     """
 
     control = Cpt(EpicsSignal, "CONTROL")
-    status = Cpt(EpicsSignalRO, "STATUS", kind=Kind.hinted, string=True, auto_monitor=True)
+    status = Cpt(EpicsSignalRO, "STATUS", string=True, auto_monitor=True)
