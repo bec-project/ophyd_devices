@@ -61,7 +61,9 @@ class PGMOtFScan(FlyerInterface, Device):
     """
     PGM on-the-fly scan
     """
+
     SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
 
     e1 = Cpt(EpicsSignal, "E1", kind=Kind.config)
     e2 = Cpt(EpicsSignal, "E2", kind=Kind.config)
@@ -90,17 +92,13 @@ class PGMOtFScan(FlyerInterface, Device):
 
     def complete(self):
         def check_value(*, old_value, value, **kwargs):
-            return (old_value == 1 and value == 0)
+            return old_value == 1 and value == 0
 
         status = SubscriptionStatus(self.acquire, check_value, event_type=self.acquire.SUB_VALUE)
         return status
 
     def collect(self):
-        data = {
-            "time": self._start_time,
-            "data": {},
-            "timestamps": {}
-        }
+        data = {"time": self._start_time, "data": {}, "timestamps": {}}
         for attr in ("edata", "data", "idata", "fdata"):
             obj = getattr(self, attr)
             data["data"][obj.name] = obj.get()
