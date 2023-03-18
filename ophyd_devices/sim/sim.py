@@ -383,6 +383,10 @@ class SynFlyer(Device, PositionerBase):
 
         super().__init__(name=name, parent=parent, labels=labels, kind=kind, **kwargs)
 
+    @property
+    def hints(self):
+        return {"fields": ["flyer_samx", "flyer_samy"]}
+
     def kickoff(self, metadata, num_pos, positions, exp_time: float = 0):
         positions = np.asarray(positions)
 
@@ -394,8 +398,10 @@ class SynFlyer(Device, PositionerBase):
                 bundle.append(
                     BECMessage.DeviceMessage(
                         signals={
-                            "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
-                            "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
+                            self.name: {
+                                "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
+                                "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
+                            }
                         },
                         metadata={"pointID": ii, **metadata},
                     ).dumps()
