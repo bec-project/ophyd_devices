@@ -107,6 +107,8 @@ class RtLamniController(Controller):
             logger.info("The connection has already been established.")
             # warnings.warn(f"The connection has already been established.", stacklevel=2)
 
+        self._update_flyer_device_info()
+
     def off(self) -> None:
         """Close the socket connection to the controller"""
         if self.connected:
@@ -304,6 +306,29 @@ class RtLamniController(Controller):
     def start_readout(self):
         readout = threading.Thread(target=self.read_positions_from_sampler)
         readout.start()
+
+    def _update_flyer_device_info(self):
+        flyer_info = self._get_flyer_device_info()
+        self.get_device_manager().producer.set(
+            MessageEndpoints.device_info("rt_scan"),
+            BECMessage.DeviceInfoMessage(device="rt_scan", info=flyer_info).dumps(),
+        )
+
+    def _get_flyer_device_info(self) -> dict:
+        return {
+            "device_name": self.name,
+            "device_attr_name": getattr(self, "attr_name", ""),
+            "device_dotted_name": getattr(self, "dotted_name", ""),
+            "device_info": {
+                "device_base_class": "ophydobject",
+                "signals": [],
+                "hints": ["average_x_st_fzp", "average_y_st_fzp"],
+                "describe": {},
+                "describe_configuration": {},
+                "sub_devices": [],
+                "custom_user_access": [],
+            },
+        }
 
     def kickoff(self, metadata):
         self.readout_metadata = metadata
