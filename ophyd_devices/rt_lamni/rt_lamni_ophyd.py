@@ -322,7 +322,7 @@ class RtLamniController(Controller):
             "device_info": {
                 "device_base_class": "ophydobject",
                 "signals": [],
-                "hints": ["average_x_st_fzp", "average_y_st_fzp"],
+                "hints": {"fields": ["average_x_st_fzp", "average_y_st_fzp"]},
                 "describe": {},
                 "describe_configuration": {},
                 "sub_devices": [],
