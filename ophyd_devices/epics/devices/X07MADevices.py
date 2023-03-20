@@ -63,6 +63,7 @@ class PGMOtFScan(FlyerInterface, Device):
     """
 
     SUB_VALUE = "value"
+    SUB_FLYER = "flyer"
     _default_sub = SUB_VALUE
 
     e1 = Cpt(EpicsSignal, "E1", kind=Kind.config)
@@ -114,13 +115,18 @@ class PGMOtFScan(FlyerInterface, Device):
 
     def _update_status(self, *, old_value, value, **kwargs):
         if old_value == 1 and value == 0:
+            self._update_data(100) # make sure that the last entries are also emitted
             self._done_acquiring()
 
     def _update_data(self, value, **kwargs):
         if value == 0:
             return
         data = self.collect()
-        self._run_subs(sub_type=self.SUB_VALUE, value=data)
+
+        # FIXME: to avoid emitting outdated / stale data, wait until all signals report > 10 entries
+        if any(len(val)<10 for val in data["data"].values()) or value < 10:
+            return
+        self._run_subs(sub_type=self.SUB_FLYER, value=data)
 
 
 class VacuumValve(PVPositionerComparator):
