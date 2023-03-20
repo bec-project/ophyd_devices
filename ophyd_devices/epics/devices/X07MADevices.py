@@ -115,7 +115,7 @@ class PGMOtFScan(FlyerInterface, Device):
 
     def _update_status(self, *, old_value, value, **kwargs):
         if old_value == 1 and value == 0:
-            self._update_data(100) # make sure that the last entries are also emitted
+            self._update_data(100)  # make sure that the last entries are also emitted
             self._done_acquiring()
 
     def _update_data(self, value, **kwargs):
@@ -124,7 +124,7 @@ class PGMOtFScan(FlyerInterface, Device):
         data = self.collect()
 
         # FIXME: to avoid emitting outdated / stale data, wait until all signals report > 10 entries
-        if any(len(val)<10 for val in data["data"].values()) or value < 10:
+        if any(len(val) < 10 for val in data["data"].values()) or value < 10:
             return
         self._run_subs(sub_type=self.SUB_FLYER, value=data)
 
