@@ -70,10 +70,26 @@ goldmesh2:
   onFailure: retry
   status: {enabled: true}
 
-field:
-  description: 'Magnetic field'
-  deviceClass: X07MAMagnet
-  deviceConfig: {name: field, prefix: 'X07MA-PC-MAG:'}
+# field:
+#   description: 'Magnetic field'
+#   deviceClass: X07MAMagnet
+#   deviceConfig: {name: field, prefix: 'X07MA-PC-MAG:'}
+#   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+#   onFailure: retry
+#   status: {enabled: true}
+
+field_x:
+  description: 'Magnetic field x'
+  deviceClass: X07MAMagnetAxis
+  deviceConfig: {name: field_x, axis_id: X, ps_prefix: "X07MA-PC-PS2:", prefix: 'X07MA-PC-MAG:'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+field_z:
+  description: 'Magnetic field z'
+  deviceClass: X07MAMagnetAxis
+  deviceConfig: {name: field_z, axis_id: Z, ps_prefix: "X07MA-PC-PS1:", prefix: 'X07MA-PC-MAG:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
@@ -108,4 +124,20 @@ TControl:
   deviceConfig: {name: 'TControl', prefix: 'X07MA-ES1-TEMP:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
+  status: {enabled: true}
+
+sls_info:
+  description: 'sls info'
+  deviceClass: SLSInfo
+  deviceConfig: {name: 'sls_info'}
+  acquisitionConfig: {acquisitionGroup: status, readoutPriority: ignored, schedule: sync}
+  onFailure: buffer
+  status: {enabled: true}
+
+sls_operator:
+  description: 'sls operator messages'
+  deviceClass: SLSOperatorMessages
+  deviceConfig: {name: 'sls_operator'}
+  acquisitionConfig: {acquisitionGroup: status, readoutPriority: ignored, schedule: sync}
+  onFailure: buffer
   status: {enabled: true}
