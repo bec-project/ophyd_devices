@@ -15,7 +15,7 @@ from ophyd.pv_positioner import PVPositionerComparator
 import traceback
 from bec_utils import bec_logger
 
-logger = bec_logger.logger 
+logger = bec_logger.logger
 
 
 __all__ = [
@@ -47,8 +47,28 @@ class X07MAUndulator(PVPositioner):
     pol_angle = Cpt(EpicsSignal, "ALPHA")
     harmonic = Cpt(EpicsSignal, "HARMONIC")
 
-    def __init__(self, prefix="", *, limits=None, name=None, read_attrs=None, configuration_attrs=None, parent=None, egu="", **kwargs):
-        super().__init__(prefix, limits=limits, name=name, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, egu=egu, **kwargs)
+    def __init__(
+        self,
+        prefix="",
+        *,
+        limits=None,
+        name=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        egu="",
+        **kwargs
+    ):
+        super().__init__(
+            prefix,
+            limits=limits,
+            name=name,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            egu=egu,
+            **kwargs
+        )
         self.readback.name = self.name
 
 
@@ -65,8 +85,28 @@ class PGMMonochromator(PVPositioner):
     cff = Cpt(EpicsSignal, "PGM:rbkcff", write_pv="PGM:cff.A", kind=Kind.config)
     with_undulator = Cpt(EpicsSignal, "PHS-E:OPT", kind=Kind.config)
 
-    def __init__(self, prefix="", *, limits=None, name=None, read_attrs=None, configuration_attrs=None, parent=None, egu="", **kwargs):
-        super().__init__(prefix, limits=limits, name=name, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, egu=egu, **kwargs)
+    def __init__(
+        self,
+        prefix="",
+        *,
+        limits=None,
+        name=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        egu="",
+        **kwargs
+    ):
+        super().__init__(
+            prefix,
+            limits=limits,
+            name=name,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            egu=egu,
+            **kwargs
+        )
         self.readback.name = self.name
 
 
@@ -145,6 +185,7 @@ class PGMOtFScan(FlyerInterface, Device):
             content = traceback.format_exc()
             logger.error(content)
 
+
 class VacuumValve(PVPositionerComparator):
     """
     EPS vacuum valve.
@@ -184,8 +225,29 @@ class X07MAExitSlit(PVPositioner):
     setpoint = Cpt(EpicsSignal, "TR_AP")
     readback = Cpt(EpicsSignalRO, "TR_ISAP", kind=Kind.hinted, auto_monitor=True)
     done = Cpt(EpicsSignalRO, "TR.DMOV", kind=Kind.omitted, auto_monitor=True)
-    def __init__(self, prefix="", *, limits=None, name=None, read_attrs=None, configuration_attrs=None, parent=None, egu="", **kwargs):
-        super().__init__(prefix, limits=limits, name=name, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, egu=egu, **kwargs)
+
+    def __init__(
+        self,
+        prefix="",
+        *,
+        limits=None,
+        name=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        egu="",
+        **kwargs
+    ):
+        super().__init__(
+            prefix,
+            limits=limits,
+            name=name,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            egu=egu,
+            **kwargs
+        )
         self.readback.name = self.name
 
 
@@ -193,6 +255,7 @@ class X07MAExitSlit(PVPositioner):
 #     """
 #     Magnet fields.
 #     """
+
 
 class X07MAMagnetAxis(PVPositioner):
     """
@@ -202,13 +265,9 @@ class X07MAMagnetAxis(PVPositioner):
     done_value = 1
     actuate_value = 1
     setpoint = FCpt(EpicsSignal, "{prefix}{_axis_id}:DMD")
-    readback = FCpt(
-        EpicsSignalRO, "{prefix}{_axis_id}:RBV", kind=Kind.hinted, auto_monitor=True
-    )
+    readback = FCpt(EpicsSignalRO, "{prefix}{_axis_id}:RBV", kind=Kind.hinted, auto_monitor=True)
     actuate = Cpt(EpicsSignal, "STARTRAMP.PROC", kind=Kind.omitted)
-    done = FCpt(
-        EpicsSignalRO, "{prefix}{_axis_id}:RAMP:DONE", auto_monitor=True
-    )
+    done = FCpt(EpicsSignalRO, "{prefix}{_axis_id}:RAMP:DONE", auto_monitor=True)
     ramprate = FCpt(
         EpicsSignal, "{_ps_prefix}STS:RAMPRATE:TPM", write_pv="{_ps_prefix}SET:DMD:RAMPRATE:TPM"
     )
@@ -218,8 +277,6 @@ class X07MAMagnetAxis(PVPositioner):
         self._ps_prefix = ps_prefix
         super().__init__(prefix, name=name, **kwargs)
         self.readback.name = self.name
-        
-
 
     # x = Cpt(MagnetAxis, "", axis_id="X", ps_prefix="X07MA-PC-PS2:", name="x")
     # z = Cpt(MagnetAxis, "", axis_id="Z", ps_prefix="X07MA-PC-PS1:", name="z")
@@ -265,8 +322,26 @@ class X07MATemperatureController(Device):
     setpoint = Cpt(EpicsSignal, "STS:LOOP1:SETPOINT", write_pv="DMD:LOOP1:SETPOINT")
     readback = Cpt(EpicsSignalRO, "STS:T1", kind=Kind.hinted, auto_monitor=True)
 
-    def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
-        super().__init__(prefix, name=name, kind=kind, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, **kwargs)
+    def __init__(
+        self,
+        prefix="",
+        *,
+        name,
+        kind=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        **kwargs
+    ):
+        super().__init__(
+            prefix,
+            name=name,
+            kind=kind,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            **kwargs
+        )
         self.readback.name = self.name
 
 
