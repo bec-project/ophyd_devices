@@ -1,19 +1,19 @@
 """
 ophyd device classes for X07MA beamline
 """
-from collections import OrderedDict
 import time
+import traceback
+from collections import OrderedDict
 from typing import Any
 
-from ophyd import Component as Cpt
-from ophyd import FormattedComponent as FCpt
-
-from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind, PVPositioner, EpicsMotor
-from ophyd.flyers import FlyerInterface
-from ophyd.status import DeviceStatus, SubscriptionStatus
-from ophyd.pv_positioner import PVPositionerComparator
-import traceback
 from bec_utils import bec_logger
+from ophyd import Component as Cpt
+from ophyd import Device, EpicsMotor, EpicsSignal, EpicsSignalRO
+from ophyd import FormattedComponent as FCpt
+from ophyd import Kind, PVPositioner
+from ophyd.flyers import FlyerInterface
+from ophyd.pv_positioner import PVPositionerComparator
+from ophyd.status import DeviceStatus, SubscriptionStatus
 
 logger = bec_logger.logger
 
