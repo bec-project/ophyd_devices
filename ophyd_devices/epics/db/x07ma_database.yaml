@@ -102,13 +102,45 @@ signals:
   onFailure: retry
   status: {enabled: true}
 
-manipulator:
-  description: 'Sample Manipulator'
-  deviceClass: X07MASampleManipulator
-  deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG:'}
+sample_hor:
+  description: 'Horizontal sample position'
+  deviceClass: EpicsMotor
+  deviceConfig: {name: sample_hor, prefix: 'X07MA-ES1-AI:TRZS'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
+
+sample_vert:
+  description: 'Horizontal sample position'
+  deviceClass: EpicsMotor
+  deviceConfig: {name: sample_vert, prefix: 'X07MA-ES1-AI:TRY1'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+sample_rot:
+  description: 'Horizontal sample position'
+  deviceClass: EpicsMotor
+  deviceConfig: {name: sample_rot, prefix: 'X07MA-ES1-AI:ROY1'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+harmonic:
+  description: 'ID harmonic'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: harmonic, prefix: 'X07MA-ID:HARMONIC'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+# manipulator:
+#   description: 'Sample Manipulator'
+#   deviceClass: X07MASampleManipulator
+#   deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG:'}
+#   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+#   onFailure: retry
+#   status: {enabled: true}
 
 temperature:
   description: 'Temperature controller'
@@ -118,10 +150,10 @@ temperature:
   onFailure: retry
   status: {enabled: true}
 
-TControl:
+tcontrol:
   description: 'Automatic temperature control'
   deviceClass: X07MAAutoTemperatureControl
-  deviceConfig: {name: 'TControl', prefix: 'X07MA-ES1-TEMP:'}
+  deviceConfig: {name: 'tcontrol', prefix: 'X07MA-ES1-TEMP:'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
