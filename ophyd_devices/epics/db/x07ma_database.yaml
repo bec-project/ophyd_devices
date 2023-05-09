@@ -105,7 +105,7 @@ signals:
 sample_hor:
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_hor, prefix: 'X07MA-ES1-AI:TRZS'}
+  deviceConfig: {name: sample_hor, prefix: 'X07MA-ES1-MAG:TRZS'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
@@ -113,7 +113,7 @@ sample_hor:
 sample_vert:
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_vert, prefix: 'X07MA-ES1-AI:TRY1'}
+  deviceConfig: {name: sample_vert, prefix: 'X07MA-ES1-MAG:TRY1'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
@@ -121,7 +121,7 @@ sample_vert:
 sample_rot:
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_rot, prefix: 'X07MA-ES1-AI:ROY1'}
+  deviceConfig: {name: sample_rot, prefix: 'X07MA-ES1-MAG:ROY1'}
   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
   onFailure: retry
   status: {enabled: true}
