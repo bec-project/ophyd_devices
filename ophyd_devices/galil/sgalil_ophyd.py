@@ -4,15 +4,14 @@ import time
 from typing import List
 
 import numpy as np
-from bec_lib.core import bec_logger
+from bec_utils import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
-from prettytable import PrettyTable
-
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from prettytable import PrettyTable
 
 logger = bec_logger.logger
 
@@ -137,8 +136,8 @@ class GalilController(Controller):
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
         is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
-        backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
-        return bool(is_moving or backlash_is_active)
+        #backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
+        return bool(is_moving)#bool(is_moving or backlash_is_active)
 
     def is_thread_active(self, thread_id: int) -> bool:
         val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
@@ -153,11 +152,6 @@ class GalilController(Controller):
 
     def stop_all_axes(self) -> str:
         return self.socket_put_and_receive(f"XQ#STOP,1")
-
-    def lgalil_is_air_off_and_orchestra_enabled(self) -> bool:
-        rt_not_blocked_by_galil = bool(self.socket_put_and_receive(f"MG@OUT[9]"))
-        air_off = bool(self.socket_put_and_receive(f"MG@OUT[13]"))
-        return rt_not_blocked_by_galil and air_off
 
     def axis_is_referenced(self, axis_Id_numeric) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG axisref[{axis_Id_numeric}]").strip()))
@@ -178,8 +172,13 @@ class GalilController(Controller):
         return not bool(float(self.socket_put_and_receive(f"MG _MO{axis_Id}").strip()))
 
     def get_motor_limit_switch(self, axis_Id) -> list:
-        ret = self.socket_put_and_receive(f"MG _LF{axis_Id}, _LR{axis_Id}")
-        high, low = ret.strip().split(" ")
+        # SGalil specific 
+        if axis_id == 2:
+            ret = self.socket_put_and_receive(f"MG _LF{axis_Id}, _LR{axis_Id}")
+            high, low = ret.strip().split(" ")
+        elif axis_id ==4:
+            ret = self.socket_put_and_receive(f"MG _LF{'F'}, _LR{'F'}")
+            high, low = ret.strip().split(" ")
         return [not bool(float(low)), not bool(float(high))]
 
     def describe(self) -> None:
@@ -246,22 +245,17 @@ class GalilReadbackSignal(GalilSignalRO):
         Returns:
             float: Readback value after adjusting for sign and motor resolution.
         """
-
-        current_pos = float(self.controller.socket_put_and_receive(f"TD{self.parent.axis_Id}"))
+        if self.parent.axis_Id_numeric == 2:
+            current_pos = float(self.controller.socket_put_and_receive(f"MG _TP{self.parent.axis_Id}/mm"))
+        elif self.parent.axis_Id_numeric == 4:
+            #hardware controller readback from axis 4 is on axis 0, A instead of E     
+            current_pos = float(self.controller.socket_put_and_receive(f"MG _TP{'A'}/mm"))
         current_pos *= self.parent.sign
-        step_mm = self.parent.motor_resolution.get()
-        return current_pos / step_mm
+        return current_pos
 
     def read(self):
         self._metadata["timestamp"] = time.time()
         val = super().read()
-        if self.parent.axis_Id_numeric == 2:
-            try:
-                rt = self.parent.device_manager.devices[self.parent.rt]
-                if rt.enabled:
-                    rt.obj.controller.set_rotation_angle(val[self.parent.name]["value"])
-            except KeyError:
-                logger.warning("Failed to set RT value during readback.")
         return val
 
 
@@ -298,37 +292,27 @@ class GalilSetpointSignal(GalilSignalBase):
                 time.sleep(0.1)
 
             if self.parent.axis_Id_numeric == 2:
-                angle_status = self.parent.device_manager.devices[
-                    self.parent.rt
-                ].obj.controller.feedback_status_angle_lamni()
-
-                if angle_status:
-                    self.controller.socket_put_confirmed("angintf=1")
-
-            self.controller.socket_put_confirmed(f"naxis={self.parent.axis_Id_numeric}")
-            self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")
-            self.controller.socket_put_confirmed("movereq=1")
-            self.controller.socket_put_confirmed("XQ#NEWPAR")
+                self.controller.socket_put_confirmed(f"PA{self.parent.axis_Id}={target_val:.4f}*mm")
+                self.controller.socket_put_and_receive(f"BG{self.parent.axis_Id}")
+            elif self.parent.axis_Id_numeric == 4:
+                self.controller.socket_put_confirmed(f"targ{self.parent.axis_Id}={target_val:.4f}")
+                self.controller.socket_put_and_receive(f"XQ#POSE,{self.parent.axis_Id_numeric}")
             while self.controller.is_thread_active(0):
                 time.sleep(0.005)
         else:
             raise GalilError("Not all axes are referenced.")
 
 
-class GalilMotorResolution(GalilSignalRO):
-    @retry_once
-    @threadlocked
-    def _socket_get(self):
-        return float(
-            self.controller.socket_put_and_receive(f"MG stppermm[{self.parent.axis_Id_numeric}]")
-        )
-
-
 class GalilMotorIsMoving(GalilSignalRO):
     @threadlocked
     def _socket_get(self):
+        if self.parent.axis_Id_numeric == 2:
+            ret = self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
+        elif self.parent.axis_Id_numeric == 4:
+            # Motion signal from axis 4 is mapped to axis 5
+            ret = self.controller.is_axis_moving('F', 5)
         return (
-            self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
+            ret
             or self.controller.is_thread_active(0)
             or self.controller.is_thread_active(2)
         )
@@ -349,8 +333,12 @@ class GalilAxesReferenced(GalilSignalRO):
     def _socket_get(self):
         return self.controller.socket_put_and_receive("MG allaxref")
 
-
-class GalilMotor(Device, PositionerBase):
+class SGalilMotor(Device, PositionerBase):
+    """"SGalil Motors at cSAXS have a 
+    DC motor (y axis - vertical) - implemented as C
+    and a step motor (x-axis horizontal) - implemented as E
+    that require different communication for control
+    """
     USER_ACCESS = ["controller"]
     readback = Cpt(
         GalilReadbackSignal,
@@ -358,7 +346,6 @@ class GalilMotor(Device, PositionerBase):
         kind="hinted",
     )
     user_setpoint = Cpt(GalilSetpointSignal, signal_name="setpoint")
-    motor_resolution = Cpt(GalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
     all_axes_referenced = Cpt(GalilAxesReferenced, signal_name="all_axes_referenced", kind="config")
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
@@ -378,8 +365,8 @@ class GalilMotor(Device, PositionerBase):
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
-        host="mpc2680.psi.ch",
-        port=8081,
+        host="129.129.122.26",
+        port=23,
         limits=None,
         sign=1,
         socket_cls=SocketIO,
@@ -524,6 +511,8 @@ class GalilMotor(Device, PositionerBase):
         if isinstance(val, str):
             if len(val) != 1:
                 raise ValueError(f"Only single-character axis_Ids are supported.")
+            if val not in ['C', 'E']:
+                raise ValueError(f"axis_id {val} is currently not supported, please use either 'C' or 'E'.")
             self._axis_Id_alpha = val
             self._axis_Id_numeric = ord(val.lower()) - 97
         else:
@@ -536,24 +525,34 @@ class GalilMotor(Device, PositionerBase):
     @axis_Id_numeric.setter
     def axis_Id_numeric(self, val):
         if isinstance(val, int):
-            if val > 26:
-                raise ValueError(f"Numeric value exceeds supported range.")
+            if val not in [2, 4]:
+                raise ValueError(f"Numeric value {val} is not supported, it must be either 2 or 4.")
             self._axis_Id_alpha = val
             self._axis_Id_numeric = (chr(val + 97)).capitalize()
         else:
-            raise TypeError(f"Expected value of type int but received {type(val)}")
+            raise TypeError(f"Expected value of type int but received {type(val)}.")
 
     @property
     def egu(self):
         """The engineering units (EGU) for positions"""
         return "mm"
 
-    def stage(self) -> List[object]:
-        return super().stage()
-
-    def unstage(self) -> List[object]:
-        return super().unstage()
-
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
         return super().stop(success=success)
+
+if __name__ == "__main__":
+    mock = False
+    if not mock:
+        samy = SGalilMotor("C", name="samy", host="129.129.122.26", port=23, sign=-1)
+        samx = SGalilMotor("E", name="samx", host="129.129.122.26", port=23, sign=-1)
+    else:
+        from ophyd_devices.utils.socket import SocketMock
+        samx = SGalilMotor(
+            "E", name="samx", host="129.129.122.26", port=23, socket_cls=SocketMock
+        )
+        samy = SGalilMotor(
+            "C", name="samy", host="129.129.122.26", port=23, socket_cls=SocketMock
+        )
+        
+        samx.controller.galil_show_all()
