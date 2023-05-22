@@ -49,7 +49,6 @@ class GalilController(Controller):
         "galil_show_all",
         "socket_put_and_receive",
         "socket_put_confirmed",
-        "lgalil_is_air_off_and_orchestra_enabled",
     ]
 
     def __init__(
@@ -308,14 +307,11 @@ class GalilMotorIsMoving(GalilSignalRO):
     def _socket_get(self):
         if self.parent.axis_Id_numeric == 2:
             ret = self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
-        elif self.parent.axis_Id_numeric == 4:
+            return ret
+        if self.parent.axis_Id_numeric == 4:
             # Motion signal from axis 4 is mapped to axis 5
             ret = self.controller.is_axis_moving('F', 5)
-        return (
-            ret
-            or self.controller.is_thread_active(0)
-            or self.controller.is_thread_active(2)
-        )
+            return ret or self.controller.is_thread_active(4)
 
     def get(self):
         val = super().get()
