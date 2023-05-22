@@ -135,8 +135,8 @@ class GalilController(Controller):
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
         is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
-        #backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
-        return bool(is_moving)#bool(is_moving or backlash_is_active)
+        # backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
+        return bool(is_moving)  # bool(is_moving or backlash_is_active)
 
     def is_thread_active(self, thread_id: int) -> bool:
         val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
@@ -171,11 +171,11 @@ class GalilController(Controller):
         return not bool(float(self.socket_put_and_receive(f"MG _MO{axis_Id}").strip()))
 
     def get_motor_limit_switch(self, axis_Id) -> list:
-        # SGalil specific 
+        # SGalil specific
         if axis_id == 2:
             ret = self.socket_put_and_receive(f"MG _LF{axis_Id}, _LR{axis_Id}")
             high, low = ret.strip().split(" ")
-        elif axis_id ==4:
+        elif axis_id == 4:
             ret = self.socket_put_and_receive(f"MG _LF{'F'}, _LR{'F'}")
             high, low = ret.strip().split(" ")
         return [not bool(float(low)), not bool(float(high))]
@@ -245,9 +245,11 @@ class GalilReadbackSignal(GalilSignalRO):
             float: Readback value after adjusting for sign and motor resolution.
         """
         if self.parent.axis_Id_numeric == 2:
-            current_pos = float(self.controller.socket_put_and_receive(f"MG _TP{self.parent.axis_Id}/mm"))
+            current_pos = float(
+                self.controller.socket_put_and_receive(f"MG _TP{self.parent.axis_Id}/mm")
+            )
         elif self.parent.axis_Id_numeric == 4:
-            #hardware controller readback from axis 4 is on axis 0, A instead of E     
+            # hardware controller readback from axis 4 is on axis 0, A instead of E
             current_pos = float(self.controller.socket_put_and_receive(f"MG _TP{'A'}/mm"))
         current_pos *= self.parent.sign
         return current_pos
@@ -310,7 +312,7 @@ class GalilMotorIsMoving(GalilSignalRO):
             return ret
         if self.parent.axis_Id_numeric == 4:
             # Motion signal from axis 4 is mapped to axis 5
-            ret = self.controller.is_axis_moving('F', 5)
+            ret = self.controller.is_axis_moving("F", 5)
             return ret or self.controller.is_thread_active(4)
 
     def get(self):
@@ -329,12 +331,14 @@ class GalilAxesReferenced(GalilSignalRO):
     def _socket_get(self):
         return self.controller.socket_put_and_receive("MG allaxref")
 
+
 class SGalilMotor(Device, PositionerBase):
-    """"SGalil Motors at cSAXS have a 
+    """ "SGalil Motors at cSAXS have a
     DC motor (y axis - vertical) - implemented as C
     and a step motor (x-axis horizontal) - implemented as E
     that require different communication for control
     """
+
     USER_ACCESS = ["controller"]
     readback = Cpt(
         GalilReadbackSignal,
@@ -507,8 +511,10 @@ class SGalilMotor(Device, PositionerBase):
         if isinstance(val, str):
             if len(val) != 1:
                 raise ValueError(f"Only single-character axis_Ids are supported.")
-            if val not in ['C', 'E']:
-                raise ValueError(f"axis_id {val} is currently not supported, please use either 'C' or 'E'.")
+            if val not in ["C", "E"]:
+                raise ValueError(
+                    f"axis_id {val} is currently not supported, please use either 'C' or 'E'."
+                )
             self._axis_Id_alpha = val
             self._axis_Id_numeric = ord(val.lower()) - 97
         else:
@@ -537,6 +543,7 @@ class SGalilMotor(Device, PositionerBase):
         self.controller.stop_all_axes()
         return super().stop(success=success)
 
+
 if __name__ == "__main__":
     mock = False
     if not mock:
@@ -544,11 +551,8 @@ if __name__ == "__main__":
         samx = SGalilMotor("E", name="samx", host="129.129.122.26", port=23, sign=-1)
     else:
         from ophyd_devices.utils.socket import SocketMock
-        samx = SGalilMotor(
-            "E", name="samx", host="129.129.122.26", port=23, socket_cls=SocketMock
-        )
-        samy = SGalilMotor(
-            "C", name="samy", host="129.129.122.26", port=23, socket_cls=SocketMock
-        )
-        
+
+        samx = SGalilMotor("E", name="samx", host="129.129.122.26", port=23, socket_cls=SocketMock)
+        samy = SGalilMotor("C", name="samy", host="129.129.122.26", port=23, socket_cls=SocketMock)
+
         samx.controller.galil_show_all()
