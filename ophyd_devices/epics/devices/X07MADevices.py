@@ -278,6 +278,14 @@ class X07MAMagnetAxis(PVPositioner):
         super().__init__(prefix, name=name, **kwargs)
         self.readback.name = self.name
 
+    def _setup_move(self, position):
+        # If the setpoint is close to the current readback, the controller will not do anything,
+        # and the done value will not change. So we simply say is done.
+        if abs(position - self.readback.get()) < max(0.004, position * 0.0025):
+            self._done_moving(success=True, time=time.ctime(), value=position)
+        else:
+            super()._setup_move(position)
+
     # x = Cpt(MagnetAxis, "", axis_id="X", ps_prefix="X07MA-PC-PS2:", name="x")
     # z = Cpt(MagnetAxis, "", axis_id="Z", ps_prefix="X07MA-PC-PS1:", name="z")
 
