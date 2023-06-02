@@ -2,9 +2,9 @@ import os
 import time
 from typing import List
 
-from bec_utils import BECMessage, MessageEndpoints, bec_logger
+from bec_client_lib.core import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, EpicsSignal, Signal, EpicsSignalRO
+from ophyd import Device, DeviceStatus, EpicsSignal, EpicsSignalRO, Signal
 
 logger = bec_logger.logger
 

@@ -5,7 +5,7 @@ import warnings
 from typing import List
 
 import numpy as np
-from bec_utils import BECMessage, MessageEndpoints, bec_logger
+from bec_client_lib.core import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, OphydObject, PositionerBase, Signal
 from ophyd.sim import _ReadbackSignal, _SetpointSignal
