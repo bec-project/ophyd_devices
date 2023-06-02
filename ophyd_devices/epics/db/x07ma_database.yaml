@@ -134,6 +134,46 @@ harmonic:
   onFailure: retry
   status: {enabled: true}
 
+energy:
+  description: 'Energy in eV'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: energy, read_pv: 'X07MA-PHS-E:GO.A'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+energy_mode:
+  description: 'Energy mode. Either PGM = 0 or PGM+ID = 1'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: energy_mode, read_pv: 'X07MA-PHS-E:OPT'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+keithley_1:
+  description: 'Keithley 1 / 428 tey'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: keithley_1, read_pv: 'X07MA-PC-K428:1:setGain'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+keithley_2:
+  description: 'Keithley 2 / 428 i0'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: keithley_2, read_pv: 'X07MA-PC-K428:2:setGain'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
+keithley_3:
+  description: 'Keithley 3 / 428 diode'
+  deviceClass: EpicsSignal
+  deviceConfig: {name: keithley_3, read_pv: 'X07MA-PC-K428:3:setGain'}
+  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  onFailure: retry
+  status: {enabled: true}
+
 # manipulator:
 #   description: 'Sample Manipulator'
 #   deviceClass: X07MASampleManipulator
