@@ -6,7 +6,7 @@ Created on Tue Nov  9 16:12:47 2021
 """
 
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
-from ophyd import PositionerBase
+from ophyd import PositionerBase, PVPositioner, Signal
 from ophyd.pseudopos import (
     pseudo_position_argument,
     real_position_argument,
@@ -40,10 +40,10 @@ class DelayStatic(Device):
     )
 
 
-class DummyPositioner(Device, PositionerBase):
-    setpoint = Component(EpicsSignal, "DelayAO", kind=Kind.config)
+class DummyPositioner(PVPositioner):
+    setpoint = Component(EpicsSignal, "DelayAO", put_complete=True, kind=Kind.config)
     readback = Component(EpicsSignalRO, "DelayAI", kind=Kind.config)
-
+    done = Component(Signal, value=1)
 
 class DelayPair(PseudoPositioner):
     """Delay pair interface for DG645
@@ -56,6 +56,8 @@ class DelayPair(PseudoPositioner):
     delay = Component(PseudoSingle, limits=(0, 2000.0), name="delay")
     width = Component(PseudoSingle, limits=(0, 2000.0), name="pulsewidth")
     # The real delay axes
+    #ch1 = Component(EpicsSignal, "DelayAI", write_pv="DelayAO", name="ch1", put_complete=True, kind=Kind.config)
+    #ch2 = Component(EpicsSignal, "DelayAI", write_pv="DelayAO", name="ch2", put_complete=True, kind=Kind.config)
     ch1 = Component(DummyPositioner, name="ch1")
     ch2 = Component(DummyPositioner, name="ch2")
 
@@ -150,8 +152,7 @@ class DelayGeneratorDG645(Device):
     )
 
     # Command PVs
-    arm = Component(
-        EpicsSignal, "TriggerDelayBI", write_pv="TriggerDelayBO", name="arm", kind=Kind.omitted
+    arm = Component(EpicsSignal, "TriggerDelayBO", name="arm", kind=Kind.omitted
     )
 
     # Burst mode
