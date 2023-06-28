@@ -4,14 +4,15 @@ import time
 from typing import List
 
 import numpy as np
-from bec_client_lib.core import bec_logger
+from bec_lib.core import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
+from prettytable import PrettyTable
+
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
-from prettytable import PrettyTable
 
 logger = bec_logger.logger
 

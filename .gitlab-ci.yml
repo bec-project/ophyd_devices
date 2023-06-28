@@ -20,5 +20,5 @@ pytest:
   stage: Test
   script:
     - git clone https://oauth2:$CI_BEC_KEY@gitlab.psi.ch/bec/bec.git
-    - pip install -e ./bec/bec_client_lib
+    - pip install -e ./bec/bec_lib
     - pytest -v ./tests
