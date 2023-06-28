@@ -2,7 +2,7 @@ import os
 import time
 from typing import List
 
-from bec_client_lib.core import BECMessage, MessageEndpoints, bec_logger
+from bec_lib.core import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, EpicsSignal, EpicsSignalRO, Signal
 

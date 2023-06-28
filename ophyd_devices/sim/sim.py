@@ -5,10 +5,10 @@ import warnings
 from typing import List
 
 import numpy as np
-from bec_client_lib.core import BECMessage, MessageEndpoints, bec_logger
+from bec_lib.core import BECMessage, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, OphydObject, PositionerBase, Signal
-from ophyd.sim import _ReadbackSignal, _SetpointSignal
+from ophyd.sim import EnumSignal, SynSignal, _ReadbackSignal, _SetpointSignal
 from ophyd.utils import LimitError, ReadOnlyError
 
 logger = bec_logger.logger
@@ -45,6 +45,39 @@ class _ReadbackSignal(Signal):
     def get(self):
         self._readback = self.parent.sim_state["readback"]
         return self._readback
+
+    def describe(self):
+        res = super().describe()
+        # There should be only one key here, but for the sake of
+        # generality....
+        for k in res:
+            res[k]["precision"] = self.parent.precision
+        return res
+
+    @property
+    def timestamp(self):
+        """Timestamp of the readback value"""
+        return self.parent.sim_state["readback_ts"]
+
+    def put(self, value, *, timestamp=None, force=False):
+        raise ReadOnlyError("The signal {} is readonly.".format(self.name))
+
+    def set(self, value, *, timestamp=None, force=False):
+        raise ReadOnlyError("The signal {} is readonly.".format(self.name))
+
+
+class _ReadbackSignalCompute(Signal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._metadata.update(
+            connected=True,
+            write_access=False,
+        )
+
+    def get(self):
+        readback = self.parent._compute()
+        self._readback = self.parent.sim_state["readback"] = readback
+        return readback
 
     def describe(self):
         res = super().describe()
@@ -745,6 +778,90 @@ class SynAxisOPAAS(Device, PositionerBase):
 
     def egu(self):
         return "mm"
+
+
+class SynGaussBEC(Device):
+    """
+    Evaluate a point on a Gaussian based on the value of a motor.
+
+    Parameters
+    ----------
+    name : string
+    motor : Device
+    motor_field : string
+    center : number
+        center of peak
+    Imax : number
+        max intensity of peak
+    sigma : number, optional
+        Default is 1.
+    noise : {'poisson', 'uniform', None}, optional
+        Add noise to the gaussian peak.
+    noise_multiplier : float, optional
+        Only relevant for 'uniform' noise. Multiply the random amount of
+        noise by 'noise_multiplier'
+    random_state : numpy random state object, optional
+        np.random.RandomState(0), to generate random number with given seed
+
+    Example
+    -------
+    motor = SynAxis(name='motor')
+    det = SynGauss('det', motor, 'motor', center=0, Imax=1, sigma=1)
+    """
+
+    val = Cpt(_ReadbackSignalCompute, value=0, kind="hinted")
+    Imax = Cpt(Signal, value=10, kind="config")
+    center = Cpt(Signal, value=0, kind="config")
+    sigma = Cpt(Signal, value=1, kind="config")
+    motor = Cpt(Signal, value="samx", kind="config")
+    noise = Cpt(
+        EnumSignal,
+        value="none",
+        kind="config",
+        enum_strings=("none", "poisson", "uniform"),
+    )
+    noise_multiplier = Cpt(Signal, value=1, kind="config")
+
+    def __init__(self, name, *, device_manager=None, random_state=None, **kwargs):
+        self.device_manager = device_manager
+        set_later = {}
+        for k in ("sigma", "noise", "noise_multiplier"):
+            v = kwargs.pop(k, None)
+            if v is not None:
+                set_later[k] = v
+        super().__init__(name=name, **kwargs)
+
+        self.random_state = random_state or np.random
+        self.val.name = self.name
+        self.precision = 3
+        self.sim_state = {"readback": 0, "readback_ts": ttime.time()}
+        for k, v in set_later.items():
+            getattr(self, k).put(v)
+
+    def _compute(self):
+        try:
+            m = self.device_manager.devices[self.motor.get()].obj.read()[self.motor.get()]["value"]
+            # we need to do this one at a time because
+            #   - self.read() may be screwed with by the user
+            #   - self.get() would cause infinite recursion
+            Imax = self.Imax.get()
+            center = self.center.get()
+            sigma = self.sigma.get()
+            noise = self.noise.get()
+            noise_multiplier = self.noise_multiplier.get()
+            v = Imax * np.exp(-((m - center) ** 2) / (2 * sigma**2))
+            if noise == "poisson":
+                v = int(self.random_state.poisson(np.round(v), 1))
+            elif noise == "uniform":
+                v += self.random_state.uniform(-1, 1) * noise_multiplier
+            return v
+        except Exception:
+            return 0
+
+    def get(self, *args, **kwargs):
+        self.sim_state["readback"] = self._compute()
+        self.sim_state["readback_ts"] = ttime.time()
+        return self.val.get()
 
 
 class SynDeviceSubOPAAS(Device):

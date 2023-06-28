@@ -6,7 +6,7 @@ import traceback
 from collections import OrderedDict
 from typing import Any
 
-from bec_client_lib.core import bec_logger
+from bec_lib.core import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd import FormattedComponent as FCpt
