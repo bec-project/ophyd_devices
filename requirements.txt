@@ -1,4 +1,0 @@
-ophyd
-typeguard
-prettytable
-pytest
