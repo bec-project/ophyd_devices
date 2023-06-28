@@ -4,7 +4,7 @@ __version__ = "0.1.0"
 
 if __name__ == "__main__":
     setup(
-        install_requires=["ophyd", "typeguard", "prettytable", "bec_lib"],
-        extras_require={"dev": ["pytest", "pytest-random-order"]},
+        install_requires=["ophyd", "typeguard", "prettytable", "bec_lib", "numpy", "pyyaml"],
+        extras_require={"dev": ["pytest", "pytest-random-order", "black"]},
         version=__version__,
     )
