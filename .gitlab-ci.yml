@@ -5,20 +5,23 @@ image: morgana-harbor.psi.ch/bec/python:3.8
 
 #commands to run in the Docker container before starting each job.
 before_script:
-  - pip install -r ./requirements.txt
-  - pip install -e .
+  - pip install -e .[dev]
+
 # different stages in the pipeline
 stages:
   - Formatter
   - Test
+  - Deploy
+
 formatter:
   stage: Formatter
   script:
     - pip install black
     - black --check --diff --color --line-length=100 ./
+
 pytest:
   stage: Test
   script:
-    - git clone https://oauth2:$CI_BEC_KEY@gitlab.psi.ch/bec/bec.git
-    - pip install -e ./bec/bec_lib
-    - pytest -v ./tests
+    - pytest -v --random-order ./tests
+
+
