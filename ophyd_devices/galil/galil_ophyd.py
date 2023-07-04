@@ -218,7 +218,7 @@ class GalilController(Controller):
         for controller in self._controller_instances.values():
             if isinstance(controller, GalilController):
                 controller.describe()
-        
+
 
 class GalilSignalBase(SocketSignal):
     def __init__(self, signal_name, **kwargs):
@@ -448,7 +448,6 @@ class GalilMotor(Device, PositionerBase):
         kwargs.pop("sub_type")
         self._run_subs(sub_type="readback", **kwargs)
 
-
     @raise_if_disconnected
     def move(self, position, wait=True, **kwargs):
         """Move to a specified position, optionally waiting for motion to
@@ -558,3 +557,31 @@ class GalilMotor(Device, PositionerBase):
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
         return super().stop(success=success)
+
+
+if __name__ == "__main__":
+    mock = False
+    if not mock:
+        leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
+        leyey.stage()
+        status = leyey.move(0, wait=True)
+        status = leyey.move(10, wait=True)
+        leyey.read()
+
+        leyey.get()
+        leyey.describe()
+
+        leyey.unstage()
+    else:
+        from ophyd_devices.utils.socket import SocketMock
+
+        leyex = GalilMotor(
+            "G", name="leyex", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+        )
+        leyey = GalilMotor(
+            "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+        )
+        leyex.stage()
+        # leyey.stage()
+
+        leyex.controller.galil_show_all()
