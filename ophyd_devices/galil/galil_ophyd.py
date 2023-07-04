@@ -160,7 +160,7 @@ class GalilController(Controller):
         return rt_not_blocked_by_galil and air_off
 
     def axis_is_referenced(self, axis_Id_numeric) -> bool:
-        return bool(float(self.socket_put_and_receive(f"MG axisref[{axis_Id_numeric}]").strip()))
+        return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
 
     def show_running_threads(self) -> None:
         t = PrettyTable()
@@ -219,6 +219,30 @@ class GalilController(Controller):
             if isinstance(controller, GalilController):
                 controller.describe()
 
+    @threadlocked
+    def fly_grid_scan(self, start_y:float, end_y:float, y_interval:int, start_x:float, end_x:float, x_interval:int, ctime:float, readtime:float) -> None:
+        """_summary_
+
+        Args:
+            start_y (float): _description_
+            end_y (float): _description_
+            y_interval (int): _description_
+            start_x (float): _description_
+            end_x (float): _description_
+            x_interval (int): _description_
+            ctime (float): _description_
+            readtime (float): _description_
+        """
+        #toDo Checking limits, checking logic for speed. SGALIL do 101 points when 100 are given
+        # Check sign of motors, and offsets!
+        speed = np.abs(end_y-start_y)/(y_interval*ctime+ (y_interval-1)*readtime)
+        self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
+        step_grid = (end_x-start_x)/x_interval
+        gridmax = (end_x-start_x)/step_grid +1
+        self.socket_put_and_receive(f"b_start={start_x:.04f};gridmax={gridmax:.04f};step={step_grid:.04f}")
+        self.socket_put_and_receive('XQ#SAMPLE')
+        self.socket_put_and_receive('XQ#SCANG')
+        
 
 class GalilSignalBase(SocketSignal):
     def __init__(self, signal_name, **kwargs):
@@ -447,6 +471,7 @@ class GalilMotor(Device, PositionerBase):
     def _forward_readback(self, **kwargs):
         kwargs.pop("sub_type")
         self._run_subs(sub_type="readback", **kwargs)
+
 
     @raise_if_disconnected
     def move(self, position, wait=True, **kwargs):
