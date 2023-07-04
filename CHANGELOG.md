@@ -2,6 +2,23 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.0 (2023-07-04)
+
+### Feature
+
+* Add DDG and prel. sgalil devices ([`00c5501`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/00c55016e789f184ddb5c2474eb251fd62470e04))
+
+### Fix
+
+* Formatting DDG ([`4e10a96`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4e10a969c8625bc48d6db99fc7f5be9d46807df1))
+* Bec_lib.core import ([`25c7ce0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/25c7ce04e3c2a5c2730ce5aa079f37081d7289cd))
+* Recover galil_ophyd from master ([`5f655ca`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5f655caf29fe9941ba597fdaee6c4b2a20625ca8))
+* Fixed galil sgalil_ophyd confusion from former commit ([`f488f0b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f488f0b21cbe5addd6bd5c4c54aa00eeffde0648))
+
+### Documentation
+
+* Improved readme ([`781affa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/781affacb5bc0c204cb7501b629027e66e47a0b1))
+
 ## v0.1.0 (2023-06-28)
 
 ### Feature
