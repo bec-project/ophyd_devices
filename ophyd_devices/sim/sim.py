@@ -44,6 +44,7 @@ class _ReadbackSignal(Signal):
 
     def get(self):
         self._readback = self.parent.sim_state["readback"]
+        self.parent.sim_state["readback_ts"] = ttime.time()
         return self._readback
 
     def describe(self):
