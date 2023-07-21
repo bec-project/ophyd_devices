@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.1 (2023-07-21)
+
+### Fix
+
+* Fixed sim readback timestamp ([`7a47134`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7a47134a6b8726c0389d8e631028af8f8be54cc2))
+
 ## v0.2.0 (2023-07-04)
 
 ### Feature
