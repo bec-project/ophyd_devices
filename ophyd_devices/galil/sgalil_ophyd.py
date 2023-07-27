@@ -217,29 +217,69 @@ class GalilController(Controller):
             if isinstance(controller, GalilController):
                 controller.describe()
 
-    # @threadlocked
-    # def fly_grid_scan(self, start_y:float, end_y:float, y_interval:int, start_x:float, end_x:float, x_interval:int, ctime:float, readtime:float) -> None:
-    #     """_summary_
+    def sgalil_reference(self) -> None:
+        """Reference all axes of the controller"""
+        answer = input(
+            "Please make sure that stages are free to move, referencing will start upon confirmation [y/n]"
+        )
+        if answer.lower() != "y":
+            print("Abort reference sequence\n")
+            return
+        if bool(float(self.socket_put_and_receive(f"MG allaxref").strip())):
+            print("All axes are already referenced.\n")
+            return
+        # Make sure no axes are moving, is this necessary?
+        self.stop_all_axes()
+        self.socket_put_and_receive(f"XQ#FINDREF")
+        print("Referencing. Please wait, timeout after 100s...\n")
 
-    #     Args:
-    #         start_y (float): _description_
-    #         end_y (float): _description_
-    #         y_interval (int): _description_
-    #         start_x (float): _description_
-    #         end_x (float): _description_
-    #         x_interval (int): _description_
-    #         ctime (float): _description_
-    #         readtime (float): _description_
-    #     """
-    #     #toDo Checking limits, checking logic for speed. SGALIL do 101 points when 100 are given
-    #     # Check sign of motors, and offsets!
-    #     speed = np.abs(end_y-start_y)/(y_interval*ctime+ (y_interval-1)*readtime)
-    #     self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
-    #     step_grid = (end_x-start_x)/x_interval
-    #     gridmax = (end_x-start_x)/step_grid +1
-    #     self.socket_put_and_receive(f"b_start={start_x:.04f};gridmax={gridmax:.04f};step={step_grid:.04f}")
-    #     self.socket_put_and_receive('XQ#SAMPLE')
-    #     self.socket_put_and_receive('XQ#SCANG')
+        timeout = time.time() + 100
+        while not bool(float(self.socket_put_and_receive(f"MG allaxref").strip())):
+            if time.time() > timeout:
+                print("Abort reference sequence, timeout reached\n")
+                break
+            time.sleep(0.5)
+
+    @threadlocked
+    def fly_grid_scan(
+        self,
+        start_y: float,
+        end_y: float,
+        y_interval: int,
+        start_x: float,
+        end_x: float,
+        x_interval: int,
+        exp_time: float,
+        readtime: float,
+    ) -> None:
+        """_summary_
+
+        Args:
+            start_y (float): start position of y axis (fast axis)
+            end_y (float): end position of y axis (fast axis)
+            y_interval (int): number of points in y axis
+            start_x (float): start position of x axis (slow axis)
+            end_x (float): end position of x axis (slow axis)
+            x_interval (int): number of points in x axis
+            exp_time (float): exposure time in seconds
+            readtime (float): readout time in seconds, minimum of .5e-3s (0.5ms)
+        """
+        # TODO Checks on limits, signs and offsets of motors, how much more is needed for acceleration?
+        # Compute speed for y axis
+        speed = np.abs(end_y - start_y) / (
+            y_interval * exp_time + (y_interval - 1) * readtime
+        )  # max speed is 2mm/s for y axis
+        if speed > 2:
+            raise ValueError(f"Speed of {speed}mm/s is too high, maximum speed is 2mm/s")
+        # Compute step_grid for x axis
+        step_grid = (end_x - start_x) / x_interval
+        # Send commands to controller to start motion
+        self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
+        self.socket_put_and_receive(
+            f"b_start={start_x:.04f};gridmax={x_interval:.04f};step={step_grid:.04f}"
+        )
+        self.socket_put_and_receive("XQ#SAMPLE")
+        self.socket_put_and_receive("XQ#SCANG")
 
 
 class GalilSignalBase(SocketSignal):
