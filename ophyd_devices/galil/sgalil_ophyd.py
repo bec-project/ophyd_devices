@@ -172,10 +172,10 @@ class GalilController(Controller):
 
     def get_motor_limit_switch(self, axis_Id) -> list:
         # SGalil specific
-        if axis_id == 2:
+        if axis_Id == "C":
             ret = self.socket_put_and_receive(f"MG _LF{axis_Id}, _LR{axis_Id}")
             high, low = ret.strip().split(" ")
-        elif axis_id == 4:
+        elif axis_Id == "E":
             ret = self.socket_put_and_receive(f"MG _LF{'F'}, _LR{'F'}")
             high, low = ret.strip().split(" ")
         return [not bool(float(low)), not bool(float(high))]
@@ -240,15 +240,15 @@ class GalilController(Controller):
                 break
             time.sleep(0.5)
 
-    @threadlocked
+    # @threadlocked
     def fly_grid_scan(
         self,
         start_y: float,
         end_y: float,
-        y_interval: int,
+        interval_y: int,
         start_x: float,
         end_x: float,
-        x_interval: int,
+        interval_x: int,
         exp_time: float,
         readtime: float,
     ) -> None:
@@ -257,29 +257,45 @@ class GalilController(Controller):
         Args:
             start_y (float): start position of y axis (fast axis)
             end_y (float): end position of y axis (fast axis)
-            y_interval (int): number of points in y axis
+            interval_y (int): number of points in y axis
             start_x (float): start position of x axis (slow axis)
             end_x (float): end position of x axis (slow axis)
-            x_interval (int): number of points in x axis
+            interval_x (int): number of points in x axis
             exp_time (float): exposure time in seconds
             readtime (float): readout time in seconds, minimum of .5e-3s (0.5ms)
         """
-        # TODO Checks on limits, signs and offsets of motors, how much more is needed for acceleration?
-        # Compute speed for y axis
-        speed = np.abs(end_y - start_y) / (
-            y_interval * exp_time + (y_interval - 1) * readtime
-        )  # max speed is 2mm/s for y axis
-        if speed > 2:
-            raise ValueError(f"Speed of {speed}mm/s is too high, maximum speed is 2mm/s")
+        # TODO Checks on limits of motors needs to happen in the scan definition
+        # Check for signs and signs/offsets of motors too
+        # Speed check can be done here, but is this relevant in this case
+        # Check speeds
+        speed = np.abs(end_y - start_y) / (interval_y * exp_time + (interval_y - 1) * readtime)
+        if speed > 2.00 or speed < 0.02:
+            # TODO raise proper warning/error
+            print(f"Speed of {speed}mm/s is either above (2mm/s) or below (.02mm/s) speed limits.")
+            return
         # Compute step_grid for x axis
-        step_grid = (end_x - start_x) / x_interval
+        gridmax = int(interval_x - 1)
+        step_grid = (end_x - start_x) / interval_x
+        n_samples = int(interval_y * (interval_x - 1))
         # Send commands to controller to start motion
-        self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
-        self.socket_put_and_receive(
-            f"b_start={start_x:.04f};gridmax={x_interval:.04f};step={step_grid:.04f}"
+        # TODO rtr = return string required? good for debuggin but besides?
+        rtr = []
+        rtr.append(
+            self.socket_put_and_receive(
+                f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}"
+            )
         )
-        self.socket_put_and_receive("XQ#SAMPLE")
-        self.socket_put_and_receive("XQ#SCANG")
+        rtr.append(
+            self.socket_put_and_receive(
+                f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
+            )
+        )
+        rtr.append(self.socket_put_and_receive(f"nums={n_samples}"))
+        rtr.append(self.socket_put_and_receive("XQ#SAMPLE"))
+        # TODO remove this sleep, check if thread is still activ?
+        time.sleep(0.1)
+        print("Sleeping for .1 second")
+        rtr.append(self.socket_put_and_receive("XQ#SCANG"))
 
 
 class GalilSignalBase(SocketSignal):
@@ -534,6 +550,7 @@ class SGalilMotor(Device, PositionerBase):
         status = super().move(position, timeout=timeout, **kwargs)
         self.user_setpoint.put(position, wait=False)
 
+        # TODO include here soft limits for motions, otherwise there is the danger of crashing..
         def move_and_finish():
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
