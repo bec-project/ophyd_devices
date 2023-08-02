@@ -152,7 +152,7 @@ class GalilController(Controller):
     def stop_all_axes(self) -> str:
         return self.socket_put_and_receive(f"XQ#STOP,1")
 
-    def axis_is_referenced(self, axis_Id_numeric) -> bool:
+    def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
 
     def show_running_threads(self) -> None:
@@ -200,7 +200,7 @@ class GalilController(Controller):
                         f"{axis.axis_Id_numeric}/{axis.axis_Id}",
                         axis.name,
                         axis.connected,
-                        self.axis_is_referenced(axis.axis_Id_numeric),
+                        self.axis_is_referenced(),
                         self.is_motor_on(axis.axis_Id),
                         self.get_motor_limit_switch(axis.axis_Id),
                         axis.readback.read().get(axis.name).get("value"),
@@ -219,13 +219,7 @@ class GalilController(Controller):
 
     def sgalil_reference(self) -> None:
         """Reference all axes of the controller"""
-        answer = input(
-            "Please make sure that stages are free to move, referencing will start upon confirmation [y/n]"
-        )
-        if answer.lower() != "y":
-            print("Abort reference sequence\n")
-            return
-        if bool(float(self.socket_put_and_receive(f"MG allaxref").strip())):
+        if self.axis_is_referenced():
             print("All axes are already referenced.\n")
             return
         # Make sure no axes are moving, is this necessary?
@@ -234,7 +228,7 @@ class GalilController(Controller):
         print("Referencing. Please wait, timeout after 100s...\n")
 
         timeout = time.time() + 100
-        while not bool(float(self.socket_put_and_receive(f"MG allaxref").strip())):
+        while not self.axis_is_referenced():
             if time.time() > timeout:
                 print("Abort reference sequence, timeout reached\n")
                 break
@@ -263,39 +257,35 @@ class GalilController(Controller):
             interval_x (int): number of points in x axis
             exp_time (float): exposure time in seconds
             readtime (float): readout time in seconds, minimum of .5e-3s (0.5ms)
+
+        Raises:
+
+            LimitError: Raised if any position of motion is outside of the limits
+            LimitError: Raised if the speed is above 2mm/s or below 0.02mm/s
+
         """
-        # TODO Checks on limits of motors needs to happen in the scan definition
-        # Check for signs and signs/offsets of motors too
-        # Speed check can be done here, but is this relevant in this case
-        # Check speeds
+        # TODO add offset to start and end positions for acceleration
+        check_values = [start_y, end_y, start_x, end_x]
+        for val in check_values:
+            self.check_value(val)
         speed = np.abs(end_y - start_y) / (interval_y * exp_time + (interval_y - 1) * readtime)
         if speed > 2.00 or speed < 0.02:
-            # TODO raise proper warning/error
-            print(f"Speed of {speed}mm/s is either above (2mm/s) or below (.02mm/s) speed limits.")
-            return
-        # Compute step_grid for x axis
+            raise LimitError(
+                f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
+            )
         gridmax = int(interval_x - 1)
         step_grid = (end_x - start_x) / interval_x
         n_samples = int(interval_y * (interval_x - 1))
-        # Send commands to controller to start motion
-        # TODO rtr = return string required? good for debuggin but besides?
-        rtr = []
-        rtr.append(
-            self.socket_put_and_receive(
-                f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}"
-            )
+        # TODO check sign of stage for proper socket command.
+        self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
+        self.socket_put_and_receive(
+            f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
         )
-        rtr.append(
-            self.socket_put_and_receive(
-                f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
-            )
-        )
-        rtr.append(self.socket_put_and_receive(f"nums={n_samples}"))
-        rtr.append(self.socket_put_and_receive("XQ#SAMPLE"))
-        # TODO remove this sleep, check if thread is still activ?
+        self.socket_put_and_receive(f"nums={n_samples}")
+        self.socket_put_and_receive("XQ#SAMPLE")
+        # sleep 50ms to avoid controller running into
         time.sleep(0.1)
-        print("Sleeping for .1 second")
-        rtr.append(self.socket_put_and_receive("XQ#SCANG"))
+        self.socket_put_and_receive("XQ#SCANG")
 
 
 class GalilSignalBase(SocketSignal):
@@ -367,21 +357,22 @@ class GalilSetpointSignal(GalilSignalBase):
         """
         target_val = val * self.parent.sign
         self.setpoint = target_val
-        axes_referenced = float(self.controller.socket_put_and_receive("MG allaxref"))
-        if axes_referenced:
-            while self.controller.is_thread_active(0):
-                time.sleep(0.1)
+        axes_referenced = self.axis_is_referenced()
+        if not axes_referenced:
+            raise GalilError(
+                "Not all axes are referenced. Please use controller.sgalil_reference(). BE AWARE that axes start moving, potentially beyond limits, make sure full range of motion is safe"
+            )
+        while self.controller.is_thread_active(0):
+            time.sleep(0.1)
 
-            if self.parent.axis_Id_numeric == 2:
-                self.controller.socket_put_confirmed(f"PA{self.parent.axis_Id}={target_val:.4f}*mm")
-                self.controller.socket_put_and_receive(f"BG{self.parent.axis_Id}")
-            elif self.parent.axis_Id_numeric == 4:
-                self.controller.socket_put_confirmed(f"targ{self.parent.axis_Id}={target_val:.4f}")
-                self.controller.socket_put_and_receive(f"XQ#POSE,{self.parent.axis_Id_numeric}")
-            while self.controller.is_thread_active(0):
-                time.sleep(0.005)
-        else:
-            raise GalilError("Not all axes are referenced.")
+        if self.parent.axis_Id_numeric == 2:
+            self.controller.socket_put_confirmed(f"PA{self.parent.axis_Id}={target_val:.4f}*mm")
+            self.controller.socket_put_and_receive(f"BG{self.parent.axis_Id}")
+        elif self.parent.axis_Id_numeric == 4:
+            self.controller.socket_put_confirmed(f"targ{self.parent.axis_Id}={target_val:.4f}")
+            self.controller.socket_put_and_receive(f"XQ#POSE,{self.parent.axis_Id_numeric}")
+        while self.controller.is_thread_active(0):
+            time.sleep(0.005)
 
 
 class GalilMotorIsMoving(GalilSignalRO):
