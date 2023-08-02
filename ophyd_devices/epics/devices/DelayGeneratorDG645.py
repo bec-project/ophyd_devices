@@ -6,7 +6,7 @@ Created on Tue Nov  9 16:12:47 2021
 """
 
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
-from ophyd import PositionerBase, PVPositioner, Signal
+from ophyd import PVPositioner, Signal
 from ophyd.pseudopos import (
     pseudo_position_argument,
     real_position_argument,
@@ -174,11 +174,14 @@ class DelayGeneratorDG645(Device):
 
     def stage(self):
         """Trigger the generator by arming to accept triggers"""
-        self.arm.write(1).wait()
+        # TODO check PV TriggerDelayBO, seems to be a bug in the IOC
+        # self.arm.write(1).wait()
+        super().stage()
 
     def unstage(self):
         """Stop the trigger generator from accepting triggers"""
-        self.arm.write(0).wait()
+        # self.arm.write(0).wait()
+        super().stage()
 
     def burstEnable(self, count, delay, period, config="all"):
         """Enable the burst mode"""
