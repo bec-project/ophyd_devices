@@ -268,14 +268,16 @@ class GalilController(Controller):
         check_values = [start_y, end_y, start_x, end_x]
         for val in check_values:
             self.check_value(val)
-        speed = np.abs(end_y - start_y) / (interval_y * exp_time + (interval_y - 1) * readtime)
+        speed = np.abs(end_y - start_y) / (
+            (interval_y - 1) * exp_time + ((interval_y - 1) - 1) * readtime
+        )
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
             )
         gridmax = int(interval_x - 1)
         step_grid = (end_x - start_x) / interval_x
-        n_samples = int(interval_y * (interval_x - 1))
+        n_samples = int(interval_y * interval_x)
         # TODO check sign of stage for proper socket command.
         self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
         self.socket_put_and_receive(
@@ -286,6 +288,18 @@ class GalilController(Controller):
         # sleep 50ms to avoid controller running into
         time.sleep(0.1)
         self.socket_put_and_receive("XQ#SCANG")
+
+    def read_encoder_position(fromval: int = 0, toval: int = None) -> tuple:
+        val_axis2 = []  # y axis
+        val_axis4 = []  # x axis
+        if toval is None:
+            toval = 1999
+        for ii in range(fromval, toval + 1):
+            print(ii)
+            ret = self.socket_put_and_receive(f"MGaposavg[{ii}]*10,cposavg[{ii}]*10")
+            val_axis4.append(float(ret.strip().split(" ")[0]) / 100000)
+            val_axis2.append(float(ret.strip().split(" ")[1]) / 100000)
+        return val_axis4, val_axis2
 
 
 class GalilSignalBase(SocketSignal):
@@ -357,7 +371,7 @@ class GalilSetpointSignal(GalilSignalBase):
         """
         target_val = val * self.parent.sign
         self.setpoint = target_val
-        axes_referenced = self.axis_is_referenced()
+        axes_referenced = self.controller.axis_is_referenced()
         if not axes_referenced:
             raise GalilError(
                 "Not all axes are referenced. Please use controller.sgalil_reference(). BE AWARE that axes start moving, potentially beyond limits, make sure full range of motion is safe"
