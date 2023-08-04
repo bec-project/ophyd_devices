@@ -188,7 +188,7 @@ class DelayGeneratorDG645(Device):
         # Validate inputs
         count = int(count)
         assert count > 0, "Number of bursts must be positive"
-        assert delay > 0, "Burst delay must be positive"
+        assert delay >= 0, "Burst delay must be larger than 0"
         assert period > 0, "Burst period must be positive"
         assert config in ["all", "first"], "Supported bust configs are 'all' and 'first'"
 
@@ -202,7 +202,7 @@ class DelayGeneratorDG645(Device):
         elif config == "first":
             self.burstConfig.set(1).wait()
 
-    def busrtDisable(self):
+    def burstDisable(self):
         """Disable the burst mode"""
         self.burstMode.set(0).wait()
 
