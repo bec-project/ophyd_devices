@@ -264,21 +264,24 @@ class GalilController(Controller):
             LimitError: Raised if the speed is above 2mm/s or below 0.02mm/s
 
         """
-        # TODO add offset to start and end positions for acceleration
+        #Check limits
+        # TODO check sign of stage, or not necessary 
         check_values = [start_y, end_y, start_x, end_x]
         for val in check_values:
             self.check_value(val)
+
         speed = np.abs(end_y - start_y) / (
-            (interval_y - 1) * exp_time + ((interval_y - 1) - 1) * readtime
+            interval_y  * exp_time + (interval_y - 1) * readtime
         )
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
             )
+
         gridmax = int(interval_x - 1)
         step_grid = (end_x - start_x) / interval_x
         n_samples = int(interval_y * interval_x)
-        # TODO check sign of stage for proper socket command.
+
         self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
         self.socket_put_and_receive(
             f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
