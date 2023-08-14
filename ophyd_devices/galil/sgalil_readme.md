@@ -66,9 +66,10 @@ f***ast axis***
 - self.socket_put_and_receive(f'a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}')
 ***slow axis***
 - self.socket_put_and_receive(f'b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}')
-TODO, why is it necessay to set nums, readout for encoder? 
-- self.socket_put_and_receive(f'nums={n_samples}')
-TODO what exactly means this comman, submit new scan grid parameters? ask Mirko!
-- self.socket_put_and_receive('XQ#SAMPLE')
+- self.socket_put_and_receive(f'nums={n_samples}') # Declare number of triggers for encoder
+- self.socket_put_and_receive('XQ#SAMPLE') # Reset encoder counting --> sampling starts with 0
 Start scan (be aware, needs some waiting from before)
 - self.socket_put_and_receive('XQ#SCANG')
+for continuous readout of encoder:
+- self.socket_put_and_receive('MGsposct') # get current position counter
+- self.socket_put_and_receive('MGaposavg[{ii%2000}]*10, cposavg[{ii%2000}]*10,')
