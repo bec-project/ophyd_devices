@@ -70,6 +70,10 @@ f***ast axis***
 - self.socket_put_and_receive('XQ#SAMPLE') # Reset encoder counting --> sampling starts with 0
 Start scan (be aware, needs some waiting from before)
 - self.socket_put_and_receive('XQ#SCANG')
-for continuous readout of encoder:
+
+### Encoder readings!
+The encoder readout is triggered by an TTL pulse. 
+Unfortunately, TTL triggers to the encoder can only be accepted with at least 12.5ms time between rising/falling edges. Therefore, maximum readout has to be ~25Hz, rather 30Hz (experimentally determined).
+Socket commands for the readout:
 - self.socket_put_and_receive('MGsposct') # get current position counter
-- self.socket_put_and_receive('MGaposavg[{ii%2000}]*10, cposavg[{ii%2000}]*10,')
+- self.socket_put_and_receive('MGaposavg[{ii%2000}]*10, cposavg[{ii%2000}]*10,') # loop over ii
