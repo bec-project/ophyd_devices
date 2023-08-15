@@ -264,15 +264,13 @@ class GalilController(Controller):
             LimitError: Raised if the speed is above 2mm/s or below 0.02mm/s
 
         """
-        #Check limits
-        # TODO check sign of stage, or not necessary 
+        # Check limits
+        # TODO check sign of stage, or not necessary
         check_values = [start_y, end_y, start_x, end_x]
         for val in check_values:
             self.check_value(val)
 
-        speed = np.abs(end_y - start_y) / (
-            interval_y  * exp_time + (interval_y - 1) * readtime
-        )
+        speed = np.abs(end_y - start_y) / ((interval_y) * exp_time + (interval_y - 1) * readtime)
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
@@ -292,14 +290,11 @@ class GalilController(Controller):
         time.sleep(0.1)
         self.socket_put_and_receive("XQ#SCANG")
 
-    def read_encoder_position(fromval: int = 0, toval: int = None) -> tuple:
+    def read_encoder_position(fromval: int, toval: int) -> tuple:
         val_axis2 = []  # y axis
         val_axis4 = []  # x axis
-        if toval is None:
-            toval = 1999
         for ii in range(fromval, toval + 1):
-            print(ii)
-            ret = self.socket_put_and_receive(f"MGaposavg[{ii}]*10,cposavg[{ii}]*10")
+            self.socket_put_and_receive(f"MGaposavg[{ii}]*10,cposavg[{ii}]*10")
             val_axis4.append(float(ret.strip().split(" ")[0]) / 100000)
             val_axis2.append(float(ret.strip().split(" ")[1]) / 100000)
         return val_axis4, val_axis2
@@ -558,7 +553,6 @@ class SGalilMotor(Device, PositionerBase):
         status = super().move(position, timeout=timeout, **kwargs)
         self.user_setpoint.put(position, wait=False)
 
-        # TODO include here soft limits for motions, otherwise there is the danger of crashing..
         def move_and_finish():
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
