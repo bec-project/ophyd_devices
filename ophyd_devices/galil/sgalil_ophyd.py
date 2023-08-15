@@ -245,7 +245,7 @@ class GalilController(Controller):
         interval_x: int,
         exp_time: float,
         readtime: float,
-    ) -> None:
+    ) -> tuple:
         """_summary_
 
         Args:
@@ -289,14 +289,23 @@ class GalilController(Controller):
         # sleep 50ms to avoid controller running into
         time.sleep(0.1)
         self.socket_put_and_receive("XQ#SCANG")
+        last_readout = 0
 
+        curren_encoder = self.socket_put_and_receive(f"MGposct")
+
+    # TODO does not run from ipython
     def read_encoder_position(fromval: int, toval: int) -> tuple:
         val_axis2 = []  # y axis
         val_axis4 = []  # x axis
         for ii in range(fromval, toval + 1):
-            self.socket_put_and_receive(f"MGaposavg[{ii}]*10,cposavg[{ii}]*10")
-            val_axis4.append(float(ret.strip().split(" ")[0]) / 100000)
-            val_axis2.append(float(ret.strip().split(" ")[1]) / 100000)
+            rts = self.socket_put_and_receive(f"MGaposavg[{ii%2000}]*10,cposavg[{ii%2000}]*10")
+            if rts == ":":
+                val_axis4.append(rts)
+                val_axis2.append(rts)
+                continue
+
+            val_axis4.append(float(rts.strip().split(" ")[0]) / 100000)
+            val_axis2.append(float(rts.strip().split(" ")[1]) / 100000)
         return val_axis4, val_axis2
 
 
