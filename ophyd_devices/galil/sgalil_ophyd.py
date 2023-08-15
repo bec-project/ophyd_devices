@@ -292,6 +292,7 @@ class GalilController(Controller):
         last_readout = 0
 
         curren_encoder = self.socket_put_and_receive(f"MGposct")
+        # TODO add here loop for continous readout -> checks thread?
 
     # TODO does not run from ipython
     def read_encoder_position(fromval: int, toval: int) -> tuple:
