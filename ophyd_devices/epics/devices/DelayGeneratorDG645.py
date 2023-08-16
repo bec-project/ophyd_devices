@@ -62,11 +62,15 @@ class DelayPair(PseudoPositioner):
     # ch2 = Component(EpicsSignal, "DelayAI", write_pv="DelayAO", name="ch2", put_complete=True, kind=Kind.config)
     ch1 = Component(DummyPositioner, name="ch1")
     ch2 = Component(DummyPositioner, name="ch2")
+    io = Component(DelayStatic, name="io")
+
 
     def __init__(self, *args, **kwargs):
         # Change suffix names before connecting (a bit of dynamic connections)
         self.__class__.__dict__["ch1"].suffix = kwargs["channel"][0]
         self.__class__.__dict__["ch2"].suffix = kwargs["channel"][1]
+        self.__class__.__dict__["io"].suffix = kwargs["channel"]
+
         del kwargs["channel"]
         # Call parent to start the connections
         super().__init__(*args, **kwargs)
@@ -154,7 +158,7 @@ class DelayGeneratorDG645(Device):
     )
 
     # Command PVs
-    arm = Component(EpicsSignal, "TriggerDelayBO", name="arm", kind=Kind.omitted)
+    #arm = Component(EpicsSignal, "TriggerDelayBO", name="arm", kind=Kind.omitted)
 
     # Burst mode
     burstMode = Component(
