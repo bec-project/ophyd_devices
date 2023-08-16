@@ -35,7 +35,7 @@ class DelayStatic(Device):
     amplitude = Component(
         EpicsSignal, "OutputAmpAI", write_pv="OutputAmpAO", name="amplitude", kind=Kind.config
     )
-    polarity = Component(
+    offset = Component(
         EpicsSignal, "OutputOffsetAI", write_pv="OutputOffsetAO", name="offset", kind=Kind.config
     )
 
@@ -44,6 +44,7 @@ class DummyPositioner(PVPositioner):
     setpoint = Component(EpicsSignal, "DelayAO", put_complete=True, kind=Kind.config)
     readback = Component(EpicsSignalRO, "DelayAI", kind=Kind.config)
     done = Component(Signal, value=1)
+    reference = Component(EpicsSignal, "ReferenceMO", put_complete=True, kind=Kind.config)
 
 
 class DelayPair(PseudoPositioner):
