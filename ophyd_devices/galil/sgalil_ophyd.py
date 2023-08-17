@@ -265,7 +265,7 @@ class GalilController(Controller):
 
         """
 
-                #time.sleep(0.2)
+        # time.sleep(0.2)
 
         # Check limits
         # TODO check sign of stage, or not necessary
@@ -294,37 +294,34 @@ class GalilController(Controller):
         # sleep 50ms to avoid controller running into
         time.sleep(0.1)
         self.socket_put_and_receive("XQ#SCANG")
-        #time.sleep(0.1)
-        #threading.Thread(target=_while_in_motion(3, n_samples), daemon=True).start()
-        #self._while_in_motion(3, n_samples)
+        # time.sleep(0.1)
+        # threading.Thread(target=_while_in_motion(3, n_samples), daemon=True).start()
+        # self._while_in_motion(3, n_samples)
 
-        
-        
     def _while_in_motion(self, thread_id: int, n_samples: int) -> tuple:
         last_readout = 0
         val_axis2 = []  # y axis
         val_axis4 = []  # x axis
         while self.is_thread_active(thread_id):
-            posct = int(self.socket_put_and_receive(f'MGposct').strip().split(".")[0])
-            logger.info(f'SGalil is scanning - latest enconder position {posct+1} from {n_samples}')
+            posct = int(self.socket_put_and_receive(f"MGposct").strip().split(".")[0])
+            logger.info(f"SGalil is scanning - latest enconder position {posct+1} from {n_samples}")
             time.sleep(1)
             if posct > last_readout:
                 positions = self.read_encoder_position(last_readout, posct)
                 val_axis4.extend(positions[0])
                 val_axis2.extend(positions[1])
-                last_readout = posct+1
+                last_readout = posct + 1
             logger.info(len(val_axis2))
             time.sleep(1)
-        #Readout of last positions after scan finished
-        posct = int(self.socket_put_and_receive(f'MGposct').strip().split(".")[0])
-        logger.info(f'SGalil is scanning - latest enconder position {posct} from {n_samples}')
+        # Readout of last positions after scan finished
+        posct = int(self.socket_put_and_receive(f"MGposct").strip().split(".")[0])
+        logger.info(f"SGalil is scanning - latest enconder position {posct} from {n_samples}")
         if posct > last_readout:
             positions = self.read_encoder_position(last_readout, posct)
             val_axis4.extend(positions[0])
             val_axis2.extend(positions[1])
 
         return val_axis4, val_axis2
-
 
     def read_encoder_position(self, fromval: int, toval: int) -> tuple:
         val_axis2 = []  # y axis
