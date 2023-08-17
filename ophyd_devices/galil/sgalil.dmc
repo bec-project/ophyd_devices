@@ -1,0 +1,415 @@
+'******************************************************************************
+'    scanning saxs stages controller code
+'    version 0.1 20160113, holler, based on example code
+'    version 0.2 20160321, holler, small adjustments
+'    version 0.3 20160323, position sampling
+'    version 0.4           grid scan implemented
+'    version 0.5 20160426, shutter control from controller
+'    version 0.6 20160614, code for manual stage tuning added
+'    version 0.7 20170609, prefact added
+'    version 0.8 20190327, stepper motor x axis E, encoder axis A
+'                          DC motor y axis C
+'    version 0.9 20190403, Pos sampling averaging and ring buffered
+'                          internal grid scan updated
+'                20190507  various fixes during comm. at beamline
+'                          off now in microns for higher resolution
+'    version 1.1 20191021, position samples were off compared to xrays
+'                          use AL and RL commands for position latch
+'                          to reduce delay for axis C (continuous)
+'                          switch to DI3 required, averaging removed
+'    version 1.2 20200500, switch stepper motor to axis F
+'                          because motor driver axis E defective
+'    version 2.0 20230816, adjustments in premove with BEC
+' DO8 controls the shutter
+' DI1 1 during exposure for pos sampling
+' Thread overview
+'******************************************************************************
+#AUTO
+DA*,*[];'DEALLOCATE ARRAYS
+ssaxs_v=1.3
+IA129,129,122,26
+'acctim determines pre motion
+acctim=2.5
+prvspeed=0
+posest=0
+'prefact increases the distance for pre acceleration
+'if in acctim limits
+prefact=2.5
+off=0
+DM aposavg[2000]
+DM cposavg[2000]
+nums=1
+JS#INIT
+JS#SETPLAT
+EN
+#CALIBC
+'ACC=1000000
+'DCC=1000000
+'SPC=1*mm
+PAC=2*mm
+BGC;AMC
+WT 1000
+PAC=5*mm
+BGC;AMC
+WT 1000
+JP#CALIBC
+EN 
+'default settings
+#SETTOMO
+IF(allaxref=1)
+EN
+ENDIF
+KPC=100
+PLC=0.3
+KIC=10
+KDC=30
+ILC=9
+FAC=10
+FVC=240
+EN
+'set tuning parameters for scanning saxs plate
+#SETPLAT
+IF(allaxref=1)
+EN
+ENDIF
+KPC=100
+PLC=0.3
+KIC=10
+KDC=30
+ILC=9
+FAC=10
+FVC=240
+EN
+'called with AB before execution
+#SAMPLE
+posct=0
+sposct=0
+IF(_XQ2=-1)
+'arm position latch rising axis C
+'set latch direction rising
+'we do this prior the loop, to do the switching later asap
+CN ,,1
+ALC
+XQ#SAMPLEL,2
+ELSE
+runerr=1
+ENDIF
+EN
+#SAMPLEL
+'wait for latch
+AI3
+'WT1
+''#WAITLT1
+''JP#WAITLT1,(_ALC=1);'WAIT UNTIL CAPTURED'
+'write encoder position to a array
+aposstrt=_TPA
+'write latched position to c array
+cposstrt=_RLC
+'change latch direction falling axis C
+CN ,,-1
+ALC
+'wait for latch
+AI-3
+'WT1
+''#WAITLT2
+''JP#WAITLT2,(_ALC=1);'WAIT UNTIL CAPTURED
+'write encoder position to a array
+aposend=_TPA
+'write latched position to c array
+cposend=_RLC
+'arm position latch rising axis C for next cycle
+'set latch direction rising
+CN ,,1
+ALC
+aposavg[posct]=((aposstrt+aposend)/2)
+cposavg[posct]=((cposstrt+cposend)/2)
+posct=posct+1
+sposct=sposct+1
+IF(posct>1999)
+posct=0
+ENDIF
+JP #SAMPLEL,(posct<nums)
+EN
+#SCANG
+'a_start, a_end, speed is line axis
+'b_start, gridmax, b_step is grid axis
+gridct=0
+'nums=1000
+'wait for detector
+WT350
+IF(_XQ3=(-1))
+XQ#SCANGL,3
+ENDIF
+EN
+#SCANGL
+gridpos=b_start+(gridct*b_step)
+targE=gridpos
+JS#POSE
+WT10
+IF(@INT[(gridct/2)]<>(gridct/2))
+start=a_start
+end=a_end
+ELSE
+start=a_end
+end=a_start
+ENDIF
+'XQ#SCANL,5
+'scanstat=-1
+'#lineact
+'WT2
+'JP#lineact,(scanstat<>0)
+JS#SCANL
+gridct=gridct+1
+JP #SCANGL,(gridct<=gridmax)
+'close shutter
+CB8
+EN
+#TEMP1
+EN
+'
+#SCANL
+'based on acceleration of 500 mm/s^2
+'and a max speed of 2 mm/s
+'the max distance needed for acceleration is 4 microns
+'so we pre-move 10 microns
+'variables to set in mm, mm/s
+'start = start position
+'end = end position
+'speed = velocity
+'the scan axis is defined in the init section
+IF(allaxref=0)
+EN
+ENDIF
+'
+IF(end>start)
+dir=1
+ELSE
+dir=-1
+ENDIF
+'measure required premove
+IF((@ABS[(prvspeed-speed)])>0.001)
+premv=speed*mm*5
+IF(premv>(3*mm))
+premv=3*mm
+ENDIF
+measpre=1
+ELSE
+measpre=0
+ENDIF
+'for internal grid scans reduce overshoot
+'IF(_XQ3<>-1)
+'redpremv=0.1 ;'case for int grid scan
+'ELSE
+'redpremv=1 ;'case for line based scans
+'ENDIF
+'we are doing an internal grid
+'reduce overshoot
+prepos=(start*mm)-(dir*redpremv*(premv+(off/1000*mm)))
+'move to pre-start position if needed
+'prepos=(start*mm)-(dir*speed*acctim*mm)
+'IF(@ABS[(speed*acctim)]<0.01)
+'prepos=(start*mm)-(dir*0.01*mm*prefact)
+'ENDIF
+'IF(@ABS[(speed*acctim)]>0.1)
+'ENDIF
+IF((@ABS[(_TDC-prepos)])>(0.002*mm))
+scanstat=1
+SPC=2*mm
+PAC=prepos
+BGC
+AMC
+'open the shutter
+SB8
+WT10
+ENDIF
+IF((_LFC<>0)&(_LRC=<>0))
+scanstat=2
+SPC=@RND[speed*mm]
+'arm trigger
+trigpos=(start*mm)+(dir*off/1000*mm)
+IF(dir=1)
+OCC=trigpos,0
+ENDIF
+IF(dir=-1)
+OCC=trigpos,-65536;
+ENDIF
+'PAC=((end*mm)+(dir*premv))
+PAC=((end*mm)+(dir*redpremv*(premv+(off/1000*mm))))
+BGC
+IF(measpre=1)
+calstart=_TDC
+WT25
+#CALIBV
+prevvel=_TVC
+WT10
+JP#CALIBV,((@ABS[(prevvel-(_TVC/mm))])<15)
+calend=_TDC
+premv=((@ABS[(calend-calstart)])*3)
+'case of grid scan
+prvspeed=speed
+ENDIF
+'
+AMC
+ENDIF
+scanstat=0
+'close the shutter
+'#SHUTWT
+'JP#SHUTWT,(@IN[1]=1)
+'WT10
+'JP#SHUTWT,(@IN[1]=1)
+'
+'we are doing an internal grid
+IF(_XQ3=-1)
+CB8
+ENDIF
+EN
+'
+#POSE
+posctr=0
+posest=1
+sttime=TIME
+PTF=1;'          Position Tracking aktiv
+errE=(targE-(_TPA/mm));' Fehler in mm
+IF((@ABS[errE])>0.2)
+SPF=12*stpmm
+ENDIF
+#CORRE
+posest=2
+errE=(targE-(_TPA/mm));' Fehler in mm
+PAF=_TDF+(errE*stpmm)
+IF((@ABS[errE])<0.1)
+SPF=5*stpmm
+ENDIF
+IF((@ABS[errE])<0.0001)
+posctr=posctr+1
+IF(posctr>5)
+STF
+'MG TIME-sttime, (targE-(_TPA/mm))*1000
+EN
+ENDIF
+ELSE
+posctr=0
+ENDIF
+WT5
+JP#CORRE
+posest=3
+MCF
+EN
+'
+#ZZ
+targE=120;XQ#POSE
+WT12000
+targE=20;XQ#POSE
+WT12000
+JP#ZZ
+EN
+#FINDREF
+SB1;' Bremse C-Achse loesen (nur in Verbindung mit SHC)
+SHC
+SHF
+JS#LIMSWI
+JS#REFE
+JS#REFC
+allaxref=1
+targE=0
+EN
+'
+#REFE
+SHF
+JGF=-2*stpmm
+BGF
+'MG "suche negativen Endschalter E"
+AMF
+WT100
+'step counter zero
+DPF=0
+'encoder zero
+DPA=0
+EN
+'
+#REFC
+SB1;'    Bremse loesen (nur in Verbindung mit SHC)
+SHC
+JGC=-2*mm
+BGC
+'MG "suche negativen Endschalter C"
+AMC
+WT100
+DPC=0
+EN
+'
+#LIMSWI
+scanstat=0
+JS#LFF,_LFF=0;'    +LIMIT E
+JS#LRF,_LRF=0;'   -LIMIT E
+JS#LFC,_LFC=0;'    +LIMIT C
+JS#LRC,_LRC=0;'   -LIMIT C
+RE;'                         RETURN FROM ERROR INTERUPT
+'
+#LRF
+'MG "- LIMIT E-ACHSE "
+STF
+AMF
+JGF=stpmm
+BGF
+#LOOPA1
+JP#LOOPA1,_LRF=0
+STF
+MCF
+EN
+'
+#LFF
+'MG "+ LIMIT E-ACHSE "
+STF
+AMF
+JGF=-stpmm
+BGF
+#LOOPA2
+JP#LOOPA2,_LFF=0
+STF
+MCF
+EN
+'
+#LRC
+'MG "- LIMIT C-ACHSE "
+STC
+AMC
+JGC=mm
+BGC
+#LOOPC1
+JP#LOOPC1,_LRC=0
+STC
+AMC
+EN
+'
+#LFC
+'MG "- LIMIT C-ACHSE "
+STC
+AMC
+JGC=-mm
+BGC
+#LOOPC2
+JP#LOOPC2,_LFC=0
+STC
+AMC
+EN
+'
+#INIT
+'define fast scan axis redefined by spec
+scanstat=0
+mm=10000;'  100nm Aufloesung im encoder
+stpmm=50000;' microsteps axis E/mm
+ratio=5;'
+allaxref=0
+'acceleration rates
+ACF=3000000
+DCF=3000000
+SPF=2*mm
+OEF=0;'           OF ON ERROR axis E ausgeschaltet
+MTF=2
+KSF=0.5;'         Smoothing ausgeschaltet
+ACC=10*mm
+DCC=10*mm
+DVC=1;'    Dual loop deaktiviert
+EN
+'

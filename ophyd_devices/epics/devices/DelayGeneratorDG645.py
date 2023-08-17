@@ -6,7 +6,7 @@ Created on Tue Nov  9 16:12:47 2021
 """
 
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
-from ophyd import PositionerBase, PVPositioner, Signal
+from ophyd import PVPositioner, Signal
 from ophyd.pseudopos import (
     pseudo_position_argument,
     real_position_argument,
@@ -35,7 +35,7 @@ class DelayStatic(Device):
     amplitude = Component(
         EpicsSignal, "OutputAmpAI", write_pv="OutputAmpAO", name="amplitude", kind=Kind.config
     )
-    polarity = Component(
+    offset = Component(
         EpicsSignal, "OutputOffsetAI", write_pv="OutputOffsetAO", name="offset", kind=Kind.config
     )
 
@@ -44,6 +44,7 @@ class DummyPositioner(PVPositioner):
     setpoint = Component(EpicsSignal, "DelayAO", put_complete=True, kind=Kind.config)
     readback = Component(EpicsSignalRO, "DelayAI", kind=Kind.config)
     done = Component(Signal, value=1)
+    reference = Component(EpicsSignal, "ReferenceMO", put_complete=True, kind=Kind.config)
 
 
 class DelayPair(PseudoPositioner):
@@ -61,11 +62,14 @@ class DelayPair(PseudoPositioner):
     # ch2 = Component(EpicsSignal, "DelayAI", write_pv="DelayAO", name="ch2", put_complete=True, kind=Kind.config)
     ch1 = Component(DummyPositioner, name="ch1")
     ch2 = Component(DummyPositioner, name="ch2")
+    io = Component(DelayStatic, name="io")
 
     def __init__(self, *args, **kwargs):
         # Change suffix names before connecting (a bit of dynamic connections)
         self.__class__.__dict__["ch1"].suffix = kwargs["channel"][0]
         self.__class__.__dict__["ch2"].suffix = kwargs["channel"][1]
+        self.__class__.__dict__["io"].suffix = kwargs["channel"]
+
         del kwargs["channel"]
         # Call parent to start the connections
         super().__init__(*args, **kwargs)
@@ -153,7 +157,7 @@ class DelayGeneratorDG645(Device):
     )
 
     # Command PVs
-    arm = Component(EpicsSignal, "TriggerDelayBO", name="arm", kind=Kind.omitted)
+    # arm = Component(EpicsSignal, "TriggerDelayBO", name="arm", kind=Kind.omitted)
 
     # Burst mode
     burstMode = Component(
@@ -174,18 +178,21 @@ class DelayGeneratorDG645(Device):
 
     def stage(self):
         """Trigger the generator by arming to accept triggers"""
-        self.arm.write(1).wait()
+        # TODO check PV TriggerDelayBO, seems to be a bug in the IOC
+        # self.arm.write(1).wait()
+        super().stage()
 
     def unstage(self):
         """Stop the trigger generator from accepting triggers"""
-        self.arm.write(0).wait()
+        # self.arm.write(0).wait()
+        super().stage()
 
     def burstEnable(self, count, delay, period, config="all"):
         """Enable the burst mode"""
         # Validate inputs
         count = int(count)
         assert count > 0, "Number of bursts must be positive"
-        assert delay > 0, "Burst delay must be positive"
+        assert delay >= 0, "Burst delay must be larger than 0"
         assert period > 0, "Burst period must be positive"
         assert config in ["all", "first"], "Supported bust configs are 'all' and 'first'"
 
@@ -199,7 +206,7 @@ class DelayGeneratorDG645(Device):
         elif config == "first":
             self.burstConfig.set(1).wait()
 
-    def busrtDisable(self):
+    def burstDisable(self):
         """Disable the burst mode"""
         self.burstMode.set(0).wait()
 
