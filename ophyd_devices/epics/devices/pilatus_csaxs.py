@@ -10,6 +10,9 @@ from ophyd.areadetector.plugins import FileBase
 
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
+from bec_lib.core import bec_logger
+
+logger = bec_logger.logger
 
 
 class PilatusDetectorCamEx(PilatusDetectorCam, FileBase):
@@ -50,8 +53,8 @@ class PilatusCsaxs(DetectorBase):
             **kwargs,
         )
         # TODO how to get base_path
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/pilatus_2"}
-        self.filewriter = FileWriterMixin(self.service_cfg["base_path"])
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/pilatus_2/"}
+        self.filewriter = FileWriterMixin(self.service_cfg)
         self.num_frames = 0
         self.readout = 0.003  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
@@ -68,25 +71,26 @@ class PilatusCsaxs(DetectorBase):
         #     "RID": scan_msg.content["info"]["RID"],
         #     "queueID": scan_msg.content["info"]["queueID"],
         # }
-        scan_number = 10  # scan_msg.content["info"]["scan_number"]
+        self.scan_number = 10  # scan_msg.content["info"]["scan_number"]
         self.exp_time = 0.5  # scan_msg.content["info"]["exp_time"]
-        self.num_frames = 1  # scan_msg.content["info"]["num_points"]
+        self.num_frames = 3  # scan_msg.content["info"]["num_points"]
+        # TODO remove
         # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
 
         # set pilatus threshol
         self._set_threshold()
 
         # set Epic PVs for filewriting
-        self.file_path.set(f"/dev/shm/zmq/")
-        self.file_name.set(f"{self.username}_2_")
-        self.auto_increment.set(1)  # auto increment
-        self.file_number.set(0)  # first iter
-        self.file_format.set(0)  # 0: TIFF
-        self.file_template.set("%s%s_%5.5d.cbf")
+        self.cam.file_path.set(f"/dev/shm/zmq/")
+        self.cam.file_name.set(f"{self.username}_2_{self.scan_number:05d}")
+        self.cam.auto_increment.set(1)  # auto increment
+        self.cam.file_number.set(0)  # first iter
+        self.cam.file_format.set(0)  # 0: TIFF
+        self.cam.file_template.set("%s%s_%5.5d.cbf")
 
         # compile zmq stream for data transfer
         scan_dir = self.filewriter._get_scan_directory(
-            scan_bundle=1000, scan_number=scan_number, leading_zeros=5
+            scan_bundle=1000, scan_number=self.scan_number, leading_zeros=5
         )
         self.destination_path = os.path.join(
             self.service_cfg["base_path"]
@@ -100,6 +104,7 @@ class PilatusCsaxs(DetectorBase):
                 }
             ]
         }
+        logger.info(data_msg)
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
         res = requests.put(
@@ -116,7 +121,7 @@ class PilatusCsaxs(DetectorBase):
             "zmqWriter",
             self.username,
             {
-                "addr": "tcp://x12sa-pd=1:8888",
+                "addr": "tcp://x12sa-pd-2:8888",
                 "dst": ["file"],
                 "numFrm": self.num_frames,
                 "timeout": 2000,
@@ -126,7 +131,7 @@ class PilatusCsaxs(DetectorBase):
         ]
 
         res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_1/run",
+            url="http://xbl-daq-34:8091/pilatus_2/run",
             data=json.dumps(data_msg),
             headers=headers,
         )
@@ -155,6 +160,7 @@ class PilatusCsaxs(DetectorBase):
                 "user": self.username,
             },
         ]
+        logger.info(data_msg)
 
         res = requests.put(
             url="http://xbl-daq-34:8091/pilatus_1/run",
@@ -172,8 +178,9 @@ class PilatusCsaxs(DetectorBase):
         # TODO readout mono, monitor threshold and set it if mokev is different
         # mokev = self.device_manager.devices.mokev.obj.read()["mokev"]["value"]
         # TODO remove
-        mokev = 20
-        pil_threshold = self.cam.threshold_energy.read()
+        mokev = 16
+        # TODO refactor naming from name, pilatus_2
+        pil_threshold = self.cam.threshold_energy.read()["pilatus_2_cam_threshold_energy"]["value"]
         if not np.isclose(mokev / 2, pil_threshold, rtol=0.05):
             self.cam.threshold_energy.set(mokev / 2)
 
