@@ -2,6 +2,30 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.0 (2023-08-17)
+
+### Feature
+
+* Add continous readout of encoder while scanning ([`69fdeb1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/69fdeb1e965095147dc18dc0abfe0b7962ba8b38))
+* Adding io access to delay pairs ([`4513110`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/451311027a50909247aaf99571269761b68dcb27))
+* Read_encoder_position, does not run yet ([`9cb8890`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9cb889003933bf296b9dc1d586f7aad50421d0cf))
+* Add readout_encoder_position to sgalil controller ([`a94c12a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a94c12ac125211f16dfcda292985d883e770b44b))
+
+### Fix
+
+* Bugfix on delaystatic and dummypositioner ([`416d781`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/416d781d16f46513d6c84f4cf3108e61b4a37bc2))
+* Bugfix burstenable and burstdisalbe ([`f3866a2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3866a29e9b7952f6b416758a067bfa2940ca945))
+* Limit handling flyscan and error handling axes ref ([`a620e6c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a620e6cf5077272d306fc7636e5a8eee1741068f))
+* Bugfix stage/unstage ([`39220f2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/39220f20ea7f81825fe73fbc37592462f2e02a6e))
+* Small fixes to fly_grid_scan ([`87ac0ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/87ac0edf999eb2bc589e69807ffc6e980241a19f))
+
+### Documentation
+
+* Details on encoder reading of sgalilg controller ([`e0d93a1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e0d93a1561ca9203aaf1b5aaf2d6a0dec9f0689e))
+* Documentation update ([`5d9fb98`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5d9fb983301a5513a1fb9a9a3ed56537626848ee))
+* Add documentation for delay generator ([`7ad423b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7ad423b36434ad05d2f9b46824b6d850f55861f2))
+* Updated documentation ([`eb3e90e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/eb3e90e8a25834cbba5692eda34013f63295737f))
+
 ## v0.2.1 (2023-07-21)
 
 ### Fix
