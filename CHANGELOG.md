@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.4.0 (2023-08-18)
+
+### Feature
+
+* Add pilatus_2 ophyd class to repository ([`9476fde`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9476fde13ab427eba61bd7a5776e8b71aca92b0a))
+
+### Fix
+
+* Simple end-to-end test works at beamline ([`28b91ee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/28b91eeda22af03c3709861ff7fb045fe5b2cf9b))
+
 ## v0.3.0 (2023-08-17)
 
 ### Feature
