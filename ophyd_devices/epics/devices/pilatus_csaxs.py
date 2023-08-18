@@ -19,6 +19,7 @@ class PilatusDetectorCamEx(PilatusDetectorCam, FileBase):
     pass
 
 
+# TODO refactor class -> move away from DetectorBase and PilatusDetectorCamEx class to Device. -> this will be cleaner
 class PilatusCsaxs(DetectorBase):
     """
 
@@ -95,6 +96,7 @@ class PilatusCsaxs(DetectorBase):
         self.destination_path = os.path.join(
             self.service_cfg["base_path"]
         )  # os.path.join(self.service_cfg["base_path"], scan_dir)
+
         data_msg = {
             "source": [
                 {
@@ -156,20 +158,22 @@ class PilatusCsaxs(DetectorBase):
             {
                 "frmCnt": self.num_frames,
                 "timeout": 2000,
-                "ifType": "PULL",
-                "user": self.username,
             },
         ]
         logger.info(data_msg)
 
         res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_1/run",
+            url="http://xbl-daq-34:8091/pilatus_2/wait",
             data=json.dumps(data_msg),
             headers=headers,
         )
         # Reset triggermode to internal
         self.triggermode = 0
 
+        if not res.ok:
+            res.raise_for_status()
+
+        res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
         if not res.ok:
             res.raise_for_status()
         return super().unstage()
@@ -213,5 +217,6 @@ class PilatusCsaxs(DetectorBase):
 
     def stop(self, *, success=False) -> None:
         self.cam.acquire.set(0)
+        self.unstage()
         super().stop(success=success)
         self._stopped = True
