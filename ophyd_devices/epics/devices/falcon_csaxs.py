@@ -156,6 +156,7 @@ class FalconCsaxs(Device):
         #     "Falcon write file state{self.hdf5.capture.read()}/{self.hdf5.writestatus}"
         # )
         # if not self.hdf5.write_status.read()[f'{self.name}_hdf5_write_status']['value'] :
+        # state = self.hdf5.write_status.read()[f'{self.name}_hdf5']
 
         self._clean_up()
         msg = BECMessage.FileMessage(file_path=path_to_file, done=True, successful=state)
