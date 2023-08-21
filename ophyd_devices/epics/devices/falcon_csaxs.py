@@ -41,22 +41,29 @@ class FalconCsaxs(Device):
     mca = Cpt(EpicsMCARecord, "mca1")
     hdf5 = Cpt(FalconHDF5Plugins, "HDF1:")
 
-    # Preset options
+    # Control
     stop_all = Cpt(EpicsSignal, "StopAll")
     erase_all = Cpt(EpicsSignal, "EraseAll")
-    # 0 No preset 1 Real time 2 Events 3 Triggers
+    start_all = Cpt(EpicsSignal, "StartAll")
+    # Preset options
+    preset_mode = Cpt(EpicsSignal, "PresetMode")  # 0 No preset 1 Real time 2 Events 3 Triggers
     preset_real = Cpt(EpicsSignal, "PresetReal")
-    preset_triggers = Cpt(EpicsSignal, "PresetTriggers")
     preset_events = Cpt(EpicsSignal, "PresetEvents")
+    preset_triggers = Cpt(EpicsSignal, "PresetTriggers")
     # read-only diagnostics
     triggers = Cpt(EpicsSignalRO, "Triggers", lazy=True)
     events = Cpt(EpicsSignalRO, "Events", lazy=True)
     input_count_rate = Cpt(EpicsSignalRO, "InputCountRate", lazy=True)
     output_count_rate = Cpt(EpicsSignalRO, "OutputCountRate", lazy=True)
-    # current_pixel = Cpt(EpicsSignal, "CurrentPixel")
 
-    #     # Trace options
-    # trace_data = Cpt(EpicsSignal, "TraceData")
+    # Mapping control
+    collect_mode = Cpt(EpicsSignal, "CollectMode")  # 0 MCA spectra, 1 MCA mapping
+    pixel_advance_mode = Cpt(EpicsSignal, "PixelAdvanceMode")
+    ignore_gate = Cpt(EpicsSignal, "IgnoreGate")
+    input_logic_polarity = Cpt(EpicsSignal, "InputLogicPolarity")
+    auto_pixels_per_buffer = Cpt(EpicsSignal, "AutoPixelsPerBuffer")
+    pixels_per_buffer = Cpt(EpicsSignal, "PixelsPerBuffer")
+    pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
 
     def __init__(
         self,
@@ -92,10 +99,9 @@ class FalconCsaxs(Device):
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
         # Init script for falcon
 
-        # self._clean_up_dxp()
+        self._clean_up()
         self._init_hdf5_saving()
-
-        # self._set_up_mapping_mode()
+        self._init_mapping_mode()
 
     def stage(self) -> List[object]:
         # scan_msg = self._get_current_scan_msg()
@@ -117,17 +123,10 @@ class FalconCsaxs(Device):
     def unstage(self) -> List[object]:
         return super().unstage()
 
-    def _clean_up_hdf5plugin(self) -> None:
-        # TODO propably better monitored! similar as threshold
-        self.hdf5.capture.set(0)
-
-    def _clean_up_dxp(self) -> None:
+    def _clean_up(self) -> None:
         """Clean up"""
         self.stop_all.set(1)
         self.erase_all.set(1)
-
-    def _acquisition_parameters(self) -> None:
-        self.preset_real_time.set(self.exposure_time)
 
     def _init_hdf5_saving(self) -> None:
         """Set up hdf5 save parameters"""
@@ -135,14 +134,27 @@ class FalconCsaxs(Device):
         self.hdf5.xml_file_name.set("layout.xml")
         self.hdf5.lazy_open.set(1)  # Yes -> To be checked how to add FilePlugin_V21+
         self.hdf5.temp_suffix.set("temps")  # -> To be checked how to add FilePlugin_V22+
+        self.hdf5.capture.set(0)
 
-    def _set_up_mapping_mode(self) -> None:
+    def _init_mapping_mode(self) -> None:
         """Set up mapping mode params"""
-        self.input_logic_polarity.set(0)
-        self.preset_mode.set(1)
-        self.collect_mode.set(1)
-        self.pixel_advance_mode.set(1)
-        self.ignore_gate.set(1)
+        self.collect_mode.set(1)  # 1 MCA Mapping, 0 MCA Spectrum
+        self.preset_mode.set(1)  # 1 Realtime
+        self.input_logic_polarity.set(0)  # 0 Normal, 1 Inverted
+        self.pixel_advance_mode.set(1)  # 0 User, 1 Gate, 2 Sync
+        self.ignore_gate.set(1)  # 1 Yes
         self.auto_pixels_per_buffer.set(0)  # 0 Manual 1 Auto
-        # self.auto
-        # self.ignore
+        self.pixels_per_buffer.set(16)  #
+
+    def _prep_mca_acquisition(self) -> None:
+        """Prepare detector for acquisition"""
+        self.collect_mode.set(1)
+        self.preset_real.set(self.exposure_time)
+        self.pixels_per_run.set(self.num_frames)
+        self.auto_pixels_per_buffer.set(0)
+        self.pixels_per_buffer.set(16)
+
+        # HDF prep
+        self.hdf5.file_path(self.destination_path)
+        self.hdf5.file_name("falcon")
+        self.hdf5.file_template("%sfalcon.h5")
