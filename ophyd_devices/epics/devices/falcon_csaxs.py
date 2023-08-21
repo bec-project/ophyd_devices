@@ -92,80 +92,24 @@ class FalconCsaxs(Device):
             **kwargs,
         )
         self.device_manager = device_manager
-        self.username = (
-            "e21206"  # self.device_manager.producer.get(MessageEndpoints.account()).decode()
-        )
-        # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
         self.name = name
-        # TODO meaningful to use FileWriterMixin
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/falcon/"}
+        self.username = "e21206"
+        # TODO once running from BEC
+        # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
+
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/data/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
-        self.num_frames = 0
+        self._producer = RedisConnector(["localhost:6379"]).producer()
         self.readout = 0.003  # 3 ms
         self._value_pixel_per_buffer = 16
+        # TODO create file template from filewriter compile filename
         self._file_template = f"%s%s_{self.name}.h5"
-        # TODO localhost:6379
-        self._producer = RedisConnector(["localhost:6379"]).producer()
-        # Init script for falcon
+
+        self.num_frames = 0
 
         self._clean_up()
         self._init_hdf5_saving()
         self._init_mapping_mode()
-
-    def stage(self) -> List[object]:
-        # scan_msg = self._get_current_scan_msg()
-        # self.metadata = {
-        #     "scanID": scan_msg.content["scanID"],
-        #     "RID": scan_msg.content["info"]["RID"],
-        #     "queueID": scan_msg.content["info"]["queueID"],
-        # }
-        self.scan_number = 10  # scan_msg.content["info"]["scan_number"]
-        self.exp_time = 0.5  # scan_msg.content["info"]["exp_time"]
-        self.num_frames = 3  # scan_msg.content["info"]["num_points"]
-        # TODO update service config for file path gen.. - But problem with path
-        # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
-        self.destination_path = os.path.join(self.service_cfg["base_path"])
-        self.filename = f"test_{self.scan_number}"
-        self._prep_mca_acquisition()
-
-        # Filename to Redis
-        path_to_file = self._file_template % (self.destination_path, self.filename)
-        msg = BECMessage.FileMessage(file_path=path_to_file, done=False)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-            msg.dumps(),
-        )
-
-        # TODO BEC message on where file is going to be written to
-
-        return super().stage()
-
-    def acquire(self) -> None:
-        self.start_all.set(1)
-
-    def unstage(self) -> List[object]:
-        # Check number of acquisitions
-        while not self._check_falcon_done():
-            logger.info("Waiting for acquisition to finish, sleeping 0.1s ")
-            time.sleep(0.1)
-        # Compare expected vs measured number of pixel
-        # logger.info(
-        #     f'Falcon: number of measured frames from expected {self.current_pixel.read()}/{self.pixels_per_run.read()}'
-        # )
-        # logger.info(
-        #     "Falcon write file state{self.hdf5.capture.read()}/{self.hdf5.writestatus}"
-        # )
-        # if not self.hdf5.write_status.read()[f'{self.name}_hdf5_write_status']['value'] :
-        # state = self.hdf5.write_status.read()[f'{self.name}_hdf5']
-
-        self._clean_up()
-        msg = BECMessage.FileMessage(file_path=path_to_file, done=True, successful=state)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-            msg.dumps(),
-        )
-
-        return super().unstage()
 
     def _clean_up(self) -> None:
         """Clean up"""
@@ -190,7 +134,29 @@ class FalconCsaxs(Device):
         self.auto_pixels_per_buffer.set(0)  # 0 Manual 1 Auto
         self.pixels_per_buffer.set(16)  #
 
-    def _prep_mca_acquisition(self) -> None:
+    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
+        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
+        return BECMessage.ScanStatusMessage.loads(msg)
+
+    def _load_scan_metadata(self) -> None:
+        scan_msg = self._get_current_scan_msg()
+        self.metadata = {
+            "scanID": scan_msg.content["scanID"],
+            "RID": scan_msg.content["info"]["RID"],
+            "queueID": scan_msg.content["info"]["queueID"],
+        }
+        self.scanID = scan_msg.content["scanID"]
+        self.scan_number = scan_msg.content["info"]["scan_number"]
+        self.exp_time = scan_msg.content["info"]["exp_time"]
+        self.num_frames = scan_msg.content["info"]["num_points"]
+        self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
+        self.device_manager.devices.mokev.read()["mokev"]["value"]
+        # self.triggermode = scan_msg.content["info"]["trigger_mode"]
+        self.filepath = self.filewriter.compile_full_filename(
+            self.scan_number, "falcon", 1000, 5, True
+        )
+
+    def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
         self.collect_mode.set(1)
         self.preset_real.set(self.exposure_time)
@@ -198,7 +164,11 @@ class FalconCsaxs(Device):
         self.auto_pixels_per_buffer.set(0)
         self.pixels_per_buffer.set(self._value_pixel_per_buffer)
 
-        # HDF prep
+    def _prep_file_writer(self) -> None:
+        """Prep HDF5 weriting"""
+        # TODO creta filename and destination path from filepath
+        self.destination_path = os.path.join(self.service_cfg["base_path"])
+        self.filename = f"test_{self.scan_number}"
         self.hdf5.file_path.set(self.destination_path)
         self.hdf5.file_name.set(self.filename)
         self.hdf5.file_template.set(self._file_template)
@@ -206,8 +176,39 @@ class FalconCsaxs(Device):
         self.hdf5.file_write_mode.set(2)
         self.hdf5.capture.set(1)
 
-        # Start acquisition
-        # Check falcon status?? self.state --> 1 for acquiring.
+    def stage(self) -> List[object]:
+        """stage the detector and file writer"""
+        # TODO remove once running from BEC
+        # self._load_scan_metadata()
+        self.scan_number = 10
+        self.exp_time = 0.5
+        self.num_frames = 3
+        self.mokev = 12
+
+        self._prep_det()
+        self._prep_file_writer()
+
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
+        self.producer.set_and_publish(
+            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+            msg.dumps(),
+        )
+
+        return super().stage()
+
+    def acquire(self) -> None:
+        self.start_all.set(1)
+
+    def unstage(self) -> List[object]:
+        self._clean_up()
+        # TODO check if acquisition is done and successful!
+        state = True
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
+        self.producer.set_and_publish(
+            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+            msg.dumps(),
+        )
+        return super().unstage()
 
     def _check_falcon_done(self) -> bool:
         state = self.state.read()[f"{self.name }_state"]["value"]
