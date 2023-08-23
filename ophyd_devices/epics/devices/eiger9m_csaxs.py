@@ -111,6 +111,15 @@ class Eiger9mCsaxs(DetectorBase):
     def _init_standard_daq(self) -> None:
         self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
+        timeout = 0
+        # TODO
+        while not std_status["state"] == "READY":
+            time.sleep(0.1)
+            timeout = timeout + 0.1
+            if timeout > 2:
+                logger.info("Timeout of STD")
+
+        # TODO check status after sleep
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
@@ -184,7 +193,16 @@ class Eiger9mCsaxs(DetectorBase):
         """unstage the detector and file writer"""
         self.timing_mode = 0
         self._close_file_writer()
-        # TODO file succesfully written?
+        std_status = self.std_client.get_status()
+        if (
+            not std_status["acquisition"]["message"] == "Completed"
+            or std_status["acquisition"]["state"] == "FINISHED"
+        ):
+            logger.info(std_status)
+            # TODO add BEC error message
+            # raise
+        # TODO check detector stateX12SA-ES-EIGER9M:cam1:DetectorState_RBV
+
         state = True
         msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
         self.producer.set_and_publish(
