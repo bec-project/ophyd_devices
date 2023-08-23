@@ -1,3 +1,4 @@
+import time
 from typing import List
 import numpy as np
 
@@ -6,11 +7,13 @@ from ophyd import CamBase, DetectorBase
 from ophyd import ADComponent as ADCpt
 from ophyd.areadetector.plugins import FileBase
 
-from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
+from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
 
 from std_daq_client import StdDaqClient
+
+from .bec_scaninfo_mixin import BecScaninfoMixin
 
 
 logger = bec_logger.logger
@@ -91,16 +94,17 @@ class Eiger9mCsaxs(DetectorBase):
         )
         self.device_manager = device_manager
         self.name = name
-        self.username = "e21206"
+        self.scaninfo.username = "e21206"
         # TODO once running from BEC
-        # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
-
+        # self.scaninfo.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
+        self.wait_for_connection()  # Make sure to be connected before talking to PVs
         self._init_eiger9m()
         self._init_standard_daq()
 
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/data/"}
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/data/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
-        self._producer = RedisConnector(["localhost:6379"]).producer()
+        self.scaninfo = BecScaninfoMixin(device_manager)
+        self._producer = self.device_manager.producer
         self.readout = 0.003  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
 
@@ -112,35 +116,14 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         timeout = 0
-        # TODO
-        while not std_status["state"] == "READY":
+        # TODO check std_daq status
+        while not self.std_client.std_status["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
             if timeout > 2:
                 logger.info("Timeout of STD")
 
         # TODO check status after sleep
-
-    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
-        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        return BECMessage.ScanStatusMessage.loads(msg)
-
-    def _load_scan_metadata(self) -> None:
-        scan_msg = self._get_current_scan_msg()
-        self.metadata = {
-            "scanID": scan_msg.content["scanID"],
-            "RID": scan_msg.content["info"]["RID"],
-            "queueID": scan_msg.content["info"]["queueID"],
-        }
-        self.scanID = scan_msg.content["scanID"]
-        self.scan_number = scan_msg.content["info"]["scan_number"]
-        self.exp_time = scan_msg.content["info"]["exp_time"]
-        self.num_frames = scan_msg.content["info"]["num_points"]
-        self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
-        # self.triggermode = scan_msg.content["info"]["trigger_mode"]
-        self.filepath = self.filewriter.compile_full_filename(
-            self.scan_number, "eiger", 1000, 5, True
-        )
 
     def _prep_det(self) -> None:
         self._set_det_threshold()
@@ -153,16 +136,19 @@ class Eiger9mCsaxs(DetectorBase):
             self.cam.threshold_energy.set(self.mokev / 2)
 
     def _set_acquisition_params(self) -> None:
-        self.cam.acquire_time.set(self.exp_time)
-        self.cam.acquire_period.set(self.exp_time + self.readout)
-        self.cam.num_images.set(self.num_frames)
+        self.cam.acquire_time.set(self.scaninfo.exp_time)
+        self.cam.acquire_period.set(self.scaninfo.exp_time + self.readout)
+        self.cam.num_images.set(self.scaninfo.num_frames)
         self.cam.num_exposures.set(1)
         # trigger_mode vs timing mode ??!!
         self.cam.timing_mode.set(self.triggermode)
 
     def _prep_file_writer(self) -> None:
+        self.filepath = self.filewriter.compile_full_filename(
+            self.scaninfo.scan_number, "eiger", 1000, 5, True
+        )
         self.std_client.start_writer_async(
-            {"output_file": self.filepath, "n_images": self.num_frames}
+            {"output_file": self.filepath, "n_images": self.scaninfo.num_frames}
         )
 
     def _close_file_writer(self) -> None:
@@ -171,10 +157,10 @@ class Eiger9mCsaxs(DetectorBase):
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
         # TODO remove once running from BEC
-        # self._load_scan_metadata()
-        self.scan_number = 10
-        self.exp_time = 0.5
-        self.num_frames = 3
+        # self.scaninfo.load_scan_metadata()
+        self.scaninfo.scan_number = 10
+        self.scaninfo.exp_time = 0.5
+        self.scaninfo.num_frames = 3
         self.mokev = 12
         self.triggermode = 0
 
@@ -183,7 +169,7 @@ class Eiger9mCsaxs(DetectorBase):
 
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scanID, "eiger9m"),
+            MessageEndpoints.public_file(self.scaninfo.scanID, "eiger9m"),
             msg.dumps(),
         )
 
