@@ -22,7 +22,8 @@ class BecScaninfoMixin:
                 "scan_number": 1,
                 "exp_time": 0.1,
                 "num_points": 10,
-                "scan_type": "step",
+                "readout_time": 3e-3,
+                "scan_type": "fly",
             },
         )
 
@@ -43,4 +44,5 @@ class BecScaninfoMixin:
         self.exp_time = scan_msg.content["info"]["exp_time"]
         self.num_frames = scan_msg.content["info"]["num_points"]
         self.scan_type = scan_msg.content["info"].get("scan_type", "step")
+        self.readout_time = scan_msg.content["info"]["readout_time"]
         self.username = self._get_username()
