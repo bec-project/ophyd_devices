@@ -10,7 +10,7 @@ from ophyd.pseudopos import (
     PseudoPositioner,
 )
 from ophyd_devices.utils.socket import data_shape, data_type
-import ophyd_devices.utils.bec_utils as bec_utils
+from ophyd_devices.utils import bec_utils as bec_utils
 
 from bec_lib.core import bec_logger
 
