@@ -498,8 +498,8 @@ class DelayGeneratorDG645(Device):
 # Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
     dgen = DelayGeneratorDG645("delaygen:DG1:", name="dgen", sim_mode=True)
-    # dgen.
-    start = time.time()
-    dgen.stage()
-    dgen.trigger()
-    print(f"Time passed for stage and trigger {time.time()-start}s")
+
+    # start = time.time()
+    # dgen.stage()
+    # dgen.trigger()
+    # print(f"Time passed for stage and trigger {time.time()-start}s")
