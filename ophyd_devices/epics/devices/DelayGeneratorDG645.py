@@ -310,9 +310,9 @@ class DelayGeneratorDG645(Device):
             f"{name}_delta_width": 0,
             f"{name}_additional_triggers": 0,
             f"{name}_polarity": 1,
-            f"{name}_amplitude": 2.5,  # half amplitude -> 5V peak signal
+            f"{name}_amplitude": 4.5,
             f"{name}_offset": 0,
-            f"{name}_thres_trig_level": 1.75,  # -> 3.5V
+            f"{name}_thres_trig_level": 2.5,
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
         }
@@ -332,6 +332,7 @@ class DelayGeneratorDG645(Device):
             self._producer = self.device_manager.producer
         else:
             self._producer = bec_utils.MockProducer()
+            self.device_manager = bec_utils.MockDeviceManager()
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
@@ -369,10 +370,10 @@ class DelayGeneratorDG645(Device):
         """
         self._set_channels("polarity", polarity)
 
-    def _init_ddg_amp_allchannels(self, amplitude: float = 2.5) -> None:
+    def _init_ddg_amp_allchannels(self, amplitude: float = 5) -> None:
         """Set amplitude for all channels (including T0) upon init
         Args:
-            amplitude: float | defaults to 2.5 (value is equivalent to half amplitude -> 5V difference between low and high)
+            amplitude: float | defaults to 5
         """
         self._set_channels("amplitude", amplitude)
 
@@ -420,7 +421,8 @@ class DelayGeneratorDG645(Device):
             # set parameters in DDG
             self.burstEnable(num_burst_cycle, delay_burst, exp_time, config="first")
             self._set_channels("delay", 0)
-            self._set_channels("width", exp_time)
+            # Set burst length to half of the experimental time!
+            self._set_channels("width", exp_time / 2)
         elif self.scaninfo.scan_type == "fly":
             # Prepare FSH DDG
             if self.set_high_on_exposure.get():
@@ -438,7 +440,8 @@ class DelayGeneratorDG645(Device):
                 # set parameters in DDG
                 self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self._set_channels("delay", 0)
-                self._set_channels("width", exp_time)
+                # Set burst length to half of the experimental time!
+                self._set_channels("width", exp_time / 2)
             else:
                 # define parameters
                 self._set_trigger(TriggerSource.SINGLE_SHOT)
@@ -449,7 +452,8 @@ class DelayGeneratorDG645(Device):
                 # set parameters in DDG
                 self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self._set_channels("delay", 0)
-                self._set_channels("width", exp_time)
+                # Set burst length to half of the experimental time!
+                self._set_channels("width", exp_time / 2)
 
         else:
             raise DDGError(f"Unknown scan type {self.scaninfo.scan_type}")
