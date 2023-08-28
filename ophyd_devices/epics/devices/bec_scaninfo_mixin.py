@@ -20,9 +20,9 @@ class BecScaninfoMixin:
                 "RID": "mockrid",
                 "queueID": "mockqueuid",
                 "scan_number": 1,
-                "exp_time": 0.1,
-                "num_points": 10,
-                "readout_time": 3e-3,
+                "exp_time": 26e-3,
+                "num_points": 10000,
+                "readout_time": 2e-3,
                 "scan_type": "fly",
             },
         )
