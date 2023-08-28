@@ -284,7 +284,7 @@ class GalilController(Controller):
         n_samples = int(interval_y * interval_x)
 
         # Hard coded to maximum offset of 0.1mm to avoid long motions.
-        self.socket_put_and_receive(f"off={(0*0.1/2*1000):f}")
+        self.socket_put_and_receive(f"off={(0):f}")
         self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
         self.socket_put_and_receive(
             f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
