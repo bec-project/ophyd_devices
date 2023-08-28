@@ -84,16 +84,20 @@ class PilatusCsaxs(DetectorBase):
         self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
         self.device_manager.devices.mokev.read()["mokev"]["value"]
         # self.triggermode = scan_msg.content["info"]["trigger_mode"]
-        self.filename = self.filewriter.compile_full_filename(
-            self.scan_number, "pilatus_2", 1000, 5, True
-        )
+        # self.filename = self.filewriter.compile_full_filename(
+        #     self.scan_number, "pilatus_2", 1000, 5, True
+        # )
+        # TODO fix with BEC running
+        # self.filename = '/sls/X12SA/Data10/e21206/data/test.h5'
 
     def _prep_det(self) -> None:
+        # TODO slow reaction, seemed to have timeout.
         self._set_det_threshold()
         self._set_acquisition_params()
 
     def _set_det_threshold(self) -> None:
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
+        # threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]['value']
         if not np.isclose(self.mokev / 2, threshold, rtol=0.05):
             self.cam.threshold_energy.set(self.mokev / 2)
 
@@ -210,11 +214,11 @@ class PilatusCsaxs(DetectorBase):
         self._prep_det()
         self._prep_file_writer()
 
-        msg = BECMessage.FileMessage(file_path=self.filename, done=False)
-        self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scanID, "pilatus_2"),
-            msg.dumps(),
-        )
+        # msg = BECMessage.FileMessage(file_path=self.filename, done=False)
+        # self._producer.set_and_publish(
+        #     MessageEndpoints.public_file(self.scanID, "pilatus_2"),
+        #     msg.dumps(),
+        # )
 
         return super().stage()
 
@@ -225,11 +229,11 @@ class PilatusCsaxs(DetectorBase):
         self._close_file_writer()
         # TODO check if acquisition is done and successful!
         state = True
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-            msg.dumps(),
-        )
+        # msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
+        # self.producer.set_and_publish(
+        #     MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+        #     msg.dumps(),
+        # )
         return super().unstage()
 
     def acquire(self) -> None:
