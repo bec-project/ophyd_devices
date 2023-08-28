@@ -1,5 +1,6 @@
+import enum
 import time
-from typing import List
+from typing import Any, List
 import numpy as np
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
@@ -10,13 +11,18 @@ from ophyd.areadetector.plugins import FileBase
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
+from ophyd_devices.utils import bec_utils as bec_utils
 
 from std_daq_client import StdDaqClient
 
-from .bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 
 logger = bec_logger.logger
+
+
+class EigerError(Exception):
+    pass
 
 
 class SlsDetectorCam(CamBase, FileBase):
@@ -24,6 +30,7 @@ class SlsDetectorCam(CamBase, FileBase):
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
     delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
     threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
+    beam_energy = ADCpt(EpicsSignalWithRBV, "BeamEnergy")
     enable_trimbits = ADCpt(EpicsSignalWithRBV, "Trimbits")
     bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
     num_gates = ADCpt(EpicsSignalWithRBV, "NumGates")
@@ -57,6 +64,27 @@ class SlsDetectorCam(CamBase, FileBase):
     json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
 
 
+class TriggerSource(int, enum.Enum):
+    AUTO = 0
+    TRIGGER = 1
+    GATING = 2
+    BURST_TRIGGER = 3
+
+
+class DetectorState(int, enum.Enum):
+    IDLE = 0
+    ERROR = 1
+    WAITING = 2
+    FINISHED = 3
+    TRANSMITTING = 4
+    RUNNING = 5
+    STOPPED = 6
+    STILL_WAITING = 7
+    INITIALIZING = 8
+    DISCONNECTED = 9
+    ABORTED = 10
+
+
 class Eiger9mCsaxs(DetectorBase):
     """Eiger 9M detector for CSAXS
 
@@ -81,6 +109,7 @@ class Eiger9mCsaxs(DetectorBase):
         configuration_attrs=None,
         parent=None,
         device_manager=None,
+        sim_mode=False,
         **kwargs,
     ):
         super().__init__(
@@ -92,77 +121,128 @@ class Eiger9mCsaxs(DetectorBase):
             parent=parent,
             **kwargs,
         )
-        self.device_manager = device_manager
+        if device_manager is None and not sim_mode:
+            raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
+
         self.name = name
-        self.scaninfo.username = "e21206"
-        # TODO once running from BEC
-        # self.scaninfo.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
+        if not sim_mode:
+            self._producer = self.device_manager.producer
+            self.device_manager = device_manager
+        else:
+            self._producer = bec_utils.MockProducer()
+            self.device_manager = bec_utils.MockDeviceManager()
+        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
+        # TODO
+        self.scaninfo.username = "e21206"
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+        self.filewriter = FileWriterMixin(self.service_cfg)
+        self.reduce_readout = 1e-3  # 3 ms
+        self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
+        self.mokev = 12
         self._init_eiger9m()
         self._init_standard_daq()
 
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/data/"}
-        self.filewriter = FileWriterMixin(self.service_cfg)
-        self.scaninfo = BecScaninfoMixin(device_manager)
-        self._producer = self.device_manager.producer
-        self.readout = 0.003  # 3 ms
-        self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
+        # self.mokev = self.device_manager.devices.mokev.read()[
+        #     self.device_manager.devices.mokev.name
+        # ]["value"]
 
     def _init_eiger9m(self) -> None:
         """Init parameters for Eiger 9m"""
-        pass
+        self._set_det_threshold()
+        self._set_trigger(TriggerSource.GATING)
+        self.cam.acquire.set(0)
+
+    def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
+        cfg = self.std_client.get_config()
+        old_value = cfg.get(cfg_key)
+        if old_value is None:
+            raise EigerError(
+                f"Tried to change entry for key {cfg_key} in std_config that does not exist"
+            )
+        if not isinstance(value, type(old_value)):
+            raise EigerError(
+                f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
+            )
+        cfg.update({cfg_key: value})
+        logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
 
     def _init_standard_daq(self) -> None:
         self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
+        self.std_client.stop_writer()
         timeout = 0
-        # TODO check std_daq status
-        while not self.std_client.std_status["state"] == "READY":
+        self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
+        while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
             if timeout > 2:
-                logger.info("Timeout of STD")
-
-        # TODO check status after sleep
+                raise EigerError(
+                    f"Std client not in READY state, returns: {self.std_client.get_status()}"
+                )
 
     def _prep_det(self) -> None:
         self._set_det_threshold()
         self._set_acquisition_params()
+        self._set_trigger(TriggerSource.TRIGGER)
 
     def _set_det_threshold(self) -> None:
         # threshold_energy PV exists on Eiger 9M?
+        factor = 1
+        if self.cam.threshold_energy._metadata["units"] == "eV":
+            factor = 1000
+        setp_energy = int(self.mokev * factor)
+        energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
+        if setp_energy != energy:
+            self.cam.beam_energy.set(setp_energy)  # .wait()
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
-        if not np.isclose(self.mokev / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(self.mokev / 2)
+        if not np.isclose(setp_energy / 2, threshold, rtol=0.05):
+            self.cam.threshold_energy.set(setp_energy / 2)  # .wait()
 
     def _set_acquisition_params(self) -> None:
-        self.cam.acquire_time.set(self.scaninfo.exp_time)
-        self.cam.acquire_period.set(self.scaninfo.exp_time + self.readout)
-        self.cam.num_images.set(self.scaninfo.num_frames)
-        self.cam.num_exposures.set(1)
-        # trigger_mode vs timing mode ??!!
-        self.cam.timing_mode.set(self.triggermode)
+        # self.cam.acquire_time.set(self.scaninfo.exp_time)
+        # Set acquisition parameters slightly shorter then cycle
+        # self.cam.acquire_period.set(
+        #    self.scaninfo.exp_time + (self.scaninfo.readout_time - self.reduce_readout)
+        # )
+        self.cam.num_cycles.set(self.scaninfo.num_frames)
+        self.cam.num_frames.set(1)
+
+    def _set_trigger(self, trigger_source: TriggerSource) -> None:
+        """Set trigger source for the detector, either directly to value or TriggerSource.* with
+        AUTO = 0
+        TRIGGER = 1
+        GATING = 2
+        BURST_TRIGGER = 3
+        """
+        value = int(trigger_source)
+        self.cam.timing_mode.set(value)
 
     def _prep_file_writer(self) -> None:
         self.filepath = self.filewriter.compile_full_filename(
-            self.scaninfo.scan_number, "eiger", 1000, 5, True
+            self.scaninfo.scan_number, "eiger.h5", 1000, 5, True
         )
+        logger.info(f" std_daq output filepath {self.filepath}")
         self.std_client.start_writer_async(
             {"output_file": self.filepath, "n_images": self.scaninfo.num_frames}
         )
+        logger.info("Waiting for std daq to be armed")
+        while True:
+            det_ctrl = self.std_client.get_status()["acquisition"]["state"]
+            if det_ctrl == "WAITING_IMAGES":
+                break
+            time.sleep(0.005)
 
     def _close_file_writer(self) -> None:
+        self.std_client.stop_writer()
         pass
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
-        # TODO remove once running from BEC
-        # self.scaninfo.load_scan_metadata()
-        self.scaninfo.scan_number = 10
-        self.scaninfo.exp_time = 0.5
-        self.scaninfo.num_frames = 3
-        self.mokev = 12
-        self.triggermode = 0
+        self.scaninfo.load_scan_metadata()
+        self.mokev = self.device_manager.devices.mokev.read()[
+            self.device_manager.devices.mokev.name
+        ]["value"]
 
         self._prep_det()
         self._prep_file_writer()
@@ -172,32 +252,43 @@ class Eiger9mCsaxs(DetectorBase):
             MessageEndpoints.public_file(self.scaninfo.scanID, "eiger9m"),
             msg.dumps(),
         )
+        self.arm_acquisition()
+        logger.info("Waiting for detector to be armed")
+        while True:
+            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
+            if det_ctrl == int(DetectorState.RUNNING):
+                break
+            time.sleep(0.005)
+        logger.info("Detector is armed")
 
         return super().stage()
 
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
-        self.timing_mode = 0
-        self._close_file_writer()
-        std_status = self.std_client.get_status()
-        if (
-            not std_status["acquisition"]["message"] == "Completed"
-            or std_status["acquisition"]["state"] == "FINISHED"
-        ):
-            logger.info(std_status)
-            # TODO add BEC error message
-            # raise
-        # TODO check detector stateX12SA-ES-EIGER9M:cam1:DetectorState_RBV
+        logger.info("Waiting for eiger9M to return from acquisition")
+        while True:
+            det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
+            if det_ctrl == 0:
+                break
+            time.sleep(0.005)
 
-        state = True
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-            msg.dumps(),
-        )
+        logger.info("Waiting for std daq to receive images")
+        while True:
+            det_ctrl = self.std_client.get_status()["acquisition"]["state"]
+            if det_ctrl == "FINISHED":
+                break
+            time.sleep(0.005)
+        # Message to BEC
+        # state = True
+
+        # msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
+        # self._producer.set_and_publish(
+        #     MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+        #     msg.dumps(),
+        # )
         return super().unstage()
 
-    def acquire(self) -> None:
+    def arm_acquisition(self) -> None:
         """Start acquisition in software trigger mode,
         or arm the detector in hardware of the detector
         """
@@ -206,7 +297,13 @@ class Eiger9mCsaxs(DetectorBase):
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
         self.cam.acquire.set(0)
-        self.std_client.stop_writer()
+        self._close_file_writer()
         self.unstage()
         super().stop(success=success)
         self._stopped = True
+
+
+# Automatically connect to test environmenr if directly invoked
+if __name__ == "__main__":
+    eiger = Eiger9mCsaxs(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)
+    eiger.stage()
