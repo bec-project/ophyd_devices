@@ -150,7 +150,9 @@ class GalilController(Controller):
         return var
 
     def stop_all_axes(self) -> str:
-        return self.socket_put_and_receive(f"XQ#STOP,1")
+        # return self.socket_put_and_receive(f"XQ#STOP,1")
+        # Command stops all threads and motors!
+        return self.socket_put_and_receive(f"AB")
 
     def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
@@ -298,6 +300,7 @@ class GalilController(Controller):
         # threading.Thread(target=_while_in_motion(3, n_samples), daemon=True).start()
         # self._while_in_motion(3, n_samples)
 
+    # TODO this is for reading out positions, readout is limited by stage triggering
     def _while_in_motion(self, thread_id: int, n_samples: int) -> tuple:
         last_readout = 0
         val_axis2 = []  # y axis
