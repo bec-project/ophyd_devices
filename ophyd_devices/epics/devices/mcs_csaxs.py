@@ -8,18 +8,15 @@ from ophyd import EpicsSignal, EpicsSignalRO, Component as Cpt, Device
 from ophyd.mca import EpicsMCARecord
 from ophyd.scaler import ScalerCH
 
-from bec_lib.core import BECMessage, MessageEndpoints
-from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core import bec_loggers
-from ophyd_devices.utils import bec_utils as bec_utils
-
-from std_daq_client import StdDaqClient
-
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
-
 from ophyd_devices.utils import bec_utils
 
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib.core.file_utils import FileWriterMixin
+
+from bec_lib.core import bec_logger
+
+logger = bec_logger.logger
 
 
 class MCSError(Exception):
@@ -70,7 +67,7 @@ class SIS38XX(Device):
     elapsed_real = Cpt(EpicsSignal, "ElapsedReal")
 
     read_mode = Cpt(EpicsSignal, "ReadAll.SCAN")
-    read_all = Cpt(EpicsSignal, "DoReadAll.VAL")
+    read_all = Cpt(EpicsSignal, "DoReadAll.VAL", trigger_value=1)
     num_use_all = Cpt(EpicsSignal, "NuseAll")
     current_channel = Cpt(EpicsSignal, "CurrentChannel")
     dwell = Cpt(EpicsSignal, "Dwell")
@@ -168,7 +165,6 @@ class McsCsaxs(SIS38XX):
         self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._init_mcs()
-        self._init_standard_daq()
 
     def _init_mcs(self) -> None:
         """Init parameters for mcs card 9m
@@ -185,6 +181,7 @@ class McsCsaxs(SIS38XX):
         self.mux_output.set(5)
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
+        self.count_on_start.set(0)
 
     def _prep_det(self) -> None:
         self._set_acquisition_params()
@@ -195,19 +192,11 @@ class McsCsaxs(SIS38XX):
         self.num_use_all.set(self.scaninfo.num_frames)
         self.preset_real.set(0)
 
-        self.count_on_start.set(0)
-
-        self.cam.num_frames.set(1)
-
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
-        """Set trigger source for the detector, either directly to value or TriggerSource.* with
-        AUTO = 0
-        TRIGGER = 1
-        GATING = 2
-        BURST_TRIGGER = 3
-        """
+        """7 Modes, see TriggerSource
+        Mode3 for cSAXS"""
         value = int(trigger_source)
-        self.cam.timing_mode.set(value)
+        self.input_mode.set(value)
 
     def _prep_readout(self) -> None:
         """Set readout mode of mcs card
@@ -215,60 +204,54 @@ class McsCsaxs(SIS38XX):
         """
         self.read_mode.set(ReadoutMode.PASSIVE)
 
-    def _readout(self) -> List:
+    def _read_mcs_card(self) -> None:
+        # TODO how to properly trigger the readout!!!
         self.read_all.set(1)
+
+    def readout_data(self) -> List:
+        self._read_mcs_card()
         readback = []
-        readback.append(self.scaler.read()[self.scaler.name]["value"])
-        for ii in range(1, self.mux_output.get() + 1):
-            readback.append(self._readout_mca(ii))
+        for ii in range(1, int(self.mux_output.read()[self.mux_output.name]["value"]) + 1):
+            readback.append(self._readout_mca_channels(ii))
         return readback
 
-    def _readout_mca(self, num: int) -> List[List]:
+    def _readout_mca_channels(self, num: int) -> List[List]:
         signal = f"mca{num}"
         if signal in self.component_names:
-            return getattr(self, signal).read()[getattr(self, signal).name]["value"]
+            readback = f"{getattr(self, signal).name}_spectrum"
+            return getattr(self, signal).read()[readback]["value"]
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
         self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.read()[
-            self.device_manager.devices.mokev.name
-        ]["value"]
-
         self._prep_det()
-        self._prep_file_writer()
+        self._prep_readout()
 
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
-        self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, "eiger9m"),
-            msg.dumps(),
-        )
+        # msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
+        # self._producer.set_and_publish(
+        #     MessageEndpoints.public_file(self.scaninfo.scanID, "mcs_csaxs"),
+        #     msg.dumps(),
+        # )
         self.arm_acquisition()
-        logger.info("Waiting for detector to be armed")
+        logger.info("Waiting for mcs to be armed")
         while True:
-            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.RUNNING):
+            det_ctrl = self.acquiring.read()[self.acquiring.name]["value"]
+            if det_ctrl == 1:
                 break
             time.sleep(0.005)
-        logger.info("Detector is armed")
+        logger.info("mcs is ready and running")
 
         return super().stage()
 
     def unstage(self) -> List[object]:
-        """unstage the detector and file writer"""
-        logger.info("Waiting for eiger9M to return from acquisition")
+        """unstage"""
+        logger.info("Waiting for mcs to finish acquisition")
         while True:
-            det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
+            det_ctrl = self.acquiring.read()[self.acquiring.name]["value"]
             if det_ctrl == 0:
                 break
             time.sleep(0.005)
-
-        logger.info("Waiting for std daq to receive images")
-        while True:
-            det_ctrl = self.std_client.get_status()["acquisition"]["state"]
-            if det_ctrl == "FINISHED":
-                break
-            time.sleep(0.005)
+        self._read_mcs_card()
         # Message to BEC
         # state = True
 
@@ -280,15 +263,20 @@ class McsCsaxs(SIS38XX):
         return super().unstage()
 
     def arm_acquisition(self) -> None:
-        """Start acquisition in software trigger mode,
-        or arm the detector in hardware of the detector
+        """Arm acquisition
+        Options:
+        Start: start_all
+        Erase/Start: erase_start
         """
-        self.cam.acquire.set(1)
+        self.erase_start.set(1)
+        # self.start_all.set(1)
 
     def stop(self, *, success=False) -> None:
-        """Stop the scan, with camera and file writer"""
-        self.cam.acquire.set(0)
-        self._close_file_writer()
+        """Stop acquisition
+        Stop or Stop and Erase
+        """
+        self.stop_all.set(1)
+        # self.erase_all.set(1)
         self.unstage()
         super().stop(success=success)
         self._stopped = True
@@ -296,5 +284,5 @@ class McsCsaxs(SIS38XX):
 
 # Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
-    eiger = Eiger9mCsaxs(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)
-    eiger.stage()
+    mcs = McsCsaxs(name="mcs", prefix="X12SA-MCS:", sim_mode=True)
+    mcs.stage()
