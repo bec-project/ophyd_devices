@@ -4,7 +4,7 @@ from typing import Any, List
 import numpy as np
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import CamBase, DetectorBase
+from ophyd import CamBase, DetectorBase, Device
 from ophyd import ADComponent as ADCpt
 from ophyd.areadetector.plugins import FileBase
 
@@ -25,7 +25,7 @@ class EigerError(Exception):
     pass
 
 
-class SlsDetectorCam(CamBase, FileBase):
+class SlsDetectorCam(Device):  # CamBase, FileBase):
     detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
     delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
@@ -62,6 +62,10 @@ class SlsDetectorCam(CamBase, FileBase):
     # Moench
     json_frame_mode = ADCpt(EpicsSignalWithRBV, "JsonFrameMode")
     json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
+
+    # fixes due to missing PVs from CamBase
+    acquire = ADCpt(EpicsSignal, "Acquire")
+    detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
 
 
 class TriggerSource(int, enum.Enum):
@@ -127,8 +131,8 @@ class Eiger9mCsaxs(DetectorBase):
         self.name = name
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
         if not sim_mode:
-            self._producer = self.device_manager.producer
             self.device_manager = device_manager
+            self._producer = self.device_manager.producer
         else:
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
@@ -139,7 +143,6 @@ class Eiger9mCsaxs(DetectorBase):
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.reduce_readout = 1e-3  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
-        self.mokev = 12
         self._init_eiger9m()
         self._init_standard_daq()
 
@@ -149,7 +152,6 @@ class Eiger9mCsaxs(DetectorBase):
 
     def _init_eiger9m(self) -> None:
         """Init parameters for Eiger 9m"""
-        self._set_det_threshold()
         self._set_trigger(TriggerSource.GATING)
         self.cam.acquire.set(0)
 
@@ -184,7 +186,7 @@ class Eiger9mCsaxs(DetectorBase):
     def _prep_det(self) -> None:
         self._set_det_threshold()
         self._set_acquisition_params()
-        self._set_trigger(TriggerSource.TRIGGER)
+        self._set_trigger(TriggerSource.GATING)
 
     def _set_det_threshold(self) -> None:
         # threshold_energy PV exists on Eiger 9M?
@@ -226,7 +228,6 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client.start_writer_async(
             {"output_file": self.filepath, "n_images": self.scaninfo.num_frames}
         )
-        logger.info("Waiting for std daq to be armed")
         while True:
             det_ctrl = self.std_client.get_status()["acquisition"]["state"]
             if det_ctrl == "WAITING_IMAGES":
@@ -240,16 +241,18 @@ class Eiger9mCsaxs(DetectorBase):
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
         self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.read()[
+        self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
         ]["value"]
 
         self._prep_det()
+        logger.info("Waiting for std daq to be armed")
         self._prep_file_writer()
+        logger.info("std_daq is ready")
 
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, "eiger9m"),
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
         self.arm_acquisition()
@@ -279,13 +282,13 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(0.005)
         # Message to BEC
-        # state = True
+        state = True
 
-        # msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        # self._producer.set_and_publish(
-        #     MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-        #     msg.dumps(),
-        # )
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
+        self._producer.set_and_publish(
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
+            msg.dumps(),
+        )
         return super().unstage()
 
     def arm_acquisition(self) -> None:

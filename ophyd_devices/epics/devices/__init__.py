@@ -21,3 +21,8 @@ from .specMotors import (
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsMotor
 from ophyd.sim import SynAxis, SynSignal, SynPeriodicSignal
 from ophyd.quadem import QuadEM
+
+# cSAXS
+from .mcs_csaxs import McsCsaxs
+from .eiger9m_csaxs import Eiger9mCsaxs
+from .pilatus_csaxs import PilatusCsaxs

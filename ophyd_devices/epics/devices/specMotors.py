@@ -181,7 +181,7 @@ class MonoTheta2(VirtualEpicsSignalRO):
 
 
 MONO_THETA2_OFFSETS_FILENAME = (
-    "/import/work/sls/spec/local/X12SA/macros/spec_data/mono_th2_offsets.txt"
+    "/sls/X12SA/data/gac-x12saop/spec/macros/spec_data/mono_th2_offsets.txt"
 )
 
 

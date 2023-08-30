@@ -7,6 +7,21 @@ class BecScaninfoMixin:
     def __init__(self, device_manager: DeviceManagerBase = None, sim_mode=False) -> None:
         self.device_manager = device_manager
         self.sim_mode = sim_mode
+        self.bec_info_msg = {
+            "RID": "mockrid",
+            "queueID": "mockqueuid",
+            "scan_number": 1,
+            "exp_time": 26e-3,
+            "num_points": 10000,
+            "readout_time": 2e-3,
+            "scan_type": "fly",
+        }
+
+    def get_bec_info_msg(self) -> None:
+        return self.bec_info_msg
+
+    def change_config(self, bec_info_msg: dict) -> None:
+        self.bec_info_msg = bec_info_msg
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         if not self.sim_mode:
@@ -16,15 +31,7 @@ class BecScaninfoMixin:
         return BECMessage.ScanStatusMessage(
             scanID="1",
             status={},
-            info={
-                "RID": "mockrid",
-                "queueID": "mockqueuid",
-                "scan_number": 1,
-                "exp_time": 26e-3,
-                "num_points": 10000,
-                "readout_time": 2e-3,
-                "scan_type": "fly",
-            },
+            info=self.bec_info_msg,
         )
 
     def _get_username(self) -> str:

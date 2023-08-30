@@ -334,7 +334,8 @@ class DelayGeneratorDG645(Device):
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
+        self._all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
+        self._all_delay_pairs = ["AB", "CD", "EF", "GH"]
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
         self._init_ddg()
         self._ddg_is_okay()
@@ -386,7 +387,7 @@ class DelayGeneratorDG645(Device):
 
     def _set_channels(self, signal: str, value: Any, channels: List = None) -> None:
         if not channels:
-            channels = self.all_channels
+            channels = self._all_channels
         for chname in channels:
             channel = getattr(self, chname, None)
             if not channel:
@@ -404,6 +405,17 @@ class DelayGeneratorDG645(Device):
         self._init_ddg_pol_allchannels(self.polarity.get())
         self._init_ddg_amp_allchannels(self.amplitude.get())
         self._init_ddg_offset_allchannels(self.offset.get())
+        self._set_channels(
+            "reference",
+            0,
+            [f"channel{self._all_delay_pairs[ii]}.ch1" for ii in range(len(self._all_delay_pairs))],
+        )
+        for ii in range(len(self._all_delay_pairs)):
+            self._set_channels(
+                "reference",
+                2 * ii + 1,
+                [f"channel{self._all_delay_pairs[ii]}.ch2"],
+            )
         self._set_trigger(TriggerSource.SINGLE_SHOT)
         self.level.set(self.thres_trig_level.get())
 
@@ -474,6 +486,7 @@ class DelayGeneratorDG645(Device):
         # if self.scaninfo.scan_type == "step":
         if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
             self.trigger_shot.set(1).wait()
+        super().trigger()
 
     def burstEnable(self, count, delay, period, config="all"):
         """Enable the burst mode"""

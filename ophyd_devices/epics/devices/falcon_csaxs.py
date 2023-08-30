@@ -9,6 +9,9 @@ from ophyd.areadetector.plugins import HDF5Plugin, HDF5Plugin_V21, FilePlugin_V2
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import MessageEndpoints, BECMessage, RedisConnector
 from bec_lib.core import bec_logger
+from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+
+from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
 
@@ -32,6 +35,10 @@ class EpicsDXPFalcon(Device):
     decay_time = Cpt(EpicsSignalWithRBV, "DecayTime")
 
     current_pixel = Cpt(EpicsSignalRO, "CurrentPixel")
+
+
+class FalconError(Exception):
+    pass
 
 
 class FalconHDF5Plugins(HDF5Plugin_V21, FilePlugin_V22):
@@ -80,6 +87,7 @@ class FalconCsaxs(Device):
         configuration_attrs=None,
         parent=None,
         device_manager=None,
+        sim_mode=False,
         **kwargs,
     ):
         super().__init__(
@@ -91,15 +99,23 @@ class FalconCsaxs(Device):
             parent=parent,
             **kwargs,
         )
-        self.device_manager = device_manager
-        self.name = name
-        self.username = "e21206"
-        # TODO once running from BEC
-        # self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
+        if device_manager is None and not sim_mode:
+            raise FalconError("Add DeviceManager to initialization or init with sim_mode=True")
 
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.username}/Data10/data/"}
+        self.name = name
+        self.wait_for_connection()  # Make sure to be connected before talking to PVs
+        if not sim_mode:
+            self.device_manager = device_manager
+            self._producer = self.device_manager.producer
+        else:
+            self._producer = bec_utils.MockProducer()
+            self.device_manager = bec_utils.MockDeviceManager()
+        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
+        # TODO
+        self.scaninfo.username = "e21206"
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
-        self._producer = RedisConnector(["localhost:6379"]).producer()
+
         self.readout = 0.003  # 3 ms
         self._value_pixel_per_buffer = 16
         # TODO create file template from filewriter compile filename
@@ -218,3 +234,20 @@ class FalconCsaxs(Device):
             # TODO raise error
             logger.warning("Returned in unknown state")
             return state
+
+    def stop(self, *, success=False) -> None:
+        """Stop acquisition
+        Stop or Stop and Erase
+        """
+        self._clean_up.set(1)
+        # self.erase_all.set(1)
+        self.unstage()
+        super().stop(success=success)
+        self._stopped = True
+
+    # Automatically connect to test environmenr if directly invoked
+
+
+if __name__ == "__main__":
+    falcon = FalconCsaxs(name="falcon", prefix="X12SA-SITORO::", sim_mode=True)
+    falcon.stage()

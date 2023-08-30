@@ -16,9 +16,15 @@ class MockDeviceManager:
         self.devices = devices()
 
 
+class OphydObject:
+    def __init__(self) -> None:
+        self.name = "mock_mokev"
+        self.obj = mokev()
+
+
 class devices:
     def __init__(self):
-        self.mokev = mokev()
+        self.mokev = OphydObject()
 
 
 class mokev:
@@ -26,4 +32,4 @@ class mokev:
         self.name = "mock_mokev"
 
     def read(self):
-        return {self.name: {"value": 12.4, "timestamp": time.time()}}
+        return {self.name: {"value": 16.0, "timestamp": time.time()}}

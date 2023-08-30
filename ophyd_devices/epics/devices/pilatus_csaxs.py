@@ -248,3 +248,9 @@ class PilatusCsaxs(DetectorBase):
         self.unstage()
         super().stop(success=success)
         self._stopped = True
+
+
+# Automatically connect to test environmenr if directly invoked
+if __name__ == "__main__":
+    pilatus_2 = PilatusCsaxs(name="pilatus_2", prefix="X12SA-ES-PILATUS300K:", sim_mode=True)
+    pilatus_2.stage()

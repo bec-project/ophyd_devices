@@ -154,8 +154,8 @@ class McsCsaxs(SIS38XX):
         self.name = name
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
         if not sim_mode:
-            self._producer = self.device_manager.producer
             self.device_manager = device_manager
+            self._producer = self.device_manager.producer
         else:
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
@@ -164,6 +164,7 @@ class McsCsaxs(SIS38XX):
         self.scaninfo.username = "e21206"
         self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
+        self._stopped = False
         self._init_mcs()
 
     def _init_mcs(self) -> None:
@@ -202,11 +203,12 @@ class McsCsaxs(SIS38XX):
         """Set readout mode of mcs card
         Check ReadoutMode class for more information about options
         """
+        # self.read_mode.set(ReadoutMode.EVENT)
         self.read_mode.set(ReadoutMode.PASSIVE)
 
     def _read_mcs_card(self) -> None:
         # TODO how to properly trigger the readout!!!
-        self.read_all.set(1)
+        self.read_all.put(1, use_complete=False)
 
     def readout_data(self) -> List:
         self._read_mcs_card()
@@ -250,8 +252,11 @@ class McsCsaxs(SIS38XX):
             det_ctrl = self.acquiring.read()[self.acquiring.name]["value"]
             if det_ctrl == 0:
                 break
+            if self._stopped:
+                break
             time.sleep(0.005)
-        self._read_mcs_card()
+        if not self._stopped:
+            self._read_mcs_card()
         # Message to BEC
         # state = True
 
@@ -260,6 +265,7 @@ class McsCsaxs(SIS38XX):
         #     MessageEndpoints.public_file(self.metadata["scanID"], self.name),
         #     msg.dumps(),
         # )
+        self._stopped = False
         return super().unstage()
 
     def arm_acquisition(self) -> None:
@@ -277,7 +283,7 @@ class McsCsaxs(SIS38XX):
         """
         self.stop_all.set(1)
         # self.erase_all.set(1)
-        self.unstage()
+        # self.unstage()
         super().stop(success=success)
         self._stopped = True
 

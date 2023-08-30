@@ -247,6 +247,7 @@ class GalilController(Controller):
         interval_x: int,
         exp_time: float,
         readtime: float,
+        **kwargs,
     ) -> tuple:
         """_summary_
 
@@ -266,9 +267,8 @@ class GalilController(Controller):
             LimitError: Raised if the speed is above 2mm/s or below 0.02mm/s
 
         """
-
-        # time.sleep(0.2)
-
+        #
+        axes_referenced = self.controller.axis_is_referenced()
         # Check limits
         # TODO check sign of stage, or not necessary
         check_values = [start_y, end_y, start_x, end_x]
