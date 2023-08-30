@@ -418,6 +418,8 @@ class DelayGeneratorDG645(Device):
             )
         self._set_trigger(TriggerSource.SINGLE_SHOT)
         self.level.set(self.thres_trig_level.get())
+        # invert trigger signal for eiger9m
+        self._set_channels("polarity", 0, channels=["channelAB"])
 
     # TODO add delta_delay, delta_width, delta triggers!
 
@@ -434,7 +436,7 @@ class DelayGeneratorDG645(Device):
             self.burstEnable(num_burst_cycle, delay_burst, exp_time, config="first")
             self._set_channels("delay", 0)
             # Set burst length to half of the experimental time!
-            self._set_channels("width", exp_time / 2)
+            self._set_channels("width", exp_time)
         elif self.scaninfo.scan_type == "fly":
             # Prepare FSH DDG
             if self.set_high_on_exposure.get():
@@ -453,7 +455,7 @@ class DelayGeneratorDG645(Device):
                 self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self._set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self._set_channels("width", exp_time / 2)
+                self._set_channels("width", exp_time)
             else:
                 # define parameters
                 self._set_trigger(TriggerSource.SINGLE_SHOT)
@@ -465,7 +467,7 @@ class DelayGeneratorDG645(Device):
                 self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self._set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self._set_channels("width", exp_time / 2)
+                self._set_channels("width", exp_time)
 
         else:
             raise DDGError(f"Unknown scan type {self.scaninfo.scan_type}")
