@@ -15,6 +15,7 @@ class BecScaninfoMixin:
             "num_points": 10000,
             "readout_time": 2e-3,
             "scan_type": "fly",
+            "num_lines": 10,
         }
 
     def get_bec_info_msg(self) -> None:
@@ -40,7 +41,7 @@ class BecScaninfoMixin:
         return os.getlogin()
 
     def load_scan_metadata(self) -> None:
-        scan_msg = self._get_current_scan_msg()
+        self.scan_msg = scan_msg = self._get_current_scan_msg()
         self.metadata = {
             "scanID": scan_msg.content["scanID"],
             "RID": scan_msg.content["info"]["RID"],

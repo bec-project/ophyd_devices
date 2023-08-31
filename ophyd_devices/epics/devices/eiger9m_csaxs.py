@@ -289,6 +289,7 @@ class Eiger9mCsaxs(DetectorBase):
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
+        logger.info("Eiger done")
         return super().unstage()
 
     def arm_acquisition(self) -> None:

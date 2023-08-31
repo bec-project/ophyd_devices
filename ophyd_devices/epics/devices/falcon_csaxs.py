@@ -249,5 +249,5 @@ class FalconCsaxs(Device):
 
 
 if __name__ == "__main__":
-    falcon = FalconCsaxs(name="falcon", prefix="X12SA-SITORO::", sim_mode=True)
+    falcon = FalconCsaxs(name="falcon", prefix="X12SA-SITORO:", sim_mode=True)
     falcon.stage()

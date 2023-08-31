@@ -18,83 +18,10 @@ from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 
 logger = bec_logger.logger
-DEFAULT_EPICSSIGNAL_VALUE = object()
 
 
 class DDGError(Exception):
     pass
-
-
-class DDGConfigSignal(Signal):
-    def get(self):
-        self._readback = self.parent.ddg_configs[self.name]
-        return self._readback
-
-    def put(
-        self,
-        value,
-        connection_timeout=1,
-        callback=None,
-        timeout=1,
-        **kwargs,
-    ):
-        """Using channel access, set the write PV to `value`.
-
-        Keyword arguments are passed on to callbacks
-
-        Parameters
-        ----------
-        value : any
-            The value to set
-        connection_timeout : float, optional
-            If not already connected, allow up to `connection_timeout` seconds
-            for the connection to complete.
-        use_complete : bool, optional
-            Override put completion settings
-        callback : callable
-            Callback for when the put has completed
-        timeout : float, optional
-            Timeout before assuming that put has failed. (Only relevant if
-            put completion is used.)
-        """
-
-        old_value = self.get()
-        timestamp = time.time()
-        self.parent.ddg_configs[self.name] = value
-        super().put(value, timestamp=timestamp, force=True)
-        self._run_subs(
-            sub_type=self.SUB_VALUE,
-            old_value=old_value,
-            value=value,
-            timestamp=timestamp,
-        )
-
-    def describe(self):
-        """Provide schema and meta-data for :meth:`~BlueskyInterface.read`
-
-        This keys in the `OrderedDict` this method returns must match the
-        keys in the `OrderedDict` return by :meth:`~BlueskyInterface.read`.
-
-        This provides schema related information, (ex shape, dtype), the
-        source (ex PV name), and if available, units, limits, precision etc.
-
-        Returns
-        -------
-        data_keys : OrderedDict
-            The keys must be strings and the values must be dict-like
-            with the ``event_model.event_descriptor.data_key`` schema.
-        """
-        if self._readback is DEFAULT_EPICSSIGNAL_VALUE:
-            val = self.get()
-        else:
-            val = self._readback
-        return {
-            self.name: {
-                "source": f"{self.parent.prefix}:{self.name}",
-                "dtype": data_type(val),
-                "shape": data_shape(val),
-            }
-        }
 
 
 class DelayStatic(Device):
@@ -263,15 +190,45 @@ class DelayGeneratorDG645(Device):
         EpicsSignal, "BurstPeriodAI", write_pv="BurstPeriodAO", name="burstperiod", kind=Kind.config
     )
 
-    delay_burst = Component(DDGConfigSignal, name="delay_burst", kind="config")
-    delta_width = Component(DDGConfigSignal, name="delta_width", kind="config")
-    additional_triggers = Component(DDGConfigSignal, name="additional_triggers", kind="config")
-    polarity = Component(DDGConfigSignal, name="polarity", kind="config")
-    amplitude = Component(DDGConfigSignal, name="amplitude", kind="config")
-    offset = Component(DDGConfigSignal, name="offset", kind="config")
-    thres_trig_level = Component(DDGConfigSignal, name="thres_trig_level", kind="config")
-    set_high_on_exposure = Component(DDGConfigSignal, name="set_high_on_exposure", kind="config")
-    set_high_on_stage = Component(DDGConfigSignal, name="set_high_on_stage", kind="config")
+    delay_burst = Component(
+        bec_utils.ConfigSignal, name="delay_burst", kind="config", config_storage_name="ddg_configs"
+    )
+    delta_width = Component(
+        bec_utils.ConfigSignal, name="delta_width", kind="config", config_storage_name="ddg_configs"
+    )
+    additional_triggers = Component(
+        bec_utils.ConfigSignal,
+        name="additional_triggers",
+        kind="config",
+        config_storage_name="ddg_configs",
+    )
+    polarity = Component(
+        bec_utils.ConfigSignal, name="polarity", kind="config", config_storage_name="ddg_configs"
+    )
+    amplitude = Component(
+        bec_utils.ConfigSignal, name="amplitude", kind="config", config_storage_name="ddg_configs"
+    )
+    offset = Component(
+        bec_utils.ConfigSignal, name="offset", kind="config", config_storage_name="ddg_configs"
+    )
+    thres_trig_level = Component(
+        bec_utils.ConfigSignal,
+        name="thres_trig_level",
+        kind="config",
+        config_storage_name="ddg_configs",
+    )
+    set_high_on_exposure = Component(
+        bec_utils.ConfigSignal,
+        name="set_high_on_exposure",
+        kind="config",
+        config_storage_name="ddg_configs",
+    )
+    set_high_on_stage = Component(
+        bec_utils.ConfigSignal,
+        name="set_high_on_stage",
+        kind="config",
+        config_storage_name="ddg_configs",
+    )
 
     def __init__(
         self,
@@ -364,27 +321,6 @@ class DelayGeneratorDG645(Device):
         elif status != "STATUS OK":
             raise DDGError(f"DDG failed to start with status: {status}")
 
-    def _init_ddg_pol_allchannels(self, polarity: int = 1) -> None:
-        """Set Polarity for all channels (including T0) upon init
-        Args:
-            polarity: int | 0 negative, 1 positive defaults to 1
-        """
-        self._set_channels("polarity", polarity)
-
-    def _init_ddg_amp_allchannels(self, amplitude: float = 5) -> None:
-        """Set amplitude for all channels (including T0) upon init
-        Args:
-            amplitude: float | defaults to 5
-        """
-        self._set_channels("amplitude", amplitude)
-
-    def _init_ddg_offset_allchannels(self, offset: float = 0) -> None:
-        """Set offset for all channels (including T0) upon init
-        Args:
-            offset: float | defaults to 0
-        """
-        self._set_channels("offset", offset)
-
     def _set_channels(self, signal: str, value: Any, channels: List = None) -> None:
         if not channels:
             channels = self._all_channels
@@ -402,9 +338,16 @@ class DelayGeneratorDG645(Device):
         self._set_trigger(TriggerSource.SINGLE_SHOT)
 
     def _init_ddg(self) -> None:
-        self._init_ddg_pol_allchannels(self.polarity.get())
-        self._init_ddg_amp_allchannels(self.amplitude.get())
-        self._init_ddg_offset_allchannels(self.offset.get())
+        self._set_channels(
+            "polarity",
+            self.polarity.get(),
+            channels=["channelT0", "channelCD", "channelEF", "channelGH"],
+        )
+        # Set polarity for eiger inverted!
+        self._set_channels("polarity", 0, channels=["channelAB"])
+        self._set_channels("amplitude", self.amplitude.get())
+        self._set_channels("offset", self.offset.get())
+        # Setup reference
         self._set_channels(
             "reference",
             0,
@@ -417,11 +360,8 @@ class DelayGeneratorDG645(Device):
                 [f"channel{self._all_delay_pairs[ii]}.ch2"],
             )
         self._set_trigger(TriggerSource.SINGLE_SHOT)
+        # Set threshold level for ext. pulses
         self.level.set(self.thres_trig_level.get())
-        # invert trigger signal for eiger9m
-        self._set_channels("polarity", 0, channels=["channelAB"])
-
-    # TODO add delta_delay, delta_width, delta triggers!
 
     def stage(self):
         """Trigger the generator by arming to accept triggers"""
