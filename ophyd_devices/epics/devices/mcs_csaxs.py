@@ -91,14 +91,6 @@ class SIS38XX(Device):
     max_channels = Cpt(EpicsSignalRO, "MaxChannels")
 
 
-num_lines = Cpt(
-    bec_utils.ConfigSignal,
-    name="num_lines",
-    kind="config",
-    config_storage_name="mcs_configs",
-)
-
-
 class McsCsaxs(SIS38XX):
     # scaler = Cpt(ScalerCH, "scaler1")
 
@@ -134,6 +126,13 @@ class McsCsaxs(SIS38XX):
     # mca30 = Cpt(EpicsMCARecord, "mca30")
     # mca31 = Cpt(EpicsMCARecord, "mca31")
     # mca32 = Cpt(EpicsMCARecord, "mca32")
+
+    num_lines = Cpt(
+        bec_utils.ConfigSignal,
+        name="num_lines",
+        kind="config",
+        config_storage_name="mcs_configs",
+    )
 
     def __init__(
         self,
@@ -202,38 +201,50 @@ class McsCsaxs(SIS38XX):
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
         self.count_on_start.set(0)
-        self.mca_names = [signal for signal in self.signal_names if signal.startswith("mca")]
+        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
+        self.mca_data = defaultdict(lambda: [])
         for mca in self.mca_names:
             signal = getattr(self, mca)
-            signal.subscribe(self._on_mca_data)
-        self.mca_data = defaultdict(lambda: [])
+            signal.subscribe(self._on_mca_data, run=False)
         self._counter = 0
 
-    def _on_mca_data(self, *args, obj=None, value=None, **kwargs) -> None:
-        self.mca_data[obj.attr_name] = value
-        if len(self.mca_names) == len(self.mca_data) and len(self.mca_data[self.mca_names]) != 0:
-            self._updated = True
-            self.erase_start.set(1)
-            self._send_data_to_bec()
+    def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
+        self.mca_data[obj.attr_name] = kwargs["value"]
+        if len(self.mca_names) != len(self.mca_data):
+            return
+        ref_entry = self.mca_data[self.mca_names[0]]
+        if not ref_entry:
             self.mca_data = defaultdict(lambda: [])
-            self.counter += 1
-            if self.counter == self.num_lines:
-                self._acquisition_done = True
+            return
+        if isinstance(ref_entry, list) and not ref_entry:
+            return
+
+        self._updated = True
+        self.erase_start.set(1)
+        self._send_data_to_bec()
+        self.mca_data = defaultdict(lambda: [])
+        self.counter += 1
+        if self.counter == self.num_lines.get():
+            self._acquisition_done = True
 
     def _send_data_to_bec(self) -> None:
+        if self.scaninfo.scan_msg is None:
+            return
         metadata = self.scaninfo.scan_msg.metadata
         metadata.update(
             {
                 "async_update": "append",
-                "num_lines": self.num_lines,
+                "num_lines": self.num_lines.get(),
             }
         )
         msg = BECMessage.DeviceMessage(
             signals=dict(self.mca_data), metadata=self.scaninfo.scan_msg.metadata
         ).dumps()
         self._producer.xadd(
-            topics=MessageEndpoints._device_async_readback(self.name),
-            msg=msg,
+            topic=MessageEndpoints.device_async_readback(
+                scanID=self.scaninfo.scanID, device=self.name
+            ),
+            msg={"data": msg},
             expire=self._stream_ttl,
         )
 
@@ -281,13 +292,12 @@ class McsCsaxs(SIS38XX):
     #         readback = f"{getattr(self, signal).name}_spectrum"
     #         return getattr(self, signal).read()[readback]["value"]
 
-    def _start_readout_loop(self) -> None:
-        self._readout_lines()
-        # stop acquisition and clean up data
-        self.stop_all.set(1)
-        self.erase_all.set(1)
-        self._acquisition_done = True
-        self._updated = False
+    # def _start_readout_loop(self) -> None:
+    #     # stop acquisition and clean up data
+    #     self.stop_all.set(1)
+    #     self.erase_all.set(1)
+    #     self._acquisition_done = True
+    #     self._updated = False
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
@@ -314,8 +324,6 @@ class McsCsaxs(SIS38XX):
     def unstage(self) -> List[object]:
         """unstage"""
         logger.info("Waiting for mcs to finish acquisition")
-        # start readout in thread?
-        self._start_readout_loop()
         while not self._acquisition_done:
             # monitor signal instead?
             if self._stopped:

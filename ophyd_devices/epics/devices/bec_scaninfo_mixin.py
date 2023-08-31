@@ -7,6 +7,7 @@ class BecScaninfoMixin:
     def __init__(self, device_manager: DeviceManagerBase = None, sim_mode=False) -> None:
         self.device_manager = device_manager
         self.sim_mode = sim_mode
+        self.scan_msg = None
         self.bec_info_msg = {
             "RID": "mockrid",
             "queueID": "mockqueuid",
