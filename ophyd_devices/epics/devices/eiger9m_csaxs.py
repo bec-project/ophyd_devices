@@ -138,6 +138,7 @@ class Eiger9mCsaxs(DetectorBase):
             self.device_manager = bec_utils.MockDeviceManager()
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         # TODO
+        self.filepath = ""
         self.scaninfo.username = "e21206"
         self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.filewriter = FileWriterMixin(self.service_cfg)

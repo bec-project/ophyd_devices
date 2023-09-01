@@ -8,6 +8,7 @@ class BecScaninfoMixin:
         self.device_manager = device_manager
         self.sim_mode = sim_mode
         self.scan_msg = None
+        self.scanID = None
         self.bec_info_msg = {
             "RID": "mockrid",
             "queueID": "mockqueuid",
@@ -27,6 +28,7 @@ class BecScaninfoMixin:
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         if not self.sim_mode:
+            # TODO what if no scan info is there yet!
             msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
             return BECMessage.ScanStatusMessage.loads(msg)
 

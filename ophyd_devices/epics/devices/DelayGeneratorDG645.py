@@ -190,6 +190,7 @@ class DelayGeneratorDG645(Device):
         EpicsSignal, "BurstPeriodAI", write_pv="BurstPeriodAO", name="burstperiod", kind=Kind.config
     )
 
+    # bec_utils device ConfigSignal
     delay_burst = Component(
         bec_utils.ConfigSignal, name="delay_burst", kind="config", config_storage_name="ddg_configs"
     )

@@ -162,7 +162,9 @@ class McsCsaxs(SIS38XX):
         )
 
         if device_manager is None and not sim_mode:
-            raise MCSError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise MCSError(
+                "Add DeviceManager to initialization or init with sim_mode=True"
+            )
 
         self.name = name
         self._stream_ttl = 1800
@@ -179,7 +181,9 @@ class McsCsaxs(SIS38XX):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         # TODO
         self.scaninfo.username = "e21206"
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+        self.service_cfg = {
+            "base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
+        }
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._stopped = False
         self._acquisition_done = False
@@ -201,7 +205,9 @@ class McsCsaxs(SIS38XX):
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
         self.count_on_start.set(0)
-        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
+        self.mca_names = [
+            signal for signal in self.component_names if signal.startswith("mca")
+        ]
         self.mca_data = defaultdict(lambda: [])
         for mca in self.mca_names:
             signal = getattr(self, mca)
@@ -220,12 +226,14 @@ class McsCsaxs(SIS38XX):
             return
 
         self._updated = True
-        self.erase_start.set(1)
-        self._send_data_to_bec()
-        self.mca_data = defaultdict(lambda: [])
         self.counter += 1
         if self.counter == self.num_lines.get():
             self._acquisition_done = True
+            self._send_data_to_bec()
+            self.stop_all.put(1, use_complete=False)
+        self.erase_start.set(1)
+        self._send_data_to_bec()
+        self.mca_data = defaultdict(lambda: [])
 
     def _send_data_to_bec(self) -> None:
         if self.scaninfo.scan_msg is None:
@@ -255,7 +263,9 @@ class McsCsaxs(SIS38XX):
     def _set_acquisition_params(self) -> None:
         n_points = self.scaninfo.num_frames / int(self.num_lines.get())
         if n_points > 10000:
-            raise MCSError(f"Requested number of points {n_points} exceeds hardware limit of 10000")
+            raise MCSError(
+                f"Requested number of points {n_points} exceeds hardware limit of 10000"
+            )
         self.num_use_all.set(n_points)
         self.preset_real.set(0)
 
@@ -329,16 +339,6 @@ class McsCsaxs(SIS38XX):
             if self._stopped:
                 break
             time.sleep(0.005)
-
-        # Message to BEC
-        # state = True
-
-        # msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        # self._producer.set_and_publish(
-        #     MessageEndpoints.public_file(self.metadata["scanID"], self.name),
-        #     msg.dumps(),
-        # )
-
         self._acquisition_done = False
         self._stopped = False
         logger.info("mcs done")
