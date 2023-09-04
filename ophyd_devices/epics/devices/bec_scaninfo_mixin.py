@@ -4,7 +4,9 @@ from bec_lib.core import DeviceManagerBase, BECMessage, MessageEndpoints
 
 
 class BecScaninfoMixin:
-    def __init__(self, device_manager: DeviceManagerBase = None, sim_mode=False) -> None:
+    def __init__(
+        self, device_manager: DeviceManagerBase = None, sim_mode=False
+    ) -> None:
         self.device_manager = device_manager
         self.sim_mode = sim_mode
         self.scan_msg = None
@@ -18,6 +20,7 @@ class BecScaninfoMixin:
             "readout_time": 2e-3,
             "scan_type": "fly",
             "num_lines": 10,
+            "frames_per_trigger": 1,
         }
 
     def get_bec_info_msg(self) -> None:
@@ -54,7 +57,8 @@ class BecScaninfoMixin:
         self.scan_number = scan_msg.content["info"]["scan_number"]
         self.exp_time = scan_msg.content["info"]["exp_time"]
         self.num_frames = (
-            scan_msg.content["info"]["num_points"] * scan_msg.content["info"]["frames_per_trigger"]
+            scan_msg.content["info"]["num_points"]
+            * scan_msg.content["info"]["frames_per_trigger"]
         )
         self.scan_type = scan_msg.content["info"].get("scan_type", "step")
         self.readout_time = scan_msg.content["info"]["readout_time"]

@@ -152,7 +152,10 @@ class McsCsaxs(SIS38XX):
             f"{name}_num_lines": 1,
         }
         if mcs_config is not None:
-            [self.mcs_config.update({f"{name}_{key}": value}) for key, value in mcs_config.items()]
+            [
+                self.mcs_config.update({f"{name}_{key}": value})
+                for key, value in mcs_config.items()
+            ]
 
         super().__init__(
             prefix=prefix,
@@ -165,7 +168,9 @@ class McsCsaxs(SIS38XX):
         )
 
         if device_manager is None and not sim_mode:
-            raise MCSError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise MCSError(
+                "Add DeviceManager to initialization or init with sim_mode=True"
+            )
 
         self.name = name
         self._stream_ttl = 1800
@@ -182,7 +187,9 @@ class McsCsaxs(SIS38XX):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         # TODO
         self.scaninfo.username = "e21206"
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+        self.service_cfg = {
+            "base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
+        }
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._stopped = False
         self._acquisition_done = False
@@ -203,8 +210,11 @@ class McsCsaxs(SIS38XX):
         self.mux_output.set(5)
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
+        self.output_polarity.set(1)
         self.count_on_start.set(0)
-        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
+        self.mca_names = [
+            signal for signal in self.component_names if signal.startswith("mca")
+        ]
         self.mca_data = defaultdict(lambda: [])
         for mca in self.mca_names:
             signal = getattr(self, mca)
@@ -212,24 +222,28 @@ class McsCsaxs(SIS38XX):
         self._counter = 0
 
     def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
-        self.mca_data[obj.attr_name] = kwargs["value"]
+        if not isinstance(kwargs["value"], (list, np.ndarray)):
+            return
+        self.mca_data[obj.attr_name] = kwargs["value"][1:]
         if len(self.mca_names) != len(self.mca_data):
             return
-        ref_entry = self.mca_data[self.mca_names[0]]
-        if not ref_entry:
-            self.mca_data = defaultdict(lambda: [])
-            return
-        if isinstance(ref_entry, list) and not ref_entry:
-            return
+        # ref_entry = self.mca_data[self.mca_names[0]]
+        # if not ref_entry:
+        #     self.mca_data = defaultdict(lambda: [])
+        #     return
+        # if isinstance(ref_entry, list) and (ref_entry > 0):
+        #     return
 
         self._updated = True
-        self.counter += 1
-        if self.counter == self.num_lines.get():
+        self._counter += 1
+        if self._counter == self.num_lines.get():
             self._acquisition_done = True
             self._send_data_to_bec()
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
             self.erase_all.set(1)
+            # TODO how to make card wait for sure!
+            self._counter = 0
             return
         self.erase_start.set(1)
         self._send_data_to_bec()
@@ -245,6 +259,7 @@ class McsCsaxs(SIS38XX):
                 "num_lines": self.num_lines.get(),
             }
         )
+        logger.info(f"{self.mca_data}")
         msg = BECMessage.DeviceMessage(
             signals=dict(self.mca_data), metadata=self.scaninfo.scan_msg.metadata
         ).dumps()
@@ -262,9 +277,11 @@ class McsCsaxs(SIS38XX):
 
     def _set_acquisition_params(self) -> None:
         n_points = self.scaninfo.num_frames / int(self.num_lines.get())
-        if n_points > 10000:
-            raise MCSError(f"Requested number of points {n_points} exceeds hardware limit of 10000")
-        self.num_use_all.set(n_points)
+        if n_points > 9999:
+            raise MCSError(
+                f"Requested number of points {n_points+1} exceeds hardware limit of 10000 (n+1)"
+            )
+        self.num_use_all.set(n_points + 1)
         self.preset_real.set(0)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
@@ -283,29 +300,6 @@ class McsCsaxs(SIS38XX):
 
     def _force_readout_mcs_card(self) -> None:
         self.read_all.put(1, use_complete=False)
-
-    # TODO does not work anymore with new mca signals
-    # def readout_data(self) -> List[List]:
-    #     """Manual readout of mca slots, returns list of lists"""
-    #     self._force_readout_mcs_card()
-    #     readback = []
-    #     for ii in range(1, int(self.mux_output.read()[self.mux_output.name]["value"]) + 1):
-    #         readback.append(self._readout_mca_channels(ii))
-    #     return readback
-
-    # def _readout_mca_channels(self, num: int) -> List:
-    #     """readout of single mca channel"""
-    #     signal = f"mca{num}"
-    #     if signal in self.component_names:
-    #         readback = f"{getattr(self, signal).name}_spectrum"
-    #         return getattr(self, signal).read()[readback]["value"]
-
-    # def _start_readout_loop(self) -> None:
-    #     # stop acquisition and clean up data
-    #     self.stop_all.set(1)
-    #     self.erase_all.set(1)
-    #     self._acquisition_done = True
-    #     self._updated = False
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
@@ -348,7 +342,7 @@ class McsCsaxs(SIS38XX):
         Start: start_all
         Erase/Start: erase_start
         """
-        self.counter = 0
+        self._counter = 0
         self.erase_start.set(1)
         # self.start_all.set(1)
 
@@ -360,6 +354,7 @@ class McsCsaxs(SIS38XX):
         # self.erase_all.set(1)
         self._stopped = True
         self._acquisition_done = True
+        self._counter = 0
         super().stop(success=success)
 
 
@@ -367,3 +362,4 @@ class McsCsaxs(SIS38XX):
 if __name__ == "__main__":
     mcs = McsCsaxs(name="mcs", prefix="X12SA-MCS:", sim_mode=True)
     mcs.stage()
+    mcs.unstage()

@@ -126,7 +126,9 @@ class Eiger9mCsaxs(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise EigerError(
+                "Add DeviceManager to initialization or init with sim_mode=True"
+            )
 
         self.name = name
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
@@ -140,7 +142,9 @@ class Eiger9mCsaxs(DetectorBase):
         # TODO
         self.filepath = ""
         self.scaninfo.username = "e21206"
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+        self.service_cfg = {
+            "base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
+        }
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.reduce_readout = 1e-3  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
@@ -168,7 +172,9 @@ class Eiger9mCsaxs(DetectorBase):
                 f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
             )
         cfg.update({cfg_key: value})
-        logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
+        logger.info(
+            f"Updated std_daq config for key {cfg_key} from {old_value} to {value}"
+        )
 
     def _init_standard_daq(self) -> None:
         self.std_rest_server_url = "http://xbl-daq-29:5000"
@@ -180,9 +186,12 @@ class Eiger9mCsaxs(DetectorBase):
             time.sleep(0.1)
             timeout = timeout + 0.1
             if timeout > 2:
-                raise EigerError(
-                    f"Std client not in READY state, returns: {self.std_client.get_status()}"
-                )
+                if not self.std_client.get_status()["state"]:
+                    raise EigerError(
+                        f"Std client not in READY state, returns: {self.std_client.get_status()}"
+                    )
+                else:
+                    return
 
     def _prep_det(self) -> None:
         self._set_det_threshold()
@@ -198,7 +207,9 @@ class Eiger9mCsaxs(DetectorBase):
         energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
         if setp_energy != energy:
             self.cam.beam_energy.set(setp_energy)  # .wait()
-        threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
+        threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name][
+            "value"
+        ]
         if not np.isclose(setp_energy / 2, threshold, rtol=0.05):
             self.cam.threshold_energy.set(setp_energy / 2)  # .wait()
 
@@ -225,6 +236,7 @@ class Eiger9mCsaxs(DetectorBase):
         self.filepath = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, "eiger.h5", 1000, 5, True
         )
+        # self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
         self.std_client.start_writer_async(
             {"output_file": self.filepath, "n_images": self.scaninfo.num_frames}
@@ -259,7 +271,9 @@ class Eiger9mCsaxs(DetectorBase):
         self.arm_acquisition()
         logger.info("Waiting for detector to be armed")
         while True:
-            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
+            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name][
+                "value"
+            ]
             if det_ctrl == int(DetectorState.RUNNING):
                 break
             time.sleep(0.005)
@@ -286,7 +300,9 @@ class Eiger9mCsaxs(DetectorBase):
         # Message to BEC
         state = True
 
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
+        msg = BECMessage.FileMessage(
+            file_path=self.filepath, done=True, successful=state
+        )
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
