@@ -49,6 +49,9 @@ class GalilController(Controller):
         "galil_show_all",
         "socket_put_and_receive",
         "socket_put_confirmed",
+        "sgalil_reference",
+        "fly_grid_scan",
+        "read_encoder_position",
     ]
 
     def __init__(
@@ -152,7 +155,7 @@ class GalilController(Controller):
     def stop_all_axes(self) -> str:
         # return self.socket_put_and_receive(f"XQ#STOP,1")
         # Command stops all threads and motors!
-        return self.socket_put_and_receive(f"AB")
+        return self.socket_put_and_receive(f"ST")
 
     def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
@@ -268,14 +271,23 @@ class GalilController(Controller):
 
         """
         #
-        axes_referenced = self.controller.axis_is_referenced()
+        axes_referenced = self.axis_is_referenced()
+        sign_y = self._axis[ord("c") - 97].sign
+        sign_x = self._axis[ord("e") - 97].sign
         # Check limits
         # TODO check sign of stage, or not necessary
         check_values = [start_y, end_y, start_x, end_x]
         for val in check_values:
             self.check_value(val)
 
-        speed = np.abs(end_y - start_y) / ((interval_y) * exp_time + (interval_y - 1) * readtime)
+        start_x *= sign_x
+        end_x *= sign_x
+        start_y *= sign_y
+        end_y *= sign_y
+
+        speed = np.abs(end_y - start_y) / (
+            (interval_y) * exp_time + (interval_y - 1) * readtime
+        )
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
@@ -287,7 +299,9 @@ class GalilController(Controller):
 
         # Hard coded to maximum offset of 0.1mm to avoid long motions.
         self.socket_put_and_receive(f"off={(0):f}")
-        self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
+        self.socket_put_and_receive(
+            f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}"
+        )
         self.socket_put_and_receive(
             f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
         )
@@ -307,7 +321,9 @@ class GalilController(Controller):
         val_axis4 = []  # x axis
         while self.is_thread_active(thread_id):
             posct = int(self.socket_put_and_receive(f"MGposct").strip().split(".")[0])
-            logger.info(f"SGalil is scanning - latest enconder position {posct+1} from {n_samples}")
+            logger.info(
+                f"SGalil is scanning - latest enconder position {posct+1} from {n_samples}"
+            )
             time.sleep(1)
             if posct > last_readout:
                 positions = self.read_encoder_position(last_readout, posct)
@@ -318,7 +334,9 @@ class GalilController(Controller):
             time.sleep(1)
         # Readout of last positions after scan finished
         posct = int(self.socket_put_and_receive(f"MGposct").strip().split(".")[0])
-        logger.info(f"SGalil is scanning - latest enconder position {posct} from {n_samples}")
+        logger.info(
+            f"SGalil is scanning - latest enconder position {posct} from {n_samples}"
+        )
         if posct > last_readout:
             positions = self.read_encoder_position(last_readout, posct)
             val_axis4.extend(positions[0])
@@ -330,7 +348,9 @@ class GalilController(Controller):
         val_axis2 = []  # y axis
         val_axis4 = []  # x axis
         for ii in range(fromval, toval + 1):
-            rts = self.socket_put_and_receive(f"MGaposavg[{ii%2000}]*10,cposavg[{ii%2000}]*10")
+            rts = self.socket_put_and_receive(
+                f"MGaposavg[{ii%2000}]*10,cposavg[{ii%2000}]*10"
+            )
             if rts == ":":
                 val_axis4.append(rts)
                 val_axis2.append(rts)
@@ -369,11 +389,15 @@ class GalilReadbackSignal(GalilSignalRO):
         """
         if self.parent.axis_Id_numeric == 2:
             current_pos = float(
-                self.controller.socket_put_and_receive(f"MG _TP{self.parent.axis_Id}/mm")
+                self.controller.socket_put_and_receive(
+                    f"MG _TP{self.parent.axis_Id}/mm"
+                )
             )
         elif self.parent.axis_Id_numeric == 4:
             # hardware controller readback from axis 4 is on axis 0, A instead of E
-            current_pos = float(self.controller.socket_put_and_receive(f"MG _TP{'A'}/mm"))
+            current_pos = float(
+                self.controller.socket_put_and_receive(f"MG _TP{'A'}/mm")
+            )
         current_pos *= self.parent.sign
         return current_pos
 
@@ -419,11 +443,17 @@ class GalilSetpointSignal(GalilSignalBase):
             time.sleep(0.1)
 
         if self.parent.axis_Id_numeric == 2:
-            self.controller.socket_put_confirmed(f"PA{self.parent.axis_Id}={target_val:.4f}*mm")
+            self.controller.socket_put_confirmed(
+                f"PA{self.parent.axis_Id}={target_val:.4f}*mm"
+            )
             self.controller.socket_put_and_receive(f"BG{self.parent.axis_Id}")
         elif self.parent.axis_Id_numeric == 4:
-            self.controller.socket_put_confirmed(f"targ{self.parent.axis_Id}={target_val:.4f}")
-            self.controller.socket_put_and_receive(f"XQ#POSE,{self.parent.axis_Id_numeric}")
+            self.controller.socket_put_confirmed(
+                f"targ{self.parent.axis_Id}={target_val:.4f}"
+            )
+            self.controller.socket_put_and_receive(
+                f"XQ#POSE,{self.parent.axis_Id_numeric}"
+            )
         while self.controller.is_thread_active(0):
             time.sleep(0.005)
 
@@ -432,7 +462,9 @@ class GalilMotorIsMoving(GalilSignalRO):
     @threadlocked
     def _socket_get(self):
         if self.parent.axis_Id_numeric == 2:
-            ret = self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
+            ret = self.controller.is_axis_moving(
+                self.parent.axis_Id, self.parent.axis_Id_numeric
+            )
             return ret
         if self.parent.axis_Id_numeric == 4:
             # Motion signal from axis 4 is mapped to axis 5
@@ -470,8 +502,12 @@ class SGalilMotor(Device, PositionerBase):
         kind="hinted",
     )
     user_setpoint = Cpt(GalilSetpointSignal, signal_name="setpoint")
-    motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
-    all_axes_referenced = Cpt(GalilAxesReferenced, signal_name="all_axes_referenced", kind="config")
+    motor_is_moving = Cpt(
+        GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal"
+    )
+    all_axes_referenced = Cpt(
+        GalilAxesReferenced, signal_name="all_axes_referenced", kind="config"
+    )
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
     low_limit_travel = Cpt(Signal, value=0, kind="omitted")
 
@@ -652,7 +688,9 @@ class SGalilMotor(Device, PositionerBase):
     def axis_Id_numeric(self, val):
         if isinstance(val, int):
             if val not in [2, 4]:
-                raise ValueError(f"Numeric value {val} is not supported, it must be either 2 or 4.")
+                raise ValueError(
+                    f"Numeric value {val} is not supported, it must be either 2 or 4."
+                )
             self._axis_Id_alpha = val
             self._axis_Id_numeric = (chr(val + 97)).capitalize()
         else:
@@ -676,7 +714,11 @@ if __name__ == "__main__":
     else:
         from ophyd_devices.utils.socket import SocketMock
 
-        samx = SGalilMotor("E", name="samx", host="129.129.122.26", port=23, socket_cls=SocketMock)
-        samy = SGalilMotor("C", name="samy", host="129.129.122.26", port=23, socket_cls=SocketMock)
+        samx = SGalilMotor(
+            "E", name="samx", host="129.129.122.26", port=23, socket_cls=SocketMock
+        )
+        samy = SGalilMotor(
+            "C", name="samy", host="129.129.122.26", port=23, socket_cls=SocketMock
+        )
 
         samx.controller.galil_show_all()

@@ -131,7 +131,7 @@ class McsCsaxs(SIS38XX):
         bec_utils.ConfigSignal,
         name="num_lines",
         kind="config",
-        config_storage_name="mcs_configs",
+        config_storage_name="mcs_config",
     )
 
     def __init__(
@@ -145,11 +145,15 @@ class McsCsaxs(SIS38XX):
         parent=None,
         device_manager=None,
         sim_mode=False,
+        mcs_config = None,
         **kwargs,
     ):
-        self.mcs_configs = {
+
+        self.mcs_config = {
             f"{name}_num_lines": 1,
         }
+        if mcs_config is not None:
+            [self.mcs_config.update({f'{name}_{key}' : value}) for key, value in mcs_config.items()]
 
         super().__init__(
             prefix=prefix,
@@ -231,6 +235,9 @@ class McsCsaxs(SIS38XX):
             self._acquisition_done = True
             self._send_data_to_bec()
             self.stop_all.put(1, use_complete=False)
+            self._send_data_to_bec()
+            self.erase_all.set(1)
+            return
         self.erase_start.set(1)
         self._send_data_to_bec()
         self.mca_data = defaultdict(lambda: [])
@@ -328,7 +335,7 @@ class McsCsaxs(SIS38XX):
                 break
             time.sleep(0.005)
         logger.info("mcs is ready and running")
-
+        time.sleep(5)
         return super().stage()
 
     def unstage(self) -> List[object]:
@@ -361,6 +368,7 @@ class McsCsaxs(SIS38XX):
         self.stop_all.set(1)
         # self.erase_all.set(1)
         self._stopped = True
+        self._acquisition_done = True
         super().stop(success=success)
 
 

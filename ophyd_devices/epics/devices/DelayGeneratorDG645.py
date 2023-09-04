@@ -42,10 +42,18 @@ class DelayStatic(Device):
         kind=Kind.config,
     )
     amplitude = Component(
-        EpicsSignal, "OutputAmpAI", write_pv="OutputAmpAO", name="amplitude", kind=Kind.config
+        EpicsSignal,
+        "OutputAmpAI",
+        write_pv="OutputAmpAO",
+        name="amplitude",
+        kind=Kind.config,
     )
     offset = Component(
-        EpicsSignal, "OutputOffsetAI", write_pv="OutputOffsetAO", name="offset", kind=Kind.config
+        EpicsSignal,
+        "OutputOffsetAI",
+        write_pv="OutputOffsetAO",
+        name="offset",
+        kind=Kind.config,
     )
 
 
@@ -53,7 +61,9 @@ class DummyPositioner(PVPositioner):
     setpoint = Component(EpicsSignal, "DelayAO", put_complete=True, kind=Kind.config)
     readback = Component(EpicsSignalRO, "DelayAI", kind=Kind.config)
     done = Component(Signal, value=1)
-    reference = Component(EpicsSignal, "ReferenceMO", put_complete=True, kind=Kind.config)
+    reference = Component(
+        EpicsSignal, "ReferenceMO", put_complete=True, kind=Kind.config
+    )
 
 
 class DelayPair(PseudoPositioner):
@@ -83,12 +93,16 @@ class DelayPair(PseudoPositioner):
     @pseudo_position_argument
     def forward(self, pseudo_pos):
         """Run a forward (pseudo -> real) calculation"""
-        return self.RealPosition(ch1=pseudo_pos.delay, ch2=pseudo_pos.delay + pseudo_pos.width)
+        return self.RealPosition(
+            ch1=pseudo_pos.delay, ch2=pseudo_pos.delay + pseudo_pos.width
+        )
 
     @real_position_argument
     def inverse(self, real_pos):
         """Run an inverse (real -> pseudo) calculation"""
-        return self.PseudoPosition(delay=real_pos.ch1, width=real_pos.ch2 - real_pos.ch1)
+        return self.PseudoPosition(
+            delay=real_pos.ch1, width=real_pos.ch2 - real_pos.ch1
+        )
 
 
 class TriggerSource(int, enum.Enum):
@@ -124,6 +138,14 @@ class DelayGeneratorDG645(Device):
     electronics (30V needs quite some power). This is not implemented in the
     current device
     """
+
+    USER_ACCESS = [
+        "set_channels",
+        "_set_trigger",
+        "burst_enable",
+        "burst_disable",
+        "reload_config",
+    ]
 
     state = Component(EpicsSignalRO, "EventStatusLI", name="status_register")
     status = Component(EpicsSignalRO, "StatusSI", name="status")
@@ -172,63 +194,107 @@ class DelayGeneratorDG645(Device):
         name="trigger_rate",
         kind=Kind.config,
     )
-    trigger_shot = Component(EpicsSignal, "TriggerDelayBO", name="trigger_shot", kind="config")
+    trigger_shot = Component(
+        EpicsSignal, "TriggerDelayBO", name="trigger_shot", kind="config"
+    )
     # Burst mode
     burstMode = Component(
-        EpicsSignal, "BurstModeBI", write_pv="BurstModeBO", name="burstmode", kind=Kind.config
+        EpicsSignal,
+        "BurstModeBI",
+        write_pv="BurstModeBO",
+        name="burstmode",
+        kind=Kind.config,
     )
     burstConfig = Component(
-        EpicsSignal, "BurstConfigBI", write_pv="BurstConfigBO", name="burstconfig", kind=Kind.config
+        EpicsSignal,
+        "BurstConfigBI",
+        write_pv="BurstConfigBO",
+        name="burstconfig",
+        kind=Kind.config,
     )
     burstCount = Component(
-        EpicsSignal, "BurstCountLI", write_pv="BurstCountLO", name="burstcount", kind=Kind.config
+        EpicsSignal,
+        "BurstCountLI",
+        write_pv="BurstCountLO",
+        name="burstcount",
+        kind=Kind.config,
     )
     burstDelay = Component(
-        EpicsSignal, "BurstDelayAI", write_pv="BurstDelayAO", name="burstdelay", kind=Kind.config
+        EpicsSignal,
+        "BurstDelayAI",
+        write_pv="BurstDelayAO",
+        name="burstdelay",
+        kind=Kind.config,
     )
     burstPeriod = Component(
-        EpicsSignal, "BurstPeriodAI", write_pv="BurstPeriodAO", name="burstperiod", kind=Kind.config
+        EpicsSignal,
+        "BurstPeriodAI",
+        write_pv="BurstPeriodAO",
+        name="burstperiod",
+        kind=Kind.config,
     )
 
-    # bec_utils device ConfigSignal
     delay_burst = Component(
-        bec_utils.ConfigSignal, name="delay_burst", kind="config", config_storage_name="ddg_configs"
+        bec_utils.ConfigSignal,
+        name="delay_burst",
+        kind="config",
+        config_storage_name="ddg_config",
     )
+
     delta_width = Component(
-        bec_utils.ConfigSignal, name="delta_width", kind="config", config_storage_name="ddg_configs"
+        bec_utils.ConfigSignal,
+        name="delta_width",
+        kind="config",
+        config_storage_name="ddg_config",
     )
+
     additional_triggers = Component(
         bec_utils.ConfigSignal,
         name="additional_triggers",
         kind="config",
-        config_storage_name="ddg_configs",
+        config_storage_name="ddg_config",
     )
+
     polarity = Component(
-        bec_utils.ConfigSignal, name="polarity", kind="config", config_storage_name="ddg_configs"
+        bec_utils.ConfigSignal,
+        name="polarity",
+        kind="config",
+        config_storage_name="ddg_config",
     )
+
     amplitude = Component(
-        bec_utils.ConfigSignal, name="amplitude", kind="config", config_storage_name="ddg_configs"
+        bec_utils.ConfigSignal,
+        name="amplitude",
+        kind="config",
+        config_storage_name="ddg_config",
     )
+
     offset = Component(
-        bec_utils.ConfigSignal, name="offset", kind="config", config_storage_name="ddg_configs"
+        bec_utils.ConfigSignal,
+        name="offset",
+        kind="config",
+        config_storage_name="ddg_config",
     )
+
     thres_trig_level = Component(
         bec_utils.ConfigSignal,
         name="thres_trig_level",
         kind="config",
-        config_storage_name="ddg_configs",
+        config_storage_name="ddg_config",
     )
+
     set_high_on_exposure = Component(
         bec_utils.ConfigSignal,
         name="set_high_on_exposure",
         kind="config",
-        config_storage_name="ddg_configs",
+        config_storage_name="ddg_config",
     )
+
     set_high_on_stage = Component(
         bec_utils.ConfigSignal,
         name="set_high_on_stage",
         kind="config",
-        config_storage_name="ddg_configs",
+        config_storage_name="ddg_config",
     )
 
     def __init__(
@@ -242,6 +308,7 @@ class DelayGeneratorDG645(Device):
         parent=None,
         device_manager=None,
         sim_mode=False,
+        ddg_config = None,
         **kwargs,
     ):
         """_summary_
@@ -259,11 +326,11 @@ class DelayGeneratorDG645(Device):
             amplitude (_type_, optional): _description_. Defaults to None.
             offset (_type_, optional): _description_. Defaults to None.
             thres_trig_level (_type_, optional): _description_. Defaults to None.
-            delta_delay (_type_, float): Add delay for triggering in software trigger mode to allow fast shutter to open. Defaults to 0.
+            delay_burst (_type_, float): Add delay for triggering in software trigger mode to allow fast shutter to open. Defaults to 0.
             delta_width (_type_, float): Add width to fast shutter signal to make sure its open during acquisition. Defaults to 0.
             delta_triggers (_type_, int): Add additional triggers to burst mode (mcs card needs +1 triggers per line). Defaults to 0.
         """
-        self.ddg_configs = {
+        self.ddg_config = {
             f"{name}_delay_burst": 0,
             f"{name}_delta_width": 0,
             f"{name}_additional_triggers": 0,
@@ -274,6 +341,8 @@ class DelayGeneratorDG645(Device):
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
         }
+        if ddg_config is not None:
+            [self.ddg_config.update({f'{name}_{key}' : value}) for key, value in ddg_config.items()]
         super().__init__(
             prefix=prefix,
             name=name,
@@ -284,7 +353,9 @@ class DelayGeneratorDG645(Device):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise DDGError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise DDGError(
+                "Add DeviceManager to initialization or init with sim_mode=True"
+            )
         self.device_manager = device_manager
         if not sim_mode:
             self._producer = self.device_manager.producer
@@ -292,10 +363,17 @@ class DelayGeneratorDG645(Device):
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self._all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
+        self._all_channels = [
+            "channelT0",
+            "channelAB",
+            "channelCD",
+            "channelEF",
+            "channelGH",
+        ]
         self._all_delay_pairs = ["AB", "CD", "EF", "GH"]
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
-        self._init_ddg()
+        logger.info(f'Current polarity value {self.polarity.get()}')
+        self.reload_config()
         self._ddg_is_okay()
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
@@ -322,7 +400,7 @@ class DelayGeneratorDG645(Device):
         elif status != "STATUS OK":
             raise DDGError(f"DDG failed to start with status: {status}")
 
-    def _set_channels(self, signal: str, value: Any, channels: List = None) -> None:
+    def set_channels(self, signal: str, value: Any, channels: List = None) -> None:
         if not channels:
             channels = self._all_channels
         for chname in channels:
@@ -338,26 +416,29 @@ class DelayGeneratorDG645(Device):
     def _cleanup_ddg(self) -> None:
         self._set_trigger(TriggerSource.SINGLE_SHOT)
 
-    def _init_ddg(self) -> None:
-        self._set_channels(
+    def reload_config(self) -> None:
+        self.set_channels(
             "polarity",
             self.polarity.get(),
-            channels=["channelT0", "channelCD", "channelEF", "channelGH"],
+            channels=["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"],
         )
         # Set polarity for eiger inverted!
-        self._set_channels("polarity", 0, channels=["channelAB"])
-        self._set_channels("amplitude", self.amplitude.get())
-        self._set_channels("offset", self.offset.get())
+        # self.set_channels("polarity", 0, channels=["channelAB"])
+        self.set_channels("amplitude", self.amplitude.get())
+        self.set_channels("offset", self.offset.get())
         # Setup reference
-        self._set_channels(
+        self.set_channels(
             "reference",
             0,
-            [f"channel{self._all_delay_pairs[ii]}.ch1" for ii in range(len(self._all_delay_pairs))],
+            [
+                f"channel{self._all_delay_pairs[ii]}.ch1"
+                for ii in range(len(self._all_delay_pairs))
+            ],
         )
         for ii in range(len(self._all_delay_pairs)):
-            self._set_channels(
+            self.set_channels(
                 "reference",
-                2 * ii + 1,
+                0,
                 [f"channel{self._all_delay_pairs[ii]}.ch2"],
             )
         self._set_trigger(TriggerSource.SINGLE_SHOT)
@@ -374,10 +455,10 @@ class DelayGeneratorDG645(Device):
             delay_burst = self.delay_burst.get()
             num_burst_cycle = 1 + self.additional_triggers.get()
             # set parameters in DDG
-            self.burstEnable(num_burst_cycle, delay_burst, exp_time, config="first")
-            self._set_channels("delay", 0)
+            self.burst_enable(num_burst_cycle, delay_burst, exp_time, config="first")
+            self.set_channels("delay", 0)
             # Set burst length to half of the experimental time!
-            self._set_channels("width", exp_time)
+            self.set_channels("width", exp_time)
         elif self.scaninfo.scan_type == "fly":
             # Prepare FSH DDG
             if self.set_high_on_exposure.get():
@@ -393,22 +474,28 @@ class DelayGeneratorDG645(Device):
                 # self.additional_triggers should be 0 for self.set_high_on_exposure or remove here fully..
                 num_burst_cycle = 1 + self.additional_triggers.get()
                 # set parameters in DDG
-                self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
-                self._set_channels("delay", 0)
+                self.burst_enable(
+                    num_burst_cycle, delay_burst, total_exposure, config="first"
+                )
+                self.set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self._set_channels("width", exp_time)
+                self.set_channels("width", exp_time)
             else:
                 # define parameters
                 self._set_trigger(TriggerSource.SINGLE_SHOT)
                 exp_time = self.delta_width.get() + self.scaninfo.exp_time
                 total_exposure = exp_time + self.scaninfo.readout_time
                 delay_burst = self.delay_burst.get()
-                num_burst_cycle = self.scaninfo.num_frames + self.additional_triggers.get()
+                num_burst_cycle = (
+                    self.scaninfo.num_frames + self.additional_triggers.get()
+                )
                 # set parameters in DDG
-                self.burstEnable(num_burst_cycle, delay_burst, total_exposure, config="first")
-                self._set_channels("delay", 0)
+                self.burst_enable(
+                    num_burst_cycle, delay_burst, total_exposure, config="first"
+                )
+                self.set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self._set_channels("width", exp_time)
+                self.set_channels("width", exp_time)
 
         else:
             raise DDGError(f"Unknown scan type {self.scaninfo.scan_type}")
@@ -427,18 +514,23 @@ class DelayGeneratorDG645(Device):
 
     def trigger(self) -> None:
         # if self.scaninfo.scan_type == "step":
-        if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
+        if self.source.read()[self.source.name]["value"] == int(
+            TriggerSource.SINGLE_SHOT
+        ):
             self.trigger_shot.set(1).wait()
         super().trigger()
 
-    def burstEnable(self, count, delay, period, config="all"):
+    def burst_enable(self, count, delay, period, config="all"):
         """Enable the burst mode"""
         # Validate inputs
         count = int(count)
         assert count > 0, "Number of bursts must be positive"
         assert delay >= 0, "Burst delay must be larger than 0"
         assert period > 0, "Burst period must be positive"
-        assert config in ["all", "first"], "Supported bust configs are 'all' and 'first'"
+        assert config in [
+            "all",
+            "first",
+        ], "Supported bust configs are 'all' and 'first'"
 
         self.burstMode.set(1).wait()
         self.burstCount.set(count).wait()
@@ -450,7 +542,7 @@ class DelayGeneratorDG645(Device):
         elif config == "first":
             self.burstConfig.set(1).wait()
 
-    def burstDisable(self):
+    def burst_disable(self):
         """Disable the burst mode"""
         self.burstMode.set(0).wait()
 

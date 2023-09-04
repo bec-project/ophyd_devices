@@ -27,3 +27,4 @@ from .mcs_csaxs import McsCsaxs
 from .eiger9m_csaxs import Eiger9mCsaxs
 from .pilatus_csaxs import PilatusCsaxs
 from .falcon_csaxs import FalconCsaxs
+from .DelayGeneratorDG645 import DelayGeneratorDG645
