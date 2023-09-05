@@ -131,16 +131,20 @@ class Eiger9mCsaxs(DetectorBase):
         self.name = name
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
         if not sim_mode:
+            from bec_lib.core.bec_service import SERVICE_CONFIG
+
             self.device_manager = device_manager
             self._producer = self.device_manager.producer
+            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
+            self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         # TODO
         self.filepath = ""
         self.scaninfo.username = "e21206"
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.reduce_readout = 1e-3  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
@@ -176,9 +180,11 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client.stop_writer()
         timeout = 0
         self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
+        time.sleep(1)
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
+            logger.info("Waiting for std_daq init.")
             if timeout > 2:
                 if not self.std_client.get_status()["state"]:
                     raise EigerError(
@@ -188,8 +194,11 @@ class Eiger9mCsaxs(DetectorBase):
                     return
 
     def _prep_det(self) -> None:
+        logger.info("prepping thresholds")
         self._set_det_threshold()
+        logger.info("prepping detector parameter")
         self._set_acquisition_params()
+        logger.info("setting trigger")
         self._set_trigger(TriggerSource.GATING)
 
     def _set_det_threshold(self) -> None:

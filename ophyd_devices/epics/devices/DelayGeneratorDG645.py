@@ -1,8 +1,9 @@
 import enum
+import threading
 import time
 from typing import Any, List
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
-from ophyd import PVPositioner, Signal
+from ophyd import PVPositioner, Signal, DeviceStatus
 from ophyd.pseudopos import (
     pseudo_position_argument,
     real_position_argument,
@@ -141,8 +142,11 @@ class DelayGeneratorDG645(Device):
         "reload_config",
     ]
 
-    trigger_burst_readout = Component(EpicsSignal, "EventStatusLI.PROC", name="read_burst_state")
+    trigger_burst_readout = Component(
+        EpicsSignal, "EventStatusLI.PROC", name="trigger_burst_readout"
+    )
     burst_cycle_finished = Component(EpicsSignalRO, "EventStatusMBBID.B3", name="read_burst_state")
+    delay_finished = Component(EpicsSignalRO, "EventStatusMBBID.B2", name="delay_finished")
     status = Component(EpicsSignalRO, "StatusSI", name="status")
     clear_error = Component(EpicsSignal, "StatusClearBO", name="clear_error")
 
@@ -442,17 +446,23 @@ class DelayGeneratorDG645(Device):
         # Set threshold level for ext. pulses
         self.level.set(self.thres_trig_level.get())
 
-    def _check_burst_cycle(self) -> None:
+    def _check_burst_cycle(self, status) -> None:
         """Checks burst cycle of delay generator
         Force readout, return value from end of burst cycle
         """
         while True:
             self.trigger_burst_readout.set(1)
-            if self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1:
+            if (
+                self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1
+                and self.delay_finished.read()[self.delay_finished.name]["value"] == 1
+            ):
                 self._acquisition_done = True
+                status.set_finished()
                 return
             if self._stopped == True:
-                return
+                status.set_finished()
+                break
+
             time.sleep(0.01)
 
     def stop(self, success=False):
@@ -466,11 +476,14 @@ class DelayGeneratorDG645(Device):
         self.scaninfo.load_scan_metadata()
         if self.scaninfo.scan_type == "step":
             # define parameters
-            self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
             if self.set_high_on_exposure.get():
-                num_burst_cycle = 1
-                exp_time = self.delta_width.get() + self.scaninfo.num_frames * (
-                    self.scaninfo.exp_time + self.scaninfo.readout_time
+                self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
+                num_burst_cycle = 1 + self.additional_triggers.get()
+                exp_time = (
+                    self.delta_width.get()
+                    + self.scaninfo.num_points
+                    * self.scaninfo.frames_per_trigger
+                    * (self.scaninfo.exp_time + self.scaninfo.readout_time)
                 )
                 total_exposure = exp_time
                 delay_burst = self.delay_burst.get()
@@ -479,24 +492,24 @@ class DelayGeneratorDG645(Device):
                 # Set burst length to half of the experimental time!
                 self.set_channels("width", exp_time)
             else:
+                self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
                 exp_time = self.delta_width.get() + self.scaninfo.exp_time
                 total_exposure = exp_time + self.scaninfo.readout_time
                 delay_burst = self.delay_burst.get()
-                num_burst_cycle = self.scaninfo.num_frames + self.additional_triggers.get()
+                num_burst_cycle = self.scaninfo.frames_per_trigger + self.additional_triggers.get()
                 # set parameters in DDG
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
                 self.set_channels("width", exp_time)
         elif self.scaninfo.scan_type == "fly":
-            # Prepare FSH DDG
             if self.set_high_on_exposure.get():
                 # define parameters
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
                 exp_time = (
                     self.delta_width.get()
-                    + self.scaninfo.exp_time * self.scaninfo.num_frames
-                    + self.scaninfo.readout_time * (self.scaninfo.num_frames - 1)
+                    + self.scaninfo.exp_time * self.scaninfo.num_points
+                    + self.scaninfo.readout_time * (self.scaninfo.num_points - 1)
                 )
                 total_exposure = exp_time
                 delay_burst = self.delay_burst.get()
@@ -513,7 +526,7 @@ class DelayGeneratorDG645(Device):
                 exp_time = self.delta_width.get() + self.scaninfo.exp_time
                 total_exposure = exp_time + self.scaninfo.readout_time
                 delay_burst = self.delay_burst.get()
-                num_burst_cycle = self.scaninfo.num_frames + self.additional_triggers.get()
+                num_burst_cycle = self.scaninfo.num_points + self.additional_triggers.get()
                 # set parameters in DDG
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0.0)
@@ -531,18 +544,20 @@ class DelayGeneratorDG645(Device):
     def unstage(self):
         """Stop the trigger generator from accepting triggers"""
         # self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
-        self._check_burst_cycle()
         # Check status
         self._ddg_is_okay()
         self._stopped = False
         self._acquisition_done = False
         super().unstage()
 
-    def trigger(self) -> None:
+    def trigger(self) -> DeviceStatus:
         # if self.scaninfo.scan_type == "step":
         if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
             self.trigger_shot.set(1).wait()
-        super().trigger()
+        status = super().trigger()
+        burst_state = threading.Thread(target=self._check_burst_cycle, args=(status,), daemon=True)
+        burst_state.start()
+        return status
 
     def burst_enable(self, count, delay, period, config="all"):
         """Enable the burst mode"""

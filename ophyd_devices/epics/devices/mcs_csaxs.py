@@ -1,4 +1,5 @@
 import enum
+import threading
 import time
 from typing import Any, List
 import numpy as np
@@ -15,7 +16,7 @@ from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
 from collections import defaultdict
 
-from bec_lib.core import bec_logger
+from bec_lib.core import bec_logger, threadlocked
 
 logger = bec_logger.logger
 
@@ -186,6 +187,7 @@ class McsCsaxs(SIS38XX):
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._stopped = False
         self._acquisition_done = False
+        self._lock = threading.RLock()
         self._init_mcs()
 
     def _init_mcs(self) -> None:
@@ -212,6 +214,7 @@ class McsCsaxs(SIS38XX):
             signal.subscribe(self._on_mca_data, run=False)
         self._counter = 0
 
+    @threadlocked
     def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
         if not isinstance(kwargs["value"], (list, np.ndarray)):
             return
@@ -229,11 +232,12 @@ class McsCsaxs(SIS38XX):
         self._counter += 1
         if self._counter == self.num_lines.get():
             self._acquisition_done = True
-            self._send_data_to_bec()
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
             self.erase_all.set(1)
-            # TODO how to make card wait for sure!
+            # Require wait for
+            # time.sleep(0.01)
+            self.mca_data = defaultdict(lambda: [])
             self._counter = 0
             return
         self.erase_start.set(1)
@@ -252,7 +256,8 @@ class McsCsaxs(SIS38XX):
         )
         logger.info(f"{self.mca_data}")
         msg = BECMessage.DeviceMessage(
-            signals=dict(self.mca_data), metadata=self.scaninfo.scan_msg.metadata
+            signals=dict(self.mca_data),
+            metadata=self.scaninfo.scan_msg.metadata,
         ).dumps()
         self._producer.xadd(
             topic=MessageEndpoints.device_async_readback(
@@ -294,6 +299,7 @@ class McsCsaxs(SIS38XX):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
+        logger.info("Stage Eiger")
         self.scaninfo.load_scan_metadata()
         self._prep_det()
         self._prep_readout()
@@ -311,7 +317,7 @@ class McsCsaxs(SIS38XX):
                 break
             time.sleep(0.005)
         logger.info("mcs is ready and running")
-        time.sleep(5)
+        # time.sleep(5)
         return super().stage()
 
     def unstage(self) -> List[object]:
