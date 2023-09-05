@@ -230,7 +230,10 @@ class McsCsaxs(SIS38XX):
 
         self._updated = True
         self._counter += 1
-        if self._counter == self.num_lines.get():
+        logger.info(f"counter {self._counter}")
+        if (self.scaninfo.scan_type == "fly" and self._counter == self.num_lines.get()) or (
+            self.scaninfo.scan_type == "step" and self._counter == self.scaninfo.num_points
+        ):
             self._acquisition_done = True
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
@@ -272,12 +275,17 @@ class McsCsaxs(SIS38XX):
         self._set_trigger(TriggerSource.MODE3)
 
     def _set_acquisition_params(self) -> None:
-        n_points = self.scaninfo.num_frames / int(self.num_lines.get())
-        if n_points > 9999:
+        if self.scaninfo.scan_type == "step":
+            n_points = self.scaninfo.frames_per_trigger + 1
+        elif self.scaninfo.scan_type == "fly":
+            n_points = self.scaninfo.num_points / int(self.num_lines.get()) + 1
+        else:
+            raise MCSError(f"Scantype {self.scaninfo} not implemented for MCS card")
+        if n_points > 1000:
             raise MCSError(
-                f"Requested number of points {n_points+1} exceeds hardware limit of 10000 (n+1)"
+                f"Requested number of points N={n_points} exceeds hardware limit of mcs card 10000 (N-1)"
             )
-        self.num_use_all.set(n_points + 1)
+        self.num_use_all.set(n_points)
         self.preset_real.set(0)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:

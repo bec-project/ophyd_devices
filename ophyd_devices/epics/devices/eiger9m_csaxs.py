@@ -220,7 +220,7 @@ class Eiger9mCsaxs(DetectorBase):
         # self.cam.acquire_period.set(
         #    self.scaninfo.exp_time + (self.scaninfo.readout_time - self.reduce_readout)
         # )
-        self.cam.num_cycles.set(self.scaninfo.num_frames)
+        self.cam.num_cycles.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_frames.set(1)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
@@ -240,7 +240,10 @@ class Eiger9mCsaxs(DetectorBase):
         # self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
         self.std_client.start_writer_async(
-            {"output_file": self.filepath, "n_images": self.scaninfo.num_frames}
+            {
+                "output_file": self.filepath,
+                "n_images": int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger),
+            }
         )
         while True:
             det_ctrl = self.std_client.get_status()["acquisition"]["state"]
@@ -264,6 +267,11 @@ class Eiger9mCsaxs(DetectorBase):
         self._prep_file_writer()
         logger.info("std_daq is ready")
 
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
+        self._producer.set_and_publish(
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
+            msg.dumps(),
+        )
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),

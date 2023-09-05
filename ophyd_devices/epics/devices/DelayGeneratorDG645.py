@@ -301,6 +301,13 @@ class DelayGeneratorDG645(Device):
         config_storage_name="ddg_config",
     )
 
+    trigger_width = Component(
+        bec_utils.ConfigSignal,
+        name="trigger_width",
+        kind="config",
+        config_storage_name="ddg_config",
+    )
+
     def __init__(
         self,
         prefix="",
@@ -348,6 +355,7 @@ class DelayGeneratorDG645(Device):
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
             f"{name}_set_trigger_source": "SINGLE_SHOT",
+            f"{name}_trigger_width": None,
         }
         if ddg_config is not None:
             [self.ddg_config.update({f"{name}_{key}": value}) for key, value in ddg_config.items()]
@@ -479,18 +487,19 @@ class DelayGeneratorDG645(Device):
             if self.set_high_on_exposure.get():
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
                 num_burst_cycle = 1 + self.additional_triggers.get()
-                exp_time = (
-                    self.delta_width.get()
-                    + self.scaninfo.num_points
-                    * self.scaninfo.frames_per_trigger
-                    * (self.scaninfo.exp_time + self.scaninfo.readout_time)
+
+                exp_time = self.delta_width.get() + self.scaninfo.frames_per_trigger * (
+                    self.scaninfo.exp_time + self.scaninfo.readout_time
                 )
                 total_exposure = exp_time
                 delay_burst = self.delay_burst.get()
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self.set_channels("width", exp_time)
+                if not self.trigger_width.get():
+                    self.set_channels("width", exp_time)
+                else:
+                    self.set_channels("width", self.trigger_width.get())
             else:
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
                 exp_time = self.delta_width.get() + self.scaninfo.exp_time
@@ -501,7 +510,10 @@ class DelayGeneratorDG645(Device):
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0)
                 # Set burst length to half of the experimental time!
-                self.set_channels("width", exp_time)
+                if not self.trigger_width.get():
+                    self.set_channels("width", exp_time)
+                else:
+                    self.set_channels("width", self.trigger_width.get())
         elif self.scaninfo.scan_type == "fly":
             if self.set_high_on_exposure.get():
                 # define parameters
@@ -519,7 +531,10 @@ class DelayGeneratorDG645(Device):
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0.0)
                 # Set burst length to half of the experimental time!
-                self.set_channels("width", exp_time)
+                if not self.trigger_width.get():
+                    self.set_channels("width", exp_time)
+                else:
+                    self.set_channels("width", self.trigger_width.get())
             else:
                 # define parameters
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
@@ -531,7 +546,10 @@ class DelayGeneratorDG645(Device):
                 self.burst_enable(num_burst_cycle, delay_burst, total_exposure, config="first")
                 self.set_channels("delay", 0.0)
                 # Set burst length to half of the experimental time!
-                self.set_channels("width", exp_time)
+                if not self.trigger_width.get():
+                    self.set_channels("width", exp_time)
+                else:
+                    self.set_channels("width", self.trigger_width.get())
 
         else:
             raise DDGError(f"Unknown scan type {self.scaninfo.scan_type}")
@@ -554,7 +572,8 @@ class DelayGeneratorDG645(Device):
         # if self.scaninfo.scan_type == "step":
         if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
             self.trigger_shot.set(1).wait()
-        status = super().trigger()
+        # status = super().trigger(status=)
+        status = DeviceStatus(self)
         burst_state = threading.Thread(target=self._check_burst_cycle, args=(status,), daemon=True)
         burst_state.start()
         return status
