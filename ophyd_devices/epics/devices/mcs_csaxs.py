@@ -152,10 +152,7 @@ class McsCsaxs(SIS38XX):
             f"{name}_num_lines": 1,
         }
         if mcs_config is not None:
-            [
-                self.mcs_config.update({f"{name}_{key}": value})
-                for key, value in mcs_config.items()
-            ]
+            [self.mcs_config.update({f"{name}_{key}": value}) for key, value in mcs_config.items()]
 
         super().__init__(
             prefix=prefix,
@@ -168,9 +165,7 @@ class McsCsaxs(SIS38XX):
         )
 
         if device_manager is None and not sim_mode:
-            raise MCSError(
-                "Add DeviceManager to initialization or init with sim_mode=True"
-            )
+            raise MCSError("Add DeviceManager to initialization or init with sim_mode=True")
 
         self.name = name
         self._stream_ttl = 1800
@@ -187,9 +182,7 @@ class McsCsaxs(SIS38XX):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         # TODO
         self.scaninfo.username = "e21206"
-        self.service_cfg = {
-            "base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
-        }
+        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._stopped = False
         self._acquisition_done = False
@@ -212,9 +205,7 @@ class McsCsaxs(SIS38XX):
         self.input_polarity.set(0)
         self.output_polarity.set(1)
         self.count_on_start.set(0)
-        self.mca_names = [
-            signal for signal in self.component_names if signal.startswith("mca")
-        ]
+        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
         self.mca_data = defaultdict(lambda: [])
         for mca in self.mca_names:
             signal = getattr(self, mca)
