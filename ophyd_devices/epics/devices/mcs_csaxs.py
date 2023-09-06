@@ -276,12 +276,12 @@ class McsCsaxs(SIS38XX):
 
     def _set_acquisition_params(self) -> None:
         if self.scaninfo.scan_type == "step":
-            n_points = self.scaninfo.frames_per_trigger + 1
+            n_points = int(self.scaninfo.frames_per_trigger + 1)
         elif self.scaninfo.scan_type == "fly":
-            n_points = self.scaninfo.num_points / int(self.num_lines.get()) + 1
+            n_points = int(self.scaninfo.num_points / int(self.num_lines.get()) + 1)
         else:
             raise MCSError(f"Scantype {self.scaninfo} not implemented for MCS card")
-        if n_points > 1000:
+        if n_points > 10000:
             raise MCSError(
                 f"Requested number of points N={n_points} exceeds hardware limit of mcs card 10000 (N-1)"
             )

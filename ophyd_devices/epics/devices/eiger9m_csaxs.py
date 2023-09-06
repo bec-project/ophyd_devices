@@ -139,11 +139,13 @@ class Eiger9mCsaxs(DetectorBase):
         else:
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
+            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
+            self.scaninfo.load_scan_metadata()
             self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
+        self.scaninfo.load_scan_metadata()
         # TODO
         self.filepath = ""
-        self.scaninfo.username = "e21206"
 
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.reduce_readout = 1e-3  # 3 ms
@@ -194,11 +196,8 @@ class Eiger9mCsaxs(DetectorBase):
                     return
 
     def _prep_det(self) -> None:
-        logger.info("prepping thresholds")
         self._set_det_threshold()
-        logger.info("prepping detector parameter")
         self._set_acquisition_params()
-        logger.info("setting trigger")
         self._set_trigger(TriggerSource.GATING)
 
     def _set_det_threshold(self) -> None:
@@ -274,7 +273,7 @@ class Eiger9mCsaxs(DetectorBase):
         )
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
+            MessageEndpoints.file_event(self.name),
             msg.dumps(),
         )
         self.arm_acquisition()
