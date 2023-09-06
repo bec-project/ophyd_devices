@@ -249,7 +249,7 @@ class GalilController(Controller):
         end_x: float,
         interval_x: int,
         exp_time: float,
-        readtime: float,
+        readout_time: float,
         **kwargs,
     ) -> tuple:
         """_summary_
@@ -262,7 +262,7 @@ class GalilController(Controller):
             end_x (float): end position of x axis (slow axis)
             interval_x (int): number of points in x axis
             exp_time (float): exposure time in seconds
-            readtime (float): readout time in seconds, minimum of .5e-3s (0.5ms)
+            readout_time (float): readout time in seconds, minimum of .5e-3s (0.5ms)
 
         Raises:
 
@@ -285,7 +285,9 @@ class GalilController(Controller):
         start_y *= sign_y
         end_y *= sign_y
 
-        speed = np.abs(end_y - start_y) / ((interval_y) * exp_time + (interval_y - 1) * readtime)
+        speed = np.abs(end_y - start_y) / (
+            (interval_y) * exp_time + (interval_y - 1) * readout_time
+        )
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
@@ -676,6 +678,22 @@ class SGalilMotor(Device, PositionerBase):
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
         return super().stop(success=success)
+
+    def kickoff(
+        self,
+        metadata: dict,
+        **kwargs,
+    ) -> None:
+        self.controller.fly_grid_scan(
+            kwargs.get("start_y"),
+            kwargs.get("end_y"),
+            kwargs.get("interval_y"),
+            kwargs.get("start_x"),
+            kwargs.get("end_x"),
+            kwargs.get("interval_x"),
+            kwargs.get("exp_time"),
+            kwargs.get("readout_time"),
+        )
 
 
 if __name__ == "__main__":
