@@ -10,7 +10,7 @@ from bec_lib.core import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd import FormattedComponent as FCpt
-from ophyd import Kind, PVPositioner
+from ophyd import Kind, PVPositioner, Signal
 from ophyd.flyers import FlyerInterface
 from ophyd.pv_positioner import PVPositionerComparator
 from ophyd.status import DeviceStatus, SubscriptionStatus
@@ -290,6 +290,53 @@ class X07MAMagnetAxis(PVPositioner):
     # z = Cpt(MagnetAxis, "", axis_id="Z", ps_prefix="X07MA-PC-PS1:", name="z")
 
 
+class NormSignal(Signal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._metadata.update(
+            write_access=False,
+        )
+
+    def wait_for_connection(self, timeout=0):
+        super().wait_for_connection(timeout)
+        self._metadata.update(connected=True)
+
+    def get(self, **kwargs):
+        val1 = self.parent.signal1.get()
+        val2 = self.parent.signal2.get()
+        return val1 / val2 if val2 != 0 else 0
+
+    def describe(self):
+        desc = {
+            "shape": [],
+            "dtype": "number",
+            "source": "PV: {} / {}".format(self.parent.signal1.pvname, self.parent.signal2.pvname),
+            "units": "",
+            "precision": self.parent.signal1.precision,
+        }
+        return desc
+
+
+class NormTEYSignals(Device):
+    signal1 = Cpt(EpicsSignalRO, name="signal1", read_pv="X07MA-ES1-AI:SIGNAL1", kind="omitted")
+    signal2 = Cpt(EpicsSignalRO, name="signal2", read_pv="X07MA-ES1-AI:SIGNAL2", kind="omitted")
+    norm = Cpt(NormSignal, name="norm", kind="hinted")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.norm.name = self.name
+
+
+class NormDIODESignals(Device):
+    signal1 = Cpt(EpicsSignalRO, name="signal1", read_pv="X07MA-ES1-AI:SIGNAL3", kind="omitted")
+    signal2 = Cpt(EpicsSignalRO, name="signal2", read_pv="X07MA-ES1-AI:SIGNAL2", kind="omitted")
+    norm = Cpt(NormSignal, name="norm", kind="hinted")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.norm.name = self.name
+
+
 class X07MAAnalogSignals(Device):
     """
     ADC inputs
@@ -302,6 +349,8 @@ class X07MAAnalogSignals(Device):
     s5 = Cpt(EpicsSignalRO, "SIGNAL4", kind=Kind.hinted, auto_monitor=True)
     s6 = Cpt(EpicsSignalRO, "SIGNAL5", kind=Kind.hinted, auto_monitor=True)
     s7 = Cpt(EpicsSignalRO, "SIGNAL6", kind=Kind.hinted, auto_monitor=True)
+    norm_tey = Cpt(NormTEYSignals, name="norm_tey", kind=Kind.hinted)
+    norm_diode = Cpt(NormDIODESignals, name="norm_tey", kind=Kind.hinted)
 
     # Aliases
     # tey = s1

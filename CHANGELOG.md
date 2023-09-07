@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.5.0 (2023-09-01)
+
+### Feature
+
+* Added derived signals for xtreme ([`1276e1d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1276e1d0db44315d8e95cdf19ec32d68c7426fc8))
+
+### Fix
+
+* Added pyepics dependency ([`66d283b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/66d283baeb30da261d0f27e73bca4c9b90d0cadd))
+
 ## v0.4.0 (2023-08-18)
 
 ### Feature
