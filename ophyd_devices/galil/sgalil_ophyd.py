@@ -49,6 +49,9 @@ class GalilController(Controller):
         "galil_show_all",
         "socket_put_and_receive",
         "socket_put_confirmed",
+        "sgalil_reference",
+        "fly_grid_scan",
+        "read_encoder_position",
     ]
 
     def __init__(
@@ -150,7 +153,10 @@ class GalilController(Controller):
         return var
 
     def stop_all_axes(self) -> str:
-        return self.socket_put_and_receive(f"XQ#STOP,1")
+        # return self.socket_put_and_receive(f"XQ#STOP,1")
+        # Command stops all threads and motors!
+        # self.socket_put_and_receive(f"ST")
+        return self.socket_put_and_receive(f"AB")
 
     def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
@@ -244,7 +250,8 @@ class GalilController(Controller):
         end_x: float,
         interval_x: int,
         exp_time: float,
-        readtime: float,
+        readout_time: float,
+        **kwargs,
     ) -> tuple:
         """_summary_
 
@@ -256,7 +263,7 @@ class GalilController(Controller):
             end_x (float): end position of x axis (slow axis)
             interval_x (int): number of points in x axis
             exp_time (float): exposure time in seconds
-            readtime (float): readout time in seconds, minimum of .5e-3s (0.5ms)
+            readout_time (float): readout time in seconds, minimum of .5e-3s (0.5ms)
 
         Raises:
 
@@ -264,16 +271,24 @@ class GalilController(Controller):
             LimitError: Raised if the speed is above 2mm/s or below 0.02mm/s
 
         """
-
-        # time.sleep(0.2)
-
+        #
+        axes_referenced = self.axis_is_referenced()
+        sign_y = self._axis[ord("c") - 97].sign
+        sign_x = self._axis[ord("e") - 97].sign
         # Check limits
         # TODO check sign of stage, or not necessary
         check_values = [start_y, end_y, start_x, end_x]
         for val in check_values:
             self.check_value(val)
 
-        speed = np.abs(end_y - start_y) / ((interval_y) * exp_time + (interval_y - 1) * readtime)
+        start_x *= sign_x
+        end_x *= sign_x
+        start_y *= sign_y
+        end_y *= sign_y
+
+        speed = np.abs(end_y - start_y) / (
+            (interval_y) * exp_time + (interval_y - 1) * readout_time
+        )
         if speed > 2.00 or speed < 0.02:
             raise LimitError(
                 f"Speed of {speed:.03f}mm/s is outside of acceptable range of 0.02 to 2 mm/s"
@@ -284,7 +299,7 @@ class GalilController(Controller):
         n_samples = int(interval_y * interval_x)
 
         # Hard coded to maximum offset of 0.1mm to avoid long motions.
-        self.socket_put_and_receive(f"off={(0*0.1/2*1000):f}")
+        self.socket_put_and_receive(f"off={(0):f}")
         self.socket_put_and_receive(f"a_start={start_y:.04f};a_end={end_y:.04f};speed={speed:.04f}")
         self.socket_put_and_receive(
             f"b_start={start_x:.04f};gridmax={gridmax:d};b_step={step_grid:.04f}"
@@ -298,6 +313,7 @@ class GalilController(Controller):
         # threading.Thread(target=_while_in_motion(3, n_samples), daemon=True).start()
         # self._while_in_motion(3, n_samples)
 
+    # TODO this is for reading out positions, readout is limited by stage triggering
     def _while_in_motion(self, thread_id: int, n_samples: int) -> tuple:
         last_readout = 0
         val_axis2 = []  # y axis
@@ -390,7 +406,7 @@ class GalilSetpointSignal(GalilSignalBase):
         Returns:
             float: setpoint / target value
         """
-        return self.setpoint
+        return self.setpoint * self.parent.sign
 
     @retry_once
     @threadlocked
@@ -663,6 +679,22 @@ class SGalilMotor(Device, PositionerBase):
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
         return super().stop(success=success)
+
+    def kickoff(
+        self,
+        metadata: dict,
+        **kwargs,
+    ) -> None:
+        self.controller.fly_grid_scan(
+            kwargs.get("start_y"),
+            kwargs.get("end_y"),
+            kwargs.get("interval_y"),
+            kwargs.get("start_x"),
+            kwargs.get("end_x"),
+            kwargs.get("interval_x"),
+            kwargs.get("exp_time"),
+            kwargs.get("readout_time"),
+        )
 
 
 if __name__ == "__main__":

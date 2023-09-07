@@ -11,6 +11,7 @@ if __name__ == "__main__":
             "bec_lib",
             "numpy",
             "pyyaml",
+            "std_daq_client",
             "pyepics",
         ],
         extras_require={"dev": ["pytest", "pytest-random-order", "black"]},
