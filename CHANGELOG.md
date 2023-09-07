@@ -2,6 +2,54 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.0 (2023-09-07)
+
+### Feature
+
+* Add falcon and progress bar option to devices ([`3bab432`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3bab432a2f01e3a62811e13b9143d67da495fbb8))
+* Extension for epics motors from xiaoqiang ([`057d93a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/057d93ab60d2872b2b029bdc7b6dcab35a6a21a5))
+* Add mcs_readout_monitor and stream ([`ab22056`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ab220562fc1eac3bcffff01fd92085445dd774e7))
+* Add ConfigSignal to bec_utils ([`ac6de9d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac6de9da54444dda21820591dd8e3ad098d3f0ac))
+* Adding mcs card to repository ([`96a131d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/96a131d3743c8d62aaac309868ac1309d83fe9aa))
+* Add bec_utils to repo for generic functions ([`86e93af`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/86e93afe28fc91b5c0a773c489d99cf272c52878))
+* Add bec_scaninfo_mixin to repo ([`01c824e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/01c824ecead89a1c83cefacff53bf9f76b02d423))
+* Bec_scaninfo_mixin class for scaninfo ([`49f95e0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/49f95e04765e2e4035c030a35272bdb7f06f8d8f))
+* Add eiger9m csaxs ([`f3e4575`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3e4575359994c134e1b207915fadb9f8f92e4d9))
+* Add mcs ophyd device ([`448890a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/448890ab27ba1bfeb24870d792c498b96aa7cc47))
+
+### Fix
+
+* Online changes ([`3a12697`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3a126976cd7cfb3f294556110d77249da6fbc99d))
+* Adjusted __init__ for epics motor extension ([`ac8b96b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac8b96b9ba76ba52920aeca7486ca9046e07326c))
+* Changes for sgalil grid scan from BEC ([`3e594b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3e594b5e0461d43431e0103cb713bcd9fd22ca1c))
+* Working acquire, line and grid scan using mcs, ddg and eiger9m ([`58caf2d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/58caf2ddd3416deaace82b6e321fc0753771b282))
+* DDG logic to wait for burst in trigger ([`5ce6fbc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5ce6fbcbb92d2fafb6cfcb4bb7b1f5ee616140b8))
+* Online changes SAXS ([`911c8a2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/911c8a2438c9cdf1ca2a9685e1dbbbf4a1913f5c))
+* Working mcs readout ([`8ad3eb2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ad3eb29b79a0a8a742d1bc319cfedf60fcc150f))
+* Fix ddg code ([`b3237ce`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b3237ceda5468058e294da4a3e608c4344e582dc))
+* Bugfix online fixes ([`ba9cb77`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ba9cb77ed9b0d1a7e0f744558360c90f393b6f08))
+* Bugfix in delaygenerators ([`2dd8f25`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2dd8f25c8727759a8cf98a0abee87e379c9307d7))
+* Online changes to all devices in preparation for beamtime ([`c0b3418`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c0b34183661b11c39d65eb117c3670a714f9eb5c))
+* Online changes ([`b6101cc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b6101cced24b8b37a3363efa5554a627fdc875b1))
+* Mcs working ([`08efb64`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/08efb6405bc615b40855288067c1e811f1471423))
+* Add std_daq_client and pyepics to setup ([`5d86382`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5d86382d80c033fb442afef74e95a19952cd5937))
+* Bugfix for polarity ([`fe404bf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fe404bff9c960ff8a3f56686b24310d056ad4eda))
+* Test function ([`2dc3290`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2dc3290787a2c2cc79141b9d1da3a805b2c67ccd))
+* Online changes to integrate devices in BEC ([`fbfa562`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fbfa562713adaf374dfaf67ebf30cbd1895dd428))
+* Fixed stop command ([`d694f65`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d694f6594d0bd81fd62be570142bc2f6b19cf6f4))
+* Running ophyd for mcs card, pending fix mcs_read_all epics channel ([`7c45682`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7c45682367c363207257fff7b6ce53ffee1449df))
+* Bec_utils mixin ([`ed0ef33`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ed0ef338eb606977993d45c98421ebde0f477927))
+* Sgalil scan ([`cc6c8cb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cc6c8cb41bc6e3388a580adeee0af8a1c7dbca27))
+* Pil300k device, pending readout ([`b91f8db`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b91f8dbc6854cf46d1d504610855d50563a8df36))
+* Adjusted delaygen ([`17347ac`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/17347ac93032c9b57247d9f565f638340a9973af))
+* Add readout time to mock scaninfo ([`8dda7f3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8dda7f30c1e797287ddf52f6448604c1052ce3ce))
+* Add flyscan option ([`3258e3a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3258e3a1c7e799c4d718dc9cb7f5abfcf87e59f3))
+* Stepscan logic implemented in ddg ([`c365b8e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c365b8e9543ac0eca3bc3da34f662422e7daeef7))
+* Use bec_scaninfo_mixin in ophyd class ([`6ee819d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6ee819de53d39d8d14a4c4df29b0781f83f930ec))
+* Add status update std_daq ([`39142ff`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/39142ffc92440916b6c68beb260222f4dd8a0548))
+* Mcs updates ([`14ca550`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/14ca550af143cdca9237271311b9c5ea280d7809))
+* Falcon updates ([`b122de6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b122de69acfd88d82eaba85534840e7fae21b718))
+
 ## v0.5.0 (2023-09-01)
 
 ### Feature
