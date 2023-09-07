@@ -93,6 +93,9 @@ class SIS38XX(Device):
 
 
 class McsCsaxs(SIS38XX):
+    SUB_PROGRESS = "progress"
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
     # scaler = Cpt(ScalerCH, "scaler1")
 
     # mca2 = Cpt(EpicsMCARecord, "mca2")
@@ -127,6 +130,7 @@ class McsCsaxs(SIS38XX):
     # mca30 = Cpt(EpicsMCARecord, "mca30")
     # mca31 = Cpt(EpicsMCARecord, "mca31")
     # mca32 = Cpt(EpicsMCARecord, "mca32")
+    current_channel = Cpt(EpicsSignalRO, "CurrentChannel", auto_monitor=True)
 
     num_lines = Cpt(
         bec_utils.ConfigSignal,
@@ -164,7 +168,6 @@ class McsCsaxs(SIS38XX):
             parent=parent,
             **kwargs,
         )
-
         if device_manager is None and not sim_mode:
             raise MCSError("Add DeviceManager to initialization or init with sim_mode=True")
 
@@ -188,6 +191,8 @@ class McsCsaxs(SIS38XX):
         self._stopped = False
         self._acquisition_done = False
         self._lock = threading.RLock()
+        self.counter = 0
+        self.n_points = 0
         self._init_mcs()
 
     def _init_mcs(self) -> None:
@@ -212,7 +217,17 @@ class McsCsaxs(SIS38XX):
         for mca in self.mca_names:
             signal = getattr(self, mca)
             signal.subscribe(self._on_mca_data, run=False)
-        self._counter = 0
+        self.current_channel.subscribe(self._progress_update, run=False)
+
+    def _progress_update(self, value, **kwargs) -> None:
+        num_lines = self.num_lines.get()
+        max_value = self.scaninfo.num_points
+        self._run_subs(
+            sub_type=self.SUB_PROGRESS,
+            value=self.counter * int(self.scaninfo.num_points / num_lines) + max(value - 1, 0),
+            max_value=max_value,
+            done=bool(max_value == self.counter),
+        )
 
     @threadlocked
     def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
@@ -229,19 +244,18 @@ class McsCsaxs(SIS38XX):
         #     return
 
         self._updated = True
-        self._counter += 1
-        logger.info(f"counter {self._counter}")
-        if (self.scaninfo.scan_type == "fly" and self._counter == self.num_lines.get()) or (
-            self.scaninfo.scan_type == "step" and self._counter == self.scaninfo.num_points
+        self.counter += 1
+        if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
+            self.scaninfo.scan_type == "step" and self.counter == self.scaninfo.num_points
         ):
             self._acquisition_done = True
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
-            self.erase_all.set(1)
+            self.erase_all.put(1)
             # Require wait for
             # time.sleep(0.01)
             self.mca_data = defaultdict(lambda: [])
-            self._counter = 0
+            self.counter = 0
             return
         self.erase_start.set(1)
         self._send_data_to_bec()
@@ -257,7 +271,6 @@ class McsCsaxs(SIS38XX):
                 "num_lines": self.num_lines.get(),
             }
         )
-        logger.info(f"{self.mca_data}")
         msg = BECMessage.DeviceMessage(
             signals=dict(self.mca_data),
             metadata=self.scaninfo.scan_msg.metadata,
@@ -276,16 +289,16 @@ class McsCsaxs(SIS38XX):
 
     def _set_acquisition_params(self) -> None:
         if self.scaninfo.scan_type == "step":
-            n_points = int(self.scaninfo.frames_per_trigger + 1)
+            self.n_points = int(self.scaninfo.frames_per_trigger + 1)
         elif self.scaninfo.scan_type == "fly":
-            n_points = int(self.scaninfo.num_points / int(self.num_lines.get()) + 1)
+            self.n_points = int(self.scaninfo.num_points / int(self.num_lines.get()) + 1)
         else:
             raise MCSError(f"Scantype {self.scaninfo} not implemented for MCS card")
-        if n_points > 10000:
+        if self.n_points > 10000:
             raise MCSError(
-                f"Requested number of points N={n_points} exceeds hardware limit of mcs card 10000 (N-1)"
+                f"Requested number of points N={self.n_points} exceeds hardware limit of mcs card 10000 (N-1)"
             )
-        self.num_use_all.set(n_points)
+        self.num_use_all.set(self.n_points)
         self.preset_real.set(0)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
@@ -299,7 +312,7 @@ class McsCsaxs(SIS38XX):
         Check ReadoutMode class for more information about options
         """
         # self.read_mode.set(ReadoutMode.EVENT)
-        self.erase_all.set(1)
+        self.erase_all.put(1)
         self.read_mode.set(ReadoutMode.EVENT)
 
     def _force_readout_mcs_card(self) -> None:
@@ -307,7 +320,7 @@ class McsCsaxs(SIS38XX):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
-        logger.info("Stage Eiger")
+        logger.info("Stage mcs")
         self.scaninfo.load_scan_metadata()
         self._prep_det()
         self._prep_readout()
@@ -347,7 +360,7 @@ class McsCsaxs(SIS38XX):
         Start: start_all
         Erase/Start: erase_start
         """
-        self._counter = 0
+        self.counter = 0
         self.erase_start.set(1)
         # self.start_all.set(1)
 
@@ -359,7 +372,7 @@ class McsCsaxs(SIS38XX):
         # self.erase_all.set(1)
         self._stopped = True
         self._acquisition_done = True
-        self._counter = 0
+        self.counter = 0
         super().stop(success=success)
 
 

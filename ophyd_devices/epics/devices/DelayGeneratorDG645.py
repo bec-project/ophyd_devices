@@ -134,6 +134,10 @@ class DelayGeneratorDG645(Device):
     current device
     """
 
+    SUB_PROGRESS = "progress"
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
+
     USER_ACCESS = [
         "set_channels",
         "_set_trigger",
@@ -403,7 +407,7 @@ class DelayGeneratorDG645(Device):
         LINE = 6
         """
         value = int(trigger_source)
-        self.source.set(value)
+        self.source.put(value)
 
     def _ddg_is_okay(self, raise_on_error=False) -> None:
         status = self.status.read()[self.status.name]["value"]
@@ -452,14 +456,14 @@ class DelayGeneratorDG645(Device):
             )
         self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
         # Set threshold level for ext. pulses
-        self.level.set(self.thres_trig_level.get())
+        self.level.put(self.thres_trig_level.get())
 
     def _check_burst_cycle(self, status) -> None:
         """Checks burst cycle of delay generator
         Force readout, return value from end of burst cycle
         """
         while True:
-            self.trigger_burst_readout.set(1)
+            self.trigger_burst_readout.put(1)
             if (
                 self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1
                 and self.delay_finished.read()[self.delay_finished.name]["value"] == 1
@@ -571,7 +575,7 @@ class DelayGeneratorDG645(Device):
     def trigger(self) -> DeviceStatus:
         # if self.scaninfo.scan_type == "step":
         if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
-            self.trigger_shot.set(1).wait()
+            self.trigger_shot.put(1)
         # status = super().trigger(status=)
         status = DeviceStatus(self)
         burst_state = threading.Thread(target=self._check_burst_cycle, args=(status,), daemon=True)
@@ -590,19 +594,19 @@ class DelayGeneratorDG645(Device):
             "first",
         ], "Supported bust configs are 'all' and 'first'"
 
-        self.burstMode.set(1).wait()
-        self.burstCount.set(count).wait()
-        self.burstDelay.set(delay).wait()
-        self.burstPeriod.set(period).wait()
+        self.burstMode.put(1)
+        self.burstCount.put(count)
+        self.burstDelay.put(delay)
+        self.burstPeriod.put(period)
 
         if config == "all":
-            self.burstConfig.set(0).wait()
+            self.burstConfig.put(0)
         elif config == "first":
-            self.burstConfig.set(1).wait()
+            self.burstConfig.put(1)
 
     def burst_disable(self):
         """Disable the burst mode"""
-        self.burstMode.set(0).wait()
+        self.burstMode.put(0)
 
 
 # Automatically connect to test environmenr if directly invoked

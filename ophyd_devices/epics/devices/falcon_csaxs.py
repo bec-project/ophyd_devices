@@ -1,19 +1,29 @@
+import enum
 import os
 import time
 from typing import List
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt, Device
 
-from ophyd.mca import EpicsMCARecord, EpicsDXPMapping, EpicsDXPLowLevel, EpicsDXPMultiElementSystem
-from ophyd.areadetector.plugins import HDF5Plugin, HDF5Plugin_V21, FilePlugin_V22
+from ophyd.mca import EpicsMCARecord
+from ophyd.areadetector.plugins import HDF5Plugin_V21, FilePlugin_V22
 
 from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core import MessageEndpoints, BECMessage, RedisConnector
+from bec_lib.core import MessageEndpoints, BECMessage
 from bec_lib.core import bec_logger
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
+
+
+class FalconError(Exception):
+    pass
+
+
+class DetectorState(int, enum.Enum):
+    DONE = 0
+    ACQUIRING = 1
 
 
 class EpicsDXPFalcon(Device):
@@ -37,12 +47,21 @@ class EpicsDXPFalcon(Device):
     current_pixel = Cpt(EpicsSignalRO, "CurrentPixel")
 
 
-class FalconError(Exception):
-    pass
-
-
-class FalconHDF5Plugins(HDF5Plugin_V21, FilePlugin_V22):
-    pass
+class FalconHDF5Plugins(Device):  # HDF5Plugin_V21, FilePlugin_V22):
+    capture = Cpt(EpicsSignalWithRBV, "Capture")
+    enable = Cpt(EpicsSignalWithRBV, "EnableCallbacks", string=True, kind="config")
+    xml_file_name = Cpt(EpicsSignalWithRBV, "XMLFileName", string=True, kind="config")
+    lazy_open = Cpt(EpicsSignalWithRBV, "LazyOpen", string=True, doc="0='No' 1='Yes'")
+    temp_suffix = Cpt(EpicsSignalWithRBV, "TempSuffix", string=True)
+    # file_path = Cpt(
+    #     EpicsSignalWithRBV, "FilePath", string=True, kind="config", path_semantics="posix"
+    # )
+    file_path = Cpt(EpicsSignalWithRBV, "FilePath", string=True, kind="config")
+    file_name = Cpt(EpicsSignalWithRBV, "FileName", string=True, kind="config")
+    file_template = Cpt(EpicsSignalWithRBV, "FileTemplate", string=True, kind="config")
+    num_capture = Cpt(EpicsSignalWithRBV, "NumCapture", kind="config")
+    file_write_mode = Cpt(EpicsSignalWithRBV, "FileWriteMode", kind="config")
+    capture = Cpt(EpicsSignalWithRBV, "Capture")
 
 
 class FalconCsaxs(Device):
@@ -77,6 +96,8 @@ class FalconCsaxs(Device):
     pixels_per_buffer = Cpt(EpicsSignal, "PixelsPerBuffer")
     pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
 
+    # HDF5
+
     def __init__(
         self,
         prefix="",
@@ -101,153 +122,141 @@ class FalconCsaxs(Device):
         )
         if device_manager is None and not sim_mode:
             raise FalconError("Add DeviceManager to initialization or init with sim_mode=True")
-
+        self._stopped = False
         self.name = name
         self.wait_for_connection()  # Make sure to be connected before talking to PVs
         if not sim_mode:
+            from bec_lib.core.bec_service import SERVICE_CONFIG
+
             self.device_manager = device_manager
             self._producer = self.device_manager.producer
+            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
+            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
+            self.scaninfo.load_scan_metadata()
+            self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        # TODO
-        self.scaninfo.username = "e21206"
-        self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+        self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
 
         self.readout = 0.003  # 3 ms
-        self._value_pixel_per_buffer = 16
-        # TODO create file template from filewriter compile filename
-        self._file_template = f"%s%s_{self.name}.h5"
-
-        self.num_frames = 0
-
+        self._value_pixel_per_buffer = 1  # 16
         self._clean_up()
         self._init_hdf5_saving()
         self._init_mapping_mode()
 
     def _clean_up(self) -> None:
         """Clean up"""
-        self.hdf5.capture.set(0)
-        self.stop_all.set(1)
-        self.erase_all.set(1)
+        self.hdf5.capture.put(0)
+        self.stop_all.put(1)
+        self.erase_all.put(1)
 
     def _init_hdf5_saving(self) -> None:
         """Set up hdf5 save parameters"""
-        self.hdf5.enable.set(1)  # EnableCallbacks
-        self.hdf5.xml_file_name.set("layout.xml")  # Points to hardcopy of HDF5 Layout xml file
-        self.hdf5.lazy_open.set(1)  # Yes -> To be checked how to add FilePlugin_V21+
-        self.hdf5.temp_suffix.set("temps")  # -> To be checked how to add FilePlugin_V22+
+        self.hdf5.enable.put(1)  # EnableCallbacks
+        self.hdf5.xml_file_name.put("layout.xml")  # Points to hardcopy of HDF5 Layout xml file
+        self.hdf5.lazy_open.put(1)  # Yes -> To be checked how to add FilePlugin_V21+
+        self.hdf5.temp_suffix.put("temps")  # -> To be checked how to add FilePlugin_V22+
 
     def _init_mapping_mode(self) -> None:
         """Set up mapping mode params"""
-        self.collect_mode.set(1)  # 1 MCA Mapping, 0 MCA Spectrum
-        self.preset_mode.set(1)  # 1 Realtime
-        self.input_logic_polarity.set(0)  # 0 Normal, 1 Inverted
-        self.pixel_advance_mode.set(1)  # 0 User, 1 Gate, 2 Sync
-        self.ignore_gate.set(1)  # 1 Yes
-        self.auto_pixels_per_buffer.set(0)  # 0 Manual 1 Auto
-        self.pixels_per_buffer.set(16)  #
-
-    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
-        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        return BECMessage.ScanStatusMessage.loads(msg)
-
-    def _load_scan_metadata(self) -> None:
-        scan_msg = self._get_current_scan_msg()
-        self.metadata = {
-            "scanID": scan_msg.content["scanID"],
-            "RID": scan_msg.content["info"]["RID"],
-            "queueID": scan_msg.content["info"]["queueID"],
-        }
-        self.scanID = scan_msg.content["scanID"]
-        self.scan_number = scan_msg.content["info"]["scan_number"]
-        self.exp_time = scan_msg.content["info"]["exp_time"]
-        self.num_frames = scan_msg.content["info"]["num_points"]
-        self.username = self.device_manager.producer.get(MessageEndpoints.account()).decode()
-        self.device_manager.devices.mokev.read()["mokev"]["value"]
-        # self.triggermode = scan_msg.content["info"]["trigger_mode"]
-        self.filepath = self.filewriter.compile_full_filename(
-            self.scan_number, "falcon", 1000, 5, True
-        )
+        self.collect_mode.put(1)  # 1 MCA Mapping, 0 MCA Spectrum
+        self.preset_mode.put(1)  # 1 Realtime
+        self.input_logic_polarity.put(0)  # 0 Normal, 1 Inverted
+        self.pixel_advance_mode.put(1)  # 0 User, 1 Gate, 2 Sync
+        self.ignore_gate.put(1)  # 1 Yes
+        self.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
+        self.pixels_per_buffer.put(16)  #
 
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
-        self.collect_mode.set(1)
-        self.preset_real.set(self.exposure_time)
-        self.pixels_per_run.set(self.num_frames)
-        self.auto_pixels_per_buffer.set(0)
-        self.pixels_per_buffer.set(self._value_pixel_per_buffer)
+        self.collect_mode.put(1)
+        self.preset_real.put(self.scaninfo.exp_time)
+        self.pixels_per_run.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
+        self.auto_pixels_per_buffer.put(0)
+        self.pixels_per_buffer.put(self._value_pixel_per_buffer)
 
     def _prep_file_writer(self) -> None:
         """Prep HDF5 weriting"""
         # TODO creta filename and destination path from filepath
-        self.destination_path = os.path.join(self.service_cfg["base_path"])
-        self.filename = f"test_{self.scan_number}"
-        self.hdf5.file_path.set(self.destination_path)
-        self.hdf5.file_name.set(self.filename)
-        self.hdf5.file_template.set(self._file_template)
-        self.hdf5.num_capture.set(self.num_frames // self._value_pixel_per_buffer + 1)
-        self.hdf5.file_write_mode.set(2)
-        self.hdf5.capture.set(1)
+        self.destination_path = self.filewriter.compile_full_filename(
+            self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
+        )
+        # self.hdf5.file_path.set(self.destination_path)
+        file_path, file_name = os.path.split(self.destination_path)
+        self.hdf5.file_path.put(file_path)
+        self.hdf5.file_name.put(file_name)
+        self.hdf5.file_template.put(f"%s%s")
+        self.hdf5.num_capture.put(self.scaninfo.num_points // self._value_pixel_per_buffer + 1)
+        self.hdf5.file_write_mode.put(2)
+        self.hdf5.capture.put(1)
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
-        # TODO remove once running from BEC
-        # self._load_scan_metadata()
-        self.scan_number = 10
-        self.exp_time = 0.5
-        self.num_frames = 3
-        self.mokev = 12
+        # TODO clean up needed?
+        # self._clean_up()
+        self.scaninfo.load_scan_metadata()
+        self.mokev = self.device_manager.devices.mokev.obj.read()[
+            self.device_manager.devices.mokev.name
+        ]["value"]
 
+        logger.info("Waiting for pilatus2 to be armed")
         self._prep_det()
+        logger.info("Pilatus2 armed")
+        logger.info("Waiting for pilatus2 zmq stream to be ready")
         self._prep_file_writer()
+        logger.info("Pilatus2 zmq ready")
 
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+        msg = BECMessage.FileMessage(file_path=self.destination_path, done=False)
+        self._producer.set_and_publish(
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
-
+        self.arm_acquisition()
+        logger.info("Waiting for Falcon to be armed")
+        while True:
+            det_ctrl = self.state.read()[self.state.name]["value"]
+            if det_ctrl == int(DetectorState.ACQUIRING):
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.005)
+        logger.info("Falcon is armed")
+        self._stopped = False
         return super().stage()
 
-    def acquire(self) -> None:
-        self.start_all.set(1)
+    def arm_acquisition(self) -> None:
+        self.start_all.put(1)
 
     def unstage(self) -> List[object]:
+        logger.info("Waiting for Falcon to return from acquisition")
+        while True:
+            det_ctrl = self.state.read()[self.state.name]["value"]
+            if det_ctrl == int(DetectorState.DONE):
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.005)
+        logger.info("Falcon done")
+        # TODO needed?
         self._clean_up()
-        # TODO check if acquisition is done and successful!
         state = True
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        self.producer.set_and_publish(
-            MessageEndpoints.public_file(self.metadata["scanID"], self.name),
+        msg = BECMessage.FileMessage(file_path=self.destination_path, done=True, successful=state)
+        self._producer.set_and_publish(
+            MessageEndpoints.public_file(self.scaninfo.metadata["scanID"], self.name),
             msg.dumps(),
         )
+        self._stopped = False
         return super().unstage()
 
-    def _check_falcon_done(self) -> bool:
-        state = self.state.read()[f"{self.name }_state"]["value"]
-        if state is [0, 1]:
-            return not bool(state)
-        else:
-            # TODO raise error
-            logger.warning("Returned in unknown state")
-            return state
-
     def stop(self, *, success=False) -> None:
-        """Stop acquisition
-        Stop or Stop and Erase
-        """
-        self._clean_up.set(1)
-        # self.erase_all.set(1)
-        self.unstage()
+        """Stop the scan, with camera and file writer"""
+        self._clean_up()
         super().stop(success=success)
         self._stopped = True
-
-    # Automatically connect to test environmenr if directly invoked
 
 
 if __name__ == "__main__":
     falcon = FalconCsaxs(name="falcon", prefix="X12SA-SITORO:", sim_mode=True)
-    falcon.stage()

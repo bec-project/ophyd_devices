@@ -4,9 +4,8 @@ from typing import Any, List
 import numpy as np
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import CamBase, DetectorBase, Device
+from ophyd import DetectorBase, Device
 from ophyd import ADComponent as ADCpt
-from ophyd.areadetector.plugins import FileBase
 
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
@@ -25,7 +24,7 @@ class EigerError(Exception):
     pass
 
 
-class SlsDetectorCam(Device):  # CamBase, FileBase):
+class SlsDetectorCam(Device):
     detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
     delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
@@ -125,6 +124,7 @@ class Eiger9mCsaxs(DetectorBase):
             parent=parent,
             **kwargs,
         )
+        self._stopped = False
         if device_manager is None and not sim_mode:
             raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
 
@@ -234,16 +234,22 @@ class Eiger9mCsaxs(DetectorBase):
 
     def _prep_file_writer(self) -> None:
         self.filepath = self.filewriter.compile_full_filename(
-            self.scaninfo.scan_number, "eiger.h5", 1000, 5, True
+            self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
         # self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
-        self.std_client.start_writer_async(
-            {
-                "output_file": self.filepath,
-                "n_images": int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger),
-            }
-        )
+        try:
+            self.std_client.start_writer_async(
+                {
+                    "output_file": self.filepath,
+                    "n_images": int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger),
+                }
+            )
+        except Exception as exc:
+            time.sleep(5)
+            if self.std_client.get_status()["state"] == "READY":
+                raise EigerError(f"Timeout of start_writer_async with {exc}")
+
         while True:
             det_ctrl = self.std_client.get_status()["acquisition"]["state"]
             if det_ctrl == "WAITING_IMAGES":
@@ -277,24 +283,29 @@ class Eiger9mCsaxs(DetectorBase):
             msg.dumps(),
         )
         self.arm_acquisition()
-        logger.info("Waiting for detector to be armed")
+        logger.info("Waiting for Eiger9m to be armed")
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
             if det_ctrl == int(DetectorState.RUNNING):
                 break
+            if self._stopped == True:
+                break
             time.sleep(0.005)
-        logger.info("Detector is armed")
-
+        logger.info("Eiger9m is armed")
+        self._stopped = False
         return super().stage()
 
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
-        logger.info("Waiting for eiger9M to return from acquisition")
+        logger.info("Waiting for Eiger9M to return from acquisition")
         while True:
             det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
             if det_ctrl == 0:
                 break
+            if self._stopped == True:
+                break
             time.sleep(0.005)
+        logger.info("Eiger9M finished")
 
         logger.info("Waiting for std daq to receive images")
         while True:
@@ -302,7 +313,10 @@ class Eiger9mCsaxs(DetectorBase):
             # TODO if no writing was performed before
             if det_ctrl == "FINISHED":
                 break
+            if self._stopped == True:
+                break
             time.sleep(0.005)
+        logger.info("Std_daq finished")
         # Message to BEC
         state = True
 
@@ -311,7 +325,7 @@ class Eiger9mCsaxs(DetectorBase):
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
-        logger.info("Eiger done")
+        self._stopped = False
         return super().unstage()
 
     def arm_acquisition(self) -> None:
@@ -324,12 +338,9 @@ class Eiger9mCsaxs(DetectorBase):
         """Stop the scan, with camera and file writer"""
         self.cam.acquire.set(0)
         self._close_file_writer()
-        self.unstage()
         super().stop(success=success)
         self._stopped = True
 
 
-# Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
     eiger = Eiger9mCsaxs(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)
-    eiger.stage()

@@ -6,11 +6,12 @@ from typing import List
 import requests
 import numpy as np
 
-from ophyd.areadetector import ADComponent as ADCpt, PilatusDetectorCam, DetectorBase
-from ophyd.areadetector.plugins import FileBase
+from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
+from ophyd import DetectorBase, Device
+from ophyd import ADComponent as ADCpt
 from ophyd_devices.utils import bec_utils as bec_utils
 
-from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
+from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
 
@@ -24,16 +25,78 @@ class PilatusError(Exception):
     pass
 
 
-class PilatusDetectorCamEx(PilatusDetectorCam, FileBase):
-    pass
-
-
 class TriggerSource(int, enum.Enum):
     INTERNAL = 0
     EXT_ENABLE = 1
     EXT_TRIGGER = 2
     MULTI_TRIGGER = 3
     ALGINMENT = 4
+
+
+class SlsDetectorCam(Device):  # CamBase, FileBase):
+    # detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
+    # setting = ADCpt(EpicsSignalWithRBV, "Setting")
+    # beam_energy = ADCpt(EpicsSignalWithRBV, "BeamEnergy")
+    # enable_trimbits = ADCpt(EpicsSignalWithRBV, "Trimbits")
+    # bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
+    # trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
+    # high_voltage = ADCpt(EpicsSignalWithRBV, "HighVoltage")
+    # Receiver and data callback
+    # receiver_mode = ADCpt(EpicsSignalWithRBV, "ReceiverMode")
+    # receiver_stream = ADCpt(EpicsSignalWithRBV, "ReceiverStream")
+    # enable_data = ADCpt(EpicsSignalWithRBV, "UseDataCallback")
+    # missed_packets = ADCpt(EpicsSignalRO, "ReceiverMissedPackets_RBV")
+    # # Direct settings access
+    # setup_file = ADCpt(EpicsSignal, "SetupFile")
+    # load_setup = ADCpt(EpicsSignal, "LoadSetup")
+    # command = ADCpt(EpicsSignal, "Command")
+    # Mythen 3
+    # counter_mask = ADCpt(EpicsSignalWithRBV, "CounterMask")
+    # counter1_threshold = ADCpt(EpicsSignalWithRBV, "Counter1Threshold")
+    # counter2_threshold = ADCpt(EpicsSignalWithRBV, "Counter2Threshold")
+    # counter3_threshold = ADCpt(EpicsSignalWithRBV, "Counter3Threshold")
+    # gate1_delay = ADCpt(EpicsSignalWithRBV, "Gate1Delay")
+    # gate1_width = ADCpt(EpicsSignalWithRBV, "Gate1Width")
+    # gate2_delay = ADCpt(EpicsSignalWithRBV, "Gate2Delay")
+    # gate2_width = ADCpt(EpicsSignalWithRBV, "Gate2Width")
+    # gate3_delay = ADCpt(EpicsSignalWithRBV, "Gate3Delay")
+    # gate3_width = ADCpt(EpicsSignalWithRBV, "Gate3Width")
+    # Moench
+    # json_frame_mode = ADCpt(EpicsSignalWithRBV, "JsonFrameMode")
+    # json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
+
+    # Eiger9M
+    # delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
+    # num_frames = ADCpt(EpicsSignalWithRBV, "NumFrames")
+    # acquire = ADCpt(EpicsSignal, "Acquire")
+    # acquire_time = ADCpt(EpicsSignal, 'AcquireTime')
+    # detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
+    # threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
+    # num_gates = ADCpt(EpicsSignalWithRBV, "NumGates")
+    # num_cycles = ADCpt(EpicsSignalWithRBV, "NumCycles")
+    # timing_mode = ADCpt(EpicsSignalWithRBV, "TimingMode")
+
+    # Pilatus_2 300k
+    num_images = ADCpt(EpicsSignalWithRBV, "NumImages")
+    num_exposures = ADCpt(EpicsSignalWithRBV, "NumExposures")
+    delay_time = ADCpt(EpicsSignalWithRBV, "NumExposures")
+    trigger_mode = ADCpt(EpicsSignalWithRBV, "TriggerMode")
+    acquire = ADCpt(EpicsSignal, "Acquire")
+    armed = ADCpt(EpicsSignalRO, "Armed")
+
+    read_file_timeout = ADCpt(EpicsSignal, "ImageFileTmot")
+    detector_state = ADCpt(EpicsSignalRO, "StatusMessage_RBV")
+    status_message_camserver = ADCpt(EpicsSignalRO, "StringFromServer_RBV")
+    acquire_time = ADCpt(EpicsSignal, "AcquireTime")
+    acquire_period = ADCpt(EpicsSignal, "AcquirePeriod")
+    threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
+    file_path = ADCpt(EpicsSignalWithRBV, "FilePath")
+    file_name = ADCpt(EpicsSignalWithRBV, "FileName")
+    file_number = ADCpt(EpicsSignalWithRBV, "FileNumber")
+    auto_increment = ADCpt(EpicsSignalWithRBV, "AutoIncrement")
+    file_template = ADCpt(EpicsSignalWithRBV, "FileTemplate")
+    file_format = ADCpt(EpicsSignalWithRBV, "FileNumber")
+    gap_fill = ADCpt(EpicsSignalWithRBV, "GapFill")
 
 
 class PilatusCsaxs(DetectorBase):
@@ -43,12 +106,12 @@ class PilatusCsaxs(DetectorBase):
     Device class: PilatusDetectorCamEx
 
     Attributes:
-        name str: 'eiger'
+        name str: 'pilatus_2'
         prefix (str): PV prefix (X12SA-ES-PILATUS300K:)
 
     """
 
-    cam = ADCpt(PilatusDetectorCamEx, "cam1:")
+    cam = ADCpt(SlsDetectorCam, "cam1:")
 
     def __init__(
         self,
@@ -91,7 +154,7 @@ class PilatusCsaxs(DetectorBase):
             self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
 
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.filepath = ""
+        self.filepath_h5 = ""
 
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.readout = 1e-3  # 3 ms
@@ -99,28 +162,6 @@ class PilatusCsaxs(DetectorBase):
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
         return BECMessage.ScanStatusMessage.loads(msg)
-
-    # def _load_scan_metadata(self) -> None:
-    #     scan_msg = self._get_current_scan_msg()
-    #     self.metadata = {
-    #         "scanID": scan_msg.content["scanID"],
-    #         "RID": scan_msg.content["info"]["RID"],
-    #         "queueID": scan_msg.content["info"]["queueID"],
-    #     }
-    #     self.scanID = scan_msg.content["scanID"]
-    #     self.scan_number = scan_msg.content["info"]["scan_number"]
-    #     self.exp_time = scan_msg.content["info"]["exp_time"]
-    #     self.num_frames = scan_msg.content["info"]["num_points"]
-    #     self.username = self.device_manager.producer.get(
-    #         MessageEndpoints.account()
-    #     ).decode()
-    #     self.device_manager.devices.mokev.read()["mokev"]["value"]
-    #     # self.triggermode = scan_msg.content["info"]["trigger_mode"]
-    #     # self.filename = self.filewriter.compile_full_filename(
-    #     #     self.scan_number, "pilatus_2", 1000, 5, True
-    #     # )
-    #     # TODO fix with BEC running
-    #     # self.filename = '/sls/X12SA/Data10/e21206/data/test.h5'
 
     def _prep_det(self) -> None:
         # TODO slow reaction, seemed to have timeout.
@@ -143,7 +184,7 @@ class PilatusCsaxs(DetectorBase):
         # self.cam.acquire_period.set(self.exp_time + self.readout)
         self.cam.num_images.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_exposures.set(1)
-        self._set_trigger(TriggerSource.INTERNAL)  # EXT_TRIGGER)
+        self._set_trigger(TriggerSource.EXT_ENABLE)  # EXT_TRIGGER)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector, either directly to value or TriggerSource.* with
@@ -164,12 +205,12 @@ class PilatusCsaxs(DetectorBase):
         self.filepath_h5 = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
         )
-        self.cam.file_path.set(f"/dev/shm/zmq/")
-        self.cam.file_name.set(f"{self.scaninfo.username}_2_{self.scaninfo.scan_number:05d}")
-        self.cam.auto_increment.set(1)  # auto increment
-        self.cam.file_number.set(0)  # first iter
-        self.cam.file_format.set(0)  # 0: TIFF
-        self.cam.file_template.set("%s%s_%5.5d.cbf")
+        self.cam.file_path.put(f"/dev/shm/zmq/")
+        self.cam.file_name.put(f"{self.scaninfo.username}_2_{self.scaninfo.scan_number:05d}")
+        self.cam.auto_increment.put(1)  # auto increment
+        self.cam.file_number.put(0)  # first iter
+        self.cam.file_format.put(0)  # 0: TIFF
+        self.cam.file_template.put("%s%s_%5.5d.cbf")
 
         # compile filename
         basepath = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/pilatus_2/"
@@ -254,17 +295,19 @@ class PilatusCsaxs(DetectorBase):
             if not res.ok:
                 res.raise_for_status()
         except Exception as exc:
-            logger.info("exc")
+            logger.info(f"Pilatus2 wait threw Exception: {exc}")
 
     def _close_file_writer(self) -> None:
         """Close the file writer for pilatus_2
         a zmq service is running on xbl-daq-34 that is waiting
         for a zmq message to stop the writer for the pilatus_2 x12sa-pd-2
         """
-
-        res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
-        if not res.ok:
-            res.raise_for_status()
+        try:
+            res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
+            if not res.ok:
+                res.raise_for_status()
+        except Exception as exc:
+            logger.info(f"Pilatus2 delete threw Exception: {exc}")
 
     def _stop_file_writer(self) -> None:
         res = requests.put(
@@ -278,34 +321,48 @@ class PilatusCsaxs(DetectorBase):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
+        self._close_file_writer()
+        self._stop_file_writer()
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
         ]["value"]
 
+        logger.info("Waiting for pilatus2 to be armed")
         self._prep_det()
+        logger.info("Pilatus2 armed")
+        logger.info("Waiting for pilatus2 zmq stream to be ready")
         self._prep_file_writer()
-        self.acquire()
+        logger.info("Pilatus2 zmq ready")
+        msg = BECMessage.FileMessage(
+            file_path=self.filepath_h5, done=False, metadata={"input_path": self.destination_path}
+        )
 
         return super().stage()
+
+    def pre_scan(self) -> None:
+        self.acquire()
 
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
         # Reset to software trigger
         self.triggermode = 0
+        # TODO if images are missing, consider adding delay
         self._close_file_writer()
         self._stop_file_writer()
         # Only sent this out once data is written to disk since cbf to hdf5 converter will be triggered
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True)
+        msg = BECMessage.FileMessage(
+            file_path=self.filepath_h5, done=True, metadata={"input_path": self.destination_path}
+        )
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True)
         self._producer.set_and_publish(
             MessageEndpoints.file_event(self.name),
             msg.dumps(),
         )
+        logger.info("Pilatus2 done")
         return super().unstage()
 
     def acquire(self) -> None:

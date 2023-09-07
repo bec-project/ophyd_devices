@@ -40,5 +40,6 @@ class EpicsMotorEx(EpicsMotor):
 
         # set configuration attributes
         for key, value in attrs.items():
+            # print out attributes that are being configured
             print("setting ", key, "=", value)
             getattr(self, key).put(value)

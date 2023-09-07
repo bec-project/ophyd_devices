@@ -1,6 +1,9 @@
 import os
 
 from bec_lib.core import DeviceManagerBase, BECMessage, MessageEndpoints
+from bec_lib.core import bec_logger
+
+logger = bec_logger.logger
 
 
 class BecScaninfoMixin:
@@ -39,23 +42,28 @@ class BecScaninfoMixin:
             info=self.bec_info_msg,
         )
 
-    def _get_username(self) -> str:
+    def get_username(self) -> str:
         if not self.sim_mode:
             return self.device_manager.producer.get(MessageEndpoints.account()).decode()
         return os.getlogin()
 
     def load_scan_metadata(self) -> None:
         self.scan_msg = scan_msg = self._get_current_scan_msg()
-        self.metadata = {
-            "scanID": scan_msg.content["scanID"],
-            "RID": scan_msg.content["info"]["RID"],
-            "queueID": scan_msg.content["info"]["queueID"],
-        }
-        self.scanID = scan_msg.content["scanID"]
-        self.scan_number = scan_msg.content["info"]["scan_number"]
-        self.exp_time = scan_msg.content["info"]["exp_time"]
-        self.frames_per_trigger = scan_msg.content["info"]["frames_per_trigger"]
-        self.num_points = scan_msg.content["info"]["num_points"]
-        self.scan_type = scan_msg.content["info"].get("scan_type", "step")
-        self.readout_time = scan_msg.content["info"]["readout_time"]
-        self.username = self._get_username()
+        logger.info(f"{self.scan_msg}")
+        try:
+            self.metadata = {
+                "scanID": scan_msg.content["scanID"],
+                "RID": scan_msg.content["info"]["RID"],
+                "queueID": scan_msg.content["info"]["queueID"],
+            }
+            self.scanID = scan_msg.content["scanID"]
+            self.scan_number = scan_msg.content["info"]["scan_number"]
+            self.exp_time = scan_msg.content["info"]["exp_time"]
+            self.frames_per_trigger = scan_msg.content["info"]["frames_per_trigger"]
+            self.num_points = scan_msg.content["info"]["num_points"]
+            self.scan_type = scan_msg.content["info"].get("scan_type", "step")
+            self.readout_time = scan_msg.content["info"]["readout_time"]
+        except Exception as exc:
+            logger.error(f"Failed to load scan metadata: {exc}.")
+
+        self.username = self.get_username()

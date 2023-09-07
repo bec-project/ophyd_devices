@@ -155,7 +155,8 @@ class GalilController(Controller):
     def stop_all_axes(self) -> str:
         # return self.socket_put_and_receive(f"XQ#STOP,1")
         # Command stops all threads and motors!
-        return self.socket_put_and_receive(f"ST")
+        # self.socket_put_and_receive(f"ST")
+        return self.socket_put_and_receive(f"AB")
 
     def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
@@ -405,7 +406,7 @@ class GalilSetpointSignal(GalilSignalBase):
         Returns:
             float: setpoint / target value
         """
-        return self.setpoint
+        return self.setpoint * self.parent.sign
 
     @retry_once
     @threadlocked
