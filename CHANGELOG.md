@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.7.0 (2023-09-07)
+
+### Feature
+
+* Add timeout functionality to ophyd devices ([`c80d9ab`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c80d9ab29bcc85a46b59f3be8fb86b990c3ed299))
+
 ## v0.6.0 (2023-09-07)
 
 ### Feature
