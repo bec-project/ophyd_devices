@@ -21,7 +21,11 @@ from bec_lib.core import bec_logger, threadlocked
 logger = bec_logger.logger
 
 
-class MCSError(Exception):
+class McsError(Exception):
+    pass
+
+
+class McsTimeoutError(Exception):
     pass
 
 
@@ -169,7 +173,7 @@ class McsCsaxs(SIS38XX):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise MCSError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise McsError("Add DeviceManager to initialization or init with sim_mode=True")
 
         self.name = name
         self._stream_ttl = 1800
@@ -236,13 +240,6 @@ class McsCsaxs(SIS38XX):
         self.mca_data[obj.attr_name] = kwargs["value"][1:]
         if len(self.mca_names) != len(self.mca_data):
             return
-        # ref_entry = self.mca_data[self.mca_names[0]]
-        # if not ref_entry:
-        #     self.mca_data = defaultdict(lambda: [])
-        #     return
-        # if isinstance(ref_entry, list) and (ref_entry > 0):
-        #     return
-
         self._updated = True
         self.counter += 1
         if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
@@ -293,9 +290,9 @@ class McsCsaxs(SIS38XX):
         elif self.scaninfo.scan_type == "fly":
             self.n_points = int(self.scaninfo.num_points / int(self.num_lines.get()) + 1)
         else:
-            raise MCSError(f"Scantype {self.scaninfo} not implemented for MCS card")
+            raise McsError(f"Scantype {self.scaninfo} not implemented for MCS card")
         if self.n_points > 10000:
-            raise MCSError(
+            raise McsError(
                 f"Requested number of points N={self.n_points} exceeds hardware limit of mcs card 10000 (N-1)"
             )
         self.num_use_all.set(self.n_points)
@@ -320,6 +317,8 @@ class McsCsaxs(SIS38XX):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
+        self._stopped = False
+        self._acquisition_done = False
         logger.info("Stage mcs")
         self.scaninfo.load_scan_metadata()
         self._prep_det()
@@ -344,15 +343,29 @@ class McsCsaxs(SIS38XX):
     def unstage(self) -> List[object]:
         """unstage"""
         logger.info("Waiting for mcs to finish acquisition")
-        while not self._acquisition_done:
-            # monitor signal instead?
-            if self._stopped:
-                break
-            time.sleep(0.005)
+        self._mcs_finished()
         self._acquisition_done = False
         self._stopped = False
         logger.info("mcs done")
         return super().unstage()
+
+    def _mcs_finished(self):
+        """Function with 10s timeout"""
+        timer = 0
+        while True:
+            if self._acquisition_done == True and self.acquiring.get() == 0:
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.1)
+            timer += 0.1
+            if timer > 5:
+                total_frames = self.counter * int(
+                    self.scaninfo.num_points / self.num_lines.get()
+                ) + max(self.current_channel.get() - 1, 0)
+                raise McsTimeoutError(
+                    f"Reached timeout with mcs in state {self.acquiring.get()} and {total_frames} frames arriving at the mcs card"
+                )
 
     def arm_acquisition(self) -> None:
         """Arm acquisition

@@ -25,6 +25,10 @@ class PilatusError(Exception):
     pass
 
 
+class PilatusTimeoutError(Exception):
+    pass
+
+
 class TriggerSource(int, enum.Enum):
     INTERNAL = 0
     EXT_ENABLE = 1
@@ -321,8 +325,8 @@ class PilatusCsaxs(DetectorBase):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
-        self._close_file_writer()
-        self._stop_file_writer()
+        self._acquisition_done = False
+        self._stopped = False
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
@@ -337,7 +341,6 @@ class PilatusCsaxs(DetectorBase):
         msg = BECMessage.FileMessage(
             file_path=self.filepath_h5, done=False, metadata={"input_path": self.destination_path}
         )
-
         return super().stage()
 
     def pre_scan(self) -> None:
@@ -346,11 +349,10 @@ class PilatusCsaxs(DetectorBase):
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
         # Reset to software trigger
-        self.triggermode = 0
-        # TODO if images are missing, consider adding delay
-        self._close_file_writer()
-        self._stop_file_writer()
-        # Only sent this out once data is written to disk since cbf to hdf5 converter will be triggered
+        logger.info("Waiting for Pilatus to return from acquisition")
+        if self._stopped:
+            return super().unstage()
+        self._pilatus_finished()
         msg = BECMessage.FileMessage(
             file_path=self.filepath_h5, done=True, metadata={"input_path": self.destination_path}
         )
@@ -365,16 +367,37 @@ class PilatusCsaxs(DetectorBase):
         logger.info("Pilatus2 done")
         return super().unstage()
 
+    def _pilatus_finished(self) -> None:
+        timer = 0
+        while True:
+            rtr = self.cam.status_message_camserver
+            if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.1)
+            timer += 0.1
+            if timer > 5:
+                self._close_file_writer()
+                self._stop_file_writer()
+                raise PilatusTimeoutError(
+                    f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
+                )
+        self._close_file_writer()
+        self._stop_file_writer()
+
     def acquire(self) -> None:
         """Start acquisition in software trigger mode,
         or arm the detector in hardware of the detector
         """
-        self.cam.acquire.set(1)
+        self.cam.acquire.put(1)
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
-        self.cam.acquire.set(0)
+        self.cam.acquire.put(0)
         self._stop_file_writer()
+        # TODO maybe needed
+        # self._close_file_writer()
         # self.unstage()
         super().stop(success=success)
         self._stopped = True
@@ -383,4 +406,3 @@ class PilatusCsaxs(DetectorBase):
 # Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
     pilatus_2 = PilatusCsaxs(name="pilatus_2", prefix="X12SA-ES-PILATUS300K:", sim_mode=True)
-    pilatus_2.stage()

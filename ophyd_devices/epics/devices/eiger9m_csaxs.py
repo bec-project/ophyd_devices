@@ -24,6 +24,10 @@ class EigerError(Exception):
     pass
 
 
+class EigerTimeoutError(Exception):
+    pass
+
+
 class SlsDetectorCam(Device):
     detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
@@ -262,6 +266,8 @@ class Eiger9mCsaxs(DetectorBase):
 
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
+        self._stopped = False
+        self._acquisition_done = False
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
@@ -297,26 +303,8 @@ class Eiger9mCsaxs(DetectorBase):
 
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
-        logger.info("Waiting for Eiger9M to return from acquisition")
-        while True:
-            det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
-            if det_ctrl == 0:
-                break
-            if self._stopped == True:
-                break
-            time.sleep(0.005)
-        logger.info("Eiger9M finished")
-
-        logger.info("Waiting for std daq to receive images")
-        while True:
-            det_ctrl = self.std_client.get_status()["acquisition"]["state"]
-            # TODO if no writing was performed before
-            if det_ctrl == "FINISHED":
-                break
-            if self._stopped == True:
-                break
-            time.sleep(0.005)
-        logger.info("Std_daq finished")
+        logger.info("Waiting for Eiger9M to finish")
+        self._eiger9M_finished()
         # Message to BEC
         state = True
 
@@ -326,7 +314,29 @@ class Eiger9mCsaxs(DetectorBase):
             msg.dumps(),
         )
         self._stopped = False
+        logger.info("Eiger9M finished")
         return super().unstage()
+
+    def _eiger9M_finished(self):
+        """Function with 10s timeout"""
+        timer = 0
+        while True:
+            det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
+            std_ctrl = self.std_client.get_status()["acquisition"]["state"]
+            status = self.std_client.get_status()
+            received_frames = status["acquisition"]["stats"]["n_write_completed"]
+            total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
+            # TODO if no writing was performed before
+            if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.1)
+            timer += 0.1
+            if timer > 5:
+                raise EigerTimeoutError(
+                    f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
+                )
 
     def arm_acquisition(self) -> None:
         """Start acquisition in software trigger mode,

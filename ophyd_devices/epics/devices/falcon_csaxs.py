@@ -21,6 +21,10 @@ class FalconError(Exception):
     pass
 
 
+class FalconTimeoutError(Exception):
+    pass
+
+
 class DetectorState(int, enum.Enum):
     DONE = 0
     ACQUIRING = 1
@@ -61,7 +65,6 @@ class FalconHDF5Plugins(Device):  # HDF5Plugin_V21, FilePlugin_V22):
     file_template = Cpt(EpicsSignalWithRBV, "FileTemplate", string=True, kind="config")
     num_capture = Cpt(EpicsSignalWithRBV, "NumCapture", kind="config")
     file_write_mode = Cpt(EpicsSignalWithRBV, "FileWriteMode", kind="config")
-    capture = Cpt(EpicsSignalWithRBV, "Capture")
 
 
 class FalconCsaxs(Device):
@@ -196,7 +199,7 @@ class FalconCsaxs(Device):
     def stage(self) -> List[object]:
         """stage the detector and file writer"""
         # TODO clean up needed?
-        # self._clean_up()
+        self._stopped = False
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
@@ -224,7 +227,6 @@ class FalconCsaxs(Device):
                 break
             time.sleep(0.005)
         logger.info("Falcon is armed")
-        self._stopped = False
         return super().stage()
 
     def arm_acquisition(self) -> None:
@@ -232,15 +234,9 @@ class FalconCsaxs(Device):
 
     def unstage(self) -> List[object]:
         logger.info("Waiting for Falcon to return from acquisition")
-        while True:
-            det_ctrl = self.state.read()[self.state.name]["value"]
-            if det_ctrl == int(DetectorState.DONE):
-                break
-            if self._stopped == True:
-                break
-            time.sleep(0.005)
-        logger.info("Falcon done")
-        # TODO needed?
+        if self._stopped:
+            return super().unstage()
+        self._falcon_finished()
         self._clean_up()
         state = True
         msg = BECMessage.FileMessage(file_path=self.destination_path, done=True, successful=state)
@@ -249,7 +245,28 @@ class FalconCsaxs(Device):
             msg.dumps(),
         )
         self._stopped = False
+        logger.info("Falcon done")
         return super().unstage()
+
+    def _falcon_finished(self):
+        """Function with 10s timeout"""
+        timer = 0
+        while True:
+            det_ctrl = self.acquiring.get()
+            writer_ctrl = self.hdf5.capture.get()
+            received_frames = self.dxp.current_pixel.get()
+            total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
+            # TODO if no writing was performed before
+            if det_ctrl == 0 and writer_ctrl == 0 and total_frames == received_frames:
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.1)
+            timer += 0.1
+            if timer > 5:
+                raise FalconTimeoutError(
+                    f"Reached timeout with detector state {det_ctrl}, std_daq state {writer_ctrl} and received frames of {received_frames} for the file writer"
+                )
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
