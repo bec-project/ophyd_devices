@@ -5,7 +5,7 @@ from typing import List
 
 import numpy as np
 from bec_lib.core import bec_logger
-from ophyd import Component as Cpt
+from ophyd import Component as Cpt, DeviceStatus
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
@@ -155,8 +155,8 @@ class GalilController(Controller):
     def stop_all_axes(self) -> str:
         # return self.socket_put_and_receive(f"XQ#STOP,1")
         # Command stops all threads and motors!
-        # self.socket_put_and_receive(f"ST")
-        return self.socket_put_and_receive(f"AB")
+        self.socket_put_and_receive(f"CB8")
+        return self.socket_put_and_receive(f"ST")
 
     def axis_is_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG allaxref").strip()))
@@ -243,6 +243,7 @@ class GalilController(Controller):
     # @threadlocked
     def fly_grid_scan(
         self,
+        status: DeviceStatus,
         start_y: float,
         end_y: float,
         interval_y: int,
@@ -272,7 +273,8 @@ class GalilController(Controller):
 
         """
         #
-        axes_referenced = self.axis_is_referenced()
+        if not self.axis_is_referenced():
+            raise GalilError("Axis are not referenced")
         sign_y = self._axis[ord("c") - 97].sign
         sign_x = self._axis[ord("e") - 97].sign
         # Check limits
@@ -309,9 +311,18 @@ class GalilController(Controller):
         # sleep 50ms to avoid controller running into
         time.sleep(0.1)
         self.socket_put_and_receive("XQ#SCANG")
+        # self._block_while_active(3)
         # time.sleep(0.1)
-        # threading.Thread(target=_while_in_motion(3, n_samples), daemon=True).start()
+        threading.Thread(target=self._block_while_active, args=(3,status), daemon=True).start()
         # self._while_in_motion(3, n_samples)
+
+    def _block_while_active(self,thread_id:int, status) -> None:
+        while self.is_thread_active(thread_id):
+            time.sleep(1)
+        time.sleep(1)
+        while self.is_thread_active(thread_id):
+            time.sleep(1)
+        status.set_finished()
 
     # TODO this is for reading out positions, readout is limited by stage triggering
     def _while_in_motion(self, thread_id: int, n_samples: int) -> tuple:
@@ -680,21 +691,30 @@ class SGalilMotor(Device, PositionerBase):
         self.controller.stop_all_axes()
         return super().stop(success=success)
 
-    def kickoff(
+    def kickoff(self) -> DeviceStatus:
+        status = DeviceStatus(self)
+        self.controller.fly_grid_scan(
+            status,
+            self._kickoff_params.get("start_y"),
+            self._kickoff_params.get("end_y"),
+            self._kickoff_params.get("interval_y"),
+            self._kickoff_params.get("start_x"),
+            self._kickoff_params.get("end_x"),
+            self._kickoff_params.get("interval_x"),
+            self._kickoff_params.get("exp_time"),
+            self._kickoff_params.get("readout_time"),
+        )
+        return status
+
+
+
+    def configure(
         self,
-        metadata: dict,
+        parameter: dict,
         **kwargs,
     ) -> None:
-        self.controller.fly_grid_scan(
-            kwargs.get("start_y"),
-            kwargs.get("end_y"),
-            kwargs.get("interval_y"),
-            kwargs.get("start_x"),
-            kwargs.get("end_x"),
-            kwargs.get("interval_x"),
-            kwargs.get("exp_time"),
-            kwargs.get("readout_time"),
-        )
+        self._kickoff_params = parameter
+
 
 
 if __name__ == "__main__":
