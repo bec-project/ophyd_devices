@@ -462,11 +462,11 @@ class DelayGeneratorDG645(Device):
         """Checks burst cycle of delay generator
         Force readout, return value from end of burst cycle
         """
+        return status.set_finished()
         while True:
-            self.trigger_burst_readout.put(1)
+            self.trigger_burst_readout.put(1, use_complete=True)
             if (
                 self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1
-                and self.delay_finished.read()[self.delay_finished.name]["value"] == 1
             ):
                 self._acquisition_done = True
                 status.set_finished()
