@@ -252,7 +252,7 @@ class FalconCsaxs(Device):
         """Function with 10s timeout"""
         timer = 0
         while True:
-            det_ctrl = self.acquiring.get()
+            det_ctrl = self.acquiring.read()[self.acquiring.name]['value']
             writer_ctrl = self.hdf5.capture.get()
             received_frames = self.dxp.current_pixel.get()
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
