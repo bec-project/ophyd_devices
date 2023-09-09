@@ -97,6 +97,8 @@ class SIS38XX(Device):
 
 
 class McsCsaxs(SIS38XX):
+    USER_ACCESS = [
+        "_init_mcs"]
     SUB_PROGRESS = "progress"
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
@@ -198,6 +200,12 @@ class McsCsaxs(SIS38XX):
         self.counter = 0
         self.n_points = 0
         self._init_mcs()
+        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
+        self.mca_data = defaultdict(lambda: [])
+        for mca in self.mca_names:
+            signal = getattr(self, mca)
+            signal.subscribe(self._on_mca_data, run=False)
+        self.current_channel.subscribe(self._progress_update, run=False)
 
     def _init_mcs(self) -> None:
         """Init parameters for mcs card 9m
@@ -216,12 +224,7 @@ class McsCsaxs(SIS38XX):
         self.input_polarity.set(0)
         self.output_polarity.set(1)
         self.count_on_start.set(0)
-        self.mca_names = [signal for signal in self.component_names if signal.startswith("mca")]
-        self.mca_data = defaultdict(lambda: [])
-        for mca in self.mca_names:
-            signal = getattr(self, mca)
-            signal.subscribe(self._on_mca_data, run=False)
-        self.current_channel.subscribe(self._progress_update, run=False)
+        self.stop_all.set(1)
 
     def _progress_update(self, value, **kwargs) -> None:
         num_lines = self.num_lines.get()
@@ -240,6 +243,7 @@ class McsCsaxs(SIS38XX):
         self.mca_data[obj.attr_name] = kwargs["value"][1:]
         if len(self.mca_names) != len(self.mca_data):
             return
+        logger.info("Entered _on_mca_data")
         self._updated = True
         self.counter += 1
         if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
@@ -249,6 +253,7 @@ class McsCsaxs(SIS38XX):
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
             self.erase_all.put(1)
+            logger.info("Entered _on_mca_data, acquisition finished")
             # Require wait for
             # time.sleep(0.01)
             self.mca_data = defaultdict(lambda: [])
@@ -309,7 +314,7 @@ class McsCsaxs(SIS38XX):
         Check ReadoutMode class for more information about options
         """
         # self.read_mode.set(ReadoutMode.EVENT)
-        self.erase_all.put(1)
+        self.erase_all.set(1)
         self.read_mode.set(ReadoutMode.EVENT)
 
     def _force_readout_mcs_card(self) -> None:
@@ -343,7 +348,11 @@ class McsCsaxs(SIS38XX):
     def unstage(self) -> List[object]:
         """unstage"""
         logger.info("Waiting for mcs to finish acquisition")
-        self._mcs_finished()
+        if self._stopped == True:
+            logger.info("Entered unstage _stopped =True")
+            return super().unstage()
+        if self._stopped:
+            self._mcs_finished()
         self._acquisition_done = False
         self._stopped = False
         logger.info("mcs done")
@@ -352,6 +361,7 @@ class McsCsaxs(SIS38XX):
     def _mcs_finished(self):
         """Function with 10s timeout"""
         timer = 0
+        logger.info("Entered _mcs_finished loop")
         while True:
             if self._acquisition_done == True and self.acquiring.get() == 0:
                 break
@@ -366,6 +376,7 @@ class McsCsaxs(SIS38XX):
                 raise McsTimeoutError(
                     f"Reached timeout with mcs in state {self.acquiring.get()} and {total_frames} frames arriving at the mcs card"
                 )
+        logger.info("Finished _mcs_finished loop")
 
     def arm_acquisition(self) -> None:
         """Arm acquisition
@@ -373,6 +384,7 @@ class McsCsaxs(SIS38XX):
         Start: start_all
         Erase/Start: erase_start
         """
+        logger.info("Entered mcs arm_acquisition")
         self.counter = 0
         self.erase_start.set(1)
         # self.start_all.set(1)
@@ -381,11 +393,11 @@ class McsCsaxs(SIS38XX):
         """Stop acquisition
         Stop or Stop and Erase
         """
+        logger.info("Entered mcs stop")
         self.stop_all.set(1)
         # self.erase_all.set(1)
         self._stopped = True
         self._acquisition_done = True
-        self.counter = 0
         super().stop(success=success)
 
 
