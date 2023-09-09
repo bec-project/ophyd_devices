@@ -1,13 +1,14 @@
 import enum
 import json
 import os
+import subprocess
 import time
 from typing import List
 import requests
 import numpy as np
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import DetectorBase, Device
+from ophyd import DetectorBase, Device, Staged
 from ophyd import ADComponent as ADCpt
 from ophyd_devices.utils import bec_utils as bec_utils
 
@@ -90,7 +91,7 @@ class SlsDetectorCam(Device):  # CamBase, FileBase):
 
     read_file_timeout = ADCpt(EpicsSignal, "ImageFileTmot")
     detector_state = ADCpt(EpicsSignalRO, "StatusMessage_RBV")
-    status_message_camserver = ADCpt(EpicsSignalRO, "StringFromServer_RBV")
+    status_message_camserver = ADCpt(EpicsSignalRO, "StringFromServer_RBV", string=True)
     acquire_time = ADCpt(EpicsSignal, "AcquireTime")
     acquire_period = ADCpt(EpicsSignal, "AcquirePeriod")
     threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
@@ -162,6 +163,9 @@ class PilatusCsaxs(DetectorBase):
 
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.readout = 1e-3  # 3 ms
+        
+        # TODO maybe needed
+        # self._close_file_writer()
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
@@ -206,6 +210,10 @@ class PilatusCsaxs(DetectorBase):
         a zmq service is running on xbl-daq-34 that is waiting
         for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
         """
+        self._close_file_writer()
+        time.sleep(2)
+        self._stop_file_writer()
+        time.sleep(2)
         self.filepath_h5 = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
         )
@@ -223,7 +231,7 @@ class PilatusCsaxs(DetectorBase):
             self.filewriter.get_scan_directory(self.scaninfo.scan_number, 1000, 5),
         )
         # Make directory if needed
-        os.makedirs(os.path.dirname(self.destination_path), exist_ok=True)
+        os.makedirs(self.destination_path, exist_ok=True)
 
         data_msg = {
             "source": [
@@ -267,6 +275,7 @@ class PilatusCsaxs(DetectorBase):
             data=json.dumps(data_msg),
             headers=headers,
         )
+        # subprocess.run("curl -i -s -X PUT http://xbl-daq-34:8091/pilatus_2/run -d '[\"zmqWriter\",\"e20636\",{\"addr\":\"tcp://x12sa-pd-2:8888\",\"dst\":[\"file\"],\"numFrm\":10,\"timeout\":2000,\"ifType\":\"PULL\",\"user\":\"e20636\"}]'", shell=True)
 
         logger.info(f"{res.status_code}  - {res.text} - {res.content}")
 
@@ -368,36 +377,47 @@ class PilatusCsaxs(DetectorBase):
         return super().unstage()
 
     def _pilatus_finished(self) -> None:
-        timer = 0
+        # time.sleep(2)
         while True:
-            rtr = self.cam.status_message_camserver
-            if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
-                break
-            if self._stopped == True:
+            if self.device_manager.devices.mcs.obj._staged != Staged.yes:
                 break
             time.sleep(0.1)
-            timer += 0.1
-            if timer > 5:
-                self._close_file_writer()
-                self._stop_file_writer()
-                raise PilatusTimeoutError(
-                    f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
-                )
-        self._close_file_writer()
+        # time.sleep(2)
+        # timer = 0
+        # while True:
+        #     # rtr = self.cam.status_message_camserver.get()
+        #     #if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
+        #     # if rtr == "Camserver returned OK": 
+        #     #     break
+        #     if self._stopped == True:
+        #         break
+        #     time.sleep(0.1)
+        #     timer += 0.1
+        #     if timer > 5:
+        #         self._close_file_writer()
+        #         self._stop_file_writer()
+        #         self._stopped == True
+        #         # raise PilatusTimeoutError(
+        #         #     f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
+        #         # )
+        
         self._stop_file_writer()
+        time.sleep(2)
+        self._close_file_writer()
 
     def acquire(self) -> None:
         """Start acquisition in software trigger mode,
         or arm the detector in hardware of the detector
         """
         self.cam.acquire.put(1)
+        time.sleep(1)
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
         self.cam.acquire.put(0)
         self._stop_file_writer()
         # TODO maybe needed
-        # self._close_file_writer()
+        self._close_file_writer()
         # self.unstage()
         super().stop(success=success)
         self._stopped = True
