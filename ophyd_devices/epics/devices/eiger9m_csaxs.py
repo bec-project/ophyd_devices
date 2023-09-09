@@ -1,13 +1,14 @@
 import enum
+import threading
 import time
 from typing import Any, List
 import numpy as np
-
+import os
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import DetectorBase, Device
 from ophyd import ADComponent as ADCpt
 
-from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
 from ophyd_devices.utils import bec_utils as bec_utils
@@ -103,6 +104,9 @@ class Eiger9mCsaxs(DetectorBase):
         prefix (str): PV prefix (X12SA-ES-EIGER9M:)
 
     """
+    USER_ACCESS = [
+        "describe",
+        ]
 
     cam = ADCpt(SlsDetectorCam, "cam1:")
 
@@ -129,6 +133,7 @@ class Eiger9mCsaxs(DetectorBase):
             **kwargs,
         )
         self._stopped = False
+        self._lock = threading.RLock()
         if device_manager is None and not sim_mode:
             raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
 
@@ -169,6 +174,7 @@ class Eiger9mCsaxs(DetectorBase):
     def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
         cfg = self.std_client.get_config()
         old_value = cfg.get(cfg_key)
+        logger.info(old_value)
         if old_value is None:
             raise EigerError(
                 f"Tried to change entry for key {cfg_key} in std_config that does not exist"
@@ -178,20 +184,23 @@ class Eiger9mCsaxs(DetectorBase):
                 f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
             )
         cfg.update({cfg_key: value})
+        logger.info(cfg)
         logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
+        self.std_client.set_config(cfg)
 
     def _init_standard_daq(self) -> None:
         self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
         timeout = 0
-        self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
-        time.sleep(1)
+        #TODO put back change of e-account!
+        #self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
+        #time.sleep(5)
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
             logger.info("Waiting for std_daq init.")
-            if timeout > 2:
+            if timeout > 5:
                 if not self.std_client.get_status()["state"]:
                     raise EigerError(
                         f"Std client not in READY state, returns: {self.std_client.get_status()}"
@@ -240,7 +249,9 @@ class Eiger9mCsaxs(DetectorBase):
         self.filepath = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
-        # self._close_file_writer()
+        while not os.path.exists(os.path.dirname(self.filepath)):
+            time.sleep(0.1)
+        self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
         try:
             self.std_client.start_writer_async(
@@ -273,9 +284,9 @@ class Eiger9mCsaxs(DetectorBase):
             self.device_manager.devices.mokev.name
         ]["value"]
 
+        self._prep_file_writer()
         self._prep_det()
         logger.info("Waiting for std daq to be armed")
-        self._prep_file_writer()
         logger.info("std_daq is ready")
 
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
@@ -301,9 +312,12 @@ class Eiger9mCsaxs(DetectorBase):
         self._stopped = False
         return super().stage()
 
+    @threadlocked
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
         logger.info("Waiting for Eiger9M to finish")
+        if self._stopped ==True:
+            return super().unstage()
         self._eiger9M_finished()
         # Message to BEC
         state = True
@@ -317,6 +331,7 @@ class Eiger9mCsaxs(DetectorBase):
         logger.info("Eiger9M finished")
         return super().unstage()
 
+    @threadlocked
     def _eiger9M_finished(self):
         """Function with 10s timeout"""
         timer = 0
@@ -330,13 +345,17 @@ class Eiger9mCsaxs(DetectorBase):
             if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
                 break
             if self._stopped == True:
+                self._close_file_writer()
                 break
             time.sleep(0.1)
             timer += 0.1
             if timer > 5:
+                self._stopped == True
+                self._close_file_writer()
                 raise EigerTimeoutError(
                     f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
                 )
+        self._close_file_writer()
 
     def arm_acquisition(self) -> None:
         """Start acquisition in software trigger mode,
