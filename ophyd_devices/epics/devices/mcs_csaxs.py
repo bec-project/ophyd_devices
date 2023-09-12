@@ -223,7 +223,7 @@ class McsCsaxs(SIS38XX):
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
         self.output_polarity.set(1)
-        self.count_on_start.set(0)
+        self.count_on_start.set(1)
         self.stop_all.set(1)
 
     def _progress_update(self, value, **kwargs) -> None:
@@ -243,9 +243,10 @@ class McsCsaxs(SIS38XX):
         self.mca_data[obj.attr_name] = kwargs["value"][1:]
         if len(self.mca_names) != len(self.mca_data):
             return
-        logger.info("Entered _on_mca_data")
+        #logger.info("Entered _on_mca_data")
         self._updated = True
         self.counter += 1
+        #logger.info(f'data from mca {self.mca_data["mca1"]} and {self.mca_data["mca4"]}')
         if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
             self.scaninfo.scan_type == "step" and self.counter == self.scaninfo.num_points
         ):
@@ -253,7 +254,7 @@ class McsCsaxs(SIS38XX):
             self.stop_all.put(1, use_complete=False)
             self._send_data_to_bec()
             self.erase_all.put(1)
-            logger.info("Entered _on_mca_data, acquisition finished")
+            #logger.info("Entered _on_mca_data, acquisition finished")
             # Require wait for
             # time.sleep(0.01)
             self.mca_data = defaultdict(lambda: [])
@@ -348,11 +349,15 @@ class McsCsaxs(SIS38XX):
     def unstage(self) -> List[object]:
         """unstage"""
         logger.info("Waiting for mcs to finish acquisition")
-        if self._stopped == True:
+        old_scanID = self.scaninfo.scanID
+        self.scaninfo.load_scan_metadata()
+        logger.info(f"Old scanID: {old_scanID}, ")
+        if self.scaninfo.scanID != old_scanID:
+            self._stopped = True        
+        if self._stopped is True:
             logger.info("Entered unstage _stopped =True")
             return super().unstage()
-        if self._stopped:
-            self._mcs_finished()
+        self._mcs_finished()
         self._acquisition_done = False
         self._stopped = False
         logger.info("mcs done")
@@ -369,7 +374,7 @@ class McsCsaxs(SIS38XX):
                 break
             time.sleep(0.1)
             timer += 0.1
-            if timer > 5:
+            if timer > 8:
                 total_frames = self.counter * int(
                     self.scaninfo.num_points / self.num_lines.get()
                 ) + max(self.current_channel.get() - 1, 0)

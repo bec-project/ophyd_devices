@@ -232,8 +232,8 @@ class Eiger9mCsaxs(DetectorBase):
         # self.cam.acquire_period.set(
         #    self.scaninfo.exp_time + (self.scaninfo.readout_time - self.reduce_readout)
         # )
-        self.cam.num_cycles.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_frames.set(1)
+        self.cam.num_cycles.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
+        self.cam.num_frames.put(1)
 
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector, either directly to value or TriggerSource.* with
@@ -243,7 +243,7 @@ class Eiger9mCsaxs(DetectorBase):
         BURST_TRIGGER = 3
         """
         value = int(trigger_source)
-        self.cam.timing_mode.set(value)
+        self.cam.timing_mode.put(value)
 
     def _prep_file_writer(self) -> None:
         self.filepath = self.filewriter.compile_full_filename(
@@ -316,6 +316,11 @@ class Eiger9mCsaxs(DetectorBase):
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
         logger.info("Waiting for Eiger9M to finish")
+        old_scanID = self.scaninfo.scanID
+        self.scaninfo.load_scan_metadata()
+        logger.info(f"Old scanID: {old_scanID}, ")
+        if self.scaninfo.scanID != old_scanID:
+            self._stopped = True
         if self._stopped ==True:
             return super().unstage()
         self._eiger9M_finished()
@@ -349,7 +354,7 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(0.1)
             timer += 0.1
-            if timer > 5:
+            if timer > 8:
                 self._stopped == True
                 self._close_file_writer()
                 raise EigerTimeoutError(

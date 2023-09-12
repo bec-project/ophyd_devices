@@ -234,6 +234,11 @@ class FalconCsaxs(Device):
 
     def unstage(self) -> List[object]:
         logger.info("Waiting for Falcon to return from acquisition")
+        old_scanID = self.scaninfo.scanID
+        self.scaninfo.load_scan_metadata()
+        logger.info(f"Old scanID: {old_scanID}, ")
+        if self.scaninfo.scanID != old_scanID:
+            self._stopped = True        
         if self._stopped:
             return super().unstage()
         self._falcon_finished()
@@ -252,20 +257,20 @@ class FalconCsaxs(Device):
         """Function with 10s timeout"""
         timer = 0
         while True:
-            det_ctrl = self.acquiring.read()[self.acquiring.name]['value']
+            det_ctrl = self.state.read()[self.state.name]['value']
             writer_ctrl = self.hdf5.capture.get()
             received_frames = self.dxp.current_pixel.get()
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
             # TODO if no writing was performed before
-            if det_ctrl == 0 and writer_ctrl == 0 and total_frames == received_frames:
+            if total_frames == received_frames:
                 break
             if self._stopped == True:
                 break
             time.sleep(0.1)
             timer += 0.1
-            if timer > 5:
+            if timer > 8:
                 raise FalconTimeoutError(
-                    f"Reached timeout with detector state {det_ctrl}, std_daq state {writer_ctrl} and received frames of {received_frames} for the file writer"
+                    f"Reached timeout with detector state {det_ctrl}, falcon state {writer_ctrl} and received frames of {received_frames} for the file writer"
                 )
 
     def stop(self, *, success=False) -> None:

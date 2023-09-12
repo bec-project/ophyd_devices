@@ -359,6 +359,11 @@ class PilatusCsaxs(DetectorBase):
         """unstage the detector and file writer"""
         # Reset to software trigger
         logger.info("Waiting for Pilatus to return from acquisition")
+        old_scanID = self.scaninfo.scanID
+        self.scaninfo.load_scan_metadata()
+        logger.info(f"Old scanID: {old_scanID}, ")
+        if self.scaninfo.scanID != old_scanID:
+            self._stopped = True        
         if self._stopped:
             return super().unstage()
         self._pilatus_finished()
