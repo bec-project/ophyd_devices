@@ -194,8 +194,8 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client.stop_writer()
         timeout = 0
         #TODO put back change of e-account!
-        #self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
-        #time.sleep(5)
+        # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
+        # time.sleep(5)
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
@@ -354,7 +354,7 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(0.1)
             timer += 0.1
-            if timer > 8:
+            if timer > 5:
                 self._stopped == True
                 self._close_file_writer()
                 raise EigerTimeoutError(

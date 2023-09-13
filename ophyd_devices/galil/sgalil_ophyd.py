@@ -689,6 +689,10 @@ class SGalilMotor(Device, PositionerBase):
 
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
+        #last_speed = self.controller.socket_put_and_receive("MG")
+        rtr = self.controller.socket_put_and_receive(f'SPC={2*10000}')
+        logger.info(f"{rtr}")
+        #logger.info(f'Motor stopped, restored speed for samy from {last_speed}mm/s to 2mm/s')
         return super().stop(success=success)
 
     def kickoff(self) -> DeviceStatus:

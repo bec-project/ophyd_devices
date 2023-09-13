@@ -210,10 +210,16 @@ class PilatusCsaxs(DetectorBase):
         a zmq service is running on xbl-daq-34 that is waiting
         for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
         """
+        #TODO worked reliable with time.sleep(2)
+        # self._close_file_writer()
+        # time.sleep(2)
+        # self._stop_file_writer()
+        # time.sleep(2)
         self._close_file_writer()
-        time.sleep(2)
+        time.sleep(.1)
         self._stop_file_writer()
-        time.sleep(2)
+        time.sleep(.1)
+        
         self.filepath_h5 = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
         )

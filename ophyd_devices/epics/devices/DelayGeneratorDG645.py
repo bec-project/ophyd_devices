@@ -263,6 +263,13 @@ class DelayGeneratorDG645(Device):
         config_storage_name="ddg_config",
     )
 
+    fixed_ttl_width = Component(
+        bec_utils.ConfigSignal,
+        name="fixed_ttl_width",
+        kind="config",
+        config_storage_name="ddg_config",
+    )
+
     amplitude = Component(
         bec_utils.ConfigSignal,
         name="amplitude",
@@ -337,7 +344,8 @@ class DelayGeneratorDG645(Device):
             parent (_type_, optional): _description_. Defaults to None.
             device_manager (_type_, optional): _description_. Defaults to None.
         Signals:
-            polarity (_type_, optional): _description_. Defaults to None.
+            polarity (_list_, optional): _description_. Defaults to None.
+            fixed_ttl_width (_list_, optional): _description_. Defaults to None.
             amplitude (_type_, optional): _description_. Defaults to None.
             offset (_type_, optional): _description_. Defaults to None.
             thres_trig_level (_type_, optional): _description_. Defaults to None.
@@ -347,19 +355,21 @@ class DelayGeneratorDG645(Device):
             set_high_on_exposure
             set_high_on_stage
             set_trigger_source
+
         """
         self.ddg_config = {
             f"{name}_delay_burst": 0,
             f"{name}_delta_width": 0,
             f"{name}_additional_triggers": 0,
             f"{name}_polarity": [1, 1, 1, 1, 1],
+            f"{name}_fixed_ttl_width": [0, 0, 0, 0, 0],
             f"{name}_amplitude": 4.5,
             f"{name}_offset": 0,
             f"{name}_thres_trig_level": 2.5,
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
             f"{name}_set_trigger_source": "SINGLE_SHOT",
-            f"{name}_trigger_width": None,
+            f"{name}_trigger_width": None, # This somehow duplicates the logic of fixed_ttl_width
         }
         if ddg_config is not None:
             [self.ddg_config.update({f"{name}_{key}": value}) for key, value in ddg_config.items()]
@@ -504,6 +514,11 @@ class DelayGeneratorDG645(Device):
                     self.set_channels("width", exp_time)
                 else:
                     self.set_channels("width", self.trigger_width.get())
+                for value, channel in zip(self.fixed_ttl_width.get(), self._all_channels):
+                    logger.info(f'{value}')
+                    if value !=0:
+                        logger.info(f'Setting {value}')
+                        self.set_channels("width", value, channels=[channel])
             else:
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
                 exp_time = self.delta_width.get() + self.scaninfo.exp_time
@@ -539,6 +554,11 @@ class DelayGeneratorDG645(Device):
                     self.set_channels("width", exp_time)
                 else:
                     self.set_channels("width", self.trigger_width.get())
+                for value, channel in zip(self.fixed_ttl_width.get(), self._all_channels):
+                    logger.info(f'{value}')
+                    if value !=0:
+                        logger.info(f'Setting {value}')
+                        self.set_channels("width", value, channels=[channel])
             else:
                 # define parameters
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))

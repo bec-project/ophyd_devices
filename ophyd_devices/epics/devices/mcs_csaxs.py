@@ -223,7 +223,7 @@ class McsCsaxs(SIS38XX):
         self._set_trigger(TriggerSource.MODE3)
         self.input_polarity.set(0)
         self.output_polarity.set(1)
-        self.count_on_start.set(1)
+        self.count_on_start.set(0)
         self.stop_all.set(1)
 
     def _progress_update(self, value, **kwargs) -> None:
@@ -231,7 +231,7 @@ class McsCsaxs(SIS38XX):
         max_value = self.scaninfo.num_points
         self._run_subs(
             sub_type=self.SUB_PROGRESS,
-            value=self.counter * int(self.scaninfo.num_points / num_lines) + max(value - 1, 0),
+            value=self.counter * int(self.scaninfo.num_points / num_lines) + value ,
             max_value=max_value,
             done=bool(max_value == self.counter),
         )
@@ -240,27 +240,31 @@ class McsCsaxs(SIS38XX):
     def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
         if not isinstance(kwargs["value"], (list, np.ndarray)):
             return
-        self.mca_data[obj.attr_name] = kwargs["value"][1:]
+        #self.mca_data[obj.attr_name] = kwargs["value"][1:]
+        self.mca_data[obj.attr_name] = kwargs["value"]
         if len(self.mca_names) != len(self.mca_data):
             return
         #logger.info("Entered _on_mca_data")
-        self._updated = True
-        self.counter += 1
+        # self._updated = True
+        # self.counter += 1
         #logger.info(f'data from mca {self.mca_data["mca1"]} and {self.mca_data["mca4"]}')
-        if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
-            self.scaninfo.scan_type == "step" and self.counter == self.scaninfo.num_points
-        ):
-            self._acquisition_done = True
-            self.stop_all.put(1, use_complete=False)
-            self._send_data_to_bec()
-            self.erase_all.put(1)
-            #logger.info("Entered _on_mca_data, acquisition finished")
-            # Require wait for
-            # time.sleep(0.01)
-            self.mca_data = defaultdict(lambda: [])
-            self.counter = 0
-            return
-        self.erase_start.set(1)
+        # if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
+        #     self.scaninfo.scan_type == "step" and self.counter == self.scaninfo.num_points
+        # ):
+        #     self._acquisition_done = True
+        #     self.stop_all.put(1, use_complete=False)
+        #     self._send_data_to_bec()
+        #     self.erase_all.put(1)
+        #     #logger.info("Entered _on_mca_data, acquisition finished")
+        #     # Require wait for
+        #     # time.sleep(0.01)
+        #     self.mca_data = defaultdict(lambda: [])
+        #     self.counter = 0
+        #     return
+        # self.erase_start.set(1)
+        # self._send_data_to_bec()
+        # self.mca_data = defaultdict(lambda: [])
+        self._acquisition_done = True
         self._send_data_to_bec()
         self.mca_data = defaultdict(lambda: [])
 
@@ -292,9 +296,9 @@ class McsCsaxs(SIS38XX):
 
     def _set_acquisition_params(self) -> None:
         if self.scaninfo.scan_type == "step":
-            self.n_points = int(self.scaninfo.frames_per_trigger + 1)
+            self.n_points = int(self.scaninfo.frames_per_trigger)
         elif self.scaninfo.scan_type == "fly":
-            self.n_points = int(self.scaninfo.num_points / int(self.num_lines.get()) + 1)
+            self.n_points = int(self.scaninfo.num_points)# / int(self.num_lines.get()))
         else:
             raise McsError(f"Scantype {self.scaninfo} not implemented for MCS card")
         if self.n_points > 10000:
@@ -377,7 +381,7 @@ class McsCsaxs(SIS38XX):
             if timer > 8:
                 total_frames = self.counter * int(
                     self.scaninfo.num_points / self.num_lines.get()
-                ) + max(self.current_channel.get() - 1, 0)
+                ) + max(self.current_channel.get(), 0)
                 raise McsTimeoutError(
                     f"Reached timeout with mcs in state {self.acquiring.get()} and {total_frames} frames arriving at the mcs card"
                 )
