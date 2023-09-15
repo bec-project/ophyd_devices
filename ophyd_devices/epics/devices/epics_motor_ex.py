@@ -2,7 +2,10 @@ from ophyd import Component as Cpt, EpicsSignal, EpicsMotor
 
 
 class EpicsMotorEx(EpicsMotor):
-    """Extend EpicsMotor with extra configuration fields."""
+    """Extend EpicsMotor with extra configuration fields.
+    motor_done_move
+    motor_is_moving
+    """
 
     # configuration
     motor_resolution = Cpt(EpicsSignal, ".MRES", kind="config", auto_monitor=True)
@@ -43,3 +46,20 @@ class EpicsMotorEx(EpicsMotor):
             # print out attributes that are being configured
             print("setting ", key, "=", value)
             getattr(self, key).put(value)
+        
+        # self.motor_done_move.subscribe(self._progress_update, run=False)
+
+    # def kickoff(self) -> DeviceStatus:
+    #     status = DeviceStatus(self)
+    #     self.move(
+    #         self._kickoff_params.get("position"),
+    #         wait = False
+    #     )
+    #     return status
+
+    # def _progress_update(self, value, **kwargs) -> None:
+    #     self._run_subs(
+    #         sub_type=self.SUB_PROGRESS,
+    #         value=value ,
+    #         done= 1,
+    #     )
