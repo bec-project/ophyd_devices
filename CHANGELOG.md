@@ -2,6 +2,26 @@
 
 <!--next-version-placeholder-->
 
+## v0.8.0 (2023-09-15)
+
+### Feature
+
+* First draft for Epics sequencer class ([`c418b87`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c418b87ad623f32368197a247e83fc99444dc071))
+
+### Fix
+
+* Format online changes via black ([`f221f9e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f221f9e88ee40e7e24a572d7f12e80a98d70f553))
+* Minor changes on the sgalil controller ([`b6bf7bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b6bf7bc9b3b5e4e581051bec2822d329da432b50))
+* Small changes in epics_motor_ex, potentially only comments ([`f9f9ed5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f9f9ed5e23d7478c5661806b67368c9e4711c9f5))
+* Online changes in e20639 for mcs card operating full 2D grid ([`67115a0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/67115a0658b1122881332e90a3ae9fa2780ca129))
+* Online changes e20643 ([`0bf308a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0bf308a13d55f795c6537c66972a80d66ec081dd))
+* Online changes sgalil e20636 ([`592ddfe`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/592ddfe6da87af467cfe507b46d423ccb03c21dd))
+* Online changes pilatus_2 e20636 ([`76f88ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/76f88efa31b1c599a7ee8233a7721aed30e6a611))
+* Online changes e20636 mcs ([`bb12181`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bb12181020b8ebf16c13d13e7fabc9ad8cc26909))
+* Online changes e20636 falcon ([`7939045`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/793904566dfb4bd1a22ac349f270a5ea2c7bc75f))
+* Online changes eiger9m ([`e299c71`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e299c71ec060f53563529f64ab43c6906efd938c))
+* Online changes DDG ([`c261fbb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c261fbb55a3379f17cc7a14e915c6c5ec309281b))
+
 ## v0.7.0 (2023-09-07)
 
 ### Feature
