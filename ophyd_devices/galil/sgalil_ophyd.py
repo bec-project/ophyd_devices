@@ -105,10 +105,12 @@ class GalilController(Controller):
 
     @threadlocked
     def socket_put(self, val: str) -> None:
+        time.sleep(0.01)
         self.sock.put(f"{val}\r".encode())
 
     @threadlocked
     def socket_get(self) -> str:
+        time.sleep(0.01)
         return self.sock.receive().decode()
 
     @retry_once
@@ -627,7 +629,7 @@ class SGalilMotor(Device, PositionerBase):
                     value=val,
                     timestamp=time.time(),
                 )
-                time.sleep(0.1)
+                time.sleep(1.5)
             val = self.readback.read()
             success = np.isclose(
                 val[self.name]["value"],
