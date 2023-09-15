@@ -238,7 +238,7 @@ class FalconCsaxs(Device):
         self.scaninfo.load_scan_metadata()
         logger.info(f"Old scanID: {old_scanID}, ")
         if self.scaninfo.scanID != old_scanID:
-            self._stopped = True        
+            self._stopped = True
         if self._stopped:
             return super().unstage()
         self._falcon_finished()
@@ -257,7 +257,7 @@ class FalconCsaxs(Device):
         """Function with 10s timeout"""
         timer = 0
         while True:
-            det_ctrl = self.state.read()[self.state.name]['value']
+            det_ctrl = self.state.read()[self.state.name]["value"]
             writer_ctrl = self.hdf5.capture.get()
             received_frames = self.dxp.current_pixel.get()
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)

@@ -212,7 +212,7 @@ class EnergyKev(VirtualEpicsSignalRO):
             )
 
         offs = np.interp(energy_keV, self._th2_offsets[:, 0], self._th2_offsets[:, 1])
-        #print(offs)
+        # print(offs)
         return offs
 
     def calc(self, val):

@@ -46,7 +46,7 @@ class EpicsMotorEx(EpicsMotor):
             # print out attributes that are being configured
             print("setting ", key, "=", value)
             getattr(self, key).put(value)
-        
+
         # self.motor_done_move.subscribe(self._progress_update, run=False)
 
     # def kickoff(self) -> DeviceStatus:

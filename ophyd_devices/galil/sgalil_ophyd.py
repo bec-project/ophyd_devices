@@ -315,10 +315,10 @@ class GalilController(Controller):
         self.socket_put_and_receive("XQ#SCANG")
         # self._block_while_active(3)
         # time.sleep(0.1)
-        threading.Thread(target=self._block_while_active, args=(3,status), daemon=True).start()
+        threading.Thread(target=self._block_while_active, args=(3, status), daemon=True).start()
         # self._while_in_motion(3, n_samples)
 
-    def _block_while_active(self,thread_id:int, status) -> None:
+    def _block_while_active(self, thread_id: int, status) -> None:
         while self.is_thread_active(thread_id):
             time.sleep(1)
         time.sleep(1)
@@ -691,10 +691,10 @@ class SGalilMotor(Device, PositionerBase):
 
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
-        #last_speed = self.controller.socket_put_and_receive("MG")
-        rtr = self.controller.socket_put_and_receive(f'SPC={2*10000}')
+        # last_speed = self.controller.socket_put_and_receive("MG")
+        rtr = self.controller.socket_put_and_receive(f"SPC={2*10000}")
         logger.info(f"{rtr}")
-        #logger.info(f'Motor stopped, restored speed for samy from {last_speed}mm/s to 2mm/s')
+        # logger.info(f'Motor stopped, restored speed for samy from {last_speed}mm/s to 2mm/s')
         return super().stop(success=success)
 
     def kickoff(self) -> DeviceStatus:
@@ -712,15 +712,12 @@ class SGalilMotor(Device, PositionerBase):
         )
         return status
 
-
-
     def configure(
         self,
         parameter: dict,
         **kwargs,
     ) -> None:
         self._kickoff_params = parameter
-
 
 
 if __name__ == "__main__":

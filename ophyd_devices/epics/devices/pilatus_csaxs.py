@@ -163,7 +163,7 @@ class PilatusCsaxs(DetectorBase):
 
         self.filewriter = FileWriterMixin(self.service_cfg)
         self.readout = 1e-3  # 3 ms
-        
+
         # TODO maybe needed
         # self._close_file_writer()
 
@@ -210,16 +210,16 @@ class PilatusCsaxs(DetectorBase):
         a zmq service is running on xbl-daq-34 that is waiting
         for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
         """
-        #TODO worked reliable with time.sleep(2)
+        # TODO worked reliable with time.sleep(2)
         # self._close_file_writer()
         # time.sleep(2)
         # self._stop_file_writer()
         # time.sleep(2)
         self._close_file_writer()
-        time.sleep(.1)
+        time.sleep(0.1)
         self._stop_file_writer()
-        time.sleep(.1)
-        
+        time.sleep(0.1)
+
         self.filepath_h5 = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
         )
@@ -369,7 +369,7 @@ class PilatusCsaxs(DetectorBase):
         self.scaninfo.load_scan_metadata()
         logger.info(f"Old scanID: {old_scanID}, ")
         if self.scaninfo.scanID != old_scanID:
-            self._stopped = True        
+            self._stopped = True
         if self._stopped:
             return super().unstage()
         self._pilatus_finished()
@@ -398,7 +398,7 @@ class PilatusCsaxs(DetectorBase):
         # while True:
         #     # rtr = self.cam.status_message_camserver.get()
         #     #if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
-        #     # if rtr == "Camserver returned OK": 
+        #     # if rtr == "Camserver returned OK":
         #     #     break
         #     if self._stopped == True:
         #         break
@@ -411,7 +411,7 @@ class PilatusCsaxs(DetectorBase):
         #         # raise PilatusTimeoutError(
         #         #     f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
         #         # )
-        
+
         self._stop_file_writer()
         time.sleep(2)
         self._close_file_writer()

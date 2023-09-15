@@ -104,9 +104,10 @@ class Eiger9mCsaxs(DetectorBase):
         prefix (str): PV prefix (X12SA-ES-EIGER9M:)
 
     """
+
     USER_ACCESS = [
         "describe",
-        ]
+    ]
 
     cam = ADCpt(SlsDetectorCam, "cam1:")
 
@@ -193,7 +194,7 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
         timeout = 0
-        #TODO put back change of e-account!
+        # TODO put back change of e-account!
         # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
         # time.sleep(5)
         while not self.std_client.get_status()["state"] == "READY":
@@ -321,7 +322,7 @@ class Eiger9mCsaxs(DetectorBase):
         logger.info(f"Old scanID: {old_scanID}, ")
         if self.scaninfo.scanID != old_scanID:
             self._stopped = True
-        if self._stopped ==True:
+        if self._stopped == True:
             return super().unstage()
         self._eiger9M_finished()
         # Message to BEC

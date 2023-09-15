@@ -369,7 +369,7 @@ class DelayGeneratorDG645(Device):
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
             f"{name}_set_trigger_source": "SINGLE_SHOT",
-            f"{name}_trigger_width": None, # This somehow duplicates the logic of fixed_ttl_width
+            f"{name}_trigger_width": None,  # This somehow duplicates the logic of fixed_ttl_width
         }
         if ddg_config is not None:
             [self.ddg_config.update({f"{name}_{key}": value}) for key, value in ddg_config.items()]
@@ -475,9 +475,7 @@ class DelayGeneratorDG645(Device):
         return status.set_finished()
         while True:
             self.trigger_burst_readout.put(1, use_complete=True)
-            if (
-                self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1
-            ):
+            if self.burst_cycle_finished.read()[self.burst_cycle_finished.name]["value"] == 1:
                 self._acquisition_done = True
                 status.set_finished()
                 return
@@ -515,9 +513,9 @@ class DelayGeneratorDG645(Device):
                 else:
                     self.set_channels("width", self.trigger_width.get())
                 for value, channel in zip(self.fixed_ttl_width.get(), self._all_channels):
-                    logger.info(f'{value}')
-                    if value !=0:
-                        logger.info(f'Setting {value}')
+                    logger.info(f"{value}")
+                    if value != 0:
+                        logger.info(f"Setting {value}")
                         self.set_channels("width", value, channels=[channel])
             else:
                 self._set_trigger(getattr(TriggerSource, self.set_trigger_source.get()))
@@ -555,9 +553,9 @@ class DelayGeneratorDG645(Device):
                 else:
                     self.set_channels("width", self.trigger_width.get())
                 for value, channel in zip(self.fixed_ttl_width.get(), self._all_channels):
-                    logger.info(f'{value}')
-                    if value !=0:
-                        logger.info(f'Setting {value}')
+                    logger.info(f"{value}")
+                    if value != 0:
+                        logger.info(f"Setting {value}")
                         self.set_channels("width", value, channels=[channel])
             else:
                 # define parameters

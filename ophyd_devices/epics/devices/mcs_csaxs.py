@@ -97,8 +97,7 @@ class SIS38XX(Device):
 
 
 class McsCsaxs(SIS38XX):
-    USER_ACCESS = [
-        "_init_mcs"]
+    USER_ACCESS = ["_init_mcs"]
     SUB_PROGRESS = "progress"
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
@@ -231,7 +230,7 @@ class McsCsaxs(SIS38XX):
         max_value = self.scaninfo.num_points
         self._run_subs(
             sub_type=self.SUB_PROGRESS,
-            value=self.counter * int(self.scaninfo.num_points / num_lines) + value ,
+            value=self.counter * int(self.scaninfo.num_points / num_lines) + value,
             max_value=max_value,
             done=bool(max_value == self.counter),
         )
@@ -240,14 +239,14 @@ class McsCsaxs(SIS38XX):
     def _on_mca_data(self, *args, obj=None, **kwargs) -> None:
         if not isinstance(kwargs["value"], (list, np.ndarray)):
             return
-        #self.mca_data[obj.attr_name] = kwargs["value"][1:]
+        # self.mca_data[obj.attr_name] = kwargs["value"][1:]
         self.mca_data[obj.attr_name] = kwargs["value"]
         if len(self.mca_names) != len(self.mca_data):
             return
-        #logger.info("Entered _on_mca_data")
+        # logger.info("Entered _on_mca_data")
         # self._updated = True
         # self.counter += 1
-        #logger.info(f'data from mca {self.mca_data["mca1"]} and {self.mca_data["mca4"]}')
+        # logger.info(f'data from mca {self.mca_data["mca1"]} and {self.mca_data["mca4"]}')
         # if (self.scaninfo.scan_type == "fly" and self.counter == self.num_lines.get()) or (
         #     self.scaninfo.scan_type == "step" and self.counter == self.scaninfo.num_points
         # ):
@@ -298,7 +297,7 @@ class McsCsaxs(SIS38XX):
         if self.scaninfo.scan_type == "step":
             self.n_points = int(self.scaninfo.frames_per_trigger)
         elif self.scaninfo.scan_type == "fly":
-            self.n_points = int(self.scaninfo.num_points)# / int(self.num_lines.get()))
+            self.n_points = int(self.scaninfo.num_points)  # / int(self.num_lines.get()))
         else:
             raise McsError(f"Scantype {self.scaninfo} not implemented for MCS card")
         if self.n_points > 10000:
@@ -357,7 +356,7 @@ class McsCsaxs(SIS38XX):
         self.scaninfo.load_scan_metadata()
         logger.info(f"Old scanID: {old_scanID}, ")
         if self.scaninfo.scanID != old_scanID:
-            self._stopped = True        
+            self._stopped = True
         if self._stopped is True:
             logger.info("Entered unstage _stopped =True")
             return super().unstage()
