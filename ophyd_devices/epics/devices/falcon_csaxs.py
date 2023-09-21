@@ -65,6 +65,8 @@ class FalconHDF5Plugins(Device):  # HDF5Plugin_V21, FilePlugin_V22):
     file_template = Cpt(EpicsSignalWithRBV, "FileTemplate", string=True, kind="config")
     num_capture = Cpt(EpicsSignalWithRBV, "NumCapture", kind="config")
     file_write_mode = Cpt(EpicsSignalWithRBV, "FileWriteMode", kind="config")
+    queue_size =  Cpt(EpicsSignalWithRBV, "QueueSize", kind="config")
+    array_counter =  Cpt(EpicsSignalWithRBV, "ArrayCounter", kind="config")
 
 
 class FalconCsaxs(Device):
@@ -145,7 +147,7 @@ class FalconCsaxs(Device):
         self.filewriter = FileWriterMixin(self.service_cfg)
 
         self.readout = 0.003  # 3 ms
-        self._value_pixel_per_buffer = 1  # 16
+        self._value_pixel_per_buffer = 20  # 16
         self._clean_up()
         self._init_hdf5_saving()
         self._init_mapping_mode()
@@ -161,7 +163,8 @@ class FalconCsaxs(Device):
         self.hdf5.enable.put(1)  # EnableCallbacks
         self.hdf5.xml_file_name.put("layout.xml")  # Points to hardcopy of HDF5 Layout xml file
         self.hdf5.lazy_open.put(1)  # Yes -> To be checked how to add FilePlugin_V21+
-        self.hdf5.temp_suffix.put("temps")  # -> To be checked how to add FilePlugin_V22+
+        self.hdf5.temp_suffix.put("")  # -> To be checked how to add FilePlugin_V22+
+        self.hdf5.queue_size.put(2000)
 
     def _init_mapping_mode(self) -> None:
         """Set up mapping mode params"""
@@ -169,17 +172,17 @@ class FalconCsaxs(Device):
         self.preset_mode.put(1)  # 1 Realtime
         self.input_logic_polarity.put(0)  # 0 Normal, 1 Inverted
         self.pixel_advance_mode.put(1)  # 0 User, 1 Gate, 2 Sync
-        self.ignore_gate.put(1)  # 1 Yes
+        self.ignore_gate.put(0)  # 1 Yes, 0 No
         self.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
-        self.pixels_per_buffer.put(16)  #
+        self.pixels_per_buffer.put(self._value_pixel_per_buffer)  #
 
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
         self.collect_mode.put(1)
         self.preset_real.put(self.scaninfo.exp_time)
         self.pixels_per_run.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.auto_pixels_per_buffer.put(0)
-        self.pixels_per_buffer.put(self._value_pixel_per_buffer)
+        #self.auto_pixels_per_buffer.put(0)
+        #self.pixels_per_buffer.put(self._value_pixel_per_buffer)
 
     def _prep_file_writer(self) -> None:
         """Prep HDF5 weriting"""
@@ -192,8 +195,9 @@ class FalconCsaxs(Device):
         self.hdf5.file_path.put(file_path)
         self.hdf5.file_name.put(file_name)
         self.hdf5.file_template.put(f"%s%s")
-        self.hdf5.num_capture.put(self.scaninfo.num_points // self._value_pixel_per_buffer + 1)
+        self.hdf5.num_capture.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.hdf5.file_write_mode.put(2)
+        self.hdf5.array_counter.put(0)
         self.hdf5.capture.put(1)
 
     def stage(self) -> List[object]:
@@ -260,18 +264,21 @@ class FalconCsaxs(Device):
             det_ctrl = self.state.read()[self.state.name]["value"]
             writer_ctrl = self.hdf5.capture.get()
             received_frames = self.dxp.current_pixel.get()
+            written_frames = self.hdf5.array_counter.get()
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
             # TODO if no writing was performed before
-            if total_frames == received_frames:
+            if total_frames == received_frames and total_frames == written_frames:
                 break
             if self._stopped == True:
                 break
             time.sleep(0.1)
             timer += 0.1
-            if timer > 8:
-                raise FalconTimeoutError(
-                    f"Reached timeout with detector state {det_ctrl}, falcon state {writer_ctrl} and received frames of {received_frames} for the file writer"
-                )
+            if timer > 5:
+                logger.info(f'Falcon missed a trigger: received trigger {received_frames}, send data {written_frames} from total_frames {total_frames}')
+                break
+                # raise FalconTimeoutError
+                #     f"Reached timeout with detector state {det_ctrl}, falcon state {writer_ctrl}, received trigger {received_frames} and files written {written_frames}"
+                # )
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""

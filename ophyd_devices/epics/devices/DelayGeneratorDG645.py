@@ -318,6 +318,12 @@ class DelayGeneratorDG645(Device):
         kind="config",
         config_storage_name="ddg_config",
     )
+    premove_trigger = Component(
+        bec_utils.ConfigSignal,
+        name="premove_trigger",
+        kind="config",
+        config_storage_name="ddg_config",
+    )
 
     def __init__(
         self,
@@ -370,6 +376,7 @@ class DelayGeneratorDG645(Device):
             f"{name}_set_high_on_stage": False,
             f"{name}_set_trigger_source": "SINGLE_SHOT",
             f"{name}_trigger_width": None,  # This somehow duplicates the logic of fixed_ttl_width
+            f"{name}_premove_trigger": False,
         }
         if ddg_config is not None:
             [self.ddg_config.update({f"{name}_{key}": value}) for key, value in ddg_config.items()]
@@ -588,14 +595,20 @@ class DelayGeneratorDG645(Device):
         self._ddg_is_okay()
         self._stopped = False
         self._acquisition_done = False
+        logger.info("DDG unstaged")
         super().unstage()
 
+    def pre_scan(self) -> None:
+        if self.premove_trigger.get()==True:
+            self.trigger_shot.put(1)
+
     def trigger(self) -> DeviceStatus:
-        # if self.scaninfo.scan_type == "step":
+        status = DeviceStatus(self)
+        if self.premove_trigger.get() == True:
+            status.set_finished()
+            return status
         if self.source.read()[self.source.name]["value"] == int(TriggerSource.SINGLE_SHOT):
             self.trigger_shot.put(1)
-        # status = super().trigger(status=)
-        status = DeviceStatus(self)
         burst_state = threading.Thread(target=self._check_burst_cycle, args=(status,), daemon=True)
         burst_state.start()
         return status

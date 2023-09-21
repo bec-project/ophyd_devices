@@ -413,7 +413,7 @@ class PilatusCsaxs(DetectorBase):
         #         # )
 
         self._stop_file_writer()
-        time.sleep(2)
+        time.sleep(.5)
         self._close_file_writer()
 
     def acquire(self) -> None:
