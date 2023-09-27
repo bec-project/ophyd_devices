@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.8.1 (2023-09-27)
+
+### Fix
+
+* Fixed formatting ([`48445e8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/48445e8b61031496712bfdb262a944c6d058029f))
+* Add ndarraymode and formatting ([`712674e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/712674e4b8f662b3081d21ed7c2d053260a728e6))
+* Online changes e21536 ([`0372f6f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0372f6f726f14b3728921ca498634b4c4ad5e0cb))
+
 ## v0.8.0 (2023-09-15)
 
 ### Feature
