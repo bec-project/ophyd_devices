@@ -100,6 +100,7 @@ class FalconCsaxs(Device):
     auto_pixels_per_buffer = Cpt(EpicsSignal, "AutoPixelsPerBuffer")
     pixels_per_buffer = Cpt(EpicsSignal, "PixelsPerBuffer")
     pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
+    nd_array_mode = Cpt(EpicsSignal, "NDArrayMode")
 
     # HDF5
 
@@ -175,6 +176,7 @@ class FalconCsaxs(Device):
         self.ignore_gate.put(0)  # 1 Yes, 0 No
         self.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
         self.pixels_per_buffer.put(self._value_pixel_per_buffer)  #
+        self.nd_array_mode.put(1)
 
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
