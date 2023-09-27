@@ -30,42 +30,42 @@ class EigerTimeoutError(Exception):
 
 
 class SlsDetectorCam(Device):
-    detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
-    setting = ADCpt(EpicsSignalWithRBV, "Setting")
-    delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
+    # detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
+    # setting = ADCpt(EpicsSignalWithRBV, "Setting")
+    # delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
     threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
     beam_energy = ADCpt(EpicsSignalWithRBV, "BeamEnergy")
-    enable_trimbits = ADCpt(EpicsSignalWithRBV, "Trimbits")
+    # enable_trimbits = ADCpt(EpicsSignalWithRBV, "Trimbits")
     bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
-    num_gates = ADCpt(EpicsSignalWithRBV, "NumGates")
+    # num_gates = ADCpt(EpicsSignalWithRBV, "NumGates")
     num_cycles = ADCpt(EpicsSignalWithRBV, "NumCycles")
     num_frames = ADCpt(EpicsSignalWithRBV, "NumFrames")
     timing_mode = ADCpt(EpicsSignalWithRBV, "TimingMode")
     trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
-    high_voltage = ADCpt(EpicsSignalWithRBV, "HighVoltage")
+    # high_voltage = ADCpt(EpicsSignalWithRBV, "HighVoltage")
     # Receiver and data callback
-    receiver_mode = ADCpt(EpicsSignalWithRBV, "ReceiverMode")
-    receiver_stream = ADCpt(EpicsSignalWithRBV, "ReceiverStream")
-    enable_data = ADCpt(EpicsSignalWithRBV, "UseDataCallback")
-    missed_packets = ADCpt(EpicsSignalRO, "ReceiverMissedPackets_RBV")
+    # receiver_mode = ADCpt(EpicsSignalWithRBV, "ReceiverMode")
+    # receiver_stream = ADCpt(EpicsSignalWithRBV, "ReceiverStream")
+    # enable_data = ADCpt(EpicsSignalWithRBV, "UseDataCallback")
+    # missed_packets = ADCpt(EpicsSignalRO, "ReceiverMissedPackets_RBV")
     # Direct settings access
-    setup_file = ADCpt(EpicsSignal, "SetupFile")
-    load_setup = ADCpt(EpicsSignal, "LoadSetup")
-    command = ADCpt(EpicsSignal, "Command")
+    # setup_file = ADCpt(EpicsSignal, "SetupFile")
+    # load_setup = ADCpt(EpicsSignal, "LoadSetup")
+    # command = ADCpt(EpicsSignal, "Command")
     # Mythen 3
-    counter_mask = ADCpt(EpicsSignalWithRBV, "CounterMask")
-    counter1_threshold = ADCpt(EpicsSignalWithRBV, "Counter1Threshold")
-    counter2_threshold = ADCpt(EpicsSignalWithRBV, "Counter2Threshold")
-    counter3_threshold = ADCpt(EpicsSignalWithRBV, "Counter3Threshold")
-    gate1_delay = ADCpt(EpicsSignalWithRBV, "Gate1Delay")
-    gate1_width = ADCpt(EpicsSignalWithRBV, "Gate1Width")
-    gate2_delay = ADCpt(EpicsSignalWithRBV, "Gate2Delay")
-    gate2_width = ADCpt(EpicsSignalWithRBV, "Gate2Width")
-    gate3_delay = ADCpt(EpicsSignalWithRBV, "Gate3Delay")
-    gate3_width = ADCpt(EpicsSignalWithRBV, "Gate3Width")
-    # Moench
-    json_frame_mode = ADCpt(EpicsSignalWithRBV, "JsonFrameMode")
-    json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
+    # counter_mask = ADCpt(EpicsSignalWithRBV, "CounterMask")
+    # counter1_threshold = ADCpt(EpicsSignalWithRBV, "Counter1Threshold")
+    # counter2_threshold = ADCpt(EpicsSignalWithRBV, "Counter2Threshold")
+    # counter3_threshold = ADCpt(EpicsSignalWithRBV, "Counter3Threshold")
+    # gate1_delay = ADCpt(EpicsSignalWithRBV, "Gate1Delay")
+    # gate1_width = ADCpt(EpicsSignalWithRBV, "Gate1Width")
+    # gate2_delay = ADCpt(EpicsSignalWithRBV, "Gate2Delay")
+    # gate2_width = ADCpt(EpicsSignalWithRBV, "Gate2Width")
+    # gate3_delay = ADCpt(EpicsSignalWithRBV, "Gate3Delay")
+    # gate3_width = ADCpt(EpicsSignalWithRBV, "Gate3Width")
+    # # Moench
+    # json_frame_mode = ADCpt(EpicsSignalWithRBV, "JsonFrameMode")
+    # json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
 
     # fixes due to missing PVs from CamBase
     acquire = ADCpt(EpicsSignal, "Acquire")
@@ -170,7 +170,7 @@ class Eiger9mCsaxs(DetectorBase):
     def _init_eiger9m(self) -> None:
         """Init parameters for Eiger 9m"""
         self._set_trigger(TriggerSource.GATING)
-        self.cam.acquire.set(0)
+        self.stop_acquisition()
 
     def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
         cfg = self.std_client.get_config()
@@ -301,16 +301,10 @@ class Eiger9mCsaxs(DetectorBase):
             msg.dumps(),
         )
         self.arm_acquisition()
-        logger.info("Waiting for Eiger9m to be armed")
-        while True:
-            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.RUNNING):
-                break
-            if self._stopped == True:
-                break
-            time.sleep(0.005)
-        logger.info("Eiger9m is armed")
+
         self._stopped = False
+        # We see that we miss a trigger occasionally, it seems that status msg from the ioc are not realiable
+        time.sleep(0.05)
         return super().stage()
 
     @threadlocked
@@ -343,6 +337,7 @@ class Eiger9mCsaxs(DetectorBase):
         timer = 0
         while True:
             det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
+            # det_ctrl = 0
             std_ctrl = self.std_client.get_status()["acquisition"]["state"]
             status = self.std_client.get_status()
             received_frames = status["acquisition"]["stats"]["n_write_completed"]
@@ -351,6 +346,7 @@ class Eiger9mCsaxs(DetectorBase):
             if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
                 break
             if self._stopped == True:
+                self.stop_acquisition()
                 self._close_file_writer()
                 break
             time.sleep(0.1)
@@ -358,6 +354,7 @@ class Eiger9mCsaxs(DetectorBase):
             if timer > 5:
                 self._stopped == True
                 self._close_file_writer()
+                self.stop_acquisition()
                 raise EigerTimeoutError(
                     f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
                 )
@@ -367,11 +364,41 @@ class Eiger9mCsaxs(DetectorBase):
         """Start acquisition in software trigger mode,
         or arm the detector in hardware of the detector
         """
-        self.cam.acquire.set(1)
+        self.cam.acquire.put(1)
+        logger.info("Waiting for Eiger9m to be armed")
+        while True:
+            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
+            if det_ctrl == int(DetectorState.RUNNING):
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.005)
+        logger.info("Eiger9m is armed")
+
+    def stop_acquisition(self) -> None:
+        """Stop the detector and wait for the proper status message"""
+        logger.info("Waiting for Eiger9m to be armed")
+        elapsed_time = 0
+        sleep_time = 0.01
+        self.cam.acquire.put(0)
+        retry = False
+        while True:
+            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
+            if det_ctrl == int(DetectorState.IDLE):
+                break
+            if self._stopped == True:
+                break
+            time.sleep(sleep_time)
+            elapsed_time += sleep_time
+            if elapsed_time > 2 and not retry:
+                retry = True
+                self.cam.acquire.put(0)
+            if elapsed_time > 5:
+                raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
-        self.cam.acquire.set(0)
+        self.stop_acquisition()
         self._close_file_writer()
         super().stop(success=success)
         self._stopped = True

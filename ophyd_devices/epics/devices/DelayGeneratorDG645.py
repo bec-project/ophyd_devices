@@ -599,7 +599,7 @@ class DelayGeneratorDG645(Device):
         super().unstage()
 
     def pre_scan(self) -> None:
-        if self.premove_trigger.get()==True:
+        if self.premove_trigger.get() == True:
             self.trigger_shot.put(1)
 
     def trigger(self) -> DeviceStatus:

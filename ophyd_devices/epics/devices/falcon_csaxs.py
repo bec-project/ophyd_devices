@@ -65,8 +65,8 @@ class FalconHDF5Plugins(Device):  # HDF5Plugin_V21, FilePlugin_V22):
     file_template = Cpt(EpicsSignalWithRBV, "FileTemplate", string=True, kind="config")
     num_capture = Cpt(EpicsSignalWithRBV, "NumCapture", kind="config")
     file_write_mode = Cpt(EpicsSignalWithRBV, "FileWriteMode", kind="config")
-    queue_size =  Cpt(EpicsSignalWithRBV, "QueueSize", kind="config")
-    array_counter =  Cpt(EpicsSignalWithRBV, "ArrayCounter", kind="config")
+    queue_size = Cpt(EpicsSignalWithRBV, "QueueSize", kind="config")
+    array_counter = Cpt(EpicsSignalWithRBV, "ArrayCounter", kind="config")
 
 
 class FalconCsaxs(Device):
@@ -183,8 +183,8 @@ class FalconCsaxs(Device):
         self.collect_mode.put(1)
         self.preset_real.put(self.scaninfo.exp_time)
         self.pixels_per_run.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        #self.auto_pixels_per_buffer.put(0)
-        #self.pixels_per_buffer.put(self._value_pixel_per_buffer)
+        # self.auto_pixels_per_buffer.put(0)
+        # self.pixels_per_buffer.put(self._value_pixel_per_buffer)
 
     def _prep_file_writer(self) -> None:
         """Prep HDF5 weriting"""
@@ -276,7 +276,9 @@ class FalconCsaxs(Device):
             time.sleep(0.1)
             timer += 0.1
             if timer > 5:
-                logger.info(f'Falcon missed a trigger: received trigger {received_frames}, send data {written_frames} from total_frames {total_frames}')
+                logger.info(
+                    f"Falcon missed a trigger: received trigger {received_frames}, send data {written_frames} from total_frames {total_frames}"
+                )
                 break
                 # raise FalconTimeoutError
                 #     f"Reached timeout with detector state {det_ctrl}, falcon state {writer_ctrl}, received trigger {received_frames} and files written {written_frames}"

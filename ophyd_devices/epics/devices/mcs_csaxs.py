@@ -295,7 +295,7 @@ class McsCsaxs(SIS38XX):
 
     def _set_acquisition_params(self) -> None:
         if self.scaninfo.scan_type == "step":
-            self.n_points = int(self.scaninfo.frames_per_trigger)*int(self.scaninfo.num_points)
+            self.n_points = int(self.scaninfo.frames_per_trigger) * int(self.scaninfo.num_points)
         elif self.scaninfo.scan_type == "fly":
             self.n_points = int(self.scaninfo.num_points)  # / int(self.num_lines.get()))
         else:
