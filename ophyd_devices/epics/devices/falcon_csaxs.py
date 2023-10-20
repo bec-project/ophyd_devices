@@ -77,29 +77,40 @@ class FalconHDF5Plugins(Device):
 
 
 class FalconCsaxs(Device):
-    """FalxonX1 with HDF5 writer"""
+    """Falcon Sitoro detector for CSAXS
+
+    Parent class: Device
+    Device classes: EpicsDXPFalcon dxp1:, EpicsMCARecord mca1, FalconHDF5Plugins HDF1:
+
+    Attributes:
+        name str: 'falcon'
+        prefix (str): PV prefix ("X12SA-SITORO:)
+
+    """
+
+    # Specify which functions are revealed to the user in BEC client
+    USER_ACCESS = [
+        "describe",
+    ]
 
     dxp = Cpt(EpicsDXPFalcon, "dxp1:")
     mca = Cpt(EpicsMCARecord, "mca1")
     hdf5 = Cpt(FalconHDF5Plugins, "HDF1:")
 
-    # Control
+    # specify Epics PVs for Falcon
+    # TODO consider moving this outside of this class! 
     stop_all = Cpt(EpicsSignal, "StopAll")
     erase_all = Cpt(EpicsSignal, "EraseAll")
     start_all = Cpt(EpicsSignal, "StartAll")
     state = Cpt(EpicsSignal, "Acquiring")
-    # Preset options
     preset_mode = Cpt(EpicsSignal, "PresetMode")  # 0 No preset 1 Real time 2 Events 3 Triggers
     preset_real = Cpt(EpicsSignal, "PresetReal")
     preset_events = Cpt(EpicsSignal, "PresetEvents")
     preset_triggers = Cpt(EpicsSignal, "PresetTriggers")
-    # read-only diagnostics
     triggers = Cpt(EpicsSignalRO, "MaxTriggers", lazy=True)
     events = Cpt(EpicsSignalRO, "MaxEvents", lazy=True)
     input_count_rate = Cpt(EpicsSignalRO, "MaxInputCountRate", lazy=True)
     output_count_rate = Cpt(EpicsSignalRO, "MaxOutputCountRate", lazy=True)
-
-    # Mapping control
     collect_mode = Cpt(EpicsSignal, "CollectMode")  # 0 MCA spectra, 1 MCA mapping
     pixel_advance_mode = Cpt(EpicsSignal, "PixelAdvanceMode")
     ignore_gate = Cpt(EpicsSignal, "IgnoreGate")
@@ -108,8 +119,6 @@ class FalconCsaxs(Device):
     pixels_per_buffer = Cpt(EpicsSignal, "PixelsPerBuffer")
     pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
     nd_array_mode = Cpt(EpicsSignal, "NDArrayMode")
-
-    # HDF5
 
     def __init__(
         self,
@@ -124,6 +133,18 @@ class FalconCsaxs(Device):
         sim_mode=False,
         **kwargs,
     ):
+        """Initialize Falcon detector
+        Args:
+        #TODO add here the parameters for kind, read_attrs, configuration_attrs, parent
+            prefix (str): PV prefix ("X12SA-SITORO:)
+            name (str): 'falcon'
+            kind (str): 
+            read_attrs (list): 
+            configuration_attrs (list): 
+            parent (object): 
+            device_manager (object): BEC device manager
+            sim_mode (bool): simulation mode to start the detector without BEC, e.g. from ipython shell
+        """
         super().__init__(
             prefix=prefix,
             name=name,
@@ -137,7 +158,8 @@ class FalconCsaxs(Device):
             raise FalconError("Add DeviceManager to initialization or init with sim_mode=True")
         self._stopped = False
         self.name = name
-        self.wait_for_connection()  # Make sure to be connected before talking to PVs
+        self.wait_for_connection()
+        # Spin up connections for simulation or BEC mode  
         if not sim_mode:
             from bec_lib.core.bec_service import SERVICE_CONFIG
 
@@ -145,15 +167,21 @@ class FalconCsaxs(Device):
             self._producer = self.device_manager.producer
             self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
+            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
             self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
             self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+            self.service_cfg = {"base_path": base_path}
+
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
-
+        self._init_detector()
+        
+    def _init_detector(self) -> None:
+        """Set up detector parameters, init detector, init filewriter 
+        """
         self.readout = 0.003  # 3 ms
         self._value_pixel_per_buffer = 20  # 16
         self._clean_up()
@@ -162,6 +190,7 @@ class FalconCsaxs(Device):
 
     def _clean_up(self) -> None:
         """Clean up"""
+        #TODO clarify when to use put and when to use set!
         self.hdf5.capture.put(0)
         self.stop_all.put(1)
         self.erase_all.put(1)

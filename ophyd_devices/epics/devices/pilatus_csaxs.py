@@ -78,6 +78,11 @@ class PilatusCsaxs(DetectorBase):
 
     """
 
+    # Specify which functions are revealed to the user in BEC client
+    USER_ACCESS = [
+        "describe",
+    ]
+
     cam = ADCpt(SlsDetectorCam, "cam1:")
 
     def __init__(
@@ -93,6 +98,18 @@ class PilatusCsaxs(DetectorBase):
         sim_mode=False,
         **kwargs,
     ):
+        """Initialize the Pilatus detector
+        Args:
+        #TODO add here the parameters for kind, read_attrs, configuration_attrs, parent
+            prefix (str): PV prefix ("X12SA-ES-PILATUS300K:)
+            name (str): 'pilatus_2'
+            kind (str): 
+            read_attrs (list): 
+            configuration_attrs (list): 
+            parent (object): 
+            device_manager (object): BEC device manager
+            sim_mode (bool): simulation mode to start the detector without BEC, e.g. from ipython shell
+            """
         super().__init__(
             prefix=prefix,
             name=name,
@@ -106,7 +123,8 @@ class PilatusCsaxs(DetectorBase):
             raise PilatusError("Add DeviceManager to initialization or init with sim_mode=True")
 
         self.name = name
-        self.wait_for_connection()  # Make sure to be connected before talking to PVs
+        self.wait_for_connection()
+        # Spin up connections for simulation or BEC mode
         if not sim_mode:
             from bec_lib.core.bec_service import SERVICE_CONFIG
 
@@ -114,16 +132,17 @@ class PilatusCsaxs(DetectorBase):
             self._producer = self.device_manager.producer
             self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
+            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
             self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
             self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+            self.service_cfg = {"base_path": base_path}
 
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.filepath_h5 = ""
-
+        self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
+        
         self.readout = 1e-3  # 3 ms
 
         # TODO maybe needed

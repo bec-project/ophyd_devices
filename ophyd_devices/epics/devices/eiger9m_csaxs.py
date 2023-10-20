@@ -83,6 +83,7 @@ class Eiger9mCsaxs(DetectorBase):
 
     """
 
+    # Specify which functions are revealed to the user in BEC client
     USER_ACCESS = [
         "describe",
     ]
@@ -102,6 +103,18 @@ class Eiger9mCsaxs(DetectorBase):
         sim_mode=False,
         **kwargs,
     ):
+        """Initialize the Eiger9M detector
+        Args:
+        #TODO add here the parameters for kind, read_attrs, configuration_attrs, parent
+            prefix (str): PV prefix (X12SA-ES-EIGER9M:)
+            name (str): 'eiger'
+            kind (str): 
+            read_attrs (list): 
+            configuration_attrs (list): 
+            parent (object): 
+            device_manager (object): BEC device manager
+            sim_mode (bool): simulation mode to start the detector without BEC, e.g. from ipython shell
+        """
         super().__init__(
             prefix=prefix,
             name=name,
@@ -111,13 +124,16 @@ class Eiger9mCsaxs(DetectorBase):
             parent=parent,
             **kwargs,
         )
-        self._stopped = False
-        self._lock = threading.RLock()
         if device_manager is None and not sim_mode:
             raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
-
+        
+        # Not sure if this is needed, comment it for now!
+        #self._lock = threading.RLock()
+        self._stopped = False
         self.name = name
-        self.wait_for_connection()  # Make sure to be connected before talking to PVs
+        self.wait_for_connection()
+        # Spin up connections for simulation or BEC mode
+        # TODO check if sim_mode still works. Is it needed? I believe filewriting might be handled properly
         if not sim_mode:
             from bec_lib.core.bec_service import SERVICE_CONFIG
 
@@ -125,17 +141,17 @@ class Eiger9mCsaxs(DetectorBase):
             self._producer = self.device_manager.producer
             self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
+            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
             self._producer = bec_utils.MockProducer()
             self.device_manager = bec_utils.MockDeviceManager()
             self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
             self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"}
+            self.service_cfg = {"base_path": base_path}
+
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
-        # TODO
-        self.filepath = ""
-
         self.filewriter = FileWriterMixin(self.service_cfg)
+        
         self.reduce_readout = 1e-3  # 3 ms
         self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
         self._init_eiger9m()
