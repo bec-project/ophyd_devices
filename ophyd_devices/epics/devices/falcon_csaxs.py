@@ -226,17 +226,38 @@ class FalconCsaxs(Device):
         self.pixels_per_buffer.put(self._value_pixel_per_buffer)  #
         self.nd_array_mode.put(1) # Segmentation happens in EPICS
 
+    def stage(self) -> List[object]:
+        """Stage command, called from BEC in preparation of a scan.
+        The device needs to return with a state once it is ready to start the scan!
+        """
+        # Set parameters for scan interuption and if acquisition is done
+        self._stopped = False
+        # Get parameters for scan
+        self.scaninfo.load_scan_metadata()
+        self.mokev = self.device_manager.devices.mokev.obj.read()[
+            self.device_manager.devices.mokev.name
+        ]["value"]
+
+        # Prepare file writer and detector
+        #TODO refactor logger.info to DEBUG mode?
+        #logger.info("Waiting for falcon filewriter to be ready")
+        self._prep_file_writer()
+        #logger.info("falcon file writer ready")
+        self._prep_det()
+        #logger.info("falcon is ready")
+        self._publish_file_location()
+        self.arm_acquisition()
+        return super().stage()
+
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
         self.collect_mode.put(1)
         self.preset_real.put(self.scaninfo.exp_time)
         self.pixels_per_run.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        # self.auto_pixels_per_buffer.put(0)
-        # self.pixels_per_buffer.put(self._value_pixel_per_buffer)
 
     def _prep_file_writer(self) -> None:
-        """Prep HDF5 weriting"""
-        # TODO creta filename and destination path from filepath
+        """Prepare filewriting from HDF5 plugin
+        #TODO check file_write_mode value in EPICs for details"""
         self.destination_path = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
@@ -250,29 +271,18 @@ class FalconCsaxs(Device):
         self.hdf5.array_counter.put(0)
         self.hdf5.capture.put(1)
 
-    def stage(self) -> List[object]:
-        """stage the detector and file writer"""
-        # TODO clean up needed?
-        self._stopped = False
-        self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.obj.read()[
-            self.device_manager.devices.mokev.name
-        ]["value"]
-
-        logger.info("Waiting for pilatus2 to be armed")
-        self._prep_det()
-        logger.info("Pilatus2 armed")
-        logger.info("Waiting for pilatus2 zmq stream to be ready")
-        self._prep_file_writer()
-        logger.info("Pilatus2 zmq ready")
-
-        msg = BECMessage.FileMessage(file_path=self.destination_path, done=False)
+    def _publish_file_location(self) -> None:
+        """Publish the filepath to REDIS for file writer"""
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
             msg.dumps(),
         )
-        self.arm_acquisition()
+
+    def arm_acquisition(self) -> None:
+        self.start_all.put(1)
         logger.info("Waiting for Falcon to be armed")
+        #TODO add here timeout?
         while True:
             det_ctrl = self.state.read()[self.state.name]["value"]
             if det_ctrl == int(DetectorState.ACQUIRING):
@@ -281,10 +291,6 @@ class FalconCsaxs(Device):
                 break
             time.sleep(0.005)
         logger.info("Falcon is armed")
-        return super().stage()
-
-    def arm_acquisition(self) -> None:
-        self.start_all.put(1)
 
     def unstage(self) -> List[object]:
         logger.info("Waiting for Falcon to return from acquisition")

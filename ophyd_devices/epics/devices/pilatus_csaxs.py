@@ -167,10 +167,6 @@ class PilatusCsaxs(DetectorBase):
         #TODO in case the data backend is rewritten, add check if it is ready!
         pass
 
-    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
-        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        return BECMessage.ScanStatusMessage.loads(msg)
-
     def _prep_det(self) -> None:
         # TODO slow reaction, seemed to have timeout.
         self._set_det_threshold()
