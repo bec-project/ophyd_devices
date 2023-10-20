@@ -152,19 +152,47 @@ class Eiger9mCsaxs(DetectorBase):
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._init()
-        
+
     #TODO function for abstract class?
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters 
         """
         self.reduce_readout = 1e-3  
-        self._init_eiger9m()
-        self._init_standard_daq()
+        self._init_detector()
+        self._init_filewriter()
 
-    def _init_eiger9m(self) -> None:
-        """Init parameters for Eiger 9m"""
-        self._set_trigger(TriggerSource.GATING)
+    def _init_detector(self) -> None:
+        """Init parameters for Eiger 9m.
+        Depends on hardware configuration and delay generators. 
+        At this point it is set up for gating mode (09/2023).
+        """
         self.stop_acquisition()
+        self._set_trigger(TriggerSource.GATING)
+
+    def _init_filewriter(self) -> None:
+        """Init parameters for filewriter.
+        For the Eiger9M, the data backend is std_daq client.
+        Setting up these parameters depends on the backend, and would need to change upon changes in the backend.
+        """
+        self.std_rest_server_url = "http://xbl-daq-29:5000"
+        self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
+        self.std_client.stop_writer()
+        timeout = 0
+        # TODO changing e-account was not possible during beamtimes. 
+        # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
+        # time.sleep(5)
+        #TODO is this the only state to wait for or should we wait for more from the std_daq client?
+        while not self.std_client.get_status()["state"] == "READY":
+            time.sleep(0.1)
+            timeout = timeout + 0.1
+            logger.info("Waiting for std_daq init.")
+            if timeout > 5:
+                if not self.std_client.get_status()["state"]:
+                    raise EigerError(
+                        f"Std client not in READY state, returns: {self.std_client.get_status()}"
+                    )
+                else:
+                    return
 
     def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
         cfg = self.std_client.get_config()
@@ -183,25 +211,7 @@ class Eiger9mCsaxs(DetectorBase):
         logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
         self.std_client.set_config(cfg)
 
-    def _init_standard_daq(self) -> None:
-        self.std_rest_server_url = "http://xbl-daq-29:5000"
-        self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
-        self.std_client.stop_writer()
-        timeout = 0
-        # TODO put back change of e-account!
-        # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
-        # time.sleep(5)
-        while not self.std_client.get_status()["state"] == "READY":
-            time.sleep(0.1)
-            timeout = timeout + 0.1
-            logger.info("Waiting for std_daq init.")
-            if timeout > 5:
-                if not self.std_client.get_status()["state"]:
-                    raise EigerError(
-                        f"Std client not in READY state, returns: {self.std_client.get_status()}"
-                    )
-                else:
-                    return
+    
 
     def _prep_det(self) -> None:
         self._set_det_threshold()
