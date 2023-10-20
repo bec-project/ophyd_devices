@@ -18,10 +18,12 @@ logger = bec_logger.logger
 
 
 class FalconError(Exception):
+    '''Base class for exceptions in this module.'''
     pass
 
 
 class FalconTimeoutError(Exception):
+    '''Raised when the Falcon does not respond in time during unstage.'''
     pass
 
 

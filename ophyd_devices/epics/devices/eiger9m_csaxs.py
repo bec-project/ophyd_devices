@@ -23,10 +23,12 @@ logger = bec_logger.logger
 
 
 class EigerError(Exception):
+    '''Base class for exceptions in this module.'''
     pass
 
 
 class EigerTimeoutError(Exception):
+    '''Raised when the Eiger does not respond in time during unstage.'''
     pass
 
 

@@ -22,10 +22,12 @@ logger = bec_logger.logger
 
 
 class PilatusError(Exception):
+    """Base class for exceptions in this module."""
     pass
 
 
 class PilatusTimeoutError(Exception):
+    '''Raised when the Pilatus does not respond in time during unstage.'''
     pass
 
 
