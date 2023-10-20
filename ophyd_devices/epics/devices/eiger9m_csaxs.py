@@ -157,9 +157,15 @@ class Eiger9mCsaxs(DetectorBase):
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters 
         """
-        self.reduce_readout = 1e-3  
+        self._default_parameter()
         self._init_detector()
         self._init_filewriter()
+    
+    def _default_parameter(self) -> None:
+        """Set default parameters for Eiger 9M
+        readout (float) : readout time in seconds
+        """
+        self.reduce_readout = 1e-3 
 
     def _init_detector(self) -> None:
         """Init parameters for Eiger 9m.
@@ -195,6 +201,8 @@ class Eiger9mCsaxs(DetectorBase):
                     return
 
     def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
+        """Update std_daq config with new e-account for the current beamtime"""
+        #TODO Do we need all the loggers here, should this be properly refactored with a DEBUG mode?
         cfg = self.std_client.get_config()
         old_value = cfg.get(cfg_key)
         logger.info(old_value)
