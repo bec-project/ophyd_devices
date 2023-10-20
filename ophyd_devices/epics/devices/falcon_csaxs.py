@@ -178,15 +178,21 @@ class FalconCsaxs(Device):
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._init()
-        
+    
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters 
         """
+        self._default_parameter()
+        self._init_detector()
+        self._init_filewriter()
+    
+    def _default_parameter(self) -> None:
+        """Set default parameters for Falcon
+        readout (float): readout time in seconds
+        _value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro"""
         self.readout = 1e-3
         self._value_pixel_per_buffer = 20  # 16
-        self._clean_up()
-        self._init_hdf5_saving()
-        self._init_mapping_mode()
+        self._clean_up()        
 
     def _clean_up(self) -> None:
         """Clean up"""
@@ -195,16 +201,22 @@ class FalconCsaxs(Device):
         self.stop_all.put(1)
         self.erase_all.put(1)
 
-    def _init_hdf5_saving(self) -> None:
-        """Set up hdf5 save parameters"""
+    def _init_filewriter(self) -> None:
+        """Initialize file writer for Falcon.
+        This includes setting variables for the HDF5 plugin (EPICS) that is used to write the data.
+        """
         self.hdf5.enable.put(1)  # EnableCallbacks
         self.hdf5.xml_file_name.put("layout.xml")  # Points to hardcopy of HDF5 Layout xml file
-        self.hdf5.lazy_open.put(1)  # Yes -> To be checked how to add FilePlugin_V21+
+        self.hdf5.lazy_open.put(1)  # Potentially not needed, means a temp data file is created first, could be 0
         self.hdf5.temp_suffix.put("")  # -> To be checked how to add FilePlugin_V22+
-        self.hdf5.queue_size.put(2000)
+        self.hdf5.queue_size.put(2000) # size of queue for spectra in the buffer 
 
-    def _init_mapping_mode(self) -> None:
-        """Set up mapping mode params"""
+    def _init_detector(self) -> None:
+        """Initialize Falcon detector.
+        The detector is operated in MCA mapping mode. 
+        Parameters here affect the triggering, gating  etc. 
+        This includes also the readout chunk size and whether data is segmented into spectra in EPICS.
+        """
         self.collect_mode.put(1)  # 1 MCA Mapping, 0 MCA Spectrum
         self.preset_mode.put(1)  # 1 Realtime
         self.input_logic_polarity.put(0)  # 0 Normal, 1 Inverted
@@ -212,7 +224,7 @@ class FalconCsaxs(Device):
         self.ignore_gate.put(0)  # 1 Yes, 0 No
         self.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
         self.pixels_per_buffer.put(self._value_pixel_per_buffer)  #
-        self.nd_array_mode.put(1)
+        self.nd_array_mode.put(1) # Segmentation happens in EPICS
 
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
