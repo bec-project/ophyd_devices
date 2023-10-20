@@ -40,7 +40,7 @@ class SlsDetectorCam(Device):
     threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
     beam_energy = ADCpt(EpicsSignalWithRBV, "BeamEnergy")
     bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
-    num_cycles = ADCpt(EpicsSignalWithRBV, "NumCycles")
+    num_images = ADCpt(EpicsSignalWithRBV, "NumCycles")
     num_frames = ADCpt(EpicsSignalWithRBV, "NumFrames")
     trigger_mode = ADCpt(EpicsSignalWithRBV, "TimingMode")
     trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
@@ -161,12 +161,14 @@ class Eiger9mCsaxs(DetectorBase):
         self._init_detector()
         self._init_filewriter()
     
+    #TODO function for abstract class?
     def _default_parameter(self) -> None:
         """Set default parameters for Eiger 9M
         readout (float) : readout time in seconds
         """
         self.reduce_readout = 1e-3 
 
+    #TODO function for abstract class?
     def _init_detector(self) -> None:
         """Init parameters for Eiger 9m.
         Depends on hardware configuration and delay generators. 
@@ -175,6 +177,7 @@ class Eiger9mCsaxs(DetectorBase):
         self.stop_acquisition()
         self._set_trigger(TriggerSource.GATING)
 
+    #TODO function for abstract class?
     def _init_filewriter(self) -> None:
         """Init parameters for filewriter.
         For the Eiger9M, the data backend is std_daq client.
@@ -219,53 +222,49 @@ class Eiger9mCsaxs(DetectorBase):
         logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
         self.std_client.set_config(cfg)
 
-    
-
-    def _prep_det(self) -> None:
-        self._set_det_threshold()
-        self._set_acquisition_params()
-        self._set_trigger(TriggerSource.GATING)
-
-    def _set_det_threshold(self) -> None:
-        # threshold_energy PV exists on Eiger 9M?
-        factor = 1
-        if self.cam.threshold_energy._metadata["units"] == "eV":
-            factor = 1000
-        setp_energy = int(self.mokev * factor)
-        energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
-        if setp_energy != energy:
-            self.cam.beam_energy.set(setp_energy)  # .wait()
-        threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
-        if not np.isclose(setp_energy / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(setp_energy / 2)  # .wait()
-
-    def _set_acquisition_params(self) -> None:
-        # self.cam.acquire_time.set(self.scaninfo.exp_time)
-        # Set acquisition parameters slightly shorter then cycle
-        # self.cam.acquire_period.set(
-        #    self.scaninfo.exp_time + (self.scaninfo.readout_time - self.reduce_readout)
-        # )
-        self.cam.num_cycles.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_frames.put(1)
-
-    def _set_trigger(self, trigger_source: TriggerSource) -> None:
-        """Set trigger source for the detector, either directly to value or TriggerSource.* with
-        AUTO = 0
-        TRIGGER = 1
-        GATING = 2
-        BURST_TRIGGER = 3
+    #TODO function for abstract class?
+    def stage(self) -> List[object]:
+        """Stage command, called from BEC in preparation of a scan.
+        The device needs to return with a state once it is ready to start the scan!
         """
-        value = int(trigger_source)
-        self.cam.trigger_mode.put(value)
+        # Set parameters for scan interuption and if acquisition is done
+        self._stopped = False
+        self._acquisition_done = False
+        # Get parameters for scan
+        self.scaninfo.load_scan_metadata()
+        self.mokev = self.device_manager.devices.mokev.obj.read()[
+            self.device_manager.devices.mokev.name
+        ]["value"]
 
+        # Prepare file writer and detector
+        self._prep_file_writer()
+        self._prep_det()
+        #TODO refactor logger.info to DEBUG mode?
+        logger.info("Waiting for std daq to be armed")
+        logger.info("std_daq is ready")
+
+        self._publish_file_location()
+        self.arm_acquisition()
+        #TODO Fix should take place in EPICS or directly on the hardware!
+        # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
+        time.sleep(0.05)
+        return super().stage()
+    
     def _prep_file_writer(self) -> None:
+        """Prepare file writer for scan
+        
+        self.filewriter is a FileWriterMixin object that hosts logic for compiling the filepath
+        """
         self.filepath = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
+        # TODO needed, should be checked from the filerwriter mixin right?
         while not os.path.exists(os.path.dirname(self.filepath)):
             time.sleep(0.1)
+
         self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
+        #TODO Discuss with Leo if this is needed, or how to start the async writing best
         try:
             self.std_client.start_writer_async(
                 {
@@ -283,25 +282,48 @@ class Eiger9mCsaxs(DetectorBase):
             if det_ctrl == "WAITING_IMAGES":
                 break
             time.sleep(0.005)
-
+    
     def _close_file_writer(self) -> None:
+        """Close file writer"""
         self.std_client.stop_writer()
-        pass
+        #TODO can I wait for a status message here maybe? To ensure writer returned
 
-    def stage(self) -> List[object]:
-        """stage the detector and file writer"""
-        self._stopped = False
-        self._acquisition_done = False
-        self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.obj.read()[
-            self.device_manager.devices.mokev.name
-        ]["value"]
+    def _prep_det(self) -> None:
+        """Prepare detector for scan.
+        Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
+        """
+        self._set_det_threshold()
+        self._set_acquisition_params()
+        self._set_trigger(TriggerSource.GATING)
 
-        self._prep_file_writer()
-        self._prep_det()
-        logger.info("Waiting for std daq to be armed")
-        logger.info("std_daq is ready")
+    def _set_det_threshold(self) -> None:
+        """Set correct detector threshold to 1/2 of current X-ray energy, allow 5% tolerance"""
+        # threshold energy might be in eV or keV
+        factor = 1
+        if self.cam.threshold_energy._metadata["units"] == "eV":
+            factor = 1000
+        setpoint = int(self.mokev * factor)
+        energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
+        if setpoint != energy:
+            self.cam.beam_energy.set(setpoint)
+        threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
+        if not np.isclose(setpoint / 2, threshold, rtol=0.05):
+            self.cam.threshold_energy.set(setpoint / 2)
 
+    def _set_acquisition_params(self) -> None:
+        """Set acquisition parameters for the detector"""
+        self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
+        self.cam.num_frames.put(1)
+
+    def _set_trigger(self, trigger_source: TriggerSource) -> None:
+        """Set trigger source for the detector.
+        Check the TriggerSource enum for possible values
+        """
+        value = int(trigger_source)
+        self.cam.trigger_mode.put(value)
+
+    def _publish_file_location(self) -> None:
+        """Publish the filepath to REDIS for file writer"""
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
@@ -312,13 +334,8 @@ class Eiger9mCsaxs(DetectorBase):
             MessageEndpoints.file_event(self.name),
             msg.dumps(),
         )
-        self.arm_acquisition()
-
-        self._stopped = False
-        # We see that we miss a trigger occasionally, it seems that status msg from the ioc are not realiable
-        time.sleep(0.05)
-        return super().stage()
-
+    
+    #TODO needed? if yes why only for the eiger9m?
     @threadlocked
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
