@@ -42,7 +42,7 @@ class SlsDetectorCam(Device):
     bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
     num_cycles = ADCpt(EpicsSignalWithRBV, "NumCycles")
     num_frames = ADCpt(EpicsSignalWithRBV, "NumFrames")
-    timing_mode = ADCpt(EpicsSignalWithRBV, "TimingMode")
+    trigger_mode = ADCpt(EpicsSignalWithRBV, "TimingMode")
     trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
     acquire = ADCpt(EpicsSignal, "Acquire")
     detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
@@ -151,15 +151,15 @@ class Eiger9mCsaxs(DetectorBase):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
+        self._init()
         
-        self.reduce_readout = 1e-3  # 3 ms
-        self.triggermode = 0  # 0 : internal, scan must set this if hardware triggered
+    #TODO function for abstract class?
+    def _init(self) -> None:
+        """Initialize detector, filewriter and set default parameters 
+        """
+        self.reduce_readout = 1e-3  
         self._init_eiger9m()
         self._init_standard_daq()
-
-        # self.mokev = self.device_manager.devices.mokev.read()[
-        #     self.device_manager.devices.mokev.name
-        # ]["value"]
 
     def _init_eiger9m(self) -> None:
         """Init parameters for Eiger 9m"""
@@ -238,7 +238,7 @@ class Eiger9mCsaxs(DetectorBase):
         BURST_TRIGGER = 3
         """
         value = int(trigger_source)
-        self.cam.timing_mode.put(value)
+        self.cam.trigger_mode.put(value)
 
     def _prep_file_writer(self) -> None:
         self.filepath = self.filewriter.compile_full_filename(

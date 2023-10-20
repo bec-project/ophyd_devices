@@ -142,11 +142,12 @@ class PilatusCsaxs(DetectorBase):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
-        
-        self.readout = 1e-3  # 3 ms
+        self._init()
 
-        # TODO maybe needed
-        # self._close_file_writer()
+    def _init(self) -> None:
+        """Initialize detector, filewriter and set default parameters 
+        """
+        self.reduce_readout = 1e-3 
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())

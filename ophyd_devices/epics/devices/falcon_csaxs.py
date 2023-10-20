@@ -177,12 +177,12 @@ class FalconCsaxs(Device):
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
-        self._init_detector()
+        self._init()
         
-    def _init_detector(self) -> None:
-        """Set up detector parameters, init detector, init filewriter 
+    def _init(self) -> None:
+        """Initialize detector, filewriter and set default parameters 
         """
-        self.readout = 0.003  # 3 ms
+        self.readout = 1e-3
         self._value_pixel_per_buffer = 20  # 16
         self._clean_up()
         self._init_hdf5_saving()
