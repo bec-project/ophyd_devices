@@ -250,6 +250,7 @@ class Eiger9mCsaxs(DetectorBase):
         time.sleep(0.05)
         return super().stage()
     
+    #TODO function for abstract class?
     def _prep_file_writer(self) -> None:
         """Prepare file writer for scan
         
@@ -283,11 +284,13 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(0.005)
     
+    #TODO function for abstract class?
     def _close_file_writer(self) -> None:
         """Close file writer"""
         self.std_client.stop_writer()
         #TODO can I wait for a status message here maybe? To ensure writer returned
 
+    #TODO function for abstract class?
     def _prep_det(self) -> None:
         """Prepare detector for scan.
         Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
@@ -334,6 +337,20 @@ class Eiger9mCsaxs(DetectorBase):
             MessageEndpoints.file_event(self.name),
             msg.dumps(),
         )
+
+    def arm_acquisition(self) -> None:
+        """Arm detector for acquisition
+        """
+        self.cam.acquire.put(1)
+        logger.info("Waiting for Eiger9m to be armed")
+        while True:
+            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
+            if det_ctrl == int(DetectorState.RUNNING):
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.005)
+        logger.info("Eiger9m is armed")
     
     #TODO needed? if yes why only for the eiger9m?
     @threadlocked
@@ -388,21 +405,6 @@ class Eiger9mCsaxs(DetectorBase):
                     f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
                 )
         self._close_file_writer()
-
-    def arm_acquisition(self) -> None:
-        """Start acquisition in software trigger mode,
-        or arm the detector in hardware of the detector
-        """
-        self.cam.acquire.put(1)
-        logger.info("Waiting for Eiger9m to be armed")
-        while True:
-            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.RUNNING):
-                break
-            if self._stopped == True:
-                break
-            time.sleep(0.005)
-        logger.info("Eiger9m is armed")
 
     def stop_acquisition(self) -> None:
         """Stop the detector and wait for the proper status message"""
