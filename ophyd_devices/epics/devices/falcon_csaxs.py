@@ -28,12 +28,16 @@ class FalconTimeoutError(Exception):
 
 
 class DetectorState(int, enum.Enum):
+    """Detector states for Falcon detector"""
     DONE = 0
     ACQUIRING = 1
 
 
 class EpicsDXPFalcon(Device):
-    """All high-level DXP parameters for each channel"""
+    """DXP parameters for Falcon detector
+
+    Base class to map EPICS PVs from DXP parameters to ophyd signals.
+    """
 
     elapsed_live_time = Cpt(EpicsSignal, "ElapsedLiveTime")
     elapsed_real_time = Cpt(EpicsSignal, "ElapsedRealTime")
@@ -53,15 +57,16 @@ class EpicsDXPFalcon(Device):
     current_pixel = Cpt(EpicsSignalRO, "CurrentPixel")
 
 
-class FalconHDF5Plugins(Device):  # HDF5Plugin_V21, FilePlugin_V22):
+class FalconHDF5Plugins(Device):
+    """HDF5 parameters for Falcon detector
+    
+    Base class to map EPICS PVs from HDF5 Plugin to ophyd signals.
+    """
     capture = Cpt(EpicsSignalWithRBV, "Capture")
     enable = Cpt(EpicsSignalWithRBV, "EnableCallbacks", string=True, kind="config")
     xml_file_name = Cpt(EpicsSignalWithRBV, "XMLFileName", string=True, kind="config")
     lazy_open = Cpt(EpicsSignalWithRBV, "LazyOpen", string=True, doc="0='No' 1='Yes'")
     temp_suffix = Cpt(EpicsSignalWithRBV, "TempSuffix", string=True)
-    # file_path = Cpt(
-    #     EpicsSignalWithRBV, "FilePath", string=True, kind="config", path_semantics="posix"
-    # )
     file_path = Cpt(EpicsSignalWithRBV, "FilePath", string=True, kind="config")
     file_name = Cpt(EpicsSignalWithRBV, "FileName", string=True, kind="config")
     file_template = Cpt(EpicsSignalWithRBV, "FileTemplate", string=True, kind="config")
