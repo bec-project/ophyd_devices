@@ -229,20 +229,18 @@ class Eiger9mCsaxs(DetectorBase):
         """
         # Set parameters for scan interuption and if acquisition is done
         self._stopped = False
-        self._acquisition_done = False
         # Get parameters for scan
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
         ]["value"]
-
         # Prepare file writer and detector
-        self._prep_file_writer()
-        self._prep_det()
         #TODO refactor logger.info to DEBUG mode?
-        logger.info("Waiting for std daq to be armed")
-        logger.info("std_daq is ready")
-
+        #logger.info("Waiting for std daq to be armed")
+        self._prep_file_writer()
+        #logger.info("std_daq is ready")
+        self._prep_det()
+        #logger.info("Eiger9m is ready")
         self._publish_file_location()
         self.arm_acquisition()
         #TODO Fix should take place in EPICS or directly on the hardware!
@@ -326,7 +324,9 @@ class Eiger9mCsaxs(DetectorBase):
         self.cam.trigger_mode.put(value)
 
     def _publish_file_location(self) -> None:
-        """Publish the filepath to REDIS for file writer"""
+        """Publish the filepath to REDIS for file writer
+        file_event #TODO what was the purpose of this again?
+        """
         msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
@@ -343,6 +343,7 @@ class Eiger9mCsaxs(DetectorBase):
         """
         self.cam.acquire.put(1)
         logger.info("Waiting for Eiger9m to be armed")
+        #TODO add here timeout?
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
             if det_ctrl == int(DetectorState.RUNNING):
