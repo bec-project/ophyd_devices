@@ -147,7 +147,25 @@ class PilatusCsaxs(DetectorBase):
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters 
         """
-        self.reduce_readout = 1e-3 
+        self._default_parameter()
+        self._init_detector()
+        self._init_filewriter()
+
+    def _default_parameter(self) -> None:
+        """Set default parameters for Pilatus300k detector
+        readout (float): readout time in seconds
+        """
+        self.reduce_readout = 1e-3
+
+    def _init_detector(self) -> None:
+        """Initialize the detector"""
+        #TODO add check if detector is running
+        pass
+
+    def _init_filewriter(self) -> None:
+        """Initialize the file writer"""
+        #TODO in case the data backend is rewritten, add check if it is ready!
+        pass
 
     def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
