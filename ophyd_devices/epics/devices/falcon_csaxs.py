@@ -1,17 +1,17 @@
 import enum
 import os
 import time
-from typing import List
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt, Device
 
+from typing import List
+
+from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt, Device
 from ophyd.mca import EpicsMCARecord
-from ophyd.areadetector.plugins import HDF5Plugin_V21, FilePlugin_V22
 
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import MessageEndpoints, BECMessage
 from bec_lib.core import bec_logger
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
+from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger

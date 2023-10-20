@@ -1,22 +1,23 @@
 import enum
 import threading
 import time
-from typing import Any, List
 import numpy as np
 import os
+
+from typing import Any, List
+
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import DetectorBase, Device
 from ophyd import ADComponent as ADCpt
 
+from std_daq_client import StdDaqClient
+
 from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
-from ophyd_devices.utils import bec_utils as bec_utils
-
-from std_daq_client import StdDaqClient
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
-
+from ophyd_devices.utils import bec_utils 
 
 logger = bec_logger.logger
 

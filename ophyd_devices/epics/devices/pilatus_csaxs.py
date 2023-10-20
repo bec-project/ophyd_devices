@@ -1,22 +1,21 @@
 import enum
 import json
 import os
-import subprocess
 import time
-from typing import List
 import requests
 import numpy as np
+
+from typing import List
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import DetectorBase, Device, Staged
 from ophyd import ADComponent as ADCpt
-from ophyd_devices.utils import bec_utils as bec_utils
 
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
 
-
+from ophyd_devices.utils import bec_utils as bec_utils
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 logger = bec_logger.logger
