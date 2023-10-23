@@ -177,10 +177,10 @@ class PilatusCsaxs(DetectorBase):
         factor = 1
         if self.cam.threshold_energy._metadata["units"] == "eV":
             factor = 1000
-        setp_energy = int(self.mokev * factor)
+        setpoint = int(self.mokev * factor)
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
-        if not np.isclose(setp_energy / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(setp_energy / 2)
+        if not np.isclose(setpoint / 2, threshold, rtol=0.05):
+            self.cam.threshold_energy.set(setpoint / 2)
 
     def _set_acquisition_params(self) -> None:
         """set acquisition parameters on the detector"""
