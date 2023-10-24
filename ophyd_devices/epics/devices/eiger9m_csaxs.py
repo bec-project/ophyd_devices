@@ -179,7 +179,7 @@ class Eiger9mCsaxs(DetectorBase):
         Depends on hardware configuration and delay generators.
         At this point it is set up for gating mode (09/2023).
         """
-        self._stop_detector()
+        self._stop_det()
         self._set_trigger(TriggerSource.GATING)
 
     # TODO function for abstract class?
@@ -239,6 +239,7 @@ class Eiger9mCsaxs(DetectorBase):
         The device returns a List[object] from the Ophyd Device class.
 
         #TODO make sure this is fullfiled
+
         Staging not idempotent and should raise
         :obj:`RedundantStaging` if staged twice without an
         intermediate :meth:`~BlueskyInterface.unstage`.
@@ -351,10 +352,8 @@ class Eiger9mCsaxs(DetectorBase):
 
     # TODO function for abstract class?
     def _arm_acquisition(self) -> None:
-        """Arm detector for acquisition"""
+        """Arm Eiger detector for acquisition"""
         self.cam.acquire.put(1)
-        logger.info("Waiting for Eiger9m to be armed")
-        # TODO add here timeout?
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
             if det_ctrl == int(DetectorState.RUNNING):
@@ -362,7 +361,6 @@ class Eiger9mCsaxs(DetectorBase):
             if self._stopped == True:
                 break
             time.sleep(0.005)
-        logger.info("Eiger9m is armed")
 
     # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
@@ -379,10 +377,14 @@ class Eiger9mCsaxs(DetectorBase):
     # TODO threadlocked was attached, in principle unstage needs to be fast and should possibly called multiple times
     @threadlocked
     def unstage(self) -> List[object]:
-        """Unstage the device, detector and file writer.
+        """Unstage the device.
 
         This method must be idempotent, multiple calls (without a new
         call to 'stage') have no effect.
+
+        Functions called:
+            - _finished
+            - _publish_file_location
         """
         # TODO solution for multiple calls of the function to avoid calling the finished loop.
         # Loop to avoid calling the finished loop multiple times
@@ -403,9 +405,14 @@ class Eiger9mCsaxs(DetectorBase):
     @threadlocked
     def _finished(self):
         """Check if acquisition is finished.
+
         This function is called from unstage and stop
         and will check detector and file backend status.
         Timeouts after given time
+
+        Functions called:
+            - _stop_det
+            - _stop_file_writer
         """
         sleep_time = 0.1
         timeout = 5
@@ -420,22 +427,22 @@ class Eiger9mCsaxs(DetectorBase):
             if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
                 break
             if self._stopped == True:
-                self._stop_detector()
+                self._stop_det()
                 self._stop_file_writer()
                 break
             time.sleep(sleep_time)
             timer += sleep_time
             if timer > timeout:
                 self._stopped == True
-                self._stop_detector()
+                self._stop_det()
                 self._stop_file_writer()
                 raise EigerTimeoutError(
                     f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
                 )
-        self._stop_detector()
+        self._stop_det()
         self._stop_file_writer()
 
-    def _stop_detector(self) -> None:
+    def _stop_det(self) -> None:
         """Stop the detector and wait for the proper status message"""
         elapsed_time = 0
         sleep_time = 0.01
@@ -461,7 +468,7 @@ class Eiger9mCsaxs(DetectorBase):
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
-        self._stop_detector()
+        self._stop_det()
         self._stop_file_writer()
         super().stop(success=success)
         self._stopped = True
