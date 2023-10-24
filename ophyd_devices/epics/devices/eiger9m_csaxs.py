@@ -237,6 +237,11 @@ class Eiger9mCsaxs(DetectorBase):
             - _publish_file_location
             - _arm_acquisition
         The device returns a List[object] from the Ophyd Device class.
+
+        #TODO make sure this is fullfiled
+        Staging not idempotent and should raise
+        :obj:`RedundantStaging` if staged twice without an
+        intermediate :meth:`~BlueskyInterface.unstage`.
         """
         self._stopped = False
         self.scaninfo.load_scan_metadata()
@@ -246,7 +251,8 @@ class Eiger9mCsaxs(DetectorBase):
         # TODO refactor logger.info to DEBUG mode?
         self._prep_file_writer()
         self._prep_det()
-        self._publish_file_location()
+        state = False
+        self._publish_file_location(done=state, successful=state)
         self._arm_acquisition()
         # TODO Fix should take place in EPICS or directly on the hardware!
         # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
@@ -329,20 +335,19 @@ class Eiger9mCsaxs(DetectorBase):
         value = int(trigger_source)
         self.cam.trigger_mode.put(value)
 
-    def _publish_file_location(self) -> None:
-        """Publish the filepath to REDIS for file writer
-        file_event #TODO what was the purpose of this again?
+    def _publish_file_location(self, done=False, successful=False) -> None:
+        """Publish the filepath to REDIS
+        First msg for file writer and the second one for other listeners (e.g. radial integ)
         """
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
+        pipe = self._producer.pipeline()
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
         self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
-            msg.dumps(),
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
         self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name),
-            msg.dumps(),
+            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
         )
+        pipe.execute()
 
     def _arm_acquisition(self) -> None:
         """Arm detector for acquisition"""
@@ -368,10 +373,15 @@ class Eiger9mCsaxs(DetectorBase):
         """Specify action that should be taken upon trigger signal."""
         pass
 
-    # TODO threadlocked needed? if yes why only for the eiger9m?
+    # TODO threadlocked was attached, in principle unstage needs to be fast and should possibly called multiple times
     @threadlocked
     def unstage(self) -> List[object]:
-        """unstage the detector and file writer"""
+        """Unstage the device, this means detector and file writer.
+
+
+        This method must be idempotent, multiple calls (without a new
+        call to 'stage') have no effect.
+        """
         logger.info("Waiting for Eiger9M to finish")
         old_scanID = self.scaninfo.scanID
         self.scaninfo.load_scan_metadata()
@@ -383,12 +393,7 @@ class Eiger9mCsaxs(DetectorBase):
         self._eiger9M_finished()
         # Message to BEC
         state = True
-
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=True, successful=state)
-        self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, self.name),
-            msg.dumps(),
-        )
+        self._publish_file_location(done=state, successful=state)
         self._stopped = False
         logger.info("Eiger9M finished")
         return super().unstage()
