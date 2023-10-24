@@ -1,6 +1,7 @@
 import enum
 import threading
 import time
+from bec_lib.core.devicemanager import DeviceStatus
 import numpy as np
 import os
 
@@ -229,24 +230,24 @@ class Eiger9mCsaxs(DetectorBase):
     # TODO function for abstract class?
     def stage(self) -> List[object]:
         """Stage command, called from BEC in preparation of a scan.
-        The device needs to return with a state once it is ready to start the scan!
+        This will iniate the preparation of detector and file writer.
+        The following functuions are called:
+            - _prep_file_writer
+            - _prep_det
+            - _publish_file_location
+            - _arm_acquisition
+        The device returns a List[object] from the Ophyd Device class.
         """
-        # Set parameters for scan interuption and if acquisition is done
         self._stopped = False
-        # Get parameters for scan
         self.scaninfo.load_scan_metadata()
         self.mokev = self.device_manager.devices.mokev.obj.read()[
             self.device_manager.devices.mokev.name
         ]["value"]
-        # Prepare file writer and detector
         # TODO refactor logger.info to DEBUG mode?
-        # logger.info("Waiting for std daq to be armed")
         self._prep_file_writer()
-        # logger.info("std_daq is ready")
         self._prep_det()
-        # logger.info("Eiger9m is ready")
         self._publish_file_location()
-        self.arm_acquisition()
+        self._arm_acquisition()
         # TODO Fix should take place in EPICS or directly on the hardware!
         # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
         time.sleep(0.05)
@@ -343,7 +344,7 @@ class Eiger9mCsaxs(DetectorBase):
             msg.dumps(),
         )
 
-    def arm_acquisition(self) -> None:
+    def _arm_acquisition(self) -> None:
         """Arm detector for acquisition"""
         self.cam.acquire.put(1)
         logger.info("Waiting for Eiger9m to be armed")
@@ -357,10 +358,15 @@ class Eiger9mCsaxs(DetectorBase):
             time.sleep(0.005)
         logger.info("Eiger9m is armed")
 
-    # TODO is this correct? -> for hardware triggering, nothing should happen upon trigger signal
-    # Comment this otherwise!
+    # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
+        """Trigger the detector, called from BEC."""
+        self.on_trigger()
         return super().trigger()
+
+    def on_trigger(self):
+        """Specify action that should be taken upon trigger signal."""
+        pass
 
     # TODO threadlocked needed? if yes why only for the eiger9m?
     @threadlocked
