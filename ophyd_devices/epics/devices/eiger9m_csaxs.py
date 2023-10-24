@@ -231,11 +231,10 @@ class Eiger9mCsaxs(DetectorBase):
     def stage(self) -> List[object]:
         """Stage command, called from BEC in preparation of a scan.
         This will iniate the preparation of detector and file writer.
-        The following functuions are called:
+        The following functuions are called (at least):
             - _prep_file_writer
             - _prep_det
             - _publish_file_location
-            - _arm_acquisition
         The device returns a List[object] from the Ophyd Device class.
 
         #TODO make sure this is fullfiled
