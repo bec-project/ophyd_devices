@@ -179,7 +179,7 @@ class Eiger9mCsaxs(DetectorBase):
         Depends on hardware configuration and delay generators.
         At this point it is set up for gating mode (09/2023).
         """
-        self.stop_acquisition()
+        self._stop_detector()
         self._set_trigger(TriggerSource.GATING)
 
     # TODO function for abstract class?
@@ -272,7 +272,7 @@ class Eiger9mCsaxs(DetectorBase):
         while not os.path.exists(os.path.dirname(self.filepath)):
             time.sleep(0.1)
 
-        self._close_file_writer()
+        self._stop_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
         # TODO Discuss with Leo if this is needed, or how to start the async writing best
         try:
@@ -294,7 +294,7 @@ class Eiger9mCsaxs(DetectorBase):
             time.sleep(0.005)
 
     # TODO function for abstract class?
-    def _close_file_writer(self) -> None:
+    def _stop_file_writer(self) -> None:
         """Close file writer"""
         self.std_client.stop_writer()
         # TODO can I wait for a status message here maybe? To ensure writer returned
@@ -349,6 +349,7 @@ class Eiger9mCsaxs(DetectorBase):
         )
         pipe.execute()
 
+    # TODO function for abstract class?
     def _arm_acquisition(self) -> None:
         """Arm detector for acquisition"""
         self.cam.acquire.put(1)
@@ -369,71 +370,80 @@ class Eiger9mCsaxs(DetectorBase):
         self._on_trigger()
         return super().trigger()
 
+    # TODO function for abstract class?
     def _on_trigger(self):
         """Specify action that should be taken upon trigger signal."""
         pass
 
+    # TODO function for abstract class?
     # TODO threadlocked was attached, in principle unstage needs to be fast and should possibly called multiple times
     @threadlocked
     def unstage(self) -> List[object]:
-        """Unstage the device, this means detector and file writer.
-
+        """Unstage the device, detector and file writer.
 
         This method must be idempotent, multiple calls (without a new
         call to 'stage') have no effect.
         """
-        logger.info("Waiting for Eiger9M to finish")
+        # TODO solution for multiple calls of the function to avoid calling the finished loop.
+        # Loop to avoid calling the finished loop multiple times
         old_scanID = self.scaninfo.scanID
         self.scaninfo.load_scan_metadata()
-        logger.info(f"Old scanID: {old_scanID}, ")
         if self.scaninfo.scanID != old_scanID:
             self._stopped = True
         if self._stopped == True:
             return super().unstage()
-        self._eiger9M_finished()
-        # Message to BEC
+        self._finished()
         state = True
         self._publish_file_location(done=state, successful=state)
         self._stopped = False
-        logger.info("Eiger9M finished")
         return super().unstage()
 
+    # TODO function for abstract class?
+    # TODO necessary, how can we make this cleaner.
     @threadlocked
-    def _eiger9M_finished(self):
-        """Function with 10s timeout"""
+    def _finished(self):
+        """Check if acquisition is finished.
+        This function is called from unstage and stop
+        and will check detector and file backend status.
+        Timeouts after given time
+        """
+        sleep_time = 0.1
+        timeout = 5
         timer = 0
+        # Check status with timeout, break out if _stopped=True
         while True:
             det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
-            # det_ctrl = 0
             std_ctrl = self.std_client.get_status()["acquisition"]["state"]
             status = self.std_client.get_status()
             received_frames = status["acquisition"]["stats"]["n_write_completed"]
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
-            # TODO if no writing was performed before
             if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
                 break
             if self._stopped == True:
-                self.stop_acquisition()
-                self._close_file_writer()
+                self._stop_detector()
+                self._stop_file_writer()
                 break
-            time.sleep(0.1)
-            timer += 0.1
-            if timer > 5:
+            time.sleep(sleep_time)
+            timer += sleep_time
+            if timer > timeout:
                 self._stopped == True
-                self._close_file_writer()
-                self.stop_acquisition()
+                self._stop_detector()
+                self._stop_file_writer()
                 raise EigerTimeoutError(
                     f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
                 )
-        self._close_file_writer()
+        self._stop_detector()
+        self._stop_file_writer()
 
-    def stop_acquisition(self) -> None:
+    def _stop_detector(self) -> None:
         """Stop the detector and wait for the proper status message"""
-        logger.info("Waiting for Eiger9m to be armed")
         elapsed_time = 0
         sleep_time = 0.01
+        timeout = 5
+        # Stop acquisition
         self.cam.acquire.put(0)
         retry = False
+        # Check status
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
             if det_ctrl == int(DetectorState.IDLE):
@@ -442,16 +452,17 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(sleep_time)
             elapsed_time += sleep_time
-            if elapsed_time > 2 and not retry:
+            if elapsed_time > timeout // 2 and not retry:
                 retry = True
+                # Retry to stop acquisition
                 self.cam.acquire.put(0)
-            if elapsed_time > 5:
+            if elapsed_time > timeout:
                 raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
 
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
-        self.stop_acquisition()
-        self._close_file_writer()
+        self._stop_detector()
+        self._stop_file_writer()
         super().stop(success=success)
         self._stopped = True
 
