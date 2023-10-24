@@ -17,18 +17,20 @@ from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
-from ophyd_devices.utils import bec_utils 
+from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
 
 
 class EigerError(Exception):
-    '''Base class for exceptions in this module.'''
+    """Base class for exceptions in this module."""
+
     pass
 
 
 class EigerTimeoutError(Exception):
-    '''Raised when the Eiger does not respond in time during unstage.'''
+    """Raised when the Eiger does not respond in time during unstage."""
+
     pass
 
 
@@ -37,6 +39,7 @@ class SlsDetectorCam(Device):
 
     Base class to map EPICS PVs to ophyd signals.
     """
+
     threshold_energy = ADCpt(EpicsSignalWithRBV, "ThresholdEnergy")
     beam_energy = ADCpt(EpicsSignalWithRBV, "BeamEnergy")
     bit_depth = ADCpt(EpicsSignalWithRBV, "BitDepth")
@@ -50,6 +53,7 @@ class SlsDetectorCam(Device):
 
 class TriggerSource(int, enum.Enum):
     """Trigger signals for Eiger9M detector"""
+
     AUTO = 0
     TRIGGER = 1
     GATING = 2
@@ -57,7 +61,8 @@ class TriggerSource(int, enum.Enum):
 
 
 class DetectorState(int, enum.Enum):
-    """ Detector states for Eiger9M detector"""
+    """Detector states for Eiger9M detector"""
+
     IDLE = 0
     ERROR = 1
     WAITING = 2
@@ -108,10 +113,10 @@ class Eiger9mCsaxs(DetectorBase):
         #TODO add here the parameters for kind, read_attrs, configuration_attrs, parent
             prefix (str): PV prefix (X12SA-ES-EIGER9M:)
             name (str): 'eiger'
-            kind (str): 
-            read_attrs (list): 
-            configuration_attrs (list): 
-            parent (object): 
+            kind (str):
+            read_attrs (list):
+            configuration_attrs (list):
+            parent (object):
             device_manager (object): BEC device manager
             sim_mode (bool): simulation mode to start the detector without BEC, e.g. from ipython shell
         """
@@ -126,9 +131,9 @@ class Eiger9mCsaxs(DetectorBase):
         )
         if device_manager is None and not sim_mode:
             raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
-        
+
         # Not sure if this is needed, comment it for now!
-        #self._lock = threading.RLock()
+        # self._lock = threading.RLock()
         self._stopped = False
         self.name = name
         self.wait_for_connection()
@@ -153,31 +158,30 @@ class Eiger9mCsaxs(DetectorBase):
         self.filewriter = FileWriterMixin(self.service_cfg)
         self._init()
 
-    #TODO function for abstract class?
+    # TODO function for abstract class?
     def _init(self) -> None:
-        """Initialize detector, filewriter and set default parameters 
-        """
+        """Initialize detector, filewriter and set default parameters"""
         self._default_parameter()
         self._init_detector()
         self._init_filewriter()
-    
-    #TODO function for abstract class?
+
+    # TODO function for abstract class?
     def _default_parameter(self) -> None:
         """Set default parameters for Eiger 9M
         readout (float) : readout time in seconds
         """
-        self.reduce_readout = 1e-3 
+        self.reduce_readout = 1e-3
 
-    #TODO function for abstract class?
+    # TODO function for abstract class?
     def _init_detector(self) -> None:
         """Init parameters for Eiger 9m.
-        Depends on hardware configuration and delay generators. 
+        Depends on hardware configuration and delay generators.
         At this point it is set up for gating mode (09/2023).
         """
         self.stop_acquisition()
         self._set_trigger(TriggerSource.GATING)
 
-    #TODO function for abstract class?
+    # TODO function for abstract class?
     def _init_filewriter(self) -> None:
         """Init parameters for filewriter.
         For the Eiger9M, the data backend is std_daq client.
@@ -187,10 +191,10 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
         timeout = 0
-        # TODO changing e-account was not possible during beamtimes. 
+        # TODO changing e-account was not possible during beamtimes.
         # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
         # time.sleep(5)
-        #TODO is this the only state to wait for or should we wait for more from the std_daq client?
+        # TODO is this the only state to wait for or should we wait for more from the std_daq client?
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
@@ -205,7 +209,7 @@ class Eiger9mCsaxs(DetectorBase):
 
     def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
         """Update std_daq config with new e-account for the current beamtime"""
-        #TODO Do we need all the loggers here, should this be properly refactored with a DEBUG mode?
+        # TODO Do we need all the loggers here, should this be properly refactored with a DEBUG mode?
         cfg = self.std_client.get_config()
         old_value = cfg.get(cfg_key)
         logger.info(old_value)
@@ -222,7 +226,7 @@ class Eiger9mCsaxs(DetectorBase):
         logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
         self.std_client.set_config(cfg)
 
-    #TODO function for abstract class?
+    # TODO function for abstract class?
     def stage(self) -> List[object]:
         """Stage command, called from BEC in preparation of a scan.
         The device needs to return with a state once it is ready to start the scan!
@@ -235,23 +239,23 @@ class Eiger9mCsaxs(DetectorBase):
             self.device_manager.devices.mokev.name
         ]["value"]
         # Prepare file writer and detector
-        #TODO refactor logger.info to DEBUG mode?
-        #logger.info("Waiting for std daq to be armed")
+        # TODO refactor logger.info to DEBUG mode?
+        # logger.info("Waiting for std daq to be armed")
         self._prep_file_writer()
-        #logger.info("std_daq is ready")
+        # logger.info("std_daq is ready")
         self._prep_det()
-        #logger.info("Eiger9m is ready")
+        # logger.info("Eiger9m is ready")
         self._publish_file_location()
         self.arm_acquisition()
-        #TODO Fix should take place in EPICS or directly on the hardware!
+        # TODO Fix should take place in EPICS or directly on the hardware!
         # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
         time.sleep(0.05)
         return super().stage()
-    
-    #TODO function for abstract class?
+
+    # TODO function for abstract class?
     def _prep_file_writer(self) -> None:
         """Prepare file writer for scan
-        
+
         self.filewriter is a FileWriterMixin object that hosts logic for compiling the filepath
         """
         self.filepath = self.filewriter.compile_full_filename(
@@ -263,7 +267,7 @@ class Eiger9mCsaxs(DetectorBase):
 
         self._close_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
-        #TODO Discuss with Leo if this is needed, or how to start the async writing best
+        # TODO Discuss with Leo if this is needed, or how to start the async writing best
         try:
             self.std_client.start_writer_async(
                 {
@@ -281,14 +285,14 @@ class Eiger9mCsaxs(DetectorBase):
             if det_ctrl == "WAITING_IMAGES":
                 break
             time.sleep(0.005)
-    
-    #TODO function for abstract class?
+
+    # TODO function for abstract class?
     def _close_file_writer(self) -> None:
         """Close file writer"""
         self.std_client.stop_writer()
-        #TODO can I wait for a status message here maybe? To ensure writer returned
+        # TODO can I wait for a status message here maybe? To ensure writer returned
 
-    #TODO function for abstract class?
+    # TODO function for abstract class?
     def _prep_det(self) -> None:
         """Prepare detector for scan.
         Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
@@ -316,6 +320,7 @@ class Eiger9mCsaxs(DetectorBase):
         self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_frames.put(1)
 
+    # TODO function for abstract class? + call it for each scan??
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector.
         Check the TriggerSource enum for possible values
@@ -339,11 +344,10 @@ class Eiger9mCsaxs(DetectorBase):
         )
 
     def arm_acquisition(self) -> None:
-        """Arm detector for acquisition
-        """
+        """Arm detector for acquisition"""
         self.cam.acquire.put(1)
         logger.info("Waiting for Eiger9m to be armed")
-        #TODO add here timeout?
+        # TODO add here timeout?
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
             if det_ctrl == int(DetectorState.RUNNING):
@@ -352,8 +356,13 @@ class Eiger9mCsaxs(DetectorBase):
                 break
             time.sleep(0.005)
         logger.info("Eiger9m is armed")
-    
-    #TODO needed? if yes why only for the eiger9m?
+
+    # TODO is this correct? -> for hardware triggering, nothing should happen upon trigger signal
+    # Comment this otherwise!
+    def trigger(self) -> DeviceStatus:
+        return super().trigger()
+
+    # TODO threadlocked needed? if yes why only for the eiger9m?
     @threadlocked
     def unstage(self) -> List[object]:
         """unstage the detector and file writer"""
