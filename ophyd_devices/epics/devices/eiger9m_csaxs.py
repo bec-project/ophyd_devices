@@ -361,10 +361,10 @@ class Eiger9mCsaxs(DetectorBase):
     # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
         """Trigger the detector, called from BEC."""
-        self.on_trigger()
+        self._on_trigger()
         return super().trigger()
 
-    def on_trigger(self):
+    def _on_trigger(self):
         """Specify action that should be taken upon trigger signal."""
         pass
 
