@@ -307,6 +307,17 @@ class FalconCsaxs(Device):
                 break
             time.sleep(0.005)
 
+    # TODO function for abstract class?
+    def trigger(self) -> DeviceStatus:
+        """Trigger the detector, called from BEC."""
+        self._on_trigger()
+        return super().trigger()
+
+    # TODO function for abstract class?
+    def _on_trigger(self):
+        """Specify action that should be taken upon trigger signal."""
+        pass
+
     def unstage(self) -> List[object]:
         """Unstage the device.
 
