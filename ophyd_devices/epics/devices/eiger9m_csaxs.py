@@ -340,7 +340,7 @@ class Eiger9mCsaxs(DetectorBase):
         First msg for file writer and the second one for other listeners (e.g. radial integ)
         """
         pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
