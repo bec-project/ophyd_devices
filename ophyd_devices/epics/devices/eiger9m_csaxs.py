@@ -143,15 +143,11 @@ class Eiger9mCsaxs(DetectorBase):
         if not sim_mode:
             self._update_service_config()
             self.device_manager = device_manager
-            self._producer = self.device_manager.producer
         else:
-            self._producer = bec_utils.MockProducer()
-            self.device_manager = bec_utils.MockDeviceManager()
-            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-            self.scaninfo.load_scan_metadata()
-            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
-            self.service_cfg = {"base_path": base_path}
-
+            self.device_manager = bec_utils.DMMock()
+            base_path = f"~/Data10/"
+            self.service_cfg = {"base_path": os.path.expanduser(base_path)}
+        self._producer = self.device_manager.producer
         self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
         self.scaninfo.load_scan_metadata()
         self.filewriter = FileWriterMixin(self.service_cfg)
