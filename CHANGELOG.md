@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.9.0 (2023-10-31)
+
+### Feature
+
+* Added file-based replay for xtreme ([`d25f92c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d25f92c6323cccea6de8471f4445b997cfab85a3))
+
 ## v0.8.1 (2023-09-27)
 
 ### Fix
