@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.9.1 (2023-11-02)
+
+### Fix
+
+* Fixed complete call for non-otf scans ([`9e6dc2a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9e6dc2a9f72c5615abd8bea1fcdea6719a35f1ad))
+
 ## v0.9.0 (2023-10-31)
 
 ### Feature
