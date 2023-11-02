@@ -299,6 +299,10 @@ class SynXtremeOtfReplay(FlyerInterface, Device):
         def check_value(*, old_value, value, **kwargs):
             return old_value == 1 and value == 0
 
+        if self.acquire.get() == 0:
+            status = DeviceStatus(self)
+            status.set_finished()
+            return status
         status = SubscriptionStatus(self.acquire, check_value, event_type=self.acquire.SUB_VALUE)
         return status
 
