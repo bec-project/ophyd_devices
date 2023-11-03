@@ -30,13 +30,13 @@ class EigerError(Exception):
     pass
 
 
-class EigerTimeoutError(Exception):
+class EigerTimeoutError(EigerError):
     """Raised when the Eiger does not respond in time during unstage."""
 
     pass
 
 
-class SlsDetectorCam(Device):
+class SLSDetectorCam(Device):
     """SLS Detector Camera - Eiger 9M
 
     Base class to map EPICS PVs to ophyd signals.
@@ -53,7 +53,7 @@ class SlsDetectorCam(Device):
     detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
 
 
-class TriggerSource(int, enum.Enum):
+class TriggerSource(enum.IntEnum):
     """Trigger signals for Eiger9M detector"""
 
     AUTO = 0
@@ -62,7 +62,7 @@ class TriggerSource(int, enum.Enum):
     BURST_TRIGGER = 3
 
 
-class DetectorState(int, enum.Enum):
+class DetectorState(enum.IntEnum):
     """Detector states for Eiger9M detector"""
 
     IDLE = 0
@@ -78,7 +78,7 @@ class DetectorState(int, enum.Enum):
     ABORTED = 10
 
 
-class Eiger9mCsaxs(DetectorBase):
+class Eiger9McSAXS(DetectorBase):
     """Eiger 9M detector for CSAXS
 
     Parent class: DetectorBase
@@ -95,7 +95,7 @@ class Eiger9mCsaxs(DetectorBase):
         "describe",
     ]
 
-    cam = ADCpt(SlsDetectorCam, "cam1:")
+    cam = ADCpt(SLSDetectorCam, "cam1:")
 
     def __init__(
         self,
@@ -132,7 +132,9 @@ class Eiger9mCsaxs(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
+            raise Exception(
+                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
+            )
         self.sim_mode = sim_mode
         # TODO check if threadlock is needed for unstage
         self._lock = threading.RLock()
@@ -142,6 +144,9 @@ class Eiger9mCsaxs(DetectorBase):
         self.std_client = None
         self.scaninfo = None
         self.filewriter = None
+        self.std_rest_server_url = (
+            kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
+        )
         self.wait_for_connection(all_signals=True)
         if not sim_mode:
             self._update_service_config()
@@ -199,7 +204,6 @@ class Eiger9mCsaxs(DetectorBase):
         For the Eiger9M, the data backend is std_daq client.
         Setting up these parameters depends on the backend, and would need to change upon changes in the backend.
         """
-        self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
         timeout = 0
@@ -360,7 +364,7 @@ class Eiger9mCsaxs(DetectorBase):
             trigger_source (TriggerSource): Trigger source for the detector
 
         """
-        value = int(trigger_source)
+        value = trigger_source
         self.cam.trigger_mode.put(value)
 
     def _publish_file_location(self, done: bool = False, successful: bool = None) -> None:
@@ -394,7 +398,7 @@ class Eiger9mCsaxs(DetectorBase):
         self.cam.acquire.put(1)
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.RUNNING):
+            if det_ctrl == DetectorState.RUNNING:
                 break
             if self._stopped == True:
                 break
@@ -493,7 +497,7 @@ class Eiger9mCsaxs(DetectorBase):
         # Check status
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.IDLE):
+            if det_ctrl == DetectorState.IDLE:
                 break
             if self._stopped == True:
                 break
@@ -515,4 +519,4 @@ class Eiger9mCsaxs(DetectorBase):
 
 
 if __name__ == "__main__":
-    eiger = Eiger9mCsaxs(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)
+    eiger = Eiger9McSAXS(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)

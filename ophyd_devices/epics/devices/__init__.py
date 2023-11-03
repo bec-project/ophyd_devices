@@ -25,7 +25,7 @@ from ophyd.quadem import QuadEM
 # cSAXS
 from .epics_motor_ex import EpicsMotorEx
 from .mcs_csaxs import McsCsaxs
-from .eiger9m_csaxs import Eiger9mCsaxs
+from .eiger9m_csaxs import Eiger9McSAXS
 from .pilatus_csaxs import PilatusCsaxs
 from .falcon_csaxs import FalconCsaxs
 from .DelayGeneratorDG645 import DelayGeneratorDG645

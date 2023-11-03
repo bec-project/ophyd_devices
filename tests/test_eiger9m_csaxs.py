@@ -31,7 +31,7 @@ class MockSignal(Signal):
 with mock.patch("ophyd.EpicsSignal", new=MockSignal), mock.patch(
     "ophyd.EpicsSignalRO", new=MockSignal
 ), mock.patch("ophyd.EpicsSignalWithRBV", new=MockSignal):
-    from ophyd_devices.epics.devices.eiger9m_csaxs import Eiger9mCsaxs
+    from ophyd_devices.epics.devices.eiger9m_csaxs import Eiger9McSAXS
 
 
 # TODO maybe specify here that this DeviceMock is for usage in the DeviceServer
@@ -98,12 +98,12 @@ def mock_det():
     # dm.add_device("mokev", value=12.4)
     with mock.patch.object(dm, "producer"):
         with mock.patch.object(
-            Eiger9mCsaxs, "_update_service_config"
+            Eiger9McSAXS, "_update_service_config"
         ) as mock_update_service_config, mock.patch(
             "ophyd_devices.epics.devices.eiger9m_csaxs.FileWriterMixin"
         ) as filemixin:
-            with mock.patch.object(Eiger9mCsaxs, "_init"):
-                yield Eiger9mCsaxs(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
+            with mock.patch.object(Eiger9McSAXS, "_init"):
+                yield Eiger9McSAXS(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
 
 
 @pytest.mark.parametrize(
@@ -178,15 +178,15 @@ def test_init(
     sim_mode = sim_mode
     dm = DMMock()
     with mock.patch.object(dm, "producer") as producer, mock.patch.object(
-        Eiger9mCsaxs, "_init_filewriter"
+        Eiger9McSAXS, "_init_filewriter"
     ) as mock_init_fw, mock.patch.object(
-        Eiger9mCsaxs, "_update_scaninfo"
+        Eiger9McSAXS, "_update_scaninfo"
     ) as mock_update_scaninfo, mock.patch.object(
-        Eiger9mCsaxs, "_update_filewriter"
+        Eiger9McSAXS, "_update_filewriter"
     ) as mock_update_filewriter, mock.patch.object(
-        Eiger9mCsaxs, "_update_service_config"
+        Eiger9McSAXS, "_update_service_config"
     ) as mock_update_service_config:
-        mock_det = Eiger9mCsaxs(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
+        mock_det = Eiger9McSAXS(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
         mock_det.cam.detector_state.put(detector_state)
         if expected_exception:
             with pytest.raises(Exception):
@@ -326,7 +326,7 @@ def test_stage(
     expected_exception,
 ):
     with mock.patch.object(mock_det, "std_client") as mock_std_daq, mock.patch.object(
-        Eiger9mCsaxs, "_publish_file_location"
+        Eiger9McSAXS, "_publish_file_location"
     ) as mock_publish_file_location:
         mock_std_daq.stop_writer.return_value = None
         mock_std_daq.get_status.return_value = daq_status
