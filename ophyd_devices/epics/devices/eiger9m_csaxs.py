@@ -16,6 +16,7 @@ from std_daq_client import StdDaqClient
 from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
+from bec_lib.core.bec_service import SERVICE_CONFIG
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -132,30 +133,41 @@ class Eiger9mCsaxs(DetectorBase):
         )
         if device_manager is None and not sim_mode:
             raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
-
+        self.sim_mode = sim_mode
         # TODO check if threadlock is needed for unstage
         self._lock = threading.RLock()
         self._stopped = False
         self.name = name
         self.service_cfg = None
         self.std_client = None
+        self.scaninfo = None
+        self.filewriter = None
         self.wait_for_connection(all_signals=True)
         if not sim_mode:
             self._update_service_config()
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-            base_path = f"~/Data10/"
+            base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
             self.service_cfg = {"base_path": os.path.expanduser(base_path)}
         self._producer = self.device_manager.producer
-        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.scaninfo.load_scan_metadata()
-        self.filewriter = FileWriterMixin(self.service_cfg)
+        self._update_scaninfo()
+        self._update_filewriter()
         self._init()
 
-    def _update_service_config(self) -> None:
-        from bec_lib.core.bec_service import SERVICE_CONFIG
+    def _update_filewriter(self) -> None:
+        """Update filewriter with service config"""
+        self.filewriter = FileWriterMixin(self.service_cfg)
 
+    def _update_scaninfo(self) -> None:
+        """Update scaninfo from BecScaninfoMixing
+        This depends on device manager and operation/sim_mode
+        """
+        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo.load_scan_metadata()
+
+    def _update_service_config(self) -> None:
+        """Update service config from BEC service config"""
         self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     # TODO function for abstract class?

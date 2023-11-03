@@ -97,23 +97,20 @@ def mock_det():
     dm = DMMock()
     # dm.add_device("mokev", value=12.4)
     with mock.patch.object(dm, "producer"):
-        with mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.BecScaninfoMixin"
-        ) as mixin, mock.patch(
+        with mock.patch.object(
+            Eiger9mCsaxs, "_update_service_config"
+        ) as mock_update_service_config, mock.patch(
             "ophyd_devices.epics.devices.eiger9m_csaxs.FileWriterMixin"
-        ) as filemixin, mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9mCsaxs._update_service_config"
-        ) as mock_service_config:
+        ) as filemixin:
             with mock.patch.object(Eiger9mCsaxs, "_init"):
                 yield Eiger9mCsaxs(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
 
 
 @pytest.mark.parametrize(
-    "trigger_source, stopped, detector_state, sim_mode, scan_status_msg, expected_exception",
+    "trigger_source, detector_state, sim_mode, scan_status_msg, expected_exception",
     [
         (
             2,
-            True,
             1,
             True,
             BECMessage.ScanStatusMessage(
@@ -131,36 +128,34 @@ def mock_det():
                     "frames_per_trigger": 1,
                 },
             ),
+            True,
+        ),
+        (
+            2,
+            0,
+            False,
+            BECMessage.ScanStatusMessage(
+                scanID="1",
+                status={},
+                info={
+                    "RID": "mockrid1111",
+                    "queueID": "mockqueueID111",
+                    "scan_number": 1,
+                    "exp_time": 0.012,
+                    "num_points": 500,
+                    "readout_time": 0.003,
+                    "scan_type": "fly",
+                    "num_lines": 0.012,
+                    "frames_per_trigger": 1,
+                },
+            ),
             False,
         ),
-        # (
-        #     2,
-        #     False,
-        #     0,
-        #     False,
-        #     BECMessage.ScanStatusMessage(
-        #         scanID="1",
-        #         status={},
-        #         info={
-        #             "RID": "mockrid1111",
-        #             "queueID": "mockqueueID111",
-        #             "scan_number": 1,
-        #             "exp_time": 0.012,
-        #             "num_points": 500,
-        #             "readout_time": 0.003,
-        #             "scan_type": "fly",
-        #             "num_lines": 0.012,
-        #             "frames_per_trigger": 1,
-        #         },
-        #     ),
-        #     True,
-        # ),
     ],
 )
 # TODO rewrite this one, write test for init_detector, init_filewriter is tested
 def test_init(
     trigger_source,
-    stopped,
     detector_state,
     sim_mode,
     scan_status_msg,
@@ -180,54 +175,34 @@ def test_init(
     """
     name = "eiger"
     prefix = "X12SA-ES-EIGER9M:"
-    # sim_mode = sim_mode
+    sim_mode = sim_mode
     dm = DMMock()
-    # dm.add_device("mokev", value=12.4)
-    with mock.patch.object(dm, "producer") as producer:
-        with mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.FileWriterMixin"
-        ) as filemixin, mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9mCsaxs._update_service_config"
-        ) as mock_service_config:
-            with mock.patch.object(Eiger9mCsaxs, "_init_filewriter") as mock_init_fw:
-                producer.get.return_value = scan_status_msg.dumps()
-                if sim_mode:
-                    mock_det = Eiger9mCsaxs(
-                        name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode
-                    )
-                    mock_det.cam.detector_state.put(detector_state)
-                    mock_det._stopped = stopped
-                    if expected_exception:
-                        with pytest.raises(Exception):
-                            mock_det._init()
-                            mock_init_fw.assert_called_once()
-                    else:
-                        mock_det._init()  # call the method you want to test
-                        assert mock_det.cam.acquire.get() == 0
-                        assert mock_det.cam.detector_state.get() == detector_state
-                        assert mock_det.cam.trigger_mode.get() == trigger_source
-                        mock_init_fw.assert_called()
-                        assert mock_init_fw.call_count == 2
-                else:
-                    with mock.patch(
-                        "ophyd_devices.epics.devices.eiger9m_csaxs.BecScaninfoMixin"
-                    ) as mixin:
-                        mock_det = Eiger9mCsaxs(
-                            name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode
-                        )
-                        mock_det.cam.detector_state.put(detector_state)
-                        mock_det._stopped = stopped
-                        if expected_exception:
-                            with pytest.raises(Exception):
-                                mock_det._init()
-                                mock_init_fw.assert_called_once()
-                        else:
-                            mock_det._init()  # call the method you want to test
-                            assert mock_det.cam.acquire.get() == 0
-                            assert mock_det.cam.detector_state.get() == detector_state
-                            assert mock_det.cam.trigger_mode.get() == trigger_source
-                            mock_init_fw.assert_called()
-                            assert mock_init_fw.call_count == 2
+    with mock.patch.object(dm, "producer") as producer, mock.patch.object(
+        Eiger9mCsaxs, "_init_filewriter"
+    ) as mock_init_fw, mock.patch.object(
+        Eiger9mCsaxs, "_update_scaninfo"
+    ) as mock_update_scaninfo, mock.patch.object(
+        Eiger9mCsaxs, "_update_filewriter"
+    ) as mock_update_filewriter, mock.patch.object(
+        Eiger9mCsaxs, "_update_service_config"
+    ) as mock_update_service_config:
+        mock_det = Eiger9mCsaxs(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
+        mock_det.cam.detector_state.put(detector_state)
+        if expected_exception:
+            with pytest.raises(Exception):
+                mock_det._init()
+                mock_init_fw.assert_called_once()
+        else:
+            mock_det._init()  # call the method you want to test
+            assert mock_det.cam.acquire.get() == 0
+            assert mock_det.cam.detector_state.get() == detector_state
+            assert mock_det.cam.trigger_mode.get() == trigger_source
+            mock_init_fw.assert_called()
+            mock_update_scaninfo.assert_called_once()
+            mock_update_filewriter.assert_called_once()
+            mock_update_service_config.assert_called_once()
+
+            assert mock_init_fw.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -425,7 +400,9 @@ def test_prep_file_writer(mock_det, scaninfo, daq_status, expected_exception):
         mock_det, "_filepath_exists"
     ) as mock_file_path_exists, mock.patch.object(
         mock_det, "_stop_file_writer"
-    ) as mock_stop_file_writer:
+    ) as mock_stop_file_writer, mock.patch.object(
+        mock_det, "scaninfo"
+    ) as mock_scaninfo:
         # mock_det = eiger_factory(name, prefix, sim_mode)
         mock_det.std_client = mock_std_daq
         mock_std_daq.start_writer_async.return_value = None
