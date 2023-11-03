@@ -9,8 +9,9 @@ from bec_lib.core.tests.utils import ProducerMock
 
 
 class MockSignal(Signal):
-    def __init__(self, read_pv, *, name=None, parent=None, **kwargs):
+    def __init__(self, read_pv, *, string=False, name=None, parent=None, **kwargs):
         self.read_pv = read_pv
+        self._string = bool(string)
         super().__init__(name=name, parent=parent, **kwargs)
         self._waited_for_connection = False
         self._subscriptions = []

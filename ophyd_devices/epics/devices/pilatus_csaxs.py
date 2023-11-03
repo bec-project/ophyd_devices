@@ -14,6 +14,7 @@ from ophyd import ADComponent as ADCpt
 
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
+from bec_lib.core.bec_service import SERVICE_CONFIG
 from bec_lib.core import bec_logger
 
 from ophyd_devices.utils import bec_utils as bec_utils
@@ -49,7 +50,7 @@ class SLSDetectorCam(Device):
     """
 
     num_images = ADCpt(EpicsSignalWithRBV, "NumImages")
-    num_exposures = ADCpt(EpicsSignalWithRBV, "NumExposures")
+    num_frames = ADCpt(EpicsSignalWithRBV, "NumExposures")
     delay_time = ADCpt(EpicsSignalWithRBV, "NumExposures")
     trigger_mode = ADCpt(EpicsSignalWithRBV, "TriggerMode")
     acquire = ADCpt(EpicsSignal, "Acquire")
@@ -124,29 +125,44 @@ class PilatuscSAXS(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise PilatusError("Add DeviceManager to initialization or init with sim_mode=True")
-
+            raise Exception(
+                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
+            )
+        self.sim_mode = sim_mode
+        self._stopped = False
         self.name = name
-        self.wait_for_connection()
-        # Spin up connections for simulation or BEC mode
+        self.service_cfg = None
+        self.std_client = None
+        self.scaninfo = None
+        self.filewriter = None
+        # TODO move url from data backend up here?
+        self.wait_for_connection(all_signals=True)
         if not sim_mode:
-            from bec_lib.core.bec_service import SERVICE_CONFIG
-
+            self._update_service_config()
             self.device_manager = device_manager
-            self._producer = self.device_manager.producer
-            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
-            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
-            self._producer = bec_utils.MockProducer()
-            self.device_manager = bec_utils.MockDeviceManager()
-            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-            self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": base_path}
-
-        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.scaninfo.load_scan_metadata()
-        self.filewriter = FileWriterMixin(self.service_cfg)
+            self.device_manager = bec_utils.DMMock()
+            base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
+            self.service_cfg = {"base_path": os.path.expanduser(base_path)}
+        self._producer = self.device_manager.producer
+        self._update_scaninfo()
+        self._update_filewriter()
         self._init()
+
+    def _update_filewriter(self) -> None:
+        """Update filewriter with service config"""
+        self.filewriter = FileWriterMixin(self.service_cfg)
+
+    def _update_scaninfo(self) -> None:
+        """Update scaninfo from BecScaninfoMixing
+        This depends on device manager and operation/sim_mode
+        """
+        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo.load_scan_metadata()
+
+    def _update_service_config(self) -> None:
+        """Update service config from BEC service config"""
+        self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters"""
@@ -163,7 +179,7 @@ class PilatuscSAXS(DetectorBase):
     def _init_detector(self) -> None:
         """Initialize the detector"""
         # TODO add check if detector is running
-        pass
+        self._set_trigger(TriggerSource.EXT_ENABLE)
 
     def _init_filewriter(self) -> None:
         """Initialize the file writer"""
@@ -178,7 +194,8 @@ class PilatuscSAXS(DetectorBase):
     def _set_det_threshold(self) -> None:
         # threshold_energy PV exists on Eiger 9M?
         factor = 1
-        if self.cam.threshold_energy._metadata["units"] == "eV":
+        unit = getattr(self.cam.threshold_energy, "units", None)
+        if unit != None and unit == "eV":
             factor = 1000
         setpoint = int(self.mokev * factor)
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
@@ -190,10 +207,10 @@ class PilatuscSAXS(DetectorBase):
         # self.cam.acquire_time.set(self.exp_time)
         # self.cam.acquire_period.set(self.exp_time + self.readout)
         self.cam.num_images.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_exposures.set(1)
+        self.cam.num_frames.set(1)
         self._set_trigger(TriggerSource.EXT_ENABLE)  # EXT_TRIGGER)
 
-    def _set_trigger(self, trigger_source: TriggerSource) -> None:
+    def _set_trigger(self, trigger_source: int) -> None:
         """Set trigger source for the detector, either directly to value or TriggerSource.* with
         INTERNAL = 0
         EXT_ENABLE = 1
@@ -202,7 +219,7 @@ class PilatuscSAXS(DetectorBase):
         ALGINMENT = 4
         """
         value = trigger_source
-        self.cam.trigger_mode.set(value)
+        self.cam.trigger_mode.put(value)
 
     def _prep_file_writer(self) -> None:
         """Prepare the file writer for pilatus_2
@@ -362,7 +379,7 @@ class PilatuscSAXS(DetectorBase):
         self._prep_file_writer()
         self._prep_det()
         state = False
-        self._publish_file_location(done=state, successful=state)
+        self._publish_file_location(done=state)
         return super().stage()
 
     # TODO might be useful for base class
@@ -371,19 +388,31 @@ class PilatuscSAXS(DetectorBase):
         self._arm_acquisition()
 
     def _arm_acquisition(self) -> None:
-        self.acquire()
+        self.cam.acquire.put(1)
+        # TODO check if sleep of 1s is needed, could be that less is enough
+        time.sleep(1)
 
-    def _publish_file_location(self, done=False, successful=False) -> None:
-        """Publish the filepath to REDIS
-        First msg for file writer and the second one for other listeners (e.g. radial integ)
+    def _publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """Publish the filepath to REDIS.
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+
         """
         pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
         self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
+            MessageEndpoints.file_event(self.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
 
@@ -441,43 +470,30 @@ class PilatuscSAXS(DetectorBase):
             - _stop_det
             - _stop_file_writer
         """
+        timer = 0
+        sleep_time = 0.1
+        # TODO this is a workaround at the moment which relies on the status of the mcs device
         while True:
             if self.device_manager.devices.mcs.obj._staged != Staged.yes:
                 break
-            time.sleep(0.1)
-        # TODO implement a waiting function or not
-        # time.sleep(2)
-        # timer = 0
-        # while True:
-        #     # rtr = self.cam.status_message_camserver.get()
-        #     #if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
-        #     # if rtr == "Camserver returned OK":
-        #     #     break
-        #     if self._stopped == True:
-        #         break
-        #     time.sleep(0.1)
-        #     timer += 0.1
-        #     if timer > 5:
-        #         self._close_file_writer()
-        #         self._stop_file_writer()
-        #         self._stopped == True
-        #         # raise PilatusTimeoutError(
-        #         #     f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
-        #         # )
+            if self._stopped == True:
+                break
+            time.sleep(sleep_time)
+            timer = timer + sleep_time
+            if timer > 5:
+                self._stopped == True
+                self._stop_det()
+                self._stop_file_writer()
+                # TODO explore if sleep is needed
+                time.sleep(0.5)
+                self._close_file_writer()
+                raise PilatusTimeoutError(f"Timeout waiting for mcs device to unstage")
 
         self._stop_det()
         self._stop_file_writer()
-        # TODO explore if sleep is needed
+        # TODO explore if sleep time  is needed
         time.sleep(0.5)
         self._close_file_writer()
-
-    def acquire(self) -> None:
-        """Start acquisition in software trigger mode,
-        or arm the detector in hardware of the detector
-        """
-        self.cam.acquire.put(1)
-        # TODO check if sleep of 1s is needed, could be that less is enough
-        time.sleep(1)
 
     def _stop_det(self) -> None:
         """Stop the detector"""
