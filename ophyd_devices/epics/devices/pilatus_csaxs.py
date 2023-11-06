@@ -22,6 +22,8 @@ from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 logger = bec_logger.logger
 
+PILATUS_MIN_READOUT = 3e-3
+
 
 class PilatusError(Exception):
     """Base class for exceptions in this module."""
@@ -135,6 +137,7 @@ class PilatuscSAXS(DetectorBase):
         self.std_client = None
         self.scaninfo = None
         self.filewriter = None
+        self.readout_time_min = PILATUS_MIN_READOUT
         # TODO move url from data backend up here?
         self.wait_for_connection(all_signals=True)
         if not sim_mode:
@@ -174,7 +177,15 @@ class PilatuscSAXS(DetectorBase):
         """Set default parameters for Pilatus300k detector
         readout (float): readout time in seconds
         """
-        self.reduce_readout = 1e-3
+        self._update_readout_time()
+
+    def _update_readout_time(self) -> None:
+        readout_time = (
+            self.scaninfo.readout_time
+            if hasattr(self.scaninfo, "readout_time")
+            else self.readout_time_min
+        )
+        self.readout_time = max(readout_time, self.readout_time_min)
 
     def _init_detector(self) -> None:
         """Initialize the detector"""
@@ -190,6 +201,7 @@ class PilatuscSAXS(DetectorBase):
         # TODO slow reaction, seemed to have timeout.
         self._set_det_threshold()
         self._set_acquisition_params()
+        self._set_trigger(TriggerSource.EXT_ENABLE)
 
     def _set_det_threshold(self) -> None:
         # threshold_energy PV exists on Eiger 9M?
@@ -208,7 +220,7 @@ class PilatuscSAXS(DetectorBase):
         # self.cam.acquire_period.set(self.exp_time + self.readout)
         self.cam.num_images.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_frames.set(1)
-        self._set_trigger(TriggerSource.EXT_ENABLE)  # EXT_TRIGGER)
+        self._update_readout_time()
 
     def _set_trigger(self, trigger_source: int) -> None:
         """Set trigger source for the detector, either directly to value or TriggerSource.* with

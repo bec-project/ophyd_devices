@@ -207,6 +207,25 @@ def test_init(
 
 
 @pytest.mark.parametrize(
+    "readout_time, expected_value",
+    [
+        (1e-3, 3e-3),
+        (3e-3, 3e-3),
+        (5e-3, 5e-3),
+        (None, 3e-3),
+    ],
+)
+def test_update_readout_time(mock_det, readout_time, expected_value):
+    if readout_time is None:
+        mock_det._update_readout_time()
+        assert mock_det.readout_time == expected_value
+    else:
+        mock_det.scaninfo.readout_time = readout_time
+        mock_det._update_readout_time()
+        assert mock_det.readout_time == expected_value
+
+
+@pytest.mark.parametrize(
     "eacc, exp_url, daq_status, daq_cfg, expected_exception",
     [
         (

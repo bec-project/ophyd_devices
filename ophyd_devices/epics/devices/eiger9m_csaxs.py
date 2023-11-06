@@ -23,6 +23,8 @@ from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
 
+EIGER9M_MIN_READOUT = 3e-3
+
 
 class EigerError(Exception):
     """Base class for exceptions in this module."""
@@ -144,6 +146,7 @@ class Eiger9McSAXS(DetectorBase):
         self.std_client = None
         self.scaninfo = None
         self.filewriter = None
+        self.readout_time_min = EIGER9M_MIN_READOUT
         self.std_rest_server_url = (
             kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
         )
@@ -182,12 +185,19 @@ class Eiger9McSAXS(DetectorBase):
         self._init_detector()
         self._init_filewriter()
 
-    # TODO function for abstract class?
     def _default_parameter(self) -> None:
-        """Set default parameters for Eiger 9M
-        readout (float) : readout time in seconds
+        """Set default parameters for Pilatus300k detector
+        readout (float): readout time in seconds
         """
-        self.reduce_readout = 1e-3
+        self._update_readout_time()
+
+    def _update_readout_time(self) -> None:
+        readout_time = (
+            self.scaninfo.readout_time
+            if hasattr(self.scaninfo, "readout_time")
+            else self.readout_time_min
+        )
+        self.readout_time = max(readout_time, self.readout_time_min)
 
     # TODO function for abstract class?
     def _init_detector(self) -> None:
@@ -354,6 +364,7 @@ class Eiger9McSAXS(DetectorBase):
         """Set acquisition parameters for the detector"""
         self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_frames.put(1)
+        self._update_readout_time()
 
     # TODO function for abstract class? + call it for each scan??
     def _set_trigger(self, trigger_source: TriggerSource) -> None:

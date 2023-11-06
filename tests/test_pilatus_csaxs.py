@@ -246,7 +246,9 @@ def test_stage(
         # TODO consider putting energy as variable in scaninfo
         mock_det.device_manager.add_device("mokev", value=12.4)
         mock_det._stopped = stopped
-        with mock.patch.object(mock_det, "_prep_file_writer") as mock_prep_fw:
+        with mock.patch.object(mock_det, "_prep_file_writer") as mock_prep_fw, mock.patch.object(
+            mock_det, "_update_readout_time"
+        ) as mock_update_readout_time:
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
@@ -254,6 +256,7 @@ def test_stage(
             else:
                 mock_det.stage()
                 mock_prep_fw.assert_called_once()
+                mock_update_readout_time.assert_called()
                 # Check _prep_det
                 assert mock_det.cam.num_images.get() == int(
                     scaninfo["num_points"] * scaninfo["frames_per_trigger"]
@@ -266,6 +269,25 @@ def test_stage(
 def test_pre_scan(mock_det):
     mock_det.pre_scan()
     assert mock_det.cam.acquire.get() == 1
+
+
+@pytest.mark.parametrize(
+    "readout_time, expected_value",
+    [
+        (1e-3, 3e-3),
+        (3e-3, 3e-3),
+        (5e-3, 5e-3),
+        (None, 3e-3),
+    ],
+)
+def test_update_readout_time(mock_det, readout_time, expected_value):
+    if readout_time is None:
+        mock_det._update_readout_time()
+        assert mock_det.readout_time == expected_value
+    else:
+        mock_det.scaninfo.readout_time = readout_time
+        mock_det._update_readout_time()
+        assert mock_det.readout_time == expected_value
 
 
 @pytest.mark.parametrize(
