@@ -221,16 +221,19 @@ class PilatuscSAXS(DetectorBase):
         value = trigger_source
         self.cam.trigger_mode.put(value)
 
+    def _create_directory(filepath: str) -> None:
+        """Create directory if it does not exist"""
+        os.makedirs(filepath, exist_ok=True)
+
     def _prep_file_writer(self) -> None:
-        """Prepare the file writer for pilatus_2
-        a zmq service is running on xbl-daq-34 that is waiting
-        for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
         """
-        # TODO worked reliable with time.sleep(2)
-        # self._close_file_writer()
-        # time.sleep(2)
-        # self._stop_file_writer()
-        # time.sleep(2)
+        Prepare the file writer for pilatus_2
+
+        A zmq service is running on xbl-daq-34 that is waiting
+        for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
+
+        """
+        # TODO explore required sleep time here
         self._close_file_writer()
         time.sleep(0.1)
         self._stop_file_writer()
@@ -246,6 +249,7 @@ class PilatuscSAXS(DetectorBase):
         self.cam.file_format.put(0)  # 0: TIFF
         self.cam.file_template.put("%s%s_%5.5d.cbf")
 
+        # TODO remove hardcoded filepath here
         # compile filename
         basepath = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/pilatus_2/"
         self.filepath = os.path.join(
@@ -253,8 +257,11 @@ class PilatuscSAXS(DetectorBase):
             self.filewriter.get_scan_directory(self.scaninfo.scan_number, 1000, 5),
         )
         # Make directory if needed
-        os.makedirs(self.filepath, exist_ok=True)
+        self._create_directory(self.filepath)
 
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        # start the stream on x12sa-pd-2
+        url = "http://x12sa-pd-2:8080/stream/pilatus_2"
         data_msg = {
             "source": [
                 {
@@ -264,21 +271,14 @@ class PilatuscSAXS(DetectorBase):
                 }
             ]
         }
-
-        logger.info(data_msg)
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
-        res = requests.put(
-            url="http://x12sa-pd-2:8080/stream/pilatus_2",
-            data=json.dumps(data_msg),
-            headers=headers,
-        )
+        res = self._send_requests_put(url=url, data=data_msg, headers=headers)
         logger.info(f"{res.status_code} -  {res.text} - {res.content}")
 
         if not res.ok:
             res.raise_for_status()
 
-        # prepare writer
+        # start the data receiver on xbl-daq-34
+        url = "http://xbl-daq-34:8091/pilatus_2/run"
         data_msg = [
             "zmqWriter",
             self.scaninfo.username,
@@ -291,14 +291,7 @@ class PilatuscSAXS(DetectorBase):
                 "user": self.scaninfo.username,
             },
         ]
-
-        res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_2/run",
-            data=json.dumps(data_msg),
-            headers=headers,
-        )
-        # subprocess.run("curl -i -s -X PUT http://xbl-daq-34:8091/pilatus_2/run -d '[\"zmqWriter\",\"e20636\",{\"addr\":\"tcp://x12sa-pd-2:8888\",\"dst\":[\"file\"],\"numFrm\":10,\"timeout\":2000,\"ifType\":\"PULL\",\"user\":\"e20636\"}]'", shell=True)
-
+        res = self._send_requests_put(url=url, data=data_msg, headers=headers)
         logger.info(f"{res.status_code}  - {res.text} - {res.content}")
 
         if not res.ok:
@@ -306,8 +299,10 @@ class PilatuscSAXS(DetectorBase):
 
         # Wait for server to become available again
         time.sleep(0.1)
+        logger.info(f"{res.status_code} -{res.text} - {res.content}")
 
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        # Sent requests.put to xbl-daq-34 to wait for data
+        url = "http://xbl-daq-34:8091/pilatus_2/wait"
         data_msg = [
             "zmqWriter",
             self.scaninfo.username,
@@ -316,15 +311,8 @@ class PilatuscSAXS(DetectorBase):
                 "timeout": 2000,
             },
         ]
-        logger.info(f"{res.status_code} -{res.text} - {res.content}")
-
         try:
-            res = requests.put(
-                url="http://xbl-daq-34:8091/pilatus_2/wait",
-                data=json.dumps(data_msg),
-                #            headers=headers,
-            )
-
+            res = self._send_requests_put(url=url, data=data_msg, headers=headers)
             logger.info(f"{res}")
 
             if not res.ok:
@@ -332,46 +320,56 @@ class PilatuscSAXS(DetectorBase):
         except Exception as exc:
             logger.info(f"Pilatus2 wait threw Exception: {exc}")
 
-    def _send_requests_put(self, url: str, data_msg: dict = None, headers: dict = None) -> None:
-        ...
+    def _send_requests_put(self, url: str, data_msg: list = None, headers: dict = None) -> object:
+        """
+        Send a put request to the given url
 
-    def _send_requests_delete(self, url: str, headers: dict = None) -> None:
+        Args:
+            url (str): url to send the request to
+            data (dict): data to be sent with the request (optional)
+            headers (dict): headers to be sent with the request (optional)
+
+        Returns:
+            status code of the request
+        """
+        return requests.put(url=url, data=json.dumps(data_msg), headers=headers)
+
+    def _send_requests_delete(self, url: str, headers: dict = None) -> object:
         """
         Send a delete request to the given url
 
         Args:
             url (str): url to send the request to
             headers (dict): headers to be sent with the request (optional)
+
+        Returns:
+            status code of the request
         """
-        try:
-            res = requests.delete(url=url, headers=headers)
-            if not res.ok:
-                res.raise_for_status()
-        except Exception as exc:
-            logger.info(f"Pilatus2 delete threw Exception: {exc}")
+        return requests.delete(url=url, headers=headers)
 
     def _close_file_writer(self) -> None:
-        """Close the file writer for pilatus_2
-        a zmq service is running on xbl-daq-34 that is waiting
-        for a zmq message to stop the writer for the pilatus_2 x12sa-pd-2
+        """
+        Close the file writer for pilatus_2
+
+        Delete the data from x12sa-pd-2
+
         """
         url = "http://x12sa-pd-2:8080/stream/pilatus_2"
-        self._send_requests_delete(url=url)
-
         try:
-            res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
+            res = self._send_requests_delete(url=url)
             if not res.ok:
                 res.raise_for_status()
         except Exception as exc:
-            logger.info(f"Pilatus2 delete threw Exception: {exc}")
+            logger.info(f"Pilatus2 close threw Exception: {exc}")
 
     def _stop_file_writer(self) -> None:
-        res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_2/stop",
-            # data=json.dumps(data_msg),
-            #            headers=headers,
-        )
+        """
+        Stop the file writer for pilatus_2
 
+        Runs on xbl-daq-34
+        """
+        url = "http://xbl-daq-34:8091/pilatus_2/stop"
+        res = self._send_requests_put(url=url)
         if not res.ok:
             res.raise_for_status()
 
