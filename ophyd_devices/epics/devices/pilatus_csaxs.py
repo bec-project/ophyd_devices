@@ -332,11 +332,32 @@ class PilatuscSAXS(DetectorBase):
         except Exception as exc:
             logger.info(f"Pilatus2 wait threw Exception: {exc}")
 
+    def _send_requests_put(self, url: str, data_msg: dict = None, headers: dict = None) -> None:
+        ...
+
+    def _send_requests_delete(self, url: str, headers: dict = None) -> None:
+        """
+        Send a delete request to the given url
+
+        Args:
+            url (str): url to send the request to
+            headers (dict): headers to be sent with the request (optional)
+        """
+        try:
+            res = requests.delete(url=url, headers=headers)
+            if not res.ok:
+                res.raise_for_status()
+        except Exception as exc:
+            logger.info(f"Pilatus2 delete threw Exception: {exc}")
+
     def _close_file_writer(self) -> None:
         """Close the file writer for pilatus_2
         a zmq service is running on xbl-daq-34 that is waiting
         for a zmq message to stop the writer for the pilatus_2 x12sa-pd-2
         """
+        url = "http://x12sa-pd-2:8080/stream/pilatus_2"
+        self._send_requests_delete(url=url)
+
         try:
             res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
             if not res.ok:
