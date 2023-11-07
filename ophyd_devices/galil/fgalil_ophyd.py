@@ -31,6 +31,8 @@ logger = bec_logger.logger
 
 class FlomniGalilController(GalilController):
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
+        if axis_Id is None and axis_Id_numeric is not None:
+            axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
         active_thread = self.is_thread_active(0)
         motor_is_on = self.is_motor_on(axis_Id)
         return bool(active_thread or motor_is_on)

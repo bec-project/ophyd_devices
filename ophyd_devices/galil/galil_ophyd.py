@@ -137,7 +137,7 @@ class GalilController(Controller):
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
         if axis_Id is None and axis_Id_numeric is not None:
-            axis_Id = self._axis[axis_Id_numeric].axis_Id
+            axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
         is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
         backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
         return bool(
@@ -280,6 +280,14 @@ class GalilController(Controller):
         for controller in self._controller_instances.values():
             if isinstance(controller, GalilController):
                 controller.describe()
+
+    @staticmethod
+    def axis_Id_to_numeric(axis_Id: str) -> int:
+        return ord(axis_Id.lower()) - 97
+
+    @staticmethod
+    def axis_Id_numeric_to_alpha(axis_Id_numeric: int) -> str:
+        return (chr(axis_Id_numeric + 97)).capitalize()
 
 
 class GalilSignalBase(SocketSignal):
@@ -583,7 +591,7 @@ class GalilMotor(Device, PositionerBase):
             if len(val) != 1:
                 raise ValueError(f"Only single-character axis_Ids are supported.")
             self._axis_Id_alpha = val
-            self._axis_Id_numeric = ord(val.lower()) - 97
+            self._axis_Id_numeric = self.controller.axis_Id_to_numeric(val)
         else:
             raise TypeError(f"Expected value of type str but received {type(val)}")
 
@@ -596,8 +604,8 @@ class GalilMotor(Device, PositionerBase):
         if isinstance(val, int):
             if val > 26:
                 raise ValueError(f"Numeric value exceeds supported range.")
-            self._axis_Id_alpha = val
-            self._axis_Id_numeric = (chr(val + 97)).capitalize()
+            self._axis_Id_alpha = self.controller.axis_Id_numeric_to_alpha(val)
+            self._axis_Id_numeric = val
         else:
             raise TypeError(f"Expected value of type int but received {type(val)}")
 
