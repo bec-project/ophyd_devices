@@ -40,7 +40,7 @@ class FuprGalilController(GalilController):
         # TODO: check if all axes are referenced in all controllers
         return super().all_axes_referenced()
 
-    def axis_is_referenced(self, axis_Id, axis_Id_numeric) -> bool:
+    def axis_is_referenced(self, axis_Id) -> bool:
         return self.all_axes_referenced()
 
     def all_axis_referenced(self) -> bool:
