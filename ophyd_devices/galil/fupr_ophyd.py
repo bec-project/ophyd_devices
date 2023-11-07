@@ -36,14 +36,10 @@ class FuprGalilController(GalilController):
         is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
         return is_moving
 
-    def all_axes_referenced(self) -> bool:
-        # TODO: check if all axes are referenced in all controllers
-        return super().all_axes_referenced()
-
     def axis_is_referenced(self, axis_Id) -> bool:
         return self.all_axes_referenced()
 
-    def all_axis_referenced(self) -> bool:
+    def all_axes_referenced(self) -> bool:
         return bool(float(self.socket_put_and_receive("MG axisref").strip()))
 
     def drive_axis_to_limit(self, axis_Id_numeric, direction: str) -> None:
