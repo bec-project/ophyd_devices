@@ -199,9 +199,9 @@ class GalilController(Controller):
         axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
         # check if we actually hit the limit
         if direction == "forward":
-            limit = self.get_motor_limit_switch(axis_Id)[0]
-        elif direction == "reverse":
             limit = self.get_motor_limit_switch(axis_Id)[1]
+        elif direction == "reverse":
+            limit = self.get_motor_limit_switch(axis_Id)[0]
 
         if not limit:
             raise GalilError(f"Failed to drive axis {axis_Id}/{axis_Id_numeric} to limit.")
@@ -241,8 +241,17 @@ class GalilController(Controller):
         return not bool(float(self.socket_put_and_receive(f"MG _MO{axis_Id}").strip()))
 
     def get_motor_limit_switch(self, axis_Id) -> list:
-        ret = self.socket_put_and_receive(f"MG _LF{axis_Id}, _LR{axis_Id}")
-        high, low = ret.strip().split(" ")
+        """
+        Get the status of the motor limit switches.
+
+        Args:
+            axis_Id (str): Axis identifier (e.g. 'A', 'B', 'C', ...)
+
+        Returns:
+            list: List of two booleans indicating if the low and high limit switch is active, respectively.
+        """
+        ret = self.socket_put_and_receive(f"MG _LR{axis_Id}, _LF{axis_Id}")
+        low, high = ret.strip().split(" ")
         return [not bool(float(low)), not bool(float(high))]
 
     def describe(self) -> None:
