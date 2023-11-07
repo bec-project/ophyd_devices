@@ -15,9 +15,7 @@ def patch_dual_pvs(device):
             continue
         if not hasattr(walk.item, "_write_pv"):
             continue
-        if walk.item._read_pv.pvname.endswith("_RBV") and isinstance(
-            walk.item, ophyd.areadetector.base.EpicsSignalWithRBV
-        ):
+        if walk.item._read_pv.pvname.endswith("_RBV"):
             walk.item._read_pv = walk.item._write_pv
 
 
