@@ -190,6 +190,7 @@ class PilatuscSAXS(DetectorBase):
     def _init_detector(self) -> None:
         """Initialize the detector"""
         # TODO add check if detector is running
+        self._stop_det()
         self._set_trigger(TriggerSource.EXT_ENABLE)
 
     def _init_filewriter(self) -> None:
@@ -212,14 +213,14 @@ class PilatuscSAXS(DetectorBase):
         setpoint = int(self.mokev * factor)
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
         if not np.isclose(setpoint / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(setpoint / 2)
+            self.cam.threshold_energy.put(setpoint / 2)
 
     def _set_acquisition_params(self) -> None:
         """set acquisition parameters on the detector"""
         # self.cam.acquire_time.set(self.exp_time)
         # self.cam.acquire_period.set(self.exp_time + self.readout)
-        self.cam.num_images.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_frames.set(1)
+        self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
+        self.cam.num_frames.put(1)
         self._update_readout_time()
 
     def _set_trigger(self, trigger_source: int) -> None:
