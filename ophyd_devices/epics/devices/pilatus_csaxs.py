@@ -37,6 +37,13 @@ class PilatusTimeoutError(PilatusError):
     pass
 
 
+class DeviceClassInitError(PilatusError):
+    """Raised when initiation of the device class fails,
+    due to missing device manager or not started in sim_mode."""
+
+    pass
+
+
 class TriggerSource(enum.IntEnum):
     INTERNAL = 0
     EXT_ENABLE = 1
@@ -127,7 +134,7 @@ class PilatuscSAXS(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise Exception(
+            raise DeviceClassInitError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
@@ -416,7 +423,11 @@ class PilatuscSAXS(DetectorBase):
 
     # TODO might be useful for base class
     def pre_scan(self) -> None:
-        """ " Pre_scan gets executed right before"""
+        """Pre_scan is an (optional) function that is executed by BEC just before the scan core
+
+        For the pilatus detector, it is used to arm the detector for the acquisition,
+        because the detector times out after ˜7-8seconds without seeing a trigger.
+        """
         self._arm_acquisition()
 
     def _arm_acquisition(self) -> None:
