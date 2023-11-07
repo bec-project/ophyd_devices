@@ -136,9 +136,13 @@ class GalilController(Controller):
             )
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
+        if axis_Id is None and axis_Id_numeric is not None:
+            axis_Id = self._axis[axis_Id_numeric].axis_Id
         is_moving = bool(float(self.socket_put_and_receive(f"MG_BG{axis_Id}")) != 0)
         backlash_is_active = bool(float(self.socket_put_and_receive(f"MGbcklact[axis]")) != 0)
-        return bool(is_moving or backlash_is_active)
+        return bool(
+            is_moving or backlash_is_active or self.is_thread_active(0) or self.is_thread_active(2)
+        )
 
     def is_thread_active(self, thread_id: int) -> bool:
         val = float(self.socket_put_and_receive(f"MG_XQ{thread_id}"))
@@ -155,12 +159,70 @@ class GalilController(Controller):
         return self.socket_put_and_receive(f"XQ#STOP,1")
 
     def lgalil_is_air_off_and_orchestra_enabled(self) -> bool:
+        # TODO: move this to the LamNI-specific controller
         rt_not_blocked_by_galil = bool(self.socket_put_and_receive(f"MG@OUT[9]"))
         air_off = bool(self.socket_put_and_receive(f"MG@OUT[13]"))
         return rt_not_blocked_by_galil and air_off
 
     def axis_is_referenced(self, axis_Id_numeric) -> bool:
         return bool(float(self.socket_put_and_receive(f"MG axisref[{axis_Id_numeric}]").strip()))
+
+    def all_axes_referenced(self) -> bool:
+        """
+        Check if all axes are referenced.
+        """
+        return bool(float(self.socket_put_and_receive("MG allaxref").strip()))
+
+    def drive_axis_to_limit(self, axis_Id_numeric, direction: str) -> None:
+        """
+        Drive an axis to the limit in a specified direction.
+
+        Args:
+            axis_Id_numeric (int): Axis number
+            direction (str): Direction in which the axis should be driven to the limit. Either 'forward' or 'reverse'.
+        """
+        if direction == "forward":
+            direction_flag = 1
+        elif direction == "reverse":
+            direction_flag = -1
+        else:
+            raise ValueError(f"Invalid direction {direction}")
+
+        self.socket_put_confirmed(f"naxis={axis_Id_numeric}")
+        self.socket_put_confirmed(f"ndir={direction_flag}")
+        self.socket_put_confirmed("XQ#NEWPAR")
+        self.socket_put_confirmed("XQ#FES")
+        time.sleep(0.1)
+        while self.is_axis_moving(None, axis_Id_numeric):
+            time.sleep(0.1)
+
+        # check if we actually hit the limit
+        if direction == "forward":
+            limit = self.get_motor_limit_switch(axis_Id_numeric)[0]
+        elif direction == "reverse":
+            limit = self.get_motor_limit_switch(axis_Id_numeric)[1]
+
+        if not limit:
+            raise GalilError(f"Failed to drive axis {axis_Id_numeric} to limit.")
+
+    def find_reference(self, axis_Id_numeric: int) -> None:
+        """
+        Find the reference of an axis.
+
+        Args:
+            axis_Id_numeric (int): Axis number
+        """
+        self.socket_put_confirmed(f"naxis={axis_Id_numeric}")
+        self.socket_put_and_receive("XQ#NEWPAR")
+        self.socket_put_confirmed("XQ#FRM")
+        time.sleep(0.1)
+        while self.is_axis_moving(None, axis_Id_numeric):
+            time.sleep(0.1)
+
+        if not self.axis_is_referenced(axis_Id_numeric):
+            raise GalilError(f"Failed to find reference of axis {axis_Id_numeric}.")
+
+        logger.info(f"Successfully found reference of axis {axis_Id_numeric}.")
 
     def show_running_threads(self) -> None:
         t = PrettyTable()
@@ -292,7 +354,7 @@ class GalilSetpointSignal(GalilSignalBase):
         """
         target_val = val * self.parent.sign
         self.setpoint = target_val
-        axes_referenced = float(self.controller.socket_put_and_receive("MG allaxref"))
+        axes_referenced = self.controller.all_axes_referenced()
         if axes_referenced:
             while self.controller.is_thread_active(0):
                 time.sleep(0.1)
@@ -327,11 +389,7 @@ class GalilMotorResolution(GalilSignalRO):
 class GalilMotorIsMoving(GalilSignalRO):
     @threadlocked
     def _socket_get(self):
-        return (
-            self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
-            or self.controller.is_thread_active(0)
-            or self.controller.is_thread_active(2)
-        )
+        return self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
 
     def get(self):
         val = super().get()
@@ -347,7 +405,7 @@ class GalilMotorIsMoving(GalilSignalRO):
 class GalilAxesReferenced(GalilSignalRO):
     @threadlocked
     def _socket_get(self):
-        return self.controller.socket_put_and_receive("MG allaxref")
+        return self.controller.all_axes_referenced()
 
 
 class GalilMotor(Device, PositionerBase):

@@ -13,9 +13,14 @@ from prettytable import PrettyTable
 
 from ophyd_devices.galil.galil_ophyd import (
     BECConfigError,
+    GalilAxesReferenced,
     GalilCommunicationError,
     GalilController,
     GalilError,
+    GalilMotorIsMoving,
+    GalilMotorResolution,
+    GalilReadbackSignal,
+    GalilSetpointSignal,
     retry_once,
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
@@ -25,137 +30,34 @@ logger = bec_logger.logger
 
 
 class FlomniGalilController(GalilController):
+    def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
+        active_thread = self.is_thread_active(0)
+        motor_is_on = self.is_motor_on(axis_Id)
+        return bool(active_thread or motor_is_on)
+
+    def all_axes_referenced(self) -> bool:
+        # TODO: check if all axes are referenced in all controllers
+        return super().all_axes_referenced()
+
+
+class FlomniGalilReadbackSignal(GalilReadbackSignal):
     pass
 
 
-class GalilSignalBase(SocketSignal):
-    def __init__(self, signal_name, **kwargs):
-        self.signal_name = signal_name
-        super().__init__(**kwargs)
-        self.controller = self.parent.controller
-        self.sock = self.parent.controller.sock
+class FlomniGalilSetpointSignal(GalilSetpointSignal):
+    pass
 
 
-class GalilSignalRO(GalilSignalBase):
-    def __init__(self, signal_name, **kwargs):
-        super().__init__(signal_name, **kwargs)
-        self._metadata["write_access"] = False
-
-    def _socket_set(self, val):
-        raise ReadOnlyError("Read-only signals cannot be set")
+class FlomniGalilMotorResolution(GalilMotorResolution):
+    pass
 
 
-class GalilReadbackSignal(GalilSignalRO):
-    @retry_once
-    @threadlocked
-    def _socket_get(self) -> float:
-        """Get command for the readback signal
-
-        Returns:
-            float: Readback value after adjusting for sign and motor resolution.
-        """
-
-        current_pos = float(self.controller.socket_put_and_receive(f"TD{self.parent.axis_Id}"))
-        current_pos *= self.parent.sign
-        step_mm = self.parent.motor_resolution.get()
-        return current_pos / step_mm
-
-    def read(self):
-        self._metadata["timestamp"] = time.time()
-        val = super().read()
-        if self.parent.axis_Id_numeric == 2:
-            try:
-                rt = self.parent.device_manager.devices[self.parent.rt]
-                if rt.enabled:
-                    rt.obj.controller.set_rotation_angle(val[self.parent.name]["value"])
-            except KeyError:
-                logger.warning("Failed to set RT value during readback.")
-        return val
+class FlomniGalilMotorIsMoving(GalilMotorIsMoving):
+    pass
 
 
-class GalilSetpointSignal(GalilSignalBase):
-    setpoint = 0
-
-    def _socket_get(self) -> float:
-        """Get command for receiving the setpoint / target value.
-        The value is not pulled from the controller but instead just the last setpoint used.
-
-        Returns:
-            float: setpoint / target value
-        """
-        return self.setpoint
-
-    @retry_once
-    @threadlocked
-    def _socket_set(self, val: float) -> None:
-        """Set a new target value / setpoint value. Before submission, the target value is adjusted for the axis' sign.
-        Furthermore, it is ensured that all axes are referenced before a new setpoint is submitted.
-
-        Args:
-            val (float): Target value / setpoint value
-
-        Raises:
-            GalilError: Raised if not all axes are referenced.
-
-        """
-        target_val = val * self.parent.sign
-        self.setpoint = target_val
-        axes_referenced = float(self.controller.socket_put_and_receive("MG allaxref"))
-        if axes_referenced:
-            while self.controller.is_thread_active(0):
-                time.sleep(0.1)
-
-            if self.parent.axis_Id_numeric == 2:
-                angle_status = self.parent.device_manager.devices[
-                    self.parent.rt
-                ].obj.controller.feedback_status_angle_lamni()
-
-                if angle_status:
-                    self.controller.socket_put_confirmed("angintf=1")
-
-            self.controller.socket_put_confirmed(f"naxis={self.parent.axis_Id_numeric}")
-            self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")
-            self.controller.socket_put_confirmed("movereq=1")
-            self.controller.socket_put_confirmed("XQ#NEWPAR")
-            while self.controller.is_thread_active(0):
-                time.sleep(0.005)
-        else:
-            raise GalilError("Not all axes are referenced.")
-
-
-class GalilMotorResolution(GalilSignalRO):
-    @retry_once
-    @threadlocked
-    def _socket_get(self):
-        return float(
-            self.controller.socket_put_and_receive(f"MG stppermm[{self.parent.axis_Id_numeric}]")
-        )
-
-
-class GalilMotorIsMoving(GalilSignalRO):
-    @threadlocked
-    def _socket_get(self):
-        return (
-            self.controller.is_axis_moving(self.parent.axis_Id, self.parent.axis_Id_numeric)
-            or self.controller.is_thread_active(0)
-            or self.controller.is_thread_active(2)
-        )
-
-    def get(self):
-        val = super().get()
-        if val is not None:
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                value=val,
-                timestamp=time.time(),
-            )
-        return val
-
-
-class GalilAxesReferenced(GalilSignalRO):
-    @threadlocked
-    def _socket_get(self):
-        return self.controller.socket_put_and_receive("MG allaxref")
+class FlomniGalilAxesReferenced(GalilAxesReferenced):
+    pass
 
 
 class GalilMotor(Device, PositionerBase):
@@ -165,10 +67,12 @@ class GalilMotor(Device, PositionerBase):
         signal_name="readback",
         kind="hinted",
     )
-    user_setpoint = Cpt(GalilSetpointSignal, signal_name="setpoint")
-    motor_resolution = Cpt(GalilMotorResolution, signal_name="resolution", kind="config")
-    motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
-    all_axes_referenced = Cpt(GalilAxesReferenced, signal_name="all_axes_referenced", kind="config")
+    user_setpoint = Cpt(FlomniGalilSetpointSignal, signal_name="setpoint")
+    motor_resolution = Cpt(FlomniGalilMotorResolution, signal_name="resolution", kind="config")
+    motor_is_moving = Cpt(FlomniGalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
+    all_axes_referenced = Cpt(
+        FlomniGalilAxesReferenced, signal_name="all_axes_referenced", kind="config"
+    )
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
     low_limit_travel = Cpt(Signal, value=0, kind="omitted")
 
