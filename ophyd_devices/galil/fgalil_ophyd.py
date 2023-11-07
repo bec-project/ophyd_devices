@@ -16,6 +16,7 @@ from ophyd_devices.galil.galil_ophyd import (
     GalilCommunicationError,
     GalilController,
     GalilError,
+    retry_once,
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
