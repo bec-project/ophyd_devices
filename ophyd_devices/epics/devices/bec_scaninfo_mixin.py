@@ -69,8 +69,8 @@ class BecScaninfoMixin:
         self.scan_msg = None
         self.scanID = None
         if bec_info_msg is None:
-            BECInfoMsgMock = BECInfoMsgMock()
-            self.bec_info_msg = BECInfoMsgMock.get_bec_info_msg()
+            infomsgmock = BECInfoMsgMock()
+            self.bec_info_msg = infomsgmock.get_bec_info_msg()
         else:
             self.bec_info_msg = bec_info_msg
 
