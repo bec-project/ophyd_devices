@@ -196,14 +196,15 @@ class GalilController(Controller):
         while self.is_axis_moving(None, axis_Id_numeric):
             time.sleep(0.1)
 
+        axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
         # check if we actually hit the limit
         if direction == "forward":
-            limit = self.get_motor_limit_switch(axis_Id_numeric)[0]
+            limit = self.get_motor_limit_switch(axis_Id)[0]
         elif direction == "reverse":
-            limit = self.get_motor_limit_switch(axis_Id_numeric)[1]
+            limit = self.get_motor_limit_switch(axis_Id)[1]
 
         if not limit:
-            raise GalilError(f"Failed to drive axis {axis_Id_numeric} to limit.")
+            raise GalilError(f"Failed to drive axis {axis_Id}/{axis_Id_numeric} to limit.")
 
     def find_reference(self, axis_Id_numeric: int) -> None:
         """
