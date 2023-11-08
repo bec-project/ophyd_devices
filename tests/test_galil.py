@@ -56,6 +56,7 @@ def test_axis_get(pos, msg, sign):
 )
 def test_axis_put(target_pos, socket_put_messages, socket_get_messages):
     leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock)
+    leyey.controller.on()
     leyey.controller.sock.flush_buffer()
     leyey.controller.sock.buffer_recv = socket_get_messages
     leyey.user_setpoint.put(target_pos)
