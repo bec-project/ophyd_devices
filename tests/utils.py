@@ -1,3 +1,9 @@
+from bec_lib.core.devicemanager import DeviceContainer
+from bec_lib.core.tests.utils import ProducerMock
+
+from unittest import mock
+
+
 class SocketMock:
     def __init__(self, host, port):
         self.host = host
@@ -44,3 +50,246 @@ class SocketMock:
     def flush_buffer(self):
         self.buffer_put = []
         self.buffer_recv = ""
+
+
+class MockPV:
+    """
+    MockPV class
+
+    This class is used for mocking pyepics signals for testing purposes
+
+    """
+
+    _fmtsca = "<PV '%(pvname)s', count=%(count)i, type=%(typefull)s, access=%(access)s>"
+    _fmtarr = "<PV '%(pvname)s', count=%(count)i/%(nelm)i, type=%(typefull)s, access=%(access)s>"
+    _fields = (
+        "pvname",
+        "value",
+        "char_value",
+        "status",
+        "ftype",
+        "chid",
+        "host",
+        "count",
+        "access",
+        "write_access",
+        "read_access",
+        "severity",
+        "timestamp",
+        "posixseconds",
+        "nanoseconds",
+        "precision",
+        "units",
+        "enum_strs",
+        "upper_disp_limit",
+        "lower_disp_limit",
+        "upper_alarm_limit",
+        "lower_alarm_limit",
+        "lower_warning_limit",
+        "upper_warning_limit",
+        "upper_ctrl_limit",
+        "lower_ctrl_limit",
+    )
+
+    def __init__(
+        self,
+        pvname,
+        callback=None,
+        form="time",
+        verbose=False,
+        auto_monitor=None,
+        count=None,
+        connection_callback=None,
+        connection_timeout=None,
+        access_callback=None,
+    ):
+        self.pvname = pvname.strip()
+        self.form = form.lower()
+        self.verbose = verbose
+        self._auto_monitor = auto_monitor
+        self.ftype = None
+        self.connected = True
+        self.connection_timeout = connection_timeout
+        self._user_max_count = count
+
+        if self.connection_timeout is None:
+            self.connection_timeout = 3
+        self._args = {}.fromkeys(self._fields)
+        self._args["pvname"] = self.pvname
+        self._args["count"] = count
+        self._args["nelm"] = -1
+        self._args["type"] = "unknown"
+        self._args["typefull"] = "unknown"
+        self._args["access"] = "unknown"
+        self._args["status"] = 0
+        self.connection_callbacks = []
+        self.mock_data = 0
+
+        if connection_callback is not None:
+            self.connection_callbacks = [connection_callback]
+
+        self.access_callbacks = []
+        if access_callback is not None:
+            self.access_callbacks = [access_callback]
+
+        self.callbacks = {}
+        self._put_complete = None
+        self._monref = None  # holder of data returned from create_subscription
+        self._monref_mask = None
+        self._conn_started = False
+        if isinstance(callback, (tuple, list)):
+            for i, thiscb in enumerate(callback):
+                if callable(thiscb):
+                    self.callbacks[i] = (thiscb, {})
+        elif callable(callback):
+            self.callbacks[0] = (callback, {})
+
+        self.chid = None
+        self.context = mock.MagicMock()
+        self._cache_key = (pvname, form, self.context)
+        self._reference_count = 0
+        for conn_cb in self.connection_callbacks:
+            conn_cb(pvname=pvname, conn=True, pv=self)
+        for acc_cb in self.access_callbacks:
+            acc_cb(True, True, pv=self)
+
+    def wait_for_connection(self, timeout=None):
+        return self.connected
+
+    def get_all_metadata_blocking(self, timeout):
+        md = self._args.copy()
+        md.pop("value", None)
+        return md
+
+    def get_all_metadata_callback(self, callback, *, timeout):
+        def get_metadata_thread(pvname):
+            md = self.get_all_metadata_blocking(timeout=timeout)
+            callback(pvname, md)
+
+        get_metadata_thread(pvname=self.pvname)
+
+    def put(
+        self, value, wait=False, timeout=None, use_complete=False, callback=None, callback_data=None
+    ):
+        self.mock_data = value
+        if callback is not None:
+            callback(None, None, None)
+
+    def get_with_metadata(
+        self,
+        count=None,
+        as_string=False,
+        as_numpy=True,
+        timeout=None,
+        with_ctrlvars=False,
+        form=None,
+        use_monitor=True,
+        as_namespace=False,
+    ):
+        return {"value": self.mock_data}
+
+    def get(
+        self,
+        count=None,
+        as_string=False,
+        as_numpy=True,
+        timeout=None,
+        with_ctrlvars=False,
+        use_monitor=True,
+    ):
+        data = self.get_with_metadata(
+            count=count,
+            as_string=as_string,
+            as_numpy=as_numpy,
+            timeout=timeout,
+            with_ctrlvars=with_ctrlvars,
+            use_monitor=use_monitor,
+        )
+        return data["value"] if data is not None else None
+
+
+class DeviceMock:
+    """Device Mock. Used for testing in combination with the DeviceManagerMock
+
+    Args:
+        name (str): name of the device
+        value (float, optional): initial value of the device. Defaults to 0.0.
+    Returns:
+        DeviceMock: DeviceMock object
+
+    """
+
+    def __init__(self, name: str, value: float = 0.0):
+        self.name = name
+        self.read_buffer = value
+        self._config = {"deviceConfig": {"limits": [-50, 50]}, "userParameter": None}
+        self._enabled_set = True
+        self._enabled = True
+
+    def read(self):
+        return {self.name: {"value": self.read_buffer}}
+
+    def readback(self):
+        return self.read_buffer
+
+    @property
+    def enabled_set(self) -> bool:
+        return self._enabled_set
+
+    @enabled_set.setter
+    def enabled_set(self, val: bool):
+        self._enabled_set = val
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, val: bool):
+        self._enabled = val
+
+    @property
+    def user_parameter(self):
+        return self._config["userParameter"]
+
+    @property
+    def obj(self):
+        return self
+
+
+class DMMock:
+    """Mock for DeviceManager
+
+    The mocked DeviceManager creates a device containert and a producer.
+
+    """
+
+    def __init__(self):
+        self.devices = DeviceContainer()
+        self.producer = ProducerMock()
+
+    def add_device(self, name: str, value: float = 0.0):
+        self.devices[name] = DeviceMock(name, value)
+
+
+# #TODO check what is the difference to SynSignal!
+# class MockSignal(Signal):
+#     """Can mock an OphydSignal"""
+#     def __init__(self, read_pv, *, string=False, name=None, parent=None, **kwargs):
+#         self.read_pv = read_pv
+#         self._string = bool(string)
+#         super().__init__(name=name, parent=parent, **kwargs)
+#         self._waited_for_connection = False
+#         self._subscriptions = []
+
+#     def wait_for_connection(self):
+#         self._waited_for_connection = True
+
+#     def subscribe(self, method, event_type, **kw):
+#         self._subscriptions.append((method, event_type, kw))
+
+#     def describe_configuration(self):
+#         return {self.name + "_conf": {"source": "SIM:test"}}
+
+#     def read_configuration(self):
+#         return {self.name + "_conf": {"value": 0}}

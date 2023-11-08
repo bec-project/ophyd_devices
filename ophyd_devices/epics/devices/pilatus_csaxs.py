@@ -14,12 +14,15 @@ from ophyd import ADComponent as ADCpt
 
 from bec_lib.core import BECMessage, MessageEndpoints
 from bec_lib.core.file_utils import FileWriterMixin
+from bec_lib.core.bec_service import SERVICE_CONFIG
 from bec_lib.core import bec_logger
 
 from ophyd_devices.utils import bec_utils as bec_utils
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 logger = bec_logger.logger
+
+PILATUS_MIN_READOUT = 3e-3
 
 
 class PilatusError(Exception):
@@ -28,13 +31,20 @@ class PilatusError(Exception):
     pass
 
 
-class PilatusTimeoutError(Exception):
+class PilatusTimeoutError(PilatusError):
     """Raised when the Pilatus does not respond in time during unstage."""
 
     pass
 
 
-class TriggerSource(int, enum.Enum):
+class DeviceClassInitError(PilatusError):
+    """Raised when initiation of the device class fails,
+    due to missing device manager or not started in sim_mode."""
+
+    pass
+
+
+class TriggerSource(enum.IntEnum):
     INTERNAL = 0
     EXT_ENABLE = 1
     EXT_TRIGGER = 2
@@ -42,14 +52,14 @@ class TriggerSource(int, enum.Enum):
     ALGINMENT = 4
 
 
-class SlsDetectorCam(Device):
+class SLSDetectorCam(Device):
     """SLS Detector Camera - Pilatus
 
     Base class to map EPICS PVs to ophyd signals.
     """
 
     num_images = ADCpt(EpicsSignalWithRBV, "NumImages")
-    num_exposures = ADCpt(EpicsSignalWithRBV, "NumExposures")
+    num_frames = ADCpt(EpicsSignalWithRBV, "NumExposures")
     delay_time = ADCpt(EpicsSignalWithRBV, "NumExposures")
     trigger_mode = ADCpt(EpicsSignalWithRBV, "TriggerMode")
     acquire = ADCpt(EpicsSignal, "Acquire")
@@ -70,7 +80,7 @@ class SlsDetectorCam(Device):
     gap_fill = ADCpt(EpicsSignalWithRBV, "GapFill")
 
 
-class PilatusCsaxs(DetectorBase):
+class PilatuscSAXS(DetectorBase):
     """Pilatus_2 300k detector for CSAXS
 
     Parent class: DetectorBase
@@ -87,7 +97,7 @@ class PilatusCsaxs(DetectorBase):
         "describe",
     ]
 
-    cam = ADCpt(SlsDetectorCam, "cam1:")
+    cam = ADCpt(SLSDetectorCam, "cam1:")
 
     def __init__(
         self,
@@ -124,29 +134,45 @@ class PilatusCsaxs(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise PilatusError("Add DeviceManager to initialization or init with sim_mode=True")
-
+            raise DeviceClassInitError(
+                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
+            )
+        self.sim_mode = sim_mode
+        self._stopped = False
         self.name = name
-        self.wait_for_connection()
-        # Spin up connections for simulation or BEC mode
+        self.service_cfg = None
+        self.std_client = None
+        self.scaninfo = None
+        self.filewriter = None
+        self.readout_time_min = PILATUS_MIN_READOUT
+        # TODO move url from data backend up here?
+        self.wait_for_connection(all_signals=True)
         if not sim_mode:
-            from bec_lib.core.bec_service import SERVICE_CONFIG
-
+            self._update_service_config()
             self.device_manager = device_manager
-            self._producer = self.device_manager.producer
-            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
-            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
-            self._producer = bec_utils.MockProducer()
-            self.device_manager = bec_utils.MockDeviceManager()
-            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-            self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": base_path}
-
-        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.scaninfo.load_scan_metadata()
-        self.filewriter = FileWriterMixin(self.service_cfg)
+            self.device_manager = bec_utils.DMMock()
+            base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
+            self.service_cfg = {"base_path": os.path.expanduser(base_path)}
+        self._producer = self.device_manager.producer
+        self._update_scaninfo()
+        self._update_filewriter()
         self._init()
+
+    def _update_filewriter(self) -> None:
+        """Update filewriter with service config"""
+        self.filewriter = FileWriterMixin(self.service_cfg)
+
+    def _update_scaninfo(self) -> None:
+        """Update scaninfo from BecScaninfoMixing
+        This depends on device manager and operation/sim_mode
+        """
+        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo.load_scan_metadata()
+
+    def _update_service_config(self) -> None:
+        """Update service config from BEC service config"""
+        self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters"""
@@ -158,12 +184,21 @@ class PilatusCsaxs(DetectorBase):
         """Set default parameters for Pilatus300k detector
         readout (float): readout time in seconds
         """
-        self.reduce_readout = 1e-3
+        self._update_readout_time()
+
+    def _update_readout_time(self) -> None:
+        readout_time = (
+            self.scaninfo.readout_time
+            if hasattr(self.scaninfo, "readout_time")
+            else self.readout_time_min
+        )
+        self.readout_time = max(readout_time, self.readout_time_min)
 
     def _init_detector(self) -> None:
         """Initialize the detector"""
         # TODO add check if detector is running
-        pass
+        self._stop_det()
+        self._set_trigger(TriggerSource.EXT_ENABLE)
 
     def _init_filewriter(self) -> None:
         """Initialize the file writer"""
@@ -174,26 +209,28 @@ class PilatusCsaxs(DetectorBase):
         # TODO slow reaction, seemed to have timeout.
         self._set_det_threshold()
         self._set_acquisition_params()
+        self._set_trigger(TriggerSource.EXT_ENABLE)
 
     def _set_det_threshold(self) -> None:
         # threshold_energy PV exists on Eiger 9M?
         factor = 1
-        if self.cam.threshold_energy._metadata["units"] == "eV":
+        unit = getattr(self.cam.threshold_energy, "units", None)
+        if unit != None and unit == "eV":
             factor = 1000
         setpoint = int(self.mokev * factor)
         threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
         if not np.isclose(setpoint / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(setpoint / 2)
+            self.cam.threshold_energy.put(setpoint / 2)
 
     def _set_acquisition_params(self) -> None:
         """set acquisition parameters on the detector"""
         # self.cam.acquire_time.set(self.exp_time)
         # self.cam.acquire_period.set(self.exp_time + self.readout)
-        self.cam.num_images.set(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_exposures.set(1)
-        self._set_trigger(TriggerSource.EXT_ENABLE)  # EXT_TRIGGER)
+        self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
+        self.cam.num_frames.put(1)
+        self._update_readout_time()
 
-    def _set_trigger(self, trigger_source: TriggerSource) -> None:
+    def _set_trigger(self, trigger_source: int) -> None:
         """Set trigger source for the detector, either directly to value or TriggerSource.* with
         INTERNAL = 0
         EXT_ENABLE = 1
@@ -201,19 +238,22 @@ class PilatusCsaxs(DetectorBase):
         MULTI_TRIGGER = 3
         ALGINMENT = 4
         """
-        value = int(trigger_source)
-        self.cam.trigger_mode.set(value)
+        value = trigger_source
+        self.cam.trigger_mode.put(value)
+
+    def _create_directory(filepath: str) -> None:
+        """Create directory if it does not exist"""
+        os.makedirs(filepath, exist_ok=True)
 
     def _prep_file_writer(self) -> None:
-        """Prepare the file writer for pilatus_2
-        a zmq service is running on xbl-daq-34 that is waiting
-        for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
         """
-        # TODO worked reliable with time.sleep(2)
-        # self._close_file_writer()
-        # time.sleep(2)
-        # self._stop_file_writer()
-        # time.sleep(2)
+        Prepare the file writer for pilatus_2
+
+        A zmq service is running on xbl-daq-34 that is waiting
+        for a zmq message to start the writer for the pilatus_2 x12sa-pd-2
+
+        """
+        # TODO explore required sleep time here
         self._close_file_writer()
         time.sleep(0.1)
         self._stop_file_writer()
@@ -229,6 +269,7 @@ class PilatusCsaxs(DetectorBase):
         self.cam.file_format.put(0)  # 0: TIFF
         self.cam.file_template.put("%s%s_%5.5d.cbf")
 
+        # TODO remove hardcoded filepath here
         # compile filename
         basepath = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/pilatus_2/"
         self.filepath = os.path.join(
@@ -236,8 +277,11 @@ class PilatusCsaxs(DetectorBase):
             self.filewriter.get_scan_directory(self.scaninfo.scan_number, 1000, 5),
         )
         # Make directory if needed
-        os.makedirs(self.filepath, exist_ok=True)
+        self._create_directory(self.filepath)
 
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        # start the stream on x12sa-pd-2
+        url = "http://x12sa-pd-2:8080/stream/pilatus_2"
         data_msg = {
             "source": [
                 {
@@ -247,21 +291,14 @@ class PilatusCsaxs(DetectorBase):
                 }
             ]
         }
-
-        logger.info(data_msg)
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
-        res = requests.put(
-            url="http://x12sa-pd-2:8080/stream/pilatus_2",
-            data=json.dumps(data_msg),
-            headers=headers,
-        )
+        res = self._send_requests_put(url=url, data=data_msg, headers=headers)
         logger.info(f"{res.status_code} -  {res.text} - {res.content}")
 
         if not res.ok:
             res.raise_for_status()
 
-        # prepare writer
+        # start the data receiver on xbl-daq-34
+        url = "http://xbl-daq-34:8091/pilatus_2/run"
         data_msg = [
             "zmqWriter",
             self.scaninfo.username,
@@ -274,14 +311,7 @@ class PilatusCsaxs(DetectorBase):
                 "user": self.scaninfo.username,
             },
         ]
-
-        res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_2/run",
-            data=json.dumps(data_msg),
-            headers=headers,
-        )
-        # subprocess.run("curl -i -s -X PUT http://xbl-daq-34:8091/pilatus_2/run -d '[\"zmqWriter\",\"e20636\",{\"addr\":\"tcp://x12sa-pd-2:8888\",\"dst\":[\"file\"],\"numFrm\":10,\"timeout\":2000,\"ifType\":\"PULL\",\"user\":\"e20636\"}]'", shell=True)
-
+        res = self._send_requests_put(url=url, data=data_msg, headers=headers)
         logger.info(f"{res.status_code}  - {res.text} - {res.content}")
 
         if not res.ok:
@@ -289,8 +319,10 @@ class PilatusCsaxs(DetectorBase):
 
         # Wait for server to become available again
         time.sleep(0.1)
+        logger.info(f"{res.status_code} -{res.text} - {res.content}")
 
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        # Sent requests.put to xbl-daq-34 to wait for data
+        url = "http://xbl-daq-34:8091/pilatus_2/wait"
         data_msg = [
             "zmqWriter",
             self.scaninfo.username,
@@ -299,15 +331,8 @@ class PilatusCsaxs(DetectorBase):
                 "timeout": 2000,
             },
         ]
-        logger.info(f"{res.status_code} -{res.text} - {res.content}")
-
         try:
-            res = requests.put(
-                url="http://xbl-daq-34:8091/pilatus_2/wait",
-                data=json.dumps(data_msg),
-                #            headers=headers,
-            )
-
+            res = self._send_requests_put(url=url, data=data_msg, headers=headers)
             logger.info(f"{res}")
 
             if not res.ok:
@@ -315,25 +340,56 @@ class PilatusCsaxs(DetectorBase):
         except Exception as exc:
             logger.info(f"Pilatus2 wait threw Exception: {exc}")
 
-    def _close_file_writer(self) -> None:
-        """Close the file writer for pilatus_2
-        a zmq service is running on xbl-daq-34 that is waiting
-        for a zmq message to stop the writer for the pilatus_2 x12sa-pd-2
+    def _send_requests_put(self, url: str, data_msg: list = None, headers: dict = None) -> object:
         """
+        Send a put request to the given url
+
+        Args:
+            url (str): url to send the request to
+            data (dict): data to be sent with the request (optional)
+            headers (dict): headers to be sent with the request (optional)
+
+        Returns:
+            status code of the request
+        """
+        return requests.put(url=url, data=json.dumps(data_msg), headers=headers)
+
+    def _send_requests_delete(self, url: str, headers: dict = None) -> object:
+        """
+        Send a delete request to the given url
+
+        Args:
+            url (str): url to send the request to
+            headers (dict): headers to be sent with the request (optional)
+
+        Returns:
+            status code of the request
+        """
+        return requests.delete(url=url, headers=headers)
+
+    def _close_file_writer(self) -> None:
+        """
+        Close the file writer for pilatus_2
+
+        Delete the data from x12sa-pd-2
+
+        """
+        url = "http://x12sa-pd-2:8080/stream/pilatus_2"
         try:
-            res = requests.delete(url="http://x12sa-pd-2:8080/stream/pilatus_2")
+            res = self._send_requests_delete(url=url)
             if not res.ok:
                 res.raise_for_status()
         except Exception as exc:
-            logger.info(f"Pilatus2 delete threw Exception: {exc}")
+            logger.info(f"Pilatus2 close threw Exception: {exc}")
 
     def _stop_file_writer(self) -> None:
-        res = requests.put(
-            url="http://xbl-daq-34:8091/pilatus_2/stop",
-            # data=json.dumps(data_msg),
-            #            headers=headers,
-        )
+        """
+        Stop the file writer for pilatus_2
 
+        Runs on xbl-daq-34
+        """
+        url = "http://xbl-daq-34:8091/pilatus_2/stop"
+        res = self._send_requests_put(url=url)
         if not res.ok:
             res.raise_for_status()
 
@@ -362,28 +418,44 @@ class PilatusCsaxs(DetectorBase):
         self._prep_file_writer()
         self._prep_det()
         state = False
-        self._publish_file_location(done=state, successful=state)
+        self._publish_file_location(done=state)
         return super().stage()
 
     # TODO might be useful for base class
     def pre_scan(self) -> None:
-        """ " Pre_scan gets executed right before"""
+        """Pre_scan is an (optional) function that is executed by BEC just before the scan core
+
+        For the pilatus detector, it is used to arm the detector for the acquisition,
+        because the detector times out after ˜7-8seconds without seeing a trigger.
+        """
         self._arm_acquisition()
 
     def _arm_acquisition(self) -> None:
-        self.acquire()
+        self.cam.acquire.put(1)
+        # TODO check if sleep of 1s is needed, could be that less is enough
+        time.sleep(1)
 
-    def _publish_file_location(self, done=False, successful=False) -> None:
-        """Publish the filepath to REDIS
-        First msg for file writer and the second one for other listeners (e.g. radial integ)
+    def _publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """Publish the filepath to REDIS.
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+
         """
         pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
         self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
+            MessageEndpoints.file_event(self.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
 
@@ -441,43 +513,30 @@ class PilatusCsaxs(DetectorBase):
             - _stop_det
             - _stop_file_writer
         """
+        timer = 0
+        sleep_time = 0.1
+        # TODO this is a workaround at the moment which relies on the status of the mcs device
         while True:
             if self.device_manager.devices.mcs.obj._staged != Staged.yes:
                 break
-            time.sleep(0.1)
-        # TODO implement a waiting function or not
-        # time.sleep(2)
-        # timer = 0
-        # while True:
-        #     # rtr = self.cam.status_message_camserver.get()
-        #     #if self.cam.acquire.get() == 0 and rtr == "Camserver returned OK":
-        #     # if rtr == "Camserver returned OK":
-        #     #     break
-        #     if self._stopped == True:
-        #         break
-        #     time.sleep(0.1)
-        #     timer += 0.1
-        #     if timer > 5:
-        #         self._close_file_writer()
-        #         self._stop_file_writer()
-        #         self._stopped == True
-        #         # raise PilatusTimeoutError(
-        #         #     f"Pilatus timeout with detector state {self.cam.acquire.get()} and camserver return status: {rtr} "
-        #         # )
+            if self._stopped == True:
+                break
+            time.sleep(sleep_time)
+            timer = timer + sleep_time
+            if timer > 5:
+                self._stopped == True
+                self._stop_det()
+                self._stop_file_writer()
+                # TODO explore if sleep is needed
+                time.sleep(0.5)
+                self._close_file_writer()
+                raise PilatusTimeoutError(f"Timeout waiting for mcs device to unstage")
 
         self._stop_det()
         self._stop_file_writer()
-        # TODO explore if sleep is needed
+        # TODO explore if sleep time  is needed
         time.sleep(0.5)
         self._close_file_writer()
-
-    def acquire(self) -> None:
-        """Start acquisition in software trigger mode,
-        or arm the detector in hardware of the detector
-        """
-        self.cam.acquire.put(1)
-        # TODO check if sleep of 1s is needed, could be that less is enough
-        time.sleep(1)
 
     def _stop_det(self) -> None:
         """Stop the detector"""
@@ -494,4 +553,4 @@ class PilatusCsaxs(DetectorBase):
 
 # Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
-    pilatus_2 = PilatusCsaxs(name="pilatus_2", prefix="X12SA-ES-PILATUS300K:", sim_mode=True)
+    pilatus_2 = PilatuscSAXS(name="pilatus_2", prefix="X12SA-ES-PILATUS300K:", sim_mode=True)

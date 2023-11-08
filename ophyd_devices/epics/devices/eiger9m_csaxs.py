@@ -1,6 +1,6 @@
 import enum
-import threading
 import time
+import threading
 from bec_lib.core.devicemanager import DeviceStatus
 import numpy as np
 import os
@@ -16,11 +16,14 @@ from std_daq_client import StdDaqClient
 from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import bec_logger
+from bec_lib.core.bec_service import SERVICE_CONFIG
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
+
+EIGER9M_MIN_READOUT = 3e-3
 
 
 class EigerError(Exception):
@@ -29,13 +32,20 @@ class EigerError(Exception):
     pass
 
 
-class EigerTimeoutError(Exception):
+class EigerTimeoutError(EigerError):
     """Raised when the Eiger does not respond in time during unstage."""
 
     pass
 
 
-class SlsDetectorCam(Device):
+class DeviceClassInitError(EigerError):
+    """Raised when initiation of the device class fails,
+    due to missing device manager or not started in sim_mode."""
+
+    pass
+
+
+class SLSDetectorCam(Device):
     """SLS Detector Camera - Eiger 9M
 
     Base class to map EPICS PVs to ophyd signals.
@@ -52,7 +62,7 @@ class SlsDetectorCam(Device):
     detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
 
 
-class TriggerSource(int, enum.Enum):
+class TriggerSource(enum.IntEnum):
     """Trigger signals for Eiger9M detector"""
 
     AUTO = 0
@@ -61,7 +71,7 @@ class TriggerSource(int, enum.Enum):
     BURST_TRIGGER = 3
 
 
-class DetectorState(int, enum.Enum):
+class DetectorState(enum.IntEnum):
     """Detector states for Eiger9M detector"""
 
     IDLE = 0
@@ -77,7 +87,7 @@ class DetectorState(int, enum.Enum):
     ABORTED = 10
 
 
-class Eiger9mCsaxs(DetectorBase):
+class Eiger9McSAXS(DetectorBase):
     """Eiger 9M detector for CSAXS
 
     Parent class: DetectorBase
@@ -94,7 +104,7 @@ class Eiger9mCsaxs(DetectorBase):
         "describe",
     ]
 
-    cam = ADCpt(SlsDetectorCam, "cam1:")
+    cam = ADCpt(SLSDetectorCam, "cam1:")
 
     def __init__(
         self,
@@ -131,33 +141,49 @@ class Eiger9mCsaxs(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise EigerError("Add DeviceManager to initialization or init with sim_mode=True")
-
-        # Not sure if this is needed, comment it for now!
-        # self._lock = threading.RLock()
+            raise DeviceClassInitError(
+                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
+            )
+        self.sim_mode = sim_mode
+        # TODO check if threadlock is needed for unstage
+        self._lock = threading.RLock()
         self._stopped = False
         self.name = name
-        self.wait_for_connection()
-        # Spin up connections for simulation or BEC mode
-        # TODO check if sim_mode still works. Is it needed? I believe filewriting might be handled properly
+        self.service_cfg = None
+        self.std_client = None
+        self.scaninfo = None
+        self.filewriter = None
+        self.readout_time_min = EIGER9M_MIN_READOUT
+        self.std_rest_server_url = (
+            kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
+        )
+        self.wait_for_connection(all_signals=True)
         if not sim_mode:
-            from bec_lib.core.bec_service import SERVICE_CONFIG
-
+            self._update_service_config()
             self.device_manager = device_manager
-            self._producer = self.device_manager.producer
-            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
         else:
-            base_path = f"/sls/X12SA/data/{self.scaninfo.username}/Data10/"
-            self._producer = bec_utils.MockProducer()
-            self.device_manager = bec_utils.MockDeviceManager()
-            self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-            self.scaninfo.load_scan_metadata()
-            self.service_cfg = {"base_path": base_path}
-
-        self.scaninfo = BecScaninfoMixin(device_manager, sim_mode)
-        self.scaninfo.load_scan_metadata()
-        self.filewriter = FileWriterMixin(self.service_cfg)
+            self.device_manager = bec_utils.DMMock()
+            base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
+            self.service_cfg = {"base_path": os.path.expanduser(base_path)}
+        self._producer = self.device_manager.producer
+        self._update_scaninfo()
+        self._update_filewriter()
         self._init()
+
+    def _update_filewriter(self) -> None:
+        """Update filewriter with service config"""
+        self.filewriter = FileWriterMixin(self.service_cfg)
+
+    def _update_scaninfo(self) -> None:
+        """Update scaninfo from BecScaninfoMixing
+        This depends on device manager and operation/sim_mode
+        """
+        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo.load_scan_metadata()
+
+    def _update_service_config(self) -> None:
+        """Update service config from BEC service config"""
+        self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     # TODO function for abstract class?
     def _init(self) -> None:
@@ -166,12 +192,19 @@ class Eiger9mCsaxs(DetectorBase):
         self._init_detector()
         self._init_filewriter()
 
-    # TODO function for abstract class?
     def _default_parameter(self) -> None:
-        """Set default parameters for Eiger 9M
-        readout (float) : readout time in seconds
+        """Set default parameters for Pilatus300k detector
+        readout (float): readout time in seconds
         """
-        self.reduce_readout = 1e-3
+        self._update_readout_time()
+
+    def _update_readout_time(self) -> None:
+        readout_time = (
+            self.scaninfo.readout_time
+            if hasattr(self.scaninfo, "readout_time")
+            else self.readout_time_min
+        )
+        self.readout_time = max(readout_time, self.readout_time_min)
 
     # TODO function for abstract class?
     def _init_detector(self) -> None:
@@ -188,20 +221,19 @@ class Eiger9mCsaxs(DetectorBase):
         For the Eiger9M, the data backend is std_daq client.
         Setting up these parameters depends on the backend, and would need to change upon changes in the backend.
         """
-        self.std_rest_server_url = "http://xbl-daq-29:5000"
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
         timeout = 0
-        # TODO changing e-account was not possible during beamtimes.
-        # self._update_std_cfg("writer_user_id", int(self.scaninfo.username.strip(" e")))
-        # time.sleep(5)
-        # TODO is this the only state to wait for or should we wait for more from the std_daq client?
+        # TODO put back change of e-account! and check with Leo which status to wait for
+        eacc = self.scaninfo.username
+        self._update_std_cfg("writer_user_id", int(eacc.strip(" e")))
+        time.sleep(5)
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
             timeout = timeout + 0.1
             logger.info("Waiting for std_daq init.")
             if timeout > 5:
-                if not self.std_client.get_status()["state"]:
+                if not self.std_client.get_status()["state"] == "READY":
                     raise EigerError(
                         f"Std client not in READY state, returns: {self.std_client.get_status()}"
                     )
@@ -252,12 +284,20 @@ class Eiger9mCsaxs(DetectorBase):
         self._prep_file_writer()
         self._prep_det()
         state = False
-        self._publish_file_location(done=state, successful=state)
+        self._publish_file_location(done=state)
         self._arm_acquisition()
         # TODO Fix should take place in EPICS or directly on the hardware!
         # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
         time.sleep(0.05)
         return super().stage()
+
+    def _filepath_exists(self, filepath: str) -> None:
+        timer = 0
+        while not os.path.exists(os.path.dirname(self.filepath)):
+            timer = time + 0.1
+            time.sleep(0.1)
+            if timer > 3:
+                raise EigerError(f"Timeout of 3s reached for filepath {self.filepath}")
 
     # TODO function for abstract class?
     def _prep_file_writer(self) -> None:
@@ -265,13 +305,11 @@ class Eiger9mCsaxs(DetectorBase):
 
         self.filewriter is a FileWriterMixin object that hosts logic for compiling the filepath
         """
+        timer = 0
         self.filepath = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
-        # TODO needed, should be checked from the filerwriter mixin right?
-        while not os.path.exists(os.path.dirname(self.filepath)):
-            time.sleep(0.1)
-
+        self._filepath_exists(self.filepath)
         self._stop_file_writer()
         logger.info(f" std_daq output filepath {self.filepath}")
         # TODO Discuss with Leo if this is needed, or how to start the async writing best
@@ -288,16 +326,22 @@ class Eiger9mCsaxs(DetectorBase):
                 raise EigerError(f"Timeout of start_writer_async with {exc}")
 
         while True:
+            timer = timer + 0.01
             det_ctrl = self.std_client.get_status()["acquisition"]["state"]
             if det_ctrl == "WAITING_IMAGES":
                 break
-            time.sleep(0.005)
+            time.sleep(0.01)
+            if timer > 5:
+                self._close_file_writer()
+                raise EigerError(
+                    f"Timeout of 5s reached for std_daq start_writer_async with std_daq client status {det_ctrl}"
+                )
 
     # TODO function for abstract class?
     def _stop_file_writer(self) -> None:
         """Close file writer"""
         self.std_client.stop_writer()
-        # TODO can I wait for a status message here maybe? To ensure writer returned
+        # TODO can I wait for a status message here maybe? To ensure writer stopped and returned
 
     # TODO function for abstract class?
     def _prep_det(self) -> None:
@@ -312,7 +356,8 @@ class Eiger9mCsaxs(DetectorBase):
         """Set correct detector threshold to 1/2 of current X-ray energy, allow 5% tolerance"""
         # threshold energy might be in eV or keV
         factor = 1
-        if self.cam.threshold_energy._metadata["units"] == "eV":
+        unit = getattr(self.cam.threshold_energy, "units", None)
+        if unit != None and unit == "eV":
             factor = 1000
         setpoint = int(self.mokev * factor)
         energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
@@ -326,40 +371,60 @@ class Eiger9mCsaxs(DetectorBase):
         """Set acquisition parameters for the detector"""
         self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.cam.num_frames.put(1)
+        self._update_readout_time()
 
     # TODO function for abstract class? + call it for each scan??
     def _set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector.
         Check the TriggerSource enum for possible values
+
+        Args:
+            trigger_source (TriggerSource): Trigger source for the detector
+
         """
-        value = int(trigger_source)
+        value = trigger_source
         self.cam.trigger_mode.put(value)
 
-    def _publish_file_location(self, done=False, successful=False) -> None:
-        """Publish the filepath to REDIS
-        First msg for file writer and the second one for other listeners (e.g. radial integ)
+    def _publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """Publish the filepath to REDIS.
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+
         """
         pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
         self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
+            MessageEndpoints.file_event(self.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
 
     # TODO function for abstract class?
     def _arm_acquisition(self) -> None:
         """Arm Eiger detector for acquisition"""
+        timer = 0
         self.cam.acquire.put(1)
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.RUNNING):
+            if det_ctrl == DetectorState.RUNNING:
                 break
             if self._stopped == True:
                 break
-            time.sleep(0.005)
+            time.sleep(0.01)
+            timer += 0.01
+            if timer > 5:
+                self.stop()
+                raise EigerTimeoutError("Failed to arm the acquisition. IOC did not update.")
 
     # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
@@ -419,15 +484,13 @@ class Eiger9mCsaxs(DetectorBase):
         # Check status with timeout, break out if _stopped=True
         while True:
             det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
-            std_ctrl = self.std_client.get_status()["acquisition"]["state"]
             status = self.std_client.get_status()
+            std_ctrl = status["acquisition"]["state"]
             received_frames = status["acquisition"]["stats"]["n_write_completed"]
             total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
             if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
                 break
             if self._stopped == True:
-                self._stop_det()
-                self._stop_file_writer()
                 break
             time.sleep(sleep_time)
             timer += sleep_time
@@ -452,7 +515,7 @@ class Eiger9mCsaxs(DetectorBase):
         # Check status
         while True:
             det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == int(DetectorState.IDLE):
+            if det_ctrl == DetectorState.IDLE:
                 break
             if self._stopped == True:
                 break
@@ -474,4 +537,4 @@ class Eiger9mCsaxs(DetectorBase):
 
 
 if __name__ == "__main__":
-    eiger = Eiger9mCsaxs(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)
+    eiger = Eiger9McSAXS(name="eiger", prefix="X12SA-ES-EIGER9M:", sim_mode=True)

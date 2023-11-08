@@ -1,6 +1,8 @@
 import time
 
 from bec_lib.core import bec_logger
+from bec_lib.core.devicemanager import DeviceContainer
+from bec_lib.core.tests.utils import ProducerMock
 
 from ophyd import Signal, Kind
 
@@ -11,33 +13,88 @@ logger = bec_logger.logger
 DEFAULT_EPICSSIGNAL_VALUE = object()
 
 
-class MockProducer:
-    def set_and_publish(self, endpoint: str, msgdump: str):
-        logger.info(f"BECMessage to {endpoint} with msg dump {msgdump}")
-
-
-class MockDeviceManager:
-    def __init__(self) -> None:
-        self.devices = devices()
-
-
-class OphydObject:
-    def __init__(self) -> None:
-        self.name = "mock_mokev"
-        self.obj = mokev()
-
-
-class devices:
-    def __init__(self):
-        self.mokev = OphydObject()
-
-
-class mokev:
-    def __init__(self):
-        self.name = "mock_mokev"
+# TODO maybe specify here that this DeviceMock is for usage in the DeviceServer
+class DeviceMock:
+    def __init__(self, name: str, value: float = 0.0):
+        self.name = name
+        self.read_buffer = value
+        self._config = {"deviceConfig": {"limits": [-50, 50]}, "userParameter": None}
+        self._enabled_set = True
+        self._enabled = True
 
     def read(self):
-        return {self.name: {"value": 16.0, "timestamp": time.time()}}
+        return {self.name: {"value": self.read_buffer}}
+
+    def readback(self):
+        return self.read_buffer
+
+    @property
+    def enabled_set(self) -> bool:
+        return self._enabled_set
+
+    @enabled_set.setter
+    def enabled_set(self, val: bool):
+        self._enabled_set = val
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, val: bool):
+        self._enabled = val
+
+    @property
+    def user_parameter(self):
+        return self._config["userParameter"]
+
+    @property
+    def obj(self):
+        return self
+
+
+class DMMock:
+    """Mock for DeviceManager
+
+    The mocked DeviceManager creates a device containert and a producer.
+
+    """
+
+    def __init__(self):
+        self.devices = DeviceContainer()
+        self.producer = ProducerMock()
+
+    def add_device(self, name: str, value: float = 0.0):
+        self.devices[name] = DeviceMock(name, value)
+
+
+# class MockProducer:
+#     def set_and_publish(self, endpoint: str, msgdump: str):
+#         logger.info(f"BECMessage to {endpoint} with msg dump {msgdump}")
+
+
+# class MockDeviceManager:
+#     def __init__(self) -> None:
+#         self.devices = devices()
+
+
+# class OphydObject:
+#     def __init__(self) -> None:
+#         self.name = "mock_mokev"
+#         self.obj = mokev()
+
+
+# class devices:
+#     def __init__(self):
+#         self.mokev = OphydObject()
+
+
+# class mokev:
+#     def __init__(self):
+#         self.name = "mock_mokev"
+
+#     def read(self):
+#         return {self.name: {"value": 16.0, "timestamp": time.time()}}
 
 
 class ConfigSignal(Signal):
