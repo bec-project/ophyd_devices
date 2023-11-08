@@ -2,6 +2,27 @@
 
 <!--next-version-placeholder-->
 
+## v0.10.0 (2023-11-08)
+
+### Feature
+
+* Added fupr ([`9840491`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9840491ab7f92eacdb7616b9530659b1800654af))
+* Added support for flomni galil ([`23664e5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/23664e542cfcccafe31d0e41d1421c277bd00d23))
+* Added galil for flomni ([`7b17b84`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7b17b8401a516613ee3e67f1e03892ba573e392c))
+
+### Fix
+
+* Changed dependency injection for controller classes; closes #13 ([`fb9a17c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fb9a17c5e383e2a378d0a3e9cc7cc185dd20c96e))
+* Fixed fupr number of axis ([`9080d45`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9080d45075158b1a7d7a60838ea33f058260755f))
+* Fixed fupr axis_is_referenced ([`ce94a6a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ce94a6a88df6f90409c4fb4c29260ad77048f27d))
+* Fixed fupr axis_is_referenced ([`3396ff4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3396ff44d94955155c38a84a08880b93cb400cca))
+* Fixed fupr axis_is_referenced ([`d72dc82`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d72dc82264051e3e0a77527b06d29bd055e7bcdc))
+* Fixed import; fixed file name ([`2ddc074`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2ddc074e4fe9638bac77df5f3bbd2b1c4600814c))
+* Fixed drive_to_limit ([`1aae1eb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1aae1eba12c05dfa5c4196edec3be488fa4f2b1e))
+* Fixed drive_to_limit ([`3eea89a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3eea89acc5b2e18dd9d7b4a91e50590ca9702bba))
+* Fixed id assignment ([`9b3139e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9b3139ecf106150170d2299303997d3dd8a97b4d))
+* Fixed import for fgalil ([`3f76ef7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3f76ef76d736965b3257770efee1d2971afd90b3))
+
 ## v0.9.2 (2023-11-08)
 
 ### Fix
