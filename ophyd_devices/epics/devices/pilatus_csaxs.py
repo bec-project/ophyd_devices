@@ -470,31 +470,6 @@ class PilatuscSAXS(DetectorBase):
         """Specify action that should be taken upon trigger signal."""
         pass
 
-    def _publish_file_location(self, done=False, successful=False) -> None:
-        """Publish the filepath to REDIS
-        First msg for file writer and the second one for other listeners (e.g. radial integ)
-        """
-        pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
-        self._producer.set_and_publish(
-            MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
-        )
-        self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
-        )
-        pipe.execute()
-
-    # TODO function for abstract class?
-    def trigger(self) -> DeviceStatus:
-        """Trigger the detector, called from BEC."""
-        self._on_trigger()
-        return super().trigger()
-
-    # TODO function for abstract class?
-    def _on_trigger(self):
-        """Specify action that should be taken upon trigger signal."""
-        pass
-
     def unstage(self) -> List[object]:
         """Unstage the device.
 
@@ -562,10 +537,6 @@ class PilatuscSAXS(DetectorBase):
         # TODO explore if sleep time  is needed
         time.sleep(0.5)
         self._close_file_writer()
-
-    def _stop_det(self) -> None:
-        """Stop the detector"""
-        self.cam.acquire.put(0)
 
     def _stop_det(self) -> None:
         """Stop the detector"""
