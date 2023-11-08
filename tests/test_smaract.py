@@ -20,6 +20,7 @@ from ophyd_devices.smaract.smaract_ophyd import SmaractMotor
     ],
 )
 def test_get_position(axis, position, get_message, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -39,6 +40,7 @@ def test_get_position(axis, position, get_message, return_msg):
     ],
 )
 def test_axis_is_referenced(axis, is_referenced, get_message, return_msg, exception):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -62,6 +64,7 @@ def test_axis_is_referenced(axis, is_referenced, get_message, return_msg, except
     ],
 )
 def test_socket_put_and_receive_raises_exception(return_msg, exception, raised):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -87,6 +90,7 @@ def test_socket_put_and_receive_raises_exception(return_msg, exception, raised):
     ],
 )
 def test_communication_mode(mode, get_message, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -112,6 +116,7 @@ def test_communication_mode(mode, get_message, return_msg):
     ],
 )
 def test_axis_is_moving(is_moving, get_message, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -132,6 +137,7 @@ def test_axis_is_moving(is_moving, get_message, return_msg):
     ],
 )
 def test_get_sensor_definition(sensor_id, axis, get_msg, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -149,6 +155,7 @@ def test_get_sensor_definition(sensor_id, axis, get_msg, return_msg):
     ],
 )
 def test_set_move_speed(move_speed, axis, get_msg, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -166,6 +173,7 @@ def test_set_move_speed(move_speed, axis, get_msg, return_msg):
     ],
 )
 def test_move_axis_to_absolute_position(pos, axis, hold_time, get_msg, return_msg):
+    SmaractController._reset_controller()
     controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
     controller.on()
     controller.sock.flush_buffer()
@@ -203,6 +211,7 @@ def test_move_axis_to_absolute_position(pos, axis, hold_time, get_msg, return_ms
     ],
 )
 def test_move_axis(pos, get_msg, return_msg):
+    SmaractController._reset_controller()
     lsmarA = SmaractMotor(
         "A",
         name="lsmarA",
@@ -230,6 +239,7 @@ def test_move_axis(pos, get_msg, return_msg):
     ],
 )
 def test_stop_axis(num_axes, get_msg, return_msg):
+    SmaractController._reset_controller()
     lsmarA = SmaractMotor(
         "A",
         name="lsmarA",

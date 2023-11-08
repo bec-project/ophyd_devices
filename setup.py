@@ -14,6 +14,6 @@ if __name__ == "__main__":
             "std_daq_client",
             "pyepics",
         ],
-        extras_require={"dev": ["pytest", "pytest-random-order", "black"]},
+        extras_require={"dev": ["pytest", "pytest-random-order", "black", "coverage"]},
         version=__version__,
     )

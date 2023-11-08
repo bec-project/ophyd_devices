@@ -130,12 +130,12 @@ class SmaractMotor(Device, PositionerBase):
         socket_cls=SocketIO,
         **kwargs,
     ):
-        self.axis_Id = axis_Id
-        self.sign = sign
         self.controller = SmaractController(
             socket_cls=socket_cls, socket_host=host, socket_port=port
         )
-        self.controller.set_axis(self.axis_Id_numeric, axis=self)
+        self.axis_Id = axis_Id
+        self.sign = sign
+        self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
         self.tolerance = kwargs.pop("tolerance", 0.5)
 
         super().__init__(

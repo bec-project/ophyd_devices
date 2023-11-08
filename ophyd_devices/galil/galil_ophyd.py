@@ -44,6 +44,7 @@ def retry_once(fcn):
 
 
 class GalilController(Controller):
+    _axes_per_controller = 8
     USER_ACCESS = [
         "describe",
         "show_running_threads",
@@ -52,42 +53,6 @@ class GalilController(Controller):
         "socket_put_confirmed",
         "lgalil_is_air_off_and_orchestra_enabled",
     ]
-
-    def __init__(
-        self,
-        *,
-        name="GalilController",
-        kind=None,
-        parent=None,
-        socket_cls=None,
-        socket_host=None,
-        socket_port=None,
-        attr_name="",
-        labels=None,
-    ):
-        if not hasattr(self, "_initialized") or not self._initialized:
-            self._galil_axis_per_controller = 8
-            self._axis = [None for axis_num in range(self._galil_axis_per_controller)]
-            super().__init__(
-                name=name,
-                socket_cls=socket_cls,
-                socket_host=socket_host,
-                socket_port=socket_port,
-                attr_name=attr_name,
-                parent=parent,
-                labels=labels,
-                kind=kind,
-            )
-
-    def set_axis(self, axis: Device, axis_nr: int) -> None:
-        """Assign an axis to a device instance.
-
-        Args:
-            axis (Device): Device instance (e.g. GalilMotor)
-            axis_nr (int): Controller axis number
-
-        """
-        self._axis[axis_nr] = axis
 
     @threadlocked
     def socket_put(self, val: str) -> None:
@@ -160,7 +125,7 @@ class GalilController(Controller):
         """
         return bool(float(self.socket_put_and_receive("MG allaxref").strip()))
 
-    def drive_axis_to_limit(self, axis_Id_numeric, direction: str) -> None:
+    def drive_axis_to_limit(self, axis_Id_numeric: int, direction: str) -> None:
         """
         Drive an axis to the limit in a specified direction.
 
@@ -215,11 +180,11 @@ class GalilController(Controller):
     def show_running_threads(self) -> None:
         t = PrettyTable()
         t.title = f"Threads on {self.sock.host}:{self.sock.port}"
-        t.field_names = [str(ax) for ax in range(self._galil_axis_per_controller)]
+        t.field_names = [str(ax) for ax in range(self._axes_per_controller)]
         t.add_row(
             [
                 "active" if self.is_thread_active(t) else "inactive"
-                for t in range(self._galil_axis_per_controller)
+                for t in range(self._axes_per_controller)
             ]
         )
         print(t)
@@ -253,7 +218,7 @@ class GalilController(Controller):
             "Limits",
             "Position",
         ]
-        for ax in range(self._galil_axis_per_controller):
+        for ax in range(self._axes_per_controller):
             axis = self._axis[ax]
             if axis is not None:
                 t.add_row(

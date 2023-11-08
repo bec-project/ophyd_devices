@@ -30,29 +30,7 @@ logger = bec_logger.logger
 
 
 class FuprGalilController(GalilController):
-    def __init__(
-        self,
-        *,
-        name="GalilController",
-        kind=None,
-        parent=None,
-        socket_cls=None,
-        socket_host=None,
-        socket_port=None,
-        attr_name="",
-        labels=None,
-    ):
-        super().__init__(
-            name=name,
-            kind=kind,
-            parent=parent,
-            socket_cls=socket_cls,
-            socket_host=socket_host,
-            socket_port=socket_port,
-            attr_name=attr_name,
-            labels=labels,
-        )
-        self._galil_axis_per_controller = 1
+    _axes_per_controller = 1
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
         if axis_Id is None and axis_Id_numeric is not None:

@@ -11,7 +11,7 @@ from ophyd_devices.smaract.smaract_errors import (
     SmaractCommunicationError,
     SmaractErrorCode,
 )
-from ophyd_devices.utils.controller import Controller, threadlocked
+from ophyd_devices.utils.controller import Controller, axis_checked, threadlocked
 
 logger = logging.getLogger("smaract_controller")
 
@@ -19,17 +19,6 @@ logger = logging.getLogger("smaract_controller")
 class SmaractCommunicationMode(enum.Enum):
     SYNC = 0
     ASYNC = 1
-
-
-def axis_checked(fcn):
-    """Decorator to catch attempted access to channels that are not available."""
-
-    @functools.wraps(fcn)
-    def wrapper(self, *args, **kwargs):
-        self._check_axis_number(args[0])
-        return fcn(self, *args, **kwargs)
-
-    return wrapper
 
 
 def retry_once(fcn):
@@ -82,6 +71,8 @@ class SmaractSensors:
 
 
 class SmaractController(Controller):
+    _axes_per_controller = 6
+    _initialized = False
     USER_ACCESS = ["socket_put_and_receive", "smaract_show_all", "move_open_loop_steps"]
 
     def __init__(
@@ -96,9 +87,7 @@ class SmaractController(Controller):
         attr_name="",
         labels=None,
     ):
-        if not hasattr(self, "_initialized") or not self._initialized:
-            self._Smaract_axis_per_controller = 6
-            self._axis = [None for axis_num in range(self._Smaract_axis_per_controller)]
+        if not self._initialized:
             super().__init__(
                 name=name,
                 socket_cls=socket_cls,
@@ -110,10 +99,6 @@ class SmaractController(Controller):
                 kind=kind,
             )
             self._sensors = SmaractSensors()
-
-    @axis_checked
-    def set_axis(self, axis_nr, axis):
-        self._axis[axis_nr] = axis
 
     @threadlocked
     def socket_put(self, val: str):
@@ -450,12 +435,6 @@ class SmaractController(Controller):
             else:
                 t.add_row([None for t in t.field_names])
         print(t)
-
-    def _check_axis_number(self, axis_Id_numeric: int) -> None:
-        if axis_Id_numeric >= self._Smaract_axis_per_controller:
-            raise ValueError(
-                f"Axis {axis_Id_numeric} exceeds the available number of axes ({self._Smaract_axis_per_controller})"
-            )
 
     @axis_checked
     def _error_str(self, axis_Id_numeric: int, error_number: int):
