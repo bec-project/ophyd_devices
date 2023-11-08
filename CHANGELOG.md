@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.9.2 (2023-11-08)
+
+### Fix
+
+* Bugfixes after adding tests ([`72b8848`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/72b88482ca8b5104dbcf3e8a4e430497eb5fd5f8))
+
 ## v0.9.1 (2023-11-02)
 
 ### Fix
