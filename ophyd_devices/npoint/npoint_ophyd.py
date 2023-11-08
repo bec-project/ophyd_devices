@@ -1,15 +1,17 @@
 import abc
-import socket
 import functools
-import time
+import socket
 import threading
+import time
 
-from typeguard import typechecked
 from ophyd import PositionerBase, Signal
-from ophyd.device import Device, Component as Cpt
+from ophyd.device import Component as Cpt
+from ophyd.device import Device
 from prettytable import PrettyTable
+from typeguard import typechecked
+
+from ophyd_devices.utils.controller import threadlocked
 from ophyd_devices.utils.socket import raise_if_disconnected
-from ophyd_devices.utils.controller import SingletonController, threadlocked
 
 
 def channel_checked(fcn):
@@ -23,7 +25,9 @@ def channel_checked(fcn):
     return wrapper
 
 
-class NPointController(SingletonController):
+class NPointController:
+    _controller_instance = None
+
     NUM_CHANNELS = 3
     _read_single_loc_bit = "A0"
     _write_single_loc_bit = "A2"
@@ -37,10 +41,16 @@ class NPointController(SingletonController):
         server_ip: str = "129.129.99.87",
         server_port: int = 23,
     ) -> None:
+        self._lock = threading.RLock()
         super().__init__()
         self._server_and_port_name = (server_ip, server_port)
         self.socket = comm_socket
         self.connected = False
+
+    def __new__(cls, *args, **kwargs):
+        if not NPointController._controller_instance:
+            NPointController._controller_instance = object.__new__(cls)
+        return NPointController._controller_instance
 
     @classmethod
     def create(cls):

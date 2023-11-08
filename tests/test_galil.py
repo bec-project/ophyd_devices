@@ -1,7 +1,7 @@
 import pytest
-from ophyd_devices.galil.galil_ophyd import GalilMotor
-
 from utils import SocketMock
+
+from ophyd_devices.galil.galil_ophyd import GalilMotor
 
 
 @pytest.mark.parametrize(
@@ -20,8 +20,8 @@ def test_axis_get(pos, msg, sign):
         sign=sign,
         socket_cls=SocketMock,
     )
-    leyey.controller.sock.flush_buffer()
     leyey.controller.on()
+    leyey.controller.sock.flush_buffer()
     leyey.controller.sock.buffer_recv = msg
     val = leyey.read()
     assert val["leyey"]["value"] == pos

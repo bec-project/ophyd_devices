@@ -59,7 +59,9 @@ class GalilController(Controller):
         name="GalilController",
         kind=None,
         parent=None,
-        socket=None,
+        socket_cls=None,
+        socket_host=None,
+        socket_port=None,
         attr_name="",
         labels=None,
     ):
@@ -68,29 +70,14 @@ class GalilController(Controller):
             self._axis = [None for axis_num in range(self._galil_axis_per_controller)]
             super().__init__(
                 name=name,
-                socket=socket,
+                socket_cls=socket_cls,
+                socket_host=socket_host,
+                socket_port=socket_port,
                 attr_name=attr_name,
                 parent=parent,
                 labels=labels,
                 kind=kind,
             )
-
-    def on(self, controller_num=0) -> None:
-        """Open a new socket connection to the controller"""
-        if not self.connected:
-            self.sock.open()
-            self.connected = True
-        else:
-            logger.info("The connection has already been established.")
-            # warnings.warn(f"The connection has already been established.", stacklevel=2)
-
-    def off(self) -> None:
-        """Close the socket connection to the controller"""
-        if self.connected:
-            self.sock.close()
-            self.connected = False
-        else:
-            logger.info("The connection is already closed.")
 
     def set_axis(self, axis: Device, axis_nr: int) -> None:
         """Assign an axis to a device instance.
@@ -462,10 +449,10 @@ class GalilMotor(Device, PositionerBase):
         device_manager=None,
         **kwargs,
     ):
+        self.controller = GalilController(socket_cls=socket_cls, socket_host=host, socket_port=port)
         self.axis_Id = axis_Id
-        self.sign = sign
-        self.controller = GalilController(socket=socket_cls(host=host, port=port))
         self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
+        self.sign = sign
         self.tolerance = kwargs.pop("tolerance", 0.5)
         self.device_mapping = kwargs.pop("device_mapping", {})
         self.device_manager = device_manager

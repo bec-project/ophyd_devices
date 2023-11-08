@@ -5,12 +5,13 @@ import logging
 import os
 
 import numpy as np
+from typeguard import typechecked
+
 from ophyd_devices.smaract.smaract_errors import (
     SmaractCommunicationError,
     SmaractErrorCode,
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
-from typeguard import typechecked
 
 logger = logging.getLogger("smaract_controller")
 
@@ -89,7 +90,9 @@ class SmaractController(Controller):
         name="SmaractController",
         kind=None,
         parent=None,
-        socket=None,
+        socket_cls=None,
+        socket_host=None,
+        socket_port=None,
         attr_name="",
         labels=None,
     ):
@@ -98,30 +101,15 @@ class SmaractController(Controller):
             self._axis = [None for axis_num in range(self._Smaract_axis_per_controller)]
             super().__init__(
                 name=name,
-                socket=socket,
+                socket_cls=socket_cls,
+                socket_host=socket_host,
+                socket_port=socket_port,
                 attr_name=attr_name,
                 parent=parent,
                 labels=labels,
                 kind=kind,
             )
             self._sensors = SmaractSensors()
-
-    def on(self, controller_num=0):
-        """Open a new socket connection to the controller"""
-        if not self.connected:
-            self.sock.open()
-            self.connected = True
-        else:
-            logger.info("The connection has already been established.")
-            # warnings.warn(f"The connection has already been established.", stacklevel=2)
-
-    def off(self):
-        """Close the socket connection to the controller"""
-        if self.connected:
-            self.sock.close()
-            self.connected = False
-        else:
-            logger.info("The connection is already closed.")
 
     @axis_checked
     def set_axis(self, axis_nr, axis):

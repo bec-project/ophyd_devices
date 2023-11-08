@@ -1,9 +1,10 @@
 import functools
 import threading
-import warnings
 
+from bec_lib.core import bec_logger
 from ophyd.ophydobj import OphydObject
-from ophyd_devices.utils.socket import SocketIO
+
+logger = bec_logger.logger
 
 
 def threadlocked(fcn):
@@ -18,24 +19,6 @@ def threadlocked(fcn):
     return wrapper
 
 
-class SingletonController:
-    _controller_instance = None
-
-    def __init__(self) -> None:
-        self._lock = threading.RLock()
-
-    def on(self):
-        pass
-
-    def off(self):
-        pass
-
-    def __new__(cls, *args, **kwargs):
-        if not SingletonController._controller_instance:
-            SingletonController._controller_instance = object.__new__(cls)
-        return SingletonController._controller_instance
-
-
 class Controller(OphydObject):
     _controller_instances = {}
 
@@ -45,24 +28,29 @@ class Controller(OphydObject):
         self,
         *,
         name=None,
-        socket=None,
+        socket_cls=None,
+        socket_host=None,
+        socket_port=None,
         attr_name="",
         parent=None,
         labels=None,
         kind=None,
     ):
+        self.sock = None
+        self._socket_cls = socket_cls
+        self._socket_host = socket_host
+        self._socket_port = socket_port
         if not hasattr(self, "_initialized"):
             super().__init__(
                 name=name, attr_name=attr_name, parent=parent, labels=labels, kind=kind
             )
             self._lock = threading.RLock()
-            self._initialize(socket)
+            self._initialize()
             self._initialized = True
 
-    def _initialize(self, socket):
+    def _initialize(self):
         self._connected = False
         self._set_default_values()
-        self.sock = socket if socket is not None else SocketIO()
 
     def _set_default_values(self):
         # no. of axes controlled by each controller
@@ -86,25 +74,35 @@ class Controller(OphydObject):
         """Get motor instance for a specified controller axis."""
         return self._motors[axis]
 
-    def on(self, controller_num=0):
+    def on(self) -> None:
         """Open a new socket connection to the controller"""
-        if not self.connected:
+        if not self.connected or self.sock is None:
+            self.sock = self._socket_cls(host=self._socket_host, port=self._socket_port)
+            self.sock.open()
             self.connected = True
         else:
-            warnings.warn(f"The connection has already been established.", stacklevel=2)
+            logger.info("The connection has already been established.")
 
-    def off(self):
+    def off(self) -> None:
         """Close the socket connection to the controller"""
-        self.sock.close()
-        self.connected = False
+        if self.connected or self.sock is not None:
+            self.sock.close()
+            self.connected = False
+            self.sock = None
+        else:
+            logger.info("The connection is already closed.")
 
     def __new__(cls, *args, **kwargs):
-        socket = kwargs.get("socket")
-        if not hasattr(socket, "host"):
-            raise RuntimeError("Socket must specify a host.")
-        if not hasattr(socket, "port"):
-            raise RuntimeError("Socket must specify a port.")
-        host_port = f"{socket.host}:{socket.port}"
+        socket_cls = kwargs.get("socket_cls")
+        socket_host = kwargs.get("socket_host")
+        socket_port = kwargs.get("socket_port")
+        if not socket_cls:
+            raise RuntimeError("Socket class must be specified.")
+        if not socket_host:
+            raise RuntimeError("Socket host must be specified.")
+        if not socket_port:
+            raise RuntimeError("Socket port must be specified.")
+        host_port = f"{socket_host}:{socket_port}"
         if host_port not in Controller._controller_instances:
             Controller._controller_instances[host_port] = object.__new__(cls)
         return Controller._controller_instances[host_port]

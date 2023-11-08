@@ -36,12 +36,21 @@ class FuprGalilController(GalilController):
         name="GalilController",
         kind=None,
         parent=None,
-        socket=None,
+        socket_cls=None,
+        socket_host=None,
+        socket_port=None,
         attr_name="",
         labels=None,
     ):
         super().__init__(
-            name=name, kind=kind, parent=parent, socket=socket, attr_name=attr_name, labels=labels
+            name=name,
+            kind=kind,
+            parent=parent,
+            socket_cls=socket_cls,
+            socket_host=socket_host,
+            socket_port=socket_port,
+            attr_name=attr_name,
+            labels=labels,
         )
         self._galil_axis_per_controller = 1
 
@@ -157,10 +166,12 @@ class FuprGalilMotor(Device, PositionerBase):
         device_manager=None,
         **kwargs,
     ):
+        self.controller = FuprGalilController(
+            socket_cls=socket_cls, socket_host=host, socket_port=port
+        )
         self.axis_Id = axis_Id
-        self.sign = sign
-        self.controller = FuprGalilController(socket=socket_cls(host=host, port=port))
         self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
+        self.sign = sign
         self.tolerance = kwargs.pop("tolerance", 0.5)
         self.device_mapping = kwargs.pop("device_mapping", {})
         self.device_manager = device_manager
@@ -330,29 +341,29 @@ class FuprGalilMotor(Device, PositionerBase):
         return super().stop(success=success)
 
 
-if __name__ == "__main__":
-    mock = False
-    if not mock:
-        leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
-        leyey.stage()
-        status = leyey.move(0, wait=True)
-        status = leyey.move(10, wait=True)
-        leyey.read()
+# if __name__ == "__main__":
+#     mock = False
+#     if not mock:
+#         leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
+#         leyey.stage()
+#         status = leyey.move(0, wait=True)
+#         status = leyey.move(10, wait=True)
+#         leyey.read()
 
-        leyey.get()
-        leyey.describe()
+#         leyey.get()
+#         leyey.describe()
 
-        leyey.unstage()
-    else:
-        from ophyd_devices.utils.socket import SocketMock
+#         leyey.unstage()
+#     else:
+#         from ophyd_devices.utils.socket import SocketMock
 
-        leyex = GalilMotor(
-            "G", name="leyex", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
-        )
-        leyey = GalilMotor(
-            "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
-        )
-        leyex.stage()
-        # leyey.stage()
+#         leyex = GalilMotor(
+#             "G", name="leyex", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+#         )
+#         leyey = GalilMotor(
+#             "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+#         )
+#         leyex.stage()
+#         # leyey.stage()
 
-        leyex.controller.galil_show_all()
+#         leyex.controller.galil_show_all()

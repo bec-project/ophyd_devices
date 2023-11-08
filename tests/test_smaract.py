@@ -1,4 +1,6 @@
 import pytest
+from utils import SocketMock
+
 from ophyd_devices.smaract import SmaractController
 from ophyd_devices.smaract.smaract_controller import SmaractCommunicationMode
 from ophyd_devices.smaract.smaract_errors import (
@@ -6,8 +8,6 @@ from ophyd_devices.smaract.smaract_errors import (
     SmaractErrorCode,
 )
 from ophyd_devices.smaract.smaract_ophyd import SmaractMotor
-
-from utils import SocketMock
 
 
 @pytest.mark.parametrize(
@@ -20,7 +20,8 @@ from utils import SocketMock
     ],
 )
 def test_get_position(axis, position, get_message, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     val = controller.get_position(axis)
@@ -38,7 +39,8 @@ def test_get_position(axis, position, get_message, return_msg):
     ],
 )
 def test_axis_is_referenced(axis, is_referenced, get_message, return_msg, exception):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     if exception is not None:
@@ -60,7 +62,8 @@ def test_axis_is_referenced(axis, is_referenced, get_message, return_msg, except
     ],
 )
 def test_socket_put_and_receive_raises_exception(return_msg, exception, raised):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     with pytest.raises(exception):
@@ -84,7 +87,8 @@ def test_socket_put_and_receive_raises_exception(return_msg, exception, raised):
     ],
 )
 def test_communication_mode(mode, get_message, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     val = controller.get_communication_mode()
@@ -108,7 +112,8 @@ def test_communication_mode(mode, get_message, return_msg):
     ],
 )
 def test_axis_is_moving(is_moving, get_message, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     val = controller.is_axis_moving(0)
@@ -127,7 +132,8 @@ def test_axis_is_moving(is_moving, get_message, return_msg):
     ],
 )
 def test_get_sensor_definition(sensor_id, axis, get_msg, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     sensor = controller.get_sensor_type(axis)
@@ -143,7 +149,8 @@ def test_get_sensor_definition(sensor_id, axis, get_msg, return_msg):
     ],
 )
 def test_set_move_speed(move_speed, axis, get_msg, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     controller.set_closed_loop_move_speed(axis, move_speed)
@@ -159,7 +166,8 @@ def test_set_move_speed(move_speed, axis, get_msg, return_msg):
     ],
 )
 def test_move_axis_to_absolute_position(pos, axis, hold_time, get_msg, return_msg):
-    controller = SmaractController(socket=SocketMock(host="dummy", port=123))
+    controller = SmaractController(socket_cls=SocketMock, socket_host="dummy", socket_port=123)
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     if hold_time is not None:
@@ -232,6 +240,7 @@ def test_stop_axis(num_axes, get_msg, return_msg):
     )
     lsmarA.stage()
     controller = lsmarA.controller
+    controller.on()
     controller.sock.flush_buffer()
     controller.sock.buffer_recv = return_msg
     controller.stop_all_axes()
