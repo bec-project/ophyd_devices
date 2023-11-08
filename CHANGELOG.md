@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.9.1 (2023-11-02)
+
+### Fix
+
+* Fixed complete call for non-otf scans ([`9e6dc2a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9e6dc2a9f72c5615abd8bea1fcdea6719a35f1ad))
+
+## v0.9.0 (2023-10-31)
+
+### Feature
+
+* Added file-based replay for xtreme ([`d25f92c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d25f92c6323cccea6de8471f4445b997cfab85a3))
+
 ## v0.8.1 (2023-09-27)
 
 ### Fix
