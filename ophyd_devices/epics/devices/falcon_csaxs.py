@@ -7,13 +7,13 @@ from bec_lib.core.devicemanager import DeviceStatus
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt
 from ophyd.mca import EpicsMCARecord
-from ophyd import DetectorBase, Device
-from ophyd import ADComponent as ADCpt
+from ophyd import Device
 
 
 from bec_lib.core.file_utils import FileWriterMixin
 from bec_lib.core import MessageEndpoints, BECMessage
 from bec_lib.core import bec_logger
+from bec_lib.core.bec_service import SERVICE_CONFIG
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -42,11 +42,32 @@ class DeviceClassInitError(FalconError):
     pass
 
 
-class DetectorState(int, enum.Enum):
+class DetectorState(enum.IntEnum):
     """Detector states for Falcon detector"""
 
     DONE = 0
     ACQUIRING = 1
+
+
+class TriggerSource(enum.IntEnum):
+    """Trigger source for Falcon detector
+
+    Translates setttings for PV:pixel_advance_mode
+    """
+
+    USER = 0
+    GATE = 1
+    SYNC = 2
+
+
+class MappingSource(enum.IntEnum):
+    """Mapping source for Falcon detector
+
+    Translates setttings for PV:collect_mode
+    """
+
+    SPECTRUM = 0
+    MAPPING = 1
 
 
 class EpicsDXPFalcon(Device):
@@ -221,16 +242,35 @@ class FalconCsaxs(Device):
     def _default_parameter(self) -> None:
         """Set default parameters for Falcon
         readout (float): readout time in seconds
-        _value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro"""
-        self.readout = 1e-3
-        self._value_pixel_per_buffer = 20  # 16
-        self._stop_det()
-        self._stop_file_writer()
+        _value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro
+        """
+        self._value_pixel_per_buffer = 20
+        self._update_readout_time()
+
+    def _update_readout_time(self) -> None:
+        readout_time = (
+            self.scaninfo.readout_time
+            if hasattr(self.scaninfo, "readout_time")
+            else self.readout_time_min
+        )
+        self.readout_time = max(readout_time, self.readout_time_min)
 
     def _stop_det(self) -> None:
         """ "Stop detector"""
         self.stop_all.put(1)
         self.erase_all.put(1)
+        det_ctrl = self.state.read()[self.state.name]["value"]
+        timer = 0
+        while True:
+            det_ctrl = self.state.read()[self.state.name]["value"]
+            if det_ctrl == DetectorState.DONE:
+                break
+            if self._stopped == True:
+                break
+            time.sleep(0.01)
+            timer += 0.01
+            if timer > 5:
+                raise FalconTimeoutError("Failed to stop the detector. IOC did not update.")
 
     def _stop_file_writer(self) -> None:
         """ "Stop the file writer"""
@@ -240,13 +280,16 @@ class FalconCsaxs(Device):
         """Initialize file writer for Falcon.
         This includes setting variables for the HDF5 plugin (EPICS) that is used to write the data.
         """
-        self.hdf5.enable.put(1)  # EnableCallbacks
-        self.hdf5.xml_file_name.put("layout.xml")  # Points to hardcopy of HDF5 Layout xml file
-        self.hdf5.lazy_open.put(
-            1
-        )  # Potentially not needed, means a temp data file is created first, could be 0
-        self.hdf5.temp_suffix.put("")  # -> To be checked how to add FilePlugin_V22+
-        self.hdf5.queue_size.put(2000)  # size of queue for spectra in the buffer
+        self.hdf5.enable.put(1)
+        # file location of h5 layout for cSAXS
+        self.hdf5.xml_file_name.put("layout.xml")
+        # Potentially not needed, means a temp data file is created first, could be 0
+        self.hdf5.lazy_open.put(1)
+        self.hdf5.temp_suffix.put("")
+        # size of queue for number of spectra allowed in the buffer, if too small at high throughput, data is lost
+        self.hdf5.queue_size.put(2000)
+        # Segmentation into Spectra within EPICS, 1 is activate, 0 is deactivate
+        self.nd_array_mode.put(1)
 
     def _init_detector(self) -> None:
         """Initialize Falcon detector.
@@ -254,14 +297,33 @@ class FalconCsaxs(Device):
         Parameters here affect the triggering, gating  etc.
         This includes also the readout chunk size and whether data is segmented into spectra in EPICS.
         """
-        self.collect_mode.put(1)  # 1 MCA Mapping, 0 MCA Spectrum
+        self._stop_det()
+        self._stop_file_writer()
+        self._set_trigger(
+            mapping_mode=MappingSource.MAPPING, trigger_source=TriggerSource.GATE, ignore_gate=0
+        )
         self.preset_mode.put(1)  # 1 Realtime
         self.input_logic_polarity.put(0)  # 0 Normal, 1 Inverted
-        self.pixel_advance_mode.put(1)  # 0 User, 1 Gate, 2 Sync
-        self.ignore_gate.put(0)  # 1 Yes, 0 No
         self.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
         self.pixels_per_buffer.put(self._value_pixel_per_buffer)  #
-        self.nd_array_mode.put(1)  # Segmentation happens in EPICS
+
+    def _set_trigger(
+        self, mapping_mode: MappingSource, trigger_source: TriggerSource, ignore_gate: int = 0
+    ) -> None:
+        """
+        Set triggering mode for detector
+
+        Args:
+            mapping_mode (MappingSource): Mapping mode for the detector
+            trigger_source (TriggerSource): Trigger source for the detector, pixel_advance_signal
+            ignore_gate (int): Ignore gate from TTL signal; defaults to 0
+
+        """
+        mapping = int(mapping_mode)
+        trigger = trigger_source
+        self.collect_mode.put(mapping)
+        self.pixel_advance_mode.put(trigger)
+        self.ignore_gate.put(ignore_gate)
 
     def stage(self) -> List[object]:
         """Stage command, called from BEC in preparation of a scan.
@@ -280,24 +342,26 @@ class FalconCsaxs(Device):
         """
         self._stopped = False
         self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.obj.read()[
-            self.device_manager.devices.mokev.name
-        ]["value"]
         self._prep_file_writer()
         self._prep_det()
         state = False
-        self._publish_file_location(done=state, successful=state)
+        self._publish_file_location(done=state)
         self._arm_acquisition()
         return super().stage()
 
     def _prep_det(self) -> None:
         """Prepare detector for acquisition"""
-        self.collect_mode.put(1)
+        self._set_trigger(
+            mapping_mode=MappingSource.MAPPING, trigger_source=TriggerSource.GATE, ignore_gate=0
+        )
         self.preset_real.put(self.scaninfo.exp_time)
         self.pixels_per_run.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
 
     def _prep_file_writer(self) -> None:
-        """Prepare filewriting from HDF5 plugin"""
+        """Prepare filewriting from HDF5 plugin
+        #TODO check these settings together with Controls put vs set
+
+        """
         self.filepath = self.filewriter.compile_full_filename(
             self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
         )
@@ -307,33 +371,50 @@ class FalconCsaxs(Device):
         self.hdf5.file_template.put(f"%s%s")
         self.hdf5.num_capture.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
         self.hdf5.file_write_mode.put(2)
+        # Reset spectrum counter in filewriter, used for indexing & identifying missing triggers
         self.hdf5.array_counter.put(0)
+        # Start file writing
         self.hdf5.capture.put(1)
 
-    def _publish_file_location(self, done=False, successful=False) -> None:
-        """Publish the filepath to REDIS
-        First msg for file writer and the second one for other listeners (e.g. radial integ)
+    def _publish_file_location(self, done: bool = False, successful: bool = False) -> None:
+        """Publish the filepath to REDIS.
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+
         """
         pipe = self._producer.pipeline()
-        msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
         self._producer.set_and_publish(
-            MessageEndpoints.file_event(self.name), msg.dumps(), pip=pipe
+            MessageEndpoints.file_event(self.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
 
     def _arm_acquisition(self) -> None:
         """Arm Falcon detector for acquisition"""
+        timer = 0
         self.start_all.put(1)
         while True:
             det_ctrl = self.state.read()[self.state.name]["value"]
-            if det_ctrl == int(DetectorState.ACQUIRING):
+            if det_ctrl == DetectorState.ACQUIRING:
                 break
             if self._stopped == True:
                 break
-            time.sleep(0.005)
+            time.sleep(0.01)
+            timer += 0.01
+            if timer > 5:
+                self.stop()
+                raise FalconTimeoutError("Failed to arm the acquisition. IOC did not update.")
 
     # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
@@ -343,7 +424,10 @@ class FalconCsaxs(Device):
 
     # TODO function for abstract class?
     def _on_trigger(self):
-        """Specify action that should be taken upon trigger signal."""
+        """Specify action that should be taken upon trigger signal.
+
+        At cSAXS with DDGs triggering the devices, we do nothing upon the trigger signal
+        """
         pass
 
     def unstage(self) -> List[object]:
@@ -397,6 +481,8 @@ class FalconCsaxs(Device):
             time.sleep(sleep_time)
             timer += sleep_time
             if timer > timeout:
+                # self._stop_det()
+                # self._stop_file_writer()
                 logger.info(
                     f"Falcon missed a trigger: received trigger {received_frames}, send data {written_frames} from total_frames {total_frames}"
                 )
