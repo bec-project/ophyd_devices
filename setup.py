@@ -13,7 +13,7 @@ if __name__ == "__main__":
             "pyyaml",
             "std_daq_client",
             "pyepics",
-            "pytest"
+            "pytest",
         ],
         extras_require={"dev": ["pytest", "pytest-random-order", "black", "coverage"]},
         version=__version__,
