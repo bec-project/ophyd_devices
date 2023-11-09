@@ -114,7 +114,7 @@ class FalconHDF5Plugins(Device):
     array_counter = Cpt(EpicsSignalWithRBV, "ArrayCounter", kind="config")
 
 
-class FalconCsaxs(Device):
+class FalconcSAXS(Device):
     """Falcon Sitoro detector for CSAXS
 
     Parent class: Device
@@ -499,4 +499,4 @@ class FalconCsaxs(Device):
 
 
 if __name__ == "__main__":
-    falcon = FalconCsaxs(name="falcon", prefix="X12SA-SITORO:", sim_mode=True)
+    falcon = FalconcSAXS(name="falcon", prefix="X12SA-SITORO:", sim_mode=True)

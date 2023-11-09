@@ -27,5 +27,5 @@ from .epics_motor_ex import EpicsMotorEx
 from .mcs_csaxs import McsCsaxs
 from .eiger9m_csaxs import Eiger9McSAXS
 from .pilatus_csaxs import PilatuscSAXS
-from .falcon_csaxs import FalconCsaxs
+from .falcon_csaxs import FalconcSAXS
 from .DelayGeneratorDG645 import DelayGeneratorDG645

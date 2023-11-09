@@ -1,5 +1,6 @@
 import os
 import pytest
+import threading
 from unittest import mock
 
 import ophyd
@@ -34,6 +35,7 @@ def mock_det():
         ) as mock_service_config:
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
+                mock_cl.thread_class = threading.Thread
                 with mock.patch.object(PilatuscSAXS, "_init"):
                     det = PilatuscSAXS(
                         name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode
