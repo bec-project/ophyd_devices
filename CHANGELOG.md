@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.10.1 (2023-11-09)
+
+### Fix
+
+* Adding pytest as dependency; should be removed! ([`a6a621f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a6a621f5ea88370152256908cdd4d60ce4489c7b))
+
 ## v0.10.0 (2023-11-08)
 
 ### Feature
