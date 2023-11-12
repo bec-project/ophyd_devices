@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.10.2 (2023-11-12)
+
+### Fix
+
+* Remove pytest dependency for eiger, falcon and pilatus; closes #18 and #9 ([`c6e6737`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c6e6737547face4f298758e4017099208748d1a9))
+
 ## v0.10.1 (2023-11-09)
 
 ### Fix
