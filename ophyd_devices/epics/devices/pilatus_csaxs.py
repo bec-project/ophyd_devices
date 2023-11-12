@@ -37,7 +37,7 @@ class PilatusTimeoutError(PilatusError):
     pass
 
 
-class DeviceClassInitError(PilatusError):
+class PilatusInitError(PilatusError):
     """Raised when initiation of the device class fails,
     due to missing device manager or not started in sim_mode."""
 
@@ -134,7 +134,7 @@ class PilatuscSAXS(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise DeviceClassInitError(
+            raise PilatusInitError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
@@ -145,7 +145,7 @@ class PilatuscSAXS(DetectorBase):
         self.scaninfo = None
         self.filewriter = None
         self.readout_time_min = PILATUS_MIN_READOUT
-        # TODO move url from data backend up here?
+        self.timeout = 5
         self.wait_for_connection(all_signals=True)
         if not sim_mode:
             self._update_service_config()
@@ -523,7 +523,7 @@ class PilatuscSAXS(DetectorBase):
                 break
             time.sleep(sleep_time)
             timer = timer + sleep_time
-            if timer > 5:
+            if timer > self.timeout:
                 self._stopped == True
                 self._stop_det()
                 self._stop_file_writer()

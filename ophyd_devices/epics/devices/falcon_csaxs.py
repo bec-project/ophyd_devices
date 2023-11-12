@@ -35,7 +35,7 @@ class FalconTimeoutError(FalconError):
     pass
 
 
-class DeviceClassInitError(FalconError):
+class FalconInitError(FalconError):
     """Raised when initiation of the device class fails,
     due to missing device manager or not started in sim_mode."""
 
@@ -193,7 +193,7 @@ class FalconcSAXS(Device):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise DeviceClassInitError(
+            raise FalconInitError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
@@ -205,6 +205,7 @@ class FalconcSAXS(Device):
         self.readout_time_min = FALCON_MIN_READOUT
         self._value_pixel_per_buffer = None
         self.readout_time = None
+        self.timeout = 5
         self.wait_for_connection(all_signals=True)
         if not sim_mode:
             self._update_service_config()
@@ -269,7 +270,7 @@ class FalconcSAXS(Device):
                 break
             time.sleep(0.01)
             timer += 0.01
-            if timer > 5:
+            if timer > self.timeout:
                 raise FalconTimeoutError("Failed to stop the detector. IOC did not update.")
 
     def _stop_file_writer(self) -> None:
@@ -412,7 +413,7 @@ class FalconcSAXS(Device):
                 break
             time.sleep(0.01)
             timer += 0.01
-            if timer > 5:
+            if timer > self.timeout:
                 self.stop()
                 raise FalconTimeoutError("Failed to arm the acquisition. IOC did not update.")
 
@@ -465,7 +466,6 @@ class FalconcSAXS(Device):
             - _stop_file_writer
         """
         sleep_time = 0.1
-        timeout = 5
         timer = 0
         while True:
             det_ctrl = self.state.read()[self.state.name]["value"]
@@ -480,7 +480,7 @@ class FalconcSAXS(Device):
                 break
             time.sleep(sleep_time)
             timer += sleep_time
-            if timer > timeout:
+            if timer > self.timeout:
                 # self._stop_det()
                 # self._stop_file_writer()
                 logger.info(

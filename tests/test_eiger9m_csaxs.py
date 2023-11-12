@@ -105,6 +105,7 @@ def test_init_detector(
     mock_det.cam.detector_state._read_pv.mock_data = detector_state
     if expected_exception:
         with pytest.raises(Exception):
+            mock_det.timeout = 0.1
             mock_det._init_detector()
     else:
         mock_det._init_detector()  # call the method you want to test
@@ -183,6 +184,7 @@ def test_init_filewriter(mock_det, eacc, exp_url, daq_status, daq_cfg, expected_
         # scaninfo.username.return_value = eacc
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._init_filewriter()
         else:
             mock_det._init_filewriter()
@@ -270,6 +272,7 @@ def test_stage(
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
+                    mock_det.timeout = 0.1
                     mock_det.stage()
             else:
                 mock_det.stage()
@@ -340,6 +343,7 @@ def test_prep_file_writer(mock_det, scaninfo, daq_status, expected_exception):
 
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._prep_file_writer()
                 mock_file_path_exists.assert_called_once()
                 assert mock_stop_file_writer.call_count == 2
@@ -494,6 +498,7 @@ def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_e
         mock_det.scaninfo.frames_per_trigger = scaninfo["frames_per_trigger"]
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._finished()
                 assert mock_det._stopped == stopped
                 mock_stop_file_friter.assert_called()

@@ -120,6 +120,7 @@ def test_stage(
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
+                    mock_det.timeout = 0.1
                     mock_det.stage()
             else:
                 mock_det.stage()
@@ -241,6 +242,7 @@ def test_stop_file_writer(mock_det, requests_state, expected_exception, url):
         instance.raise_for_status.side_effect = Exception
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._stop_file_writer()
                 mock_send_requests_put.assert_called_once_with(url=url)
                 instance.raise_for_status.called_once()
@@ -376,6 +378,7 @@ def test_prep_file_writer(mock_det, scaninfo, data_msgs, urls, requests_state, e
 
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._prep_file_writer()
                 mock_close_file_writer.assert_called_once()
                 mock_stop_file_writer.assert_called_once()
@@ -490,6 +493,7 @@ def test_finished(mock_det, stopped, mcs_stage_state, expected_exception):
         mock_det._stopped = stopped
         if expected_exception:
             with pytest.raises(Exception):
+                mock_det.timeout = 0.1
                 mock_det._finished()
                 assert mock_det._stopped == stopped
                 mock_stop_file_friter.assert_called()

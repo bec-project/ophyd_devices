@@ -75,6 +75,7 @@ def test_init_detector(
     mock_det.state._read_pv.mock_data = detector_state
     if expected_exception:
         with pytest.raises(FalconTimeoutError):
+            mock_det.timeout = 0.1
             mock_det._init_detector()
     else:
         mock_det._init_detector()  # call the method you want to test
@@ -241,6 +242,7 @@ def test_arm_acquisition(mock_det, detector_state, expected_exception):
         mock_det.state._read_pv.mock_data = detector_state
         if expected_exception:
             with pytest.raises(FalconTimeoutError):
+                mock_det.timeout = 0.1
                 mock_det._arm_acquisition()
                 mock_stop.assert_called_once()
         else:

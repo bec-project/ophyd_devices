@@ -38,7 +38,7 @@ class EigerTimeoutError(EigerError):
     pass
 
 
-class DeviceClassInitError(EigerError):
+class EigerInitError(EigerError):
     """Raised when initiation of the device class fails,
     due to missing device manager or not started in sim_mode."""
 
@@ -141,7 +141,7 @@ class Eiger9McSAXS(DetectorBase):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise DeviceClassInitError(
+            raise EigerInitError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
@@ -158,6 +158,7 @@ class Eiger9McSAXS(DetectorBase):
             kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
         )
         self.wait_for_connection(all_signals=True)
+        self.timeout = 5
         if not sim_mode:
             self._update_service_config()
             self.device_manager = device_manager
@@ -223,16 +224,16 @@ class Eiger9McSAXS(DetectorBase):
         """
         self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
         self.std_client.stop_writer()
-        timeout = 0
+        timer = 0
         # TODO put back change of e-account! and check with Leo which status to wait for
         eacc = self.scaninfo.username
         self._update_std_cfg("writer_user_id", int(eacc.strip(" e")))
         time.sleep(5)
         while not self.std_client.get_status()["state"] == "READY":
             time.sleep(0.1)
-            timeout = timeout + 0.1
+            timer = timer + 0.1
             logger.info("Waiting for std_daq init.")
-            if timeout > 5:
+            if timer > self.timeout:
                 if not self.std_client.get_status()["state"] == "READY":
                     raise EigerError(
                         f"Std client not in READY state, returns: {self.std_client.get_status()}"
@@ -296,7 +297,7 @@ class Eiger9McSAXS(DetectorBase):
         while not os.path.exists(os.path.dirname(self.filepath)):
             timer = time + 0.1
             time.sleep(0.1)
-            if timer > 3:
+            if timer > self.timeout:
                 raise EigerError(f"Timeout of 3s reached for filepath {self.filepath}")
 
     # TODO function for abstract class?
@@ -331,7 +332,7 @@ class Eiger9McSAXS(DetectorBase):
             if det_ctrl == "WAITING_IMAGES":
                 break
             time.sleep(0.01)
-            if timer > 5:
+            if timer > self.timeout:
                 self._close_file_writer()
                 raise EigerError(
                     f"Timeout of 5s reached for std_daq start_writer_async with std_daq client status {det_ctrl}"
@@ -479,7 +480,6 @@ class Eiger9McSAXS(DetectorBase):
             - _stop_file_writer
         """
         sleep_time = 0.1
-        timeout = 5
         timer = 0
         # Check status with timeout, break out if _stopped=True
         while True:
@@ -494,7 +494,7 @@ class Eiger9McSAXS(DetectorBase):
                 break
             time.sleep(sleep_time)
             timer += sleep_time
-            if timer > timeout:
+            if timer > self.timeout:
                 self._stopped == True
                 self._stop_det()
                 self._stop_file_writer()
@@ -508,7 +508,6 @@ class Eiger9McSAXS(DetectorBase):
         """Stop the detector and wait for the proper status message"""
         elapsed_time = 0
         sleep_time = 0.01
-        timeout = 5
         # Stop acquisition
         self.cam.acquire.put(0)
         retry = False
@@ -521,11 +520,11 @@ class Eiger9McSAXS(DetectorBase):
                 break
             time.sleep(sleep_time)
             elapsed_time += sleep_time
-            if elapsed_time > timeout // 2 and not retry:
+            if elapsed_time > self.timeout // 2 and not retry:
                 retry = True
                 # Retry to stop acquisition
                 self.cam.acquire.put(0)
-            if elapsed_time > timeout:
+            if elapsed_time > self.timeout:
                 raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
 
     def stop(self, *, success=False) -> None:
