@@ -1,6 +1,7 @@
 import enum
 import os
 from abc import ABC, abstractmethod
+from typing import List
 
 from ophyd import Device
 from ophyd.device import Staged
@@ -282,7 +283,7 @@ class SLSDetectorBase(ABC, Device):
 
         """
         # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
-        if self._staged == Staged.yes:
+        if self._staged != Staged.no:
             return super().stage()
         else:
             # Reset flag for detector stopped
