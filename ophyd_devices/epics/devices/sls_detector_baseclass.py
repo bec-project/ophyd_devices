@@ -1,4 +1,5 @@
 import enum
+import os
 from abc import ABC, abstractmethod
 
 from ophyd import Device
@@ -14,7 +15,7 @@ MIN_READOUT = None
 
 
 # Custom exceptions specific to detectors
-class CustomDetectorError(Exception):
+class DetectorError(Exception):
     """
     Class for custom detector errors
 
@@ -42,9 +43,9 @@ class TriggerSource(enum.IntEnum):
 
     To set the trigger source to gating, call TriggerSource.Gating
     """
+
     pass
 
-    
 
 class SLSDetectorBase(ABC, Device):
     """
@@ -75,7 +76,7 @@ class SLSDetectorBase(ABC, Device):
             **kwargs,
         )
         if device_manager is None and not sim_mode:
-            raise CustomDetectorError(
+            raise DetectorError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
@@ -122,34 +123,40 @@ class SLSDetectorBase(ABC, Device):
     @abstractmethod
     def _init(self) -> None:
         """
-        Initialize detector & filewriter
+        Initialize detector & detector filewriter
 
         Can also be used to init default parameters
 
         Internal Calls:
         - _init_detector   : Init detector
-        - _init_filewriter : Init file_writer
+        - _init_det_fw : Init file_writer
 
         """
-        self._init_detector()
-        self._init_filewriter()
+        self._init_det()
+        self._init_det_fw()
         pass
 
     @abstractmethod
-    def _init_detector(self):
+    def _init_det(self) -> None:
         """
         Init parameters for the detector
+
+        Raises (optional):
+            DetectorError: if detector cannot be initialized
         """
         pass
 
     @abstractmethod
-    def _init_filewriter(self):
+    def _init_det_fw(self) -> None:
         """
-        Init parameters for filewriter
+        Init parameters for detector filewriter
+
+        Raises (optional):
+            DetectorError: if filewriter cannot be initialized
         """
         pass
 
-        @abstractmethod
+    @abstractmethod
     def _set_trigger(self, trigger_source) -> None:
         """
         Set trigger source for the detector
@@ -160,16 +167,22 @@ class SLSDetectorBase(ABC, Device):
         pass
 
     @abstractmethod
-    def _prep_file_writer(self) -> None:
+    def _prep_det_fw(self) -> None:
         """
-        Prepare file writer for scan
+        Prepare detector file writer for scan
+
+        Raises (optional):
+            DetectorError: If file writer cannot be prepared
         """
         pass
 
     @abstractmethod
-    def _stop_file_writer(self) -> None:
+    def _stop_det_fw(self) -> None:
         """
-        Close file writer
+        Stops detector file writer
+
+        Raises (optional):
+            DetectorError: If file writer cannot be stopped
         """
         pass
 
@@ -184,6 +197,9 @@ class SLSDetectorBase(ABC, Device):
     def _stop_det(self) -> None:
         """
         Stop the detector and wait for the proper status message
+
+        Raises (optional):
+            DetectorError: If detector cannot be prepared
         """
         pass
 
@@ -214,7 +230,9 @@ class SLSDetectorBase(ABC, Device):
     def stop(self, *, success=False) -> None:
         """
         Stop the scan, with camera and file writer
+
+        Internal Calls:
+        - _stop_det     : stop detector
+        - _stop_det_fw : stop detector filewriter
         """
         pass
-
-    
