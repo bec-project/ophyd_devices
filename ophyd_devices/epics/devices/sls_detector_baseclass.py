@@ -15,20 +15,41 @@ MIN_READOUT = None
 
 # Custom exceptions specific to detectors
 class CustomDetectorError(Exception):
-    """Class for custom detector errors.
+    """
+    Class for custom detector errors
 
     Specifying different types of errors can be helpful and used
     for error handling, e.g. scan repetitions.
 
     An suggestion/example would be to have 3 class types for errors
-    EigerError, EigerTimeoutError(EigerError), EigerInitError(EigerError)
+        - EigerError : base error class for the detector (e.g. Eiger here)
+        - EigerTimeoutError(EigerError) : timeout error, inherits from EigerError
+        - EigerInitError(EigerError) : initialization error, inherits from EigerError
     """
 
     pass
 
 
+class TriggerSource(enum.IntEnum):
+    """
+    Class for trigger signals
+
+    Here we would map trigger options from EPICS, example  implementation:
+    AUTO = 0
+    TRIGGER = 1
+    GATING = 2
+    BURST_TRIGGER = 3
+
+    To set the trigger source to gating, call TriggerSource.Gating
+    """
+    pass
+
+    
+
 class SLSDetectorBase(ABC, Device):
-    """Abstract base class for SLS detectors"""
+    """
+    Abstract base class for SLS detectors
+    """
 
     def __init____init__(
         self,
@@ -58,7 +79,6 @@ class SLSDetectorBase(ABC, Device):
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
         self.sim_mode = sim_mode
-        # TODO check if threadlock is needed for unstage
         self._stopped = False
         self.name = name
         self.service_cfg = None
@@ -81,19 +101,120 @@ class SLSDetectorBase(ABC, Device):
         self._init()
 
     def _update_service_cfg(self) -> None:
-        """Update service configuration from BEC SERVICE CONFIG"""
+        """
+        Update service configuration from BEC SERVICE CONFIG
+        """
         self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     def _update_scaninfo(self) -> None:
-        """Update scaninfo from BecScaninfoMixing"""
+        """
+        Update scaninfo from BecScaninfoMixing
+        """
         self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
         self.scaninfo.load_scan_metadata()
 
     def _update_filewriter(self) -> None:
-        """Update filewriter with service config"""
+        """
+        Update filewriter with service config
+        """
         self.filewriter = FileWriterMixin(self.service_cfg)
 
     @abstractmethod
-    def _init(self):
-        """Initialize detector, filewriter and set default parameters"""
+    def _init(self) -> None:
+        """
+        Initialize detector & filewriter
+
+        Can also be used to init default parameters
+
+        Internal Calls:
+        - _init_detector   : Init detector
+        - _init_filewriter : Init file_writer
+
+        """
+        self._init_detector()
+        self._init_filewriter()
         pass
+
+    @abstractmethod
+    def _init_detector(self):
+        """
+        Init parameters for the detector
+        """
+        pass
+
+    @abstractmethod
+    def _init_filewriter(self):
+        """
+        Init parameters for filewriter
+        """
+        pass
+
+        @abstractmethod
+    def _set_trigger(self, trigger_source) -> None:
+        """
+        Set trigger source for the detector
+
+        Args:
+            trigger_source (enum.IntEnum): trigger source
+        """
+        pass
+
+    @abstractmethod
+    def _prep_file_writer(self) -> None:
+        """
+        Prepare file writer for scan
+        """
+        pass
+
+    @abstractmethod
+    def _stop_file_writer(self) -> None:
+        """
+        Close file writer
+        """
+        pass
+
+    @abstractmethod
+    def _prep_det(self) -> None:
+        """
+        Prepare detector for scans
+        """
+        pass
+
+    @abstractmethod
+    def _stop_det(self) -> None:
+        """
+        Stop the detector and wait for the proper status message
+        """
+        pass
+
+    @abstractmethod
+    def _arm_acquisition(self) -> None:
+        """Arm detector for acquisition"""
+        pass
+
+    @abstractmethod
+    def trigger(self) -> None:
+        """
+        Trigger the detector, called from BEC
+
+        Internal Calls:
+        - _on_trigger     : call trigger action
+        """
+        self._on_trigger()
+        pass
+
+    @abstractmethod
+    def _on_trigger(self) -> None:
+        """
+        Specify action that should be taken upon trigger signal
+        """
+        pass
+
+    @abstractmethod
+    def stop(self, *, success=False) -> None:
+        """
+        Stop the scan, with camera and file writer
+        """
+        pass
+
+    
