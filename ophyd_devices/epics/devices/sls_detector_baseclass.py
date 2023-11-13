@@ -53,6 +53,23 @@ class TriggerSource(enum.IntEnum):
 class SLSDetectorBase(ABC, Device):
     """
     Abstract base class for SLS detectors
+
+    Args:
+        prefix (str): EPICS PV prefix for component (optional)
+        name (str): name of the device, as will be reported via read()
+        kind (str): member of class 'ophydobj.Kind', defaults to Kind.normal
+                    omitted -> readout ignored for read 'ophydobj.read()'
+                    normal -> readout for read
+                    config -> config parameter for 'ophydobj.read_configuration()'
+                    hinted -> which attribute is readout for read
+        read_attrs (list): sequence of attribute names to read
+        configuration_attrs (list): sequence of attribute names via config_parameters
+        parent (object): instance of the parent device
+        device_manager (object): bec device manager
+        sim_mode (bool): simulation mode, if True, no device manager is required
+        **kwargs: keyword arguments
+
+        attributes: lazy_wait_for_connection : bool
     """
 
     def __init____init__(
