@@ -3,10 +3,12 @@ import os
 from abc import ABC, abstractmethod
 
 from ophyd import Device
+from ophyd.device import Staged
 from ophyd_devices.utils import bec_utils
 
 from bec_lib.bec_service import SERVICE_CONFIG
 from bec_lib.file_utils import FileWriterMixin
+from bec_lib.messages import BECMessage, MessageEndpoints
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 
 
@@ -81,6 +83,7 @@ class SLSDetectorBase(ABC, Device):
             )
         self.sim_mode = sim_mode
         self._stopped = False
+        self._staged = Staged.no
         self.name = name
         self.service_cfg = None
         self.std_client = None
@@ -134,7 +137,6 @@ class SLSDetectorBase(ABC, Device):
         """
         self._init_det()
         self._init_det_fw()
-        pass
 
     @abstractmethod
     def _init_det(self) -> None:
@@ -217,7 +219,6 @@ class SLSDetectorBase(ABC, Device):
         - _on_trigger     : call trigger action
         """
         self._on_trigger()
-        pass
 
     @abstractmethod
     def _on_trigger(self) -> None:
@@ -234,5 +235,110 @@ class SLSDetectorBase(ABC, Device):
         Internal Calls:
         - _stop_det     : stop detector
         - _stop_det_fw : stop detector filewriter
+        """
+        pass
+
+    # TODO maybe not required to overwrite, but simply used by the user.
+    # If yes, then self.scaninfo.scanID & self.scaninfo.name  & self.filepath
+    # should become input arguments
+    @abstractmethod
+    def _publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """Publish the file location/event to bec
+
+        Two events are published:
+        - file_event  : event for the filewriter
+        - public_file : event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+
+        """
+        pipe = self._producer.pipeline()
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+        self._producer.set_and_publish(
+            MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
+        )
+        self._producer.set_and_publish(
+            MessageEndpoints.file_event(self.name), msg.dumps(), pipe=pipe
+        )
+        pipe.execute()
+
+    @abstractmethod
+    def stage(self) -> List(object):
+        """
+        Stage device in preparation for a scan
+
+        Internal Calls:
+        - _prep_det_fw           : prepare detector filewriter for measurement
+        - _prep_det              : prepare detector for measurement
+        - _publish_file_location : publish file location to bec
+
+        Returns:
+            List(object): list of objects that were staged
+
+        """
+        # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
+        if self._staged == Staged.yes:
+            return super().stage()
+        else:
+            # Reset flag for detector stopped
+            self._stopped = False
+            # Load metadata of the scan
+            self.scaninfo.load_scan_metadata()
+            # Prepare detector and file writer
+            self._prep_det_fw()
+            self._prep_det()
+            state = False
+            self._publish_file_location(done=state)
+            return super().stage()
+
+    @abstractmethod
+    def unstage(self):
+        """
+        Unstage device in preparation for a scan
+
+        Returns directly if self._stopped,
+        otherwise checks with self._finished
+        if data acquisition on device finished (an was successful)
+
+        Internal Calls:
+        - _finished              : check if device finished acquisition (succesfully)
+        - _publish_file_location : publish file location to bec
+        """
+        # Check if scan was stopped
+        old_scanID = self.scaninfo.scanID
+        self.scaninfo.load_scan_metadata()
+        if self.scaninfo.scanID != old_scanID:
+            self._stopped = True
+        if self._stopped == True:
+            return super().unstage()
+        # check if device finished acquisition
+        self._finished()
+        state = True
+        # Publish file location to bec
+        self._publish_file_location(done=state, successful=state)
+        self._stopped = False
+        return super().unstage()
+
+    def _finished(self):
+        """
+        Check if acquisition on device finished (succesfully)
+
+        This function is called from unstage, and will check if
+        detector and filewriter of the detector return from acquisition.
+        If desired, it can also raise in case data acquisition was incomplete
+
+        Small examples:
+            (1) check detector & detector filewriter status
+            if both finished --> good, if either is not finished --> raise
+            (2) (Optional) check if number of images received
+            is equivalent to the number of images requested
+
+        Raises (optional):
+            TimeoutError: if data acquisition was incomplete
         """
         pass
