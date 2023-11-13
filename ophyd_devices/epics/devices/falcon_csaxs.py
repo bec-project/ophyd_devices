@@ -3,17 +3,16 @@ import os
 import time
 
 from typing import List
-from bec_lib.core.devicemanager import DeviceStatus
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt
 from ophyd.mca import EpicsMCARecord
 from ophyd import Device
 
 
-from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core import MessageEndpoints, BECMessage
-from bec_lib.core import bec_logger
-from bec_lib.core.bec_service import SERVICE_CONFIG
+from bec_lib import MessageEndpoints, messages, bec_logger
+from bec_lib.file_utils import FileWriterMixin
+from bec_lib.devicemanager import DeviceStatus
+from bec_lib.bec_service import SERVICE_CONFIG
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -390,9 +389,9 @@ class FalconcSAXS(Device):
         """
         pipe = self._producer.pipeline()
         if successful is None:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+            msg = messages.FileMessage(file_path=self.filepath, done=done)
         else:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+            msg = messages.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )

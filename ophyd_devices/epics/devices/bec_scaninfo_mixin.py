@@ -1,7 +1,6 @@
 import os
 
-from bec_lib.core import DeviceManagerBase, BECMessage, MessageEndpoints
-from bec_lib.core import bec_logger
+from bec_lib import DeviceManagerBase, messages, MessageEndpoints, bec_logger
 
 logger = bec_logger.logger
 
@@ -82,18 +81,18 @@ class BecScaninfoMixin:
         """Change BECInfoMsg object"""
         self.bec_info_msg = bec_info_msg
 
-    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
+    def _get_current_scan_msg(self) -> messages.ScanStatusMessage:
         """Get current scan message
 
         Returns:
-            BECMessage.ScanStatusMessage: BECMessage.ScanStatusMessage object
+            messages.ScanStatusMessage: messages.ScanStatusMessage object
         """
         if not self.sim_mode:
             # TODO what if no scan info is there yet!
             msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-            return BECMessage.ScanStatusMessage.loads(msg)
+            return messages.ScanStatusMessage.loads(msg)
 
-        return BECMessage.ScanStatusMessage(
+        return messages.ScanStatusMessage(
             scanID="1",
             status={},
             info=self.bec_info_msg,

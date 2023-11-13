@@ -1,7 +1,7 @@
 import time
 
-from bec_lib.core import bec_logger
-from bec_lib.core.devicemanager import DeviceContainer
+from bec_lib import bec_logger
+from bec_lib.devicemanager import DeviceContainer
 
 from ophyd import Signal, Kind
 

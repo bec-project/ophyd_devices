@@ -5,7 +5,7 @@ import warnings
 from typing import List
 
 import numpy as np
-from bec_lib.core import BECMessage, MessageEndpoints, bec_logger
+from bec_lib import messages, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, OphydObject, PositionerBase, Signal
 from ophyd.sim import EnumSignal, SynSignal, _ReadbackSignal, _SetpointSignal
@@ -301,7 +301,7 @@ class SynSLSDetector(Device):
 
     def stage(self) -> List[object]:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        scan_msg = BECMessage.ScanStatusMessage.loads(msg)
+        scan_msg = messages.ScanStatusMessage.loads(msg)
         self.metadata = {
             "scanID": scan_msg.content["scanID"],
             "RID": scan_msg.content["info"]["RID"],
@@ -316,7 +316,7 @@ class SynSLSDetector(Device):
 
     def unstage(self) -> List[object]:
         signals = {"config": self.sim_state, "data": self.file_name}
-        msg = BECMessage.DeviceMessage(signals=signals, metadata=self.metadata)
+        msg = messages.DeviceMessage(signals=signals, metadata=self.metadata)
         self.device_manager.producer.set_and_publish(
             MessageEndpoints.device_read(self.name), msg.dumps()
         )
@@ -427,10 +427,10 @@ class SynFlyer(Device, PositionerBase):
         def produce_data(device, metadata):
             buffer_time = 0.2
             elapsed_time = 0
-            bundle = BECMessage.BundleMessage()
+            bundle = messages.BundleMessage()
             for ii in range(num_pos):
                 bundle.append(
-                    BECMessage.DeviceMessage(
+                    messages.DeviceMessage(
                         signals={
                             self.name: {
                                 "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
@@ -447,10 +447,10 @@ class SynFlyer(Device, PositionerBase):
                     device.device_manager.producer.send(
                         MessageEndpoints.device_read(device.name), bundle.dumps()
                     )
-                    bundle = BECMessage.BundleMessage()
+                    bundle = messages.BundleMessage()
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
-                        BECMessage.DeviceStatusMessage(
+                        messages.DeviceStatusMessage(
                             device=device.name,
                             status=1,
                             metadata={"pointID": ii, **metadata},
@@ -461,7 +461,7 @@ class SynFlyer(Device, PositionerBase):
             )
             device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
-                BECMessage.DeviceStatusMessage(
+                messages.DeviceStatusMessage(
                     device=device.name,
                     status=0,
                     metadata={"pointID": num_pos, **metadata},
@@ -531,10 +531,10 @@ class SynFlyerLamNI(Device, PositionerBase):
         def produce_data(device, metadata):
             buffer_time = 0.2
             elapsed_time = 0
-            bundle = BECMessage.BundleMessage()
+            bundle = messages.BundleMessage()
             for ii in range(num_pos):
                 bundle.append(
-                    BECMessage.DeviceMessage(
+                    messages.DeviceMessage(
                         signals={
                             "syn_flyer_lamni": {
                                 "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
@@ -551,10 +551,10 @@ class SynFlyerLamNI(Device, PositionerBase):
                     device.device_manager.producer.send(
                         MessageEndpoints.device_read(device.name), bundle.dumps()
                     )
-                    bundle = BECMessage.BundleMessage()
+                    bundle = messages.BundleMessage()
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
-                        BECMessage.DeviceStatusMessage(
+                        messages.DeviceStatusMessage(
                             device=device.name,
                             status=1,
                             metadata={"pointID": ii, **metadata},
@@ -565,7 +565,7 @@ class SynFlyerLamNI(Device, PositionerBase):
             )
             device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
-                BECMessage.DeviceStatusMessage(
+                messages.DeviceStatusMessage(
                     device=device.name,
                     status=0,
                     metadata={"pointID": num_pos, **metadata},

@@ -1,5 +1,5 @@
-from bec_lib.core.devicemanager import DeviceContainer
-from bec_lib.core.tests.utils import ProducerMock
+from bec_lib.devicemanager import DeviceContainer
+from bec_lib.tests.utils import ProducerMock
 
 from unittest import mock
 

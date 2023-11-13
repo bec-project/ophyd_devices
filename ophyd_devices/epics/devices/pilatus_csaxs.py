@@ -2,7 +2,6 @@ import enum
 import json
 import os
 import time
-from bec_lib.core.devicemanager import DeviceStatus
 import requests
 import numpy as np
 
@@ -12,10 +11,10 @@ from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import DetectorBase, Device, Staged
 from ophyd import ADComponent as ADCpt
 
-from bec_lib.core import BECMessage, MessageEndpoints
-from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core.bec_service import SERVICE_CONFIG
-from bec_lib.core import bec_logger
+from bec_lib import messages, MessageEndpoints, bec_logger
+from bec_lib.file_utils import FileWriterMixin
+from bec_lib.bec_service import SERVICE_CONFIG
+from bec_lib.devicemanager import DeviceStatus
 
 from ophyd_devices.utils import bec_utils as bec_utils
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
@@ -448,9 +447,9 @@ class PilatuscSAXS(DetectorBase):
         """
         pipe = self._producer.pipeline()
         if successful is None:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+            msg = messages.FileMessage(file_path=self.filepath, done=done)
         else:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+            msg = messages.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )
@@ -495,7 +494,7 @@ class PilatuscSAXS(DetectorBase):
 
     def _start_h5converter(self, done=False) -> None:
         """Start the h5converter"""
-        msg = BECMessage.FileMessage(
+        msg = messages.FileMessage(
             file_path=self.filepath_raw, done=done, metadata={"input_path": self.filepath}
         )
         self._producer.set_and_publish(

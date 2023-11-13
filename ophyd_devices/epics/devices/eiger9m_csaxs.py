@@ -1,7 +1,6 @@
 import enum
 import time
 import threading
-from bec_lib.core.devicemanager import DeviceStatus
 import numpy as np
 import os
 
@@ -13,10 +12,10 @@ from ophyd import ADComponent as ADCpt
 
 from std_daq_client import StdDaqClient
 
-from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
-from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core import bec_logger
-from bec_lib.core.bec_service import SERVICE_CONFIG
+from bec_lib import messages, MessageEndpoints, threadlocked, bec_logger
+from bec_lib.bec_service import SERVICE_CONFIG
+from bec_lib.devicemanager import DeviceStatus
+from bec_lib.file_utils import FileWriterMixin
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -399,9 +398,9 @@ class Eiger9McSAXS(DetectorBase):
         """
         pipe = self._producer.pipeline()
         if successful is None:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done)
+            msg = messages.FileMessage(file_path=self.filepath, done=done)
         else:
-            msg = BECMessage.FileMessage(file_path=self.filepath, done=done, successful=successful)
+            msg = messages.FileMessage(file_path=self.filepath, done=done, successful=successful)
         self._producer.set_and_publish(
             MessageEndpoints.public_file(self.scaninfo.scanID, self.name), msg.dumps(), pipe=pipe
         )

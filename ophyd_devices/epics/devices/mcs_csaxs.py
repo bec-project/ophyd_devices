@@ -12,11 +12,9 @@ from ophyd.scaler import ScalerCH
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
-from bec_lib.core import BECMessage, MessageEndpoints
-from bec_lib.core.file_utils import FileWriterMixin
+from bec_lib import messages, MessageEndpoints, bec_logger, threadlocked
+from bec_lib.file_utils import FileWriterMixin
 from collections import defaultdict
-
-from bec_lib.core import bec_logger, threadlocked
 
 logger = bec_logger.logger
 
@@ -277,7 +275,7 @@ class McsCsaxs(SIS38XX):
                 "num_lines": self.num_lines.get(),
             }
         )
-        msg = BECMessage.DeviceMessage(
+        msg = messages.DeviceMessage(
             signals=dict(self.mca_data),
             metadata=self.scaninfo.scan_msg.metadata,
         ).dumps()
@@ -333,7 +331,7 @@ class McsCsaxs(SIS38XX):
         self._prep_det()
         self._prep_readout()
 
-        # msg = BECMessage.FileMessage(file_path=self.filepath, done=False)
+        # msg = messages.FileMessage(file_path=self.filepath, done=False)
         # self._producer.set_and_publish(
         #     MessageEndpoints.public_file(self.scaninfo.scanID, "mcs_csaxs"),
         #     msg.dumps(),

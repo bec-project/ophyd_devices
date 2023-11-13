@@ -2,7 +2,7 @@ import os
 import time
 from typing import List
 
-from bec_lib.core import BECMessage, MessageEndpoints, bec_logger
+from bec_lib import messages, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, EpicsSignal, EpicsSignalRO, Signal
 
@@ -81,9 +81,9 @@ class Eiger1p5MDetector(Device):
         self.metadata = {}
         self.username = "e20588"  # TODO get from config
 
-    def _get_current_scan_msg(self) -> BECMessage.ScanStatusMessage:
+    def _get_current_scan_msg(self) -> messages.ScanStatusMessage:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        return BECMessage.ScanStatusMessage.loads(msg)
+        return messages.ScanStatusMessage.loads(msg)
 
     def _get_scan_dir(self, scan_bundle, scan_number, leading_zeros=None):
         if leading_zeros is None:
@@ -159,7 +159,7 @@ class Eiger1p5MDetector(Device):
             break
         self.detector_control.put("stop")
         signals = {"config": self.read(), "data": self.file_name}
-        msg = BECMessage.DeviceMessage(signals=signals, metadata=self.metadata)
+        msg = messages.DeviceMessage(signals=signals, metadata=self.metadata)
         self.device_manager.producer.set_and_publish(
             MessageEndpoints.device_read(self.name), msg.dumps()
         )

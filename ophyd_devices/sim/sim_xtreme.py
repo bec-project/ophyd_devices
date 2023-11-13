@@ -2,7 +2,7 @@ import threading
 import time
 
 import numpy as np
-from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib import messages, MessageEndpoints
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, Signal
 from ophyd.flyers import FlyerInterface
@@ -355,7 +355,7 @@ class SynXtremeOtfReplay(FlyerInterface, Device):
                 "timestamp": timestamp,
             },
         }
-        msg = BECMessage.DeviceMessage(
+        msg = messages.DeviceMessage(
             signals=signals, metadata=self._device_manager.devices.otf.metadata
         ).dumps()
         self._device_manager.producer.set_and_publish(

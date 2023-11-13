@@ -4,7 +4,7 @@ import time
 from typing import List
 
 import numpy as np
-from bec_lib.core import BECMessage, MessageEndpoints, bec_logger
+from bec_lib import messages, MessageEndpoints, bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
@@ -311,7 +311,7 @@ class RtLamniController(Controller):
         flyer_info = self._get_flyer_device_info()
         self.get_device_manager().producer.set(
             MessageEndpoints.device_info("rt_scan"),
-            BECMessage.DeviceInfoMessage(device="rt_scan", info=flyer_info).dumps(),
+            messages.DeviceInfoMessage(device="rt_scan", info=flyer_info).dumps(),
         )
 
     def _get_flyer_device_info(self) -> dict:
@@ -388,7 +388,7 @@ class RtLamniController(Controller):
         #    error
         self.get_device_manager().producer.set_and_publish(
             MessageEndpoints.device_status("rt_scan"),
-            BECMessage.DeviceStatusMessage(
+            messages.DeviceStatusMessage(
                 device="rt_scan", status=1, metadata=self.readout_metadata
             ).dumps(),
         )
@@ -423,7 +423,7 @@ class RtLamniController(Controller):
 
         self.get_device_manager().producer.set_and_publish(
             MessageEndpoints.device_status("rt_scan"),
-            BECMessage.DeviceStatusMessage(
+            messages.DeviceStatusMessage(
                 device="rt_scan", status=0, metadata=self.readout_metadata
             ).dumps(),
         )
@@ -435,7 +435,7 @@ class RtLamniController(Controller):
     def publish_device_data(self, signals, pointID):
         self.get_device_manager().producer.send(
             MessageEndpoints.device_read("rt_lamni"),
-            BECMessage.DeviceMessage(
+            messages.DeviceMessage(
                 signals=signals,
                 metadata={"pointID": pointID, **self.readout_metadata},
             ).dumps(),

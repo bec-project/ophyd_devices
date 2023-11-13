@@ -7,7 +7,7 @@ import ophyd
 from ophyd_devices.epics.devices.falcon_csaxs import FalconcSAXS, FalconTimeoutError
 
 from tests.utils import DMMock, MockPV
-from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib import messages, MessageEndpoints
 
 
 def patch_dual_pvs(device):
@@ -210,9 +210,9 @@ def test_publish_file_location(mock_det, scaninfo):
     mock_det.filepath = scaninfo["filepath"]
     mock_det._publish_file_location(done=scaninfo["done"], successful=scaninfo["successful"])
     if scaninfo["successful"] is None:
-        msg = BECMessage.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
+        msg = messages.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
     else:
-        msg = BECMessage.FileMessage(
+        msg = messages.FileMessage(
             file_path=scaninfo["filepath"], done=scaninfo["done"], successful=scaninfo["successful"]
         ).dumps()
     expected_calls = [

@@ -13,7 +13,7 @@ from ophyd.pseudopos import (
 from ophyd_devices.utils.socket import data_shape, data_type
 from ophyd_devices.utils import bec_utils as bec_utils
 
-from bec_lib.core import bec_logger
+from bec_lib import bec_logger
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 

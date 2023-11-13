@@ -5,7 +5,7 @@ from unittest import mock
 
 import ophyd
 
-from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib import messages, MessageEndpoints
 from ophyd_devices.epics.devices.pilatus_csaxs import PilatuscSAXS
 
 from tests.utils import DMMock, MockPV
@@ -172,9 +172,9 @@ def test_publish_file_location(mock_det, scaninfo):
     mock_det.filepath = scaninfo["filepath"]
     mock_det._publish_file_location(done=scaninfo["done"], successful=scaninfo["successful"])
     if scaninfo["successful"] is None:
-        msg = BECMessage.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
+        msg = messages.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
     else:
-        msg = BECMessage.FileMessage(
+        msg = messages.FileMessage(
             file_path=scaninfo["filepath"], done=scaninfo["done"], successful=scaninfo["successful"]
         ).dumps()
     expected_calls = [

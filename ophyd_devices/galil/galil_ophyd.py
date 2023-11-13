@@ -4,7 +4,7 @@ import time
 from typing import List
 
 import numpy as np
-from bec_lib.core import bec_logger
+from bec_lib import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait

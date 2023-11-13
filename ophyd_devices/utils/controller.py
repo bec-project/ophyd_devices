@@ -1,7 +1,7 @@
 import functools
 import threading
 
-from bec_lib.core import bec_logger
+from bec_lib import bec_logger
 from ophyd import Device
 from ophyd.ophydobj import OphydObject
 

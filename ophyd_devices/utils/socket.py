@@ -6,7 +6,7 @@ import time
 import typing
 
 import numpy as np
-from bec_lib.core import bec_logger
+from bec_lib import bec_logger
 from ophyd import Signal
 from ophyd.utils.errors import DisconnectedError
 
