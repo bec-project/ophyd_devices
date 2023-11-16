@@ -14,9 +14,6 @@ from bec_lib.core.bec_service import SERVICE_CONFIG
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
-# Specify here the minimum readout time for the detector
-MIN_READOUT = 3e-3
-
 
 class DetectorInitError(Exception):
     """Raised when initiation of the device class fails,
