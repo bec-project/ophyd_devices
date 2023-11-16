@@ -57,17 +57,17 @@ def test_init():
         ) as mock_service_config:
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
-                with mock.patch.object(
-                    Eiger9McSAXS, "_default_parameter"
-                ) as mock_default, mock.patch.object(
-                    Eiger9McSAXS, "_init_detector"
-                ) as mock_init_det, mock.patch.object(
-                    Eiger9McSAXS, "_init_filewriter"
-                ) as mock_init_fw:
+                with mock.patch(
+                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_default_parameter"
+                ) as mock_default, mock.patch(
+                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector"
+                ) as mock_init_det, mock.patch(
+                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector_backend"
+                ) as mock_init_backend:
                     Eiger9McSAXS(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
                     mock_default.assert_called_once()
                     mock_init_det.assert_called_once()
-                    mock_init_fw.assert_called_once()
+                    mock_init_backend.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -85,7 +85,7 @@ def test_init():
         ),
     ],
 )
-def test_init_detector(
+def test_initialize_detector(
     mock_det,
     trigger_source,
     detector_state,
@@ -106,9 +106,9 @@ def test_init_detector(
     if expected_exception:
         with pytest.raises(Exception):
             mock_det.timeout = 0.1
-            mock_det._init_detector()
+            mock_det.custom_prepare.initialize_detector()
     else:
-        mock_det._init_detector()  # call the method you want to test
+        mock_det.custom_prepare.initialize_detector()  # call the method you want to test
         assert mock_det.cam.acquire.get() == 0
         assert mock_det.cam.detector_state.get() == detector_state
         assert mock_det.cam.trigger_mode.get() == trigger_source
@@ -125,11 +125,11 @@ def test_init_detector(
 )
 def test_update_readout_time(mock_det, readout_time, expected_value):
     if readout_time is None:
-        mock_det._update_readout_time()
+        mock_det.custom_prepare.update_readout_time()
         assert mock_det.readout_time == expected_value
     else:
         mock_det.scaninfo.readout_time = readout_time
-        mock_det._update_readout_time()
+        mock_det.custom_prepare.update_readout_time()
         assert mock_det.readout_time == expected_value
 
 
@@ -166,8 +166,10 @@ def test_update_readout_time(mock_det, readout_time, expected_value):
         ),
     ],
 )
-def test_init_filewriter(mock_det, eacc, exp_url, daq_status, daq_cfg, expected_exception):
-    """Test _init_filewriter (std daq in this case)
+def test_initialize_detector_backend(
+    mock_det, eacc, exp_url, daq_status, daq_cfg, expected_exception
+):
+    """Test self.custom_prepare.initialize_detector_backend (std daq in this case)
 
     This includes testing the functions:
 
@@ -185,11 +187,10 @@ def test_init_filewriter(mock_det, eacc, exp_url, daq_status, daq_cfg, expected_
         if expected_exception:
             with pytest.raises(Exception):
                 mock_det.timeout = 0.1
-                mock_det._init_filewriter()
+                mock_det.custom_prepare.initialize_detector_backend()
         else:
-            mock_det._init_filewriter()
+            mock_det.custom_prepare.initialize_detector_backend()
 
-            assert mock_det.std_rest_server_url == exp_url
             instance.stop_writer.assert_called_once()
             instance.get_status.assert_called()
             instance.set_config.assert_called_once_with(daq_cfg)
@@ -254,8 +255,10 @@ def test_stage(
     stopped,
     expected_exception,
 ):
-    with mock.patch.object(mock_det, "std_client") as mock_std_daq, mock.patch.object(
-        Eiger9McSAXS, "_publish_file_location"
+    with mock.patch.object(
+        mock_det.custom_prepare, "std_client"
+    ) as mock_std_daq, mock.patch.object(
+        mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
         mock_std_daq.stop_writer.return_value = None
         mock_std_daq.get_status.return_value = daq_status
@@ -268,7 +271,7 @@ def test_stage(
         mock_det.cam.beam_energy.put(scaninfo["mokev"])
         mock_det._stopped = stopped
         mock_det.cam.detector_state._read_pv.mock_data = detector_state
-        with mock.patch.object(mock_det, "_prep_file_writer") as mock_prep_fw:
+        with mock.patch.object(mock_det.custom_prepare, "prepare_data_backend") as mock_prep_fw:
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
@@ -325,16 +328,16 @@ def test_stage(
         ),
     ],
 )
-def test_prep_file_writer(mock_det, scaninfo, daq_status, expected_exception):
-    with mock.patch.object(mock_det, "std_client") as mock_std_daq, mock.patch.object(
-        mock_det, "_filepath_exists"
+def test_prepare_detector_backend(mock_det, scaninfo, daq_status, expected_exception):
+    with mock.patch.object(
+        mock_det.custom_prepare, "std_client"
+    ) as mock_std_daq, mock.patch.object(
+        mock_det.custom_prepare, "filepath_exists"
     ) as mock_file_path_exists, mock.patch.object(
-        mock_det, "_stop_file_writer"
-    ) as mock_stop_file_writer, mock.patch.object(
+        mock_det.custom_prepare, "stop_detector_backend"
+    ) as mock_stop_backend, mock.patch.object(
         mock_det, "scaninfo"
-    ) as mock_scaninfo:
-        # mock_det = eiger_factory(name, prefix, sim_mode)
-        mock_det.std_client = mock_std_daq
+    ):
         mock_std_daq.start_writer_async.return_value = None
         mock_std_daq.get_status.return_value = daq_status
         mock_det.filewriter.compile_full_filename.return_value = scaninfo["filepath"]
@@ -344,14 +347,14 @@ def test_prep_file_writer(mock_det, scaninfo, daq_status, expected_exception):
         if expected_exception:
             with pytest.raises(Exception):
                 mock_det.timeout = 0.1
-                mock_det._prep_file_writer()
+                mock_det.custom_prepare.prepare_data_backend()
                 mock_file_path_exists.assert_called_once()
-                assert mock_stop_file_writer.call_count == 2
+                assert mock_stop_backend.call_count == 2
 
         else:
-            mock_det._prep_file_writer()
+            mock_det.custom_prepare.prepare_data_backend()
             mock_file_path_exists.assert_called_once()
-            mock_stop_file_writer.assert_called_once()
+            mock_stop_backend.assert_called_once()
 
         daq_writer_call = {
             "output_file": scaninfo["filepath"],
@@ -378,8 +381,8 @@ def test_unstage(
     stopped,
     expected_exception,
 ):
-    with mock.patch.object(mock_det, "_finished") as mock_finished, mock.patch.object(
-        mock_det, "_publish_file_location"
+    with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
+        mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
         mock_det._stopped = stopped
         if expected_exception:
@@ -392,11 +395,11 @@ def test_unstage(
             assert mock_det._stopped == False
 
 
-def test_stop_fw(mock_det):
-    with mock.patch.object(mock_det, "std_client") as mock_std_daq:
+def test_stop_detector_backend(mock_det):
+    with mock.patch.object(mock_det.custom_prepare, "std_client") as mock_std_daq:
         mock_std_daq.stop_writer.return_value = None
         mock_det.std_client = mock_std_daq
-        mock_det._stop_file_writer()
+        mock_det.custom_prepare.stop_detector_backend()
         mock_std_daq.stop_writer.assert_called_once()
 
 
@@ -411,7 +414,9 @@ def test_stop_fw(mock_det):
 def test_publish_file_location(mock_det, scaninfo):
     mock_det.scaninfo.scanID = scaninfo["scanID"]
     mock_det.filepath = scaninfo["filepath"]
-    mock_det._publish_file_location(done=scaninfo["done"], successful=scaninfo["successful"])
+    mock_det.custom_prepare.publish_file_location(
+        done=scaninfo["done"], successful=scaninfo["successful"]
+    )
     if scaninfo["successful"] is None:
         msg = messages.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
     else:
@@ -434,12 +439,14 @@ def test_publish_file_location(mock_det, scaninfo):
 
 
 def test_stop(mock_det):
-    with mock.patch.object(mock_det, "_stop_det") as mock_stop_det, mock.patch.object(
-        mock_det, "_stop_file_writer"
-    ) as mock_stop_file_writer:
+    with mock.patch.object(
+        mock_det.custom_prepare, "stop_detector"
+    ) as mock_stop_det, mock.patch.object(
+        mock_det.custom_prepare, "stop_detector_backend"
+    ) as mock_stop_detector_backend:
         mock_det.stop()
         mock_stop_det.assert_called_once()
-        mock_stop_file_writer.assert_called_once()
+        mock_stop_detector_backend.assert_called_once()
         assert mock_det._stopped == True
 
 
@@ -489,9 +496,13 @@ def test_stop(mock_det):
     ],
 )
 def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_exception):
-    with mock.patch.object(mock_det, "std_client") as mock_std_daq, mock.patch.object(
-        mock_det, "_stop_file_writer"
-    ) as mock_stop_file_friter, mock.patch.object(mock_det, "_stop_det") as mock_stop_det:
+    with mock.patch.object(
+        mock_det.custom_prepare, "std_client"
+    ) as mock_std_daq, mock.patch.object(
+        mock_det.custom_prepare, "stop_detector_backend"
+    ) as mock_stop_backend, mock.patch.object(
+        mock_det.custom_prepare, "stop_detector"
+    ) as mock_stop_det:
         mock_std_daq.get_status.return_value = daq_status
         mock_det.cam.acquire._read_pv.mock_state = cam_state
         mock_det.scaninfo.num_points = scaninfo["num_points"]
@@ -499,14 +510,14 @@ def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_e
         if expected_exception:
             with pytest.raises(Exception):
                 mock_det.timeout = 0.1
-                mock_det._finished()
+                mock_det.custom_prepare.finished()
                 assert mock_det._stopped == stopped
-                mock_stop_file_friter.assert_called()
+                mock_stop_backend.assert_called()
                 mock_stop_det.assert_called_once()
         else:
-            mock_det._finished()
+            mock_det.custom_prepare.finished()
             if stopped:
                 assert mock_det._stopped == stopped
 
-            mock_stop_file_friter.assert_called()
+            mock_stop_backend.assert_called()
             mock_stop_det.assert_called_once()

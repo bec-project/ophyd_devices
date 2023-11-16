@@ -22,7 +22,8 @@ from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
 
-EIGER9M_MIN_READOUT = 3e-3
+# Specify here the minimum readout time for the detector
+MIN_READOUT = 3e-3
 
 
 class EigerError(Exception):
@@ -42,6 +43,404 @@ class EigerInitError(EigerError):
     due to missing device manager or not started in sim_mode."""
 
     pass
+
+
+class CustomDetectorMixin:
+    def __init__(self, parent: Device = None, *args, **kwargs) -> None:
+        self.parent = parent
+
+    def initialize_default_parameter(self) -> None:
+        """
+        Init parameters for the detector
+
+        Raises (optional):
+            DetectorTimeoutError: if detector cannot be initialized
+        """
+        pass
+
+    def initialize_detector(self) -> None:
+        """
+        Init parameters for the detector
+
+        Raises (optional):
+            DetectorTimeoutError: if detector cannot be initialized
+        """
+        pass
+
+    def initialize_detector_backend(self) -> None:
+        """
+        Init parameters for teh detector backend (filewriter)
+
+        Raises (optional):
+            DetectorTimeoutError: if filewriter cannot be initialized
+        """
+        pass
+
+    def prepare_detector(self) -> None:
+        """
+        Prepare detector for the scan
+        """
+        pass
+
+    def prepare_data_backend(self) -> None:
+        """
+        Prepare the data backend for the scan
+        """
+        pass
+
+    def stop_detector(self) -> None:
+        """
+        Stop the detector
+        """
+        pass
+
+    def stop_detector_backend(self) -> None:
+        """
+        Stop the detector backend
+        """
+        pass
+
+    def on_trigger(self) -> None:
+        """
+        Specify actions to be executed upon receiving trigger signal
+        """
+        pass
+
+    def pre_scan(self) -> None:
+        """
+        Specify actions to be executed right before a scan
+
+        BEC calls pre_scan just before execution of the scan core.
+        It is convenient to execute time critical features of the detector,
+        e.g. arming it, but it is recommended to keep this function as short/fast as possible.
+        """
+        pass
+
+    def finished(self) -> None:
+        """
+        Specify actions to be executed during unstage
+
+        This may include checks if acquisition was succesful
+
+        Raises (optional):
+            DetectorTimeoutError: if detector cannot be stopped
+        """
+
+
+class Eiger9MSetup(CustomDetectorMixin):
+    """Eiger setup class
+
+    Parent class: CustomDetectorMixin
+
+    """
+
+    def __init__(self, parent: Device = None, *args, **kwargs) -> None:
+        super().__init__(parent=parent, *args, **kwargs)
+        self.std_rest_server_url = (
+            kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
+        )
+        self.std_client = None
+
+    def initialize_default_parameter(self) -> None:
+        """Set default parameters for Eiger9M detector"""
+        self.update_readout_time()
+
+    def update_readout_time(self) -> None:
+        """Set readout time for Eiger9M detector"""
+        readout_time = (
+            self.parent.scaninfo.readout_time
+            if hasattr(self.parent.scaninfo, "readout_time")
+            else self.parent.readout_time_min
+        )
+        self.parent.readout_time = max(readout_time, self.parent.readout_time_min)
+
+    def initialize_detector(self) -> None:
+        """Initialize detector"""
+        # Stops the detector
+        self.stop_detector()
+        # Sets the trigger source to GATING
+        self.parent.set_trigger(TriggerSource.GATING)
+
+    def initialize_detector_backend(self) -> None:
+        """Initialize detector backend"""
+
+        # Std client
+        self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
+
+        # Stop writer
+        self.std_client.stop_writer()
+
+        # TODO put back change of e-account! and check with Leo which status to wait for
+        eacc = self.parent.scaninfo.username
+        self.update_std_cfg("writer_user_id", int(eacc.strip(" e")))
+
+        signal_conditions = [
+            (
+                lambda: self.std_client.get_status()["state"],
+                "READY",
+            ),
+        ]
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout,
+            all_signals=True,
+        ):
+            raise EigerTimeoutError(
+                f"Std client not in READY state, returns: {self.std_client.get_status()}"
+            )
+
+    def update_std_cfg(self, cfg_key: str, value: Any) -> None:
+        """Update std_daq config with new e-account for the current beamtime"""
+        cfg = self.std_client.get_config()
+        old_value = cfg.get(cfg_key)
+        if old_value is None:
+            raise EigerError(
+                f"Tried to change entry for key {cfg_key} in std_config that does not exist"
+            )
+        if not isinstance(value, type(old_value)):
+            raise EigerError(
+                f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
+            )
+        cfg.update({cfg_key: value})
+        logger.info(cfg)
+        logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
+        self.std_client.set_config(cfg)
+
+    def stop_detector(self) -> None:
+        """Stop the detector and wait for the proper status message"""
+        # Stop detector
+        self.parent.cam.acquire.put(0)
+        signal_conditions = [
+            (
+                lambda: self.parent.cam.detector_state.read()[self.parent.cam.detector_state.name][
+                    "value"
+                ],
+                DetectorState.IDLE,
+            ),
+            (lambda: self.parent._stopped, True),
+        ]
+
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout - self.parent.timeout // 2,
+            all_signals=False,
+        ):
+            # Retry stop detector
+            self.parent.cam.acquire.put(0)
+            if not self.wait_for_signals(
+                signal_conditions=signal_conditions,
+                timeout=self.parent.timeout - self.parent.timeout // 2,
+                all_signals=False,
+            ):
+                raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
+
+    def stop_detector_backend(self) -> None:
+        """Close file writer"""
+        self.std_client.stop_writer()
+
+    def prepare_detector(self) -> None:
+        """Prepare detector for scan.
+        Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
+        """
+        self.set_detector_threshold()
+        self.set_acquisition_params()
+        self.parent.set_trigger(TriggerSource.GATING)
+
+    def set_detector_threshold(self) -> None:
+        """
+        Set correct detector threshold to 1/2 of current X-ray energy, allow 5% tolerance
+
+        Threshold might be in ev or keV
+        """
+        factor = 1
+
+        # Check if energies are eV or keV, assume keV as the default
+        unit = getattr(self.parent.cam.threshold_energy, "units", None)
+        if unit != None and unit == "eV":
+            factor = 1000
+
+        # set energy on detector
+        setpoint = int(self.parent.mokev * factor)
+        energy = self.parent.cam.beam_energy.read()[self.parent.cam.beam_energy.name]["value"]
+        if setpoint != energy:
+            self.parent.cam.beam_energy.set(setpoint)
+
+        # set threshold on detector
+        threshold = self.parent.cam.threshold_energy.read()[self.parent.cam.threshold_energy.name][
+            "value"
+        ]
+        if not np.isclose(setpoint / 2, threshold, rtol=0.05):
+            self.parent.cam.threshold_energy.set(setpoint / 2)
+
+    def set_acquisition_params(self) -> None:
+        """Set acquisition parameters for the detector"""
+        self.parent.cam.num_images.put(
+            int(self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger)
+        )
+        self.parent.cam.num_frames.put(1)
+        self.update_readout_time()
+
+    def prepare_data_backend(self) -> None:
+        """Prepare the data backend for the scan"""
+        self.parent.filepath = self.parent.filewriter.compile_full_filename(
+            self.parent.scaninfo.scan_number, f"{self.parent.name}.h5", 1000, 5, True
+        )
+        self.filepath_exists(self.parent.filepath)
+        self.stop_detector_backend()
+        try:
+            self.std_client.start_writer_async(
+                {
+                    "output_file": self.parent.filepath,
+                    "n_images": int(
+                        self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
+                    ),
+                }
+            )
+        except Exception as exc:
+            time.sleep(5)
+            if self.std_client.get_status()["state"] == "READY":
+                raise EigerTimeoutError(f"Timeout of start_writer_async with {exc}")
+
+        # Check status of std_daq
+        signal_conditions = [
+            (lambda: self.std_client.get_status()["acquisition"]["state"], "WAITING_IMAGES")
+        ]
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout,
+            check_stopped=False,
+            all_signals=True,
+        ):
+            raise EigerTimeoutError(
+                f"Timeout of 5s reached for std_daq start_writer_async with std_daq client status {self.std_client.get_status()}"
+            )
+
+    def filepath_exists(self, filepath: str) -> None:
+        """Check if filepath exists"""
+        signal_conditions = [(lambda: os.path.exists(os.path.dirname(self.parent.filepath)), True)]
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout,
+            check_stopped=False,
+            all_signals=True,
+        ):
+            raise EigerError(f"Timeout of 3s reached for filepath {self.parent.filepath}")
+
+    def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """
+        Publish the filepath to REDIS.
+
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+        """
+        pipe = self.parent._producer.pipeline()
+        if successful is None:
+            msg = BECMessage.FileMessage(file_path=self.parent.filepath, done=done)
+        else:
+            msg = BECMessage.FileMessage(
+                file_path=self.parent.filepath, done=done, successful=successful
+            )
+        self.parent._producer.set_and_publish(
+            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
+            msg.dumps(),
+            pipe=pipe,
+        )
+        self.parent._producer.set_and_publish(
+            MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
+        )
+        pipe.execute()
+
+    def arm_acquisition(self) -> None:
+        """Arm Eiger detector for acquisition"""
+        self.parent.cam.acquire.put(1)
+        signal_conditions = [
+            (
+                lambda: self.parent.cam.detector_state.read()[self.parent.cam.detector_state.name][
+                    "value"
+                ],
+                DetectorState.RUNNING,
+            )
+        ]
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout,
+            check_stopped=True,
+            all_signals=False,
+        ):
+            raise EigerTimeoutError(
+                f"Failed to arm the acquisition. Detector state {signal_conditions[0][0]}"
+            )
+
+    def check_scanID(self) -> None:
+        old_scanID = self.parent.scaninfo.scanID
+        self.parent.scaninfo.load_scan_metadata()
+        if self.parent.scaninfo.scanID != old_scanID:
+            self.parent._stopped = True
+
+    def finished(self):
+        """Check if acquisition is finished."""
+        signal_conditions = [
+            (
+                lambda: self.parent.cam.acquire.read()[self.parent.cam.acquire.name]["value"],
+                DetectorState.IDLE,
+            ),
+            (lambda: self.std_client.get_status()["acquisition"]["state"], "FINISHED"),
+            (
+                lambda: self.std_client.get_status()["acquisition"]["stats"]["n_write_completed"],
+                int(self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger),
+            ),
+        ]
+        if not self.wait_for_signals(
+            signal_conditions=signal_conditions,
+            timeout=self.parent.timeout,
+            check_stopped=True,
+            all_signals=True,
+        ):
+            self.stop_detector()
+            self.stop_detector_backend()
+            raise EigerTimeoutError(
+                f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for the file writer"
+            )
+        self.stop_detector()
+        self.stop_detector_backend()
+
+    def wait_for_signals(
+        self,
+        signal_conditions: list,
+        timeout: float,
+        check_stopped: bool = False,
+        interval: float = 0.05,
+        all_signals: bool = False,
+    ) -> bool:
+        """Wait for signals to reach a certain condition
+
+        Args:
+            signal_conditions (tuple): tuple of (get_current_state, condition) functions
+            timeout (float): timeout in seconds
+            interval (float): interval in seconds
+            all_signals (bool): True if all signals should be True, False if any signal should be True
+        Returns:
+            bool: True if all signals are in the desired state, False if timeout is reached
+        """
+        timer = 0
+        while True:
+            checks = [
+                get_current_state() == condition
+                for get_current_state, condition in signal_conditions
+            ]
+            if (all_signals and all(checks)) or (not all_signals and any(checks)):
+                return True
+            if check_stopped == True and self.parent._stopped == True:
+                return False
+            if timer > timeout:
+                return False
+            time.sleep(interval)
+            timer += interval
 
 
 class SLSDetectorCam(Device):
@@ -86,7 +485,7 @@ class DetectorState(enum.IntEnum):
     ABORTED = 10
 
 
-class Eiger9McSAXS(DetectorBase):
+class Eiger9McSAXS(Device):
     """Eiger 9M detector for CSAXS
 
     Parent class: DetectorBase
@@ -118,18 +517,6 @@ class Eiger9McSAXS(DetectorBase):
         sim_mode=False,
         **kwargs,
     ):
-        """Initialize the Eiger9M detector
-        Args:
-        #TODO add here the parameters for kind, read_attrs, configuration_attrs, parent
-            prefix (str): PV prefix (X12SA-ES-EIGER9M:)
-            name (str): 'eiger'
-            kind (str):
-            read_attrs (list):
-            configuration_attrs (list):
-            parent (object):
-            device_manager (object): BEC device manager
-            sim_mode (bool): simulation mode to start the detector without BEC, e.g. from ipython shell
-        """
         super().__init__(
             prefix=prefix,
             name=name,
@@ -143,6 +530,7 @@ class Eiger9McSAXS(DetectorBase):
             raise EigerInitError(
                 f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
             )
+        # sim_mode True allows the class to be started without BEC running
         self.sim_mode = sim_mode
         # TODO check if threadlock is needed for unstage
         self._lock = threading.RLock()
@@ -152,12 +540,10 @@ class Eiger9McSAXS(DetectorBase):
         self.std_client = None
         self.scaninfo = None
         self.filewriter = None
-        self.readout_time_min = EIGER9M_MIN_READOUT
-        self.std_rest_server_url = (
-            kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
-        )
-        self.wait_for_connection(all_signals=True)
+        self.readout_time_min = MIN_READOUT
         self.timeout = 5
+        self.wait_for_connection(all_signals=True)
+        self.custom_prepare = Eiger9MSetup(parent=self, **kwargs)
         if not sim_mode:
             self._update_service_config()
             self.device_manager = device_manager
@@ -185,81 +571,12 @@ class Eiger9McSAXS(DetectorBase):
         """Update service config from BEC service config"""
         self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
-    # TODO function for abstract class?
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters"""
-        self._default_parameter()
-        self._init_detector()
-        self._init_filewriter()
+        self.custom_prepare.initialize_default_parameter()
+        self.custom_prepare.initialize_detector()
+        self.custom_prepare.initialize_detector_backend()
 
-    def _default_parameter(self) -> None:
-        """Set default parameters for Pilatus300k detector
-        readout (float): readout time in seconds
-        """
-        self._update_readout_time()
-
-    def _update_readout_time(self) -> None:
-        readout_time = (
-            self.scaninfo.readout_time
-            if hasattr(self.scaninfo, "readout_time")
-            else self.readout_time_min
-        )
-        self.readout_time = max(readout_time, self.readout_time_min)
-
-    # TODO function for abstract class?
-    def _init_detector(self) -> None:
-        """Init parameters for Eiger 9m.
-        Depends on hardware configuration and delay generators.
-        At this point it is set up for gating mode (09/2023).
-        """
-        self._stop_det()
-        self._set_trigger(TriggerSource.GATING)
-
-    # TODO function for abstract class?
-    def _init_filewriter(self) -> None:
-        """Init parameters for filewriter.
-        For the Eiger9M, the data backend is std_daq client.
-        Setting up these parameters depends on the backend, and would need to change upon changes in the backend.
-        """
-        self.std_client = StdDaqClient(url_base=self.std_rest_server_url)
-        self.std_client.stop_writer()
-        timer = 0
-        # TODO put back change of e-account! and check with Leo which status to wait for
-        eacc = self.scaninfo.username
-        self._update_std_cfg("writer_user_id", int(eacc.strip(" e")))
-        time.sleep(5)
-        while not self.std_client.get_status()["state"] == "READY":
-            time.sleep(0.1)
-            timer = timer + 0.1
-            logger.info("Waiting for std_daq init.")
-            if timer > self.timeout:
-                if not self.std_client.get_status()["state"] == "READY":
-                    raise EigerError(
-                        f"Std client not in READY state, returns: {self.std_client.get_status()}"
-                    )
-                else:
-                    return
-
-    def _update_std_cfg(self, cfg_key: str, value: Any) -> None:
-        """Update std_daq config with new e-account for the current beamtime"""
-        # TODO Do we need all the loggers here, should this be properly refactored with a DEBUG mode?
-        cfg = self.std_client.get_config()
-        old_value = cfg.get(cfg_key)
-        logger.info(old_value)
-        if old_value is None:
-            raise EigerError(
-                f"Tried to change entry for key {cfg_key} in std_config that does not exist"
-            )
-        if not isinstance(value, type(old_value)):
-            raise EigerError(
-                f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
-            )
-        cfg.update({cfg_key: value})
-        logger.info(cfg)
-        logger.info(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
-        self.std_client.set_config(cfg)
-
-    # TODO function for abstract class?
     def stage(self) -> List[object]:
         """Stage command, called from BEC in preparation of a scan.
         This will iniate the preparation of detector and file writer.
@@ -281,100 +598,17 @@ class Eiger9McSAXS(DetectorBase):
             self.device_manager.devices.mokev.name
         ]["value"]
         # TODO refactor logger.info to DEBUG mode?
-        self._prep_file_writer()
-        self._prep_det()
+        self.custom_prepare.prepare_data_backend()
+        self.custom_prepare.prepare_detector()
         state = False
-        self._publish_file_location(done=state)
-        self._arm_acquisition()
+        self.custom_prepare.publish_file_location(done=state)
+        self.custom_prepare.arm_acquisition()
         # TODO Fix should take place in EPICS or directly on the hardware!
         # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
         time.sleep(0.05)
         return super().stage()
 
-    def _filepath_exists(self, filepath: str) -> None:
-        timer = 0
-        while not os.path.exists(os.path.dirname(self.filepath)):
-            timer = time + 0.1
-            time.sleep(0.1)
-            if timer > self.timeout:
-                raise EigerError(f"Timeout of 3s reached for filepath {self.filepath}")
-
-    # TODO function for abstract class?
-    def _prep_file_writer(self) -> None:
-        """Prepare file writer for scan
-
-        self.filewriter is a FileWriterMixin object that hosts logic for compiling the filepath
-        """
-        timer = 0
-        self.filepath = self.filewriter.compile_full_filename(
-            self.scaninfo.scan_number, f"{self.name}.h5", 1000, 5, True
-        )
-        self._filepath_exists(self.filepath)
-        self._stop_file_writer()
-        logger.info(f" std_daq output filepath {self.filepath}")
-        # TODO Discuss with Leo if this is needed, or how to start the async writing best
-        try:
-            self.std_client.start_writer_async(
-                {
-                    "output_file": self.filepath,
-                    "n_images": int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger),
-                }
-            )
-        except Exception as exc:
-            time.sleep(5)
-            if self.std_client.get_status()["state"] == "READY":
-                raise EigerError(f"Timeout of start_writer_async with {exc}")
-
-        while True:
-            timer = timer + 0.01
-            det_ctrl = self.std_client.get_status()["acquisition"]["state"]
-            if det_ctrl == "WAITING_IMAGES":
-                break
-            time.sleep(0.01)
-            if timer > self.timeout:
-                self._close_file_writer()
-                raise EigerError(
-                    f"Timeout of 5s reached for std_daq start_writer_async with std_daq client status {det_ctrl}"
-                )
-
-    # TODO function for abstract class?
-    def _stop_file_writer(self) -> None:
-        """Close file writer"""
-        self.std_client.stop_writer()
-        # TODO can I wait for a status message here maybe? To ensure writer stopped and returned
-
-    # TODO function for abstract class?
-    def _prep_det(self) -> None:
-        """Prepare detector for scan.
-        Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
-        """
-        self._set_det_threshold()
-        self._set_acquisition_params()
-        self._set_trigger(TriggerSource.GATING)
-
-    def _set_det_threshold(self) -> None:
-        """Set correct detector threshold to 1/2 of current X-ray energy, allow 5% tolerance"""
-        # threshold energy might be in eV or keV
-        factor = 1
-        unit = getattr(self.cam.threshold_energy, "units", None)
-        if unit != None and unit == "eV":
-            factor = 1000
-        setpoint = int(self.mokev * factor)
-        energy = self.cam.beam_energy.read()[self.cam.beam_energy.name]["value"]
-        if setpoint != energy:
-            self.cam.beam_energy.set(setpoint)
-        threshold = self.cam.threshold_energy.read()[self.cam.threshold_energy.name]["value"]
-        if not np.isclose(setpoint / 2, threshold, rtol=0.05):
-            self.cam.threshold_energy.set(setpoint / 2)
-
-    def _set_acquisition_params(self) -> None:
-        """Set acquisition parameters for the detector"""
-        self.cam.num_images.put(int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger))
-        self.cam.num_frames.put(1)
-        self._update_readout_time()
-
-    # TODO function for abstract class? + call it for each scan??
-    def _set_trigger(self, trigger_source: TriggerSource) -> None:
+    def set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector.
         Check the TriggerSource enum for possible values
 
@@ -429,17 +663,9 @@ class Eiger9McSAXS(DetectorBase):
     # TODO function for abstract class?
     def trigger(self) -> DeviceStatus:
         """Trigger the detector, called from BEC."""
-        self._on_trigger()
+        self.custom_prepare.on_trigger()
         return super().trigger()
 
-    # TODO function for abstract class?
-    def _on_trigger(self):
-        """Specify action that should be taken upon trigger signal."""
-        pass
-
-    # TODO function for abstract class?
-    # TODO threadlocked was attached, in principle unstage needs to be fast and should possibly called multiple times
-    @threadlocked
     def unstage(self) -> List[object]:
         """Unstage the device.
 
@@ -450,86 +676,22 @@ class Eiger9McSAXS(DetectorBase):
             - _finished
             - _publish_file_location
         """
-        # TODO solution for multiple calls of the function to avoid calling the finished loop.
-        # Loop to avoid calling the finished loop multiple times
-        old_scanID = self.scaninfo.scanID
-        self.scaninfo.load_scan_metadata()
-        if self.scaninfo.scanID != old_scanID:
-            self._stopped = True
+
+        self.custom_prepare.check_scanID()
+
         if self._stopped == True:
             return super().unstage()
-        self._finished()
+        # include method that
+        self.custom_prepare.finished()
         state = True
-        self._publish_file_location(done=state, successful=state)
+        self.custom_prepare.publish_file_location(done=state, successful=state)
         self._stopped = False
         return super().unstage()
 
-    # TODO function for abstract class?
-    # TODO necessary, how can we make this cleaner.
-    @threadlocked
-    def _finished(self):
-        """Check if acquisition is finished.
-
-        This function is called from unstage and stop
-        and will check detector and file backend status.
-        Timeouts after given time
-
-        Functions called:
-            - _stop_det
-            - _stop_file_writer
-        """
-        sleep_time = 0.1
-        timer = 0
-        # Check status with timeout, break out if _stopped=True
-        while True:
-            det_ctrl = self.cam.acquire.read()[self.cam.acquire.name]["value"]
-            status = self.std_client.get_status()
-            std_ctrl = status["acquisition"]["state"]
-            received_frames = status["acquisition"]["stats"]["n_write_completed"]
-            total_frames = int(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
-            if det_ctrl == 0 and std_ctrl == "FINISHED" and total_frames == received_frames:
-                break
-            if self._stopped == True:
-                break
-            time.sleep(sleep_time)
-            timer += sleep_time
-            if timer > self.timeout:
-                self._stopped == True
-                self._stop_det()
-                self._stop_file_writer()
-                raise EigerTimeoutError(
-                    f"Reached timeout with detector state {det_ctrl}, std_daq state {std_ctrl} and received frames of {received_frames} for the file writer"
-                )
-        self._stop_det()
-        self._stop_file_writer()
-
-    def _stop_det(self) -> None:
-        """Stop the detector and wait for the proper status message"""
-        elapsed_time = 0
-        sleep_time = 0.01
-        # Stop acquisition
-        self.cam.acquire.put(0)
-        retry = False
-        # Check status
-        while True:
-            det_ctrl = self.cam.detector_state.read()[self.cam.detector_state.name]["value"]
-            if det_ctrl == DetectorState.IDLE:
-                break
-            if self._stopped == True:
-                break
-            time.sleep(sleep_time)
-            elapsed_time += sleep_time
-            if elapsed_time > self.timeout // 2 and not retry:
-                retry = True
-                # Retry to stop acquisition
-                self.cam.acquire.put(0)
-            if elapsed_time > self.timeout:
-                raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
-
     def stop(self, *, success=False) -> None:
         """Stop the scan, with camera and file writer"""
-        self._stop_det()
-        self._stop_file_writer()
+        self.custom_prepare.stop_detector()
+        self.custom_prepare.stop_detector_backend()
         super().stop(success=success)
         self._stopped = True
 
