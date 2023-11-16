@@ -16,5 +16,6 @@ if __name__ == "__main__":
             "pytest",
         ],
         extras_require={"dev": ["pytest", "pytest-random-order", "black", "coverage"]},
+        package_data={"ophyd_devices.smaract": ["smaract_sensors.json"]},
         version=__version__,
     )
