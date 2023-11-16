@@ -7,8 +7,9 @@ import os
 from typing import Any, List
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import DetectorBase, Device
+from ophyd import Device
 from ophyd import ADComponent as ADCpt
+from ophyd.device import Staged
 
 from std_daq_client import StdDaqClient
 
@@ -140,6 +141,7 @@ class Eiger9MSetup(CustomDetectorMixin):
             kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
         )
         self.std_client = None
+        self._lock = self.parent._lock
 
     def initialize_default_parameter(self) -> None:
         """Set default parameters for Eiger9M detector"""
@@ -252,6 +254,9 @@ class Eiger9MSetup(CustomDetectorMixin):
 
         Threshold might be in ev or keV
         """
+        mokev = self.parent.device_manager.devices.mokev.obj.read()[
+            self.parent.device_manager.devices.mokev.name
+        ]["value"]
         factor = 1
 
         # Check if energies are eV or keV, assume keV as the default
@@ -260,7 +265,7 @@ class Eiger9MSetup(CustomDetectorMixin):
             factor = 1000
 
         # set energy on detector
-        setpoint = int(self.parent.mokev * factor)
+        setpoint = int(mokev * factor)
         energy = self.parent.cam.beam_energy.read()[self.parent.cam.beam_energy.name]["value"]
         if setpoint != energy:
             self.parent.cam.beam_energy.set(setpoint)
@@ -382,6 +387,7 @@ class Eiger9MSetup(CustomDetectorMixin):
         if self.parent.scaninfo.scanID != old_scanID:
             self.parent._stopped = True
 
+    @threadlocked
     def finished(self):
         """Check if acquisition is finished."""
         signal_conditions = [
@@ -532,7 +538,6 @@ class Eiger9McSAXS(Device):
             )
         # sim_mode True allows the class to be started without BEC running
         self.sim_mode = sim_mode
-        # TODO check if threadlock is needed for unstage
         self._lock = threading.RLock()
         self._stopped = False
         self.name = name
@@ -578,33 +583,32 @@ class Eiger9McSAXS(Device):
         self.custom_prepare.initialize_detector_backend()
 
     def stage(self) -> List[object]:
-        """Stage command, called from BEC in preparation of a scan.
-        This will iniate the preparation of detector and file writer.
-        The following functuions are called (at least):
-            - _prep_file_writer
-            - _prep_det
-            - _publish_file_location
-        The device returns a List[object] from the Ophyd Device class.
-
-        #TODO make sure this is fullfiled
-
-        Staging not idempotent and should raise
-        :obj:`RedundantStaging` if staged twice without an
-        intermediate :meth:`~BlueskyInterface.unstage`.
         """
+         Stage device in preparation for a scan
+
+        Internal Calls:
+        - _prep_backend           : prepare detector filewriter for measurement
+        - _prep_detector              : prepare detector for measurement
+
+        Returns:
+            List(object): list of objects that were staged
+
+        """
+        # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
+        if self._staged != Staged.no:
+            return super().stage()
+
+        # Reset flag for detector stopped
         self._stopped = False
+        # Load metadata of the scan
         self.scaninfo.load_scan_metadata()
-        self.mokev = self.device_manager.devices.mokev.obj.read()[
-            self.device_manager.devices.mokev.name
-        ]["value"]
-        # TODO refactor logger.info to DEBUG mode?
+        # Prepare detector and file writer
         self.custom_prepare.prepare_data_backend()
         self.custom_prepare.prepare_detector()
         state = False
         self.custom_prepare.publish_file_location(done=state)
         self.custom_prepare.arm_acquisition()
-        # TODO Fix should take place in EPICS or directly on the hardware!
-        # We observed that the detector missed triggers in the beginning in case BEC was to fast. Adding 50ms delay solved this
+        # At the moment needed bc signal is not reliable, BEC too fast
         time.sleep(0.05)
         return super().stage()
 
@@ -667,21 +671,24 @@ class Eiger9McSAXS(Device):
         return super().trigger()
 
     def unstage(self) -> List[object]:
-        """Unstage the device.
-
-        This method must be idempotent, multiple calls (without a new
-        call to 'stage') have no effect.
-
-        Functions called:
-            - _finished
-            - _publish_file_location
         """
+        Unstage device in preparation for a scan
 
+        Returns directly if self._stopped,
+        otherwise checks with self._finished
+        if data acquisition on device finished (an was successful)
+
+        Internal Calls:
+        - custom_prepare.check_scanID          : check if scanID changed or detector stopped
+        - custom_prepare.finished              : check if device finished acquisition (succesfully)
+        - custom_prepare.publish_file_location : publish file location to bec
+
+        Returns:
+            List(object): list of objects that were unstaged
+        """
         self.custom_prepare.check_scanID()
-
         if self._stopped == True:
             return super().unstage()
-        # include method that
         self.custom_prepare.finished()
         state = True
         self.custom_prepare.publish_file_location(done=state, successful=state)
@@ -689,7 +696,13 @@ class Eiger9McSAXS(Device):
         return super().unstage()
 
     def stop(self, *, success=False) -> None:
-        """Stop the scan, with camera and file writer"""
+        """
+        Stop the scan, with camera and file writer
+
+        Internal Calls:
+        - custom_prepare.stop_detector     : stop detector
+        - custom_prepare.stop_backend : stop detector filewriter
+        """
         self.custom_prepare.stop_detector()
         self.custom_prepare.stop_detector_backend()
         super().stop(success=success)
