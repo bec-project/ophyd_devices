@@ -28,9 +28,9 @@ def mock_det():
     dm = DMMock()
     with mock.patch.object(dm, "producer"):
         with mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.FileWriterMixin"
+            "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
         ) as filemixin, mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9McSAXS._update_service_config"
+            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
         ) as mock_service_config:
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
@@ -51,9 +51,9 @@ def test_init():
     dm = DMMock()
     with mock.patch.object(dm, "producer"):
         with mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.FileWriterMixin"
+            "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
         ) as filemixin, mock.patch(
-            "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9McSAXS._update_service_config"
+            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
         ) as mock_service_config:
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV

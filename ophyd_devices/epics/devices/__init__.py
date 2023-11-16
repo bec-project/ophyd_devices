@@ -25,7 +25,10 @@ from ophyd.quadem import QuadEM
 # cSAXS
 from .epics_motor_ex import EpicsMotorEx
 from .mcs_csaxs import McsCsaxs
+from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
 from .eiger9m_csaxs import Eiger9McSAXS
 from .pilatus_csaxs import PilatuscSAXS
 from .falcon_csaxs import FalconcSAXS
 from .DelayGeneratorDG645 import DelayGeneratorDG645
+
+# from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
