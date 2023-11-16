@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.11.0 (2023-11-16)
+
+### Feature
+
+* Add pylint check to ci pipeline ([`a45ffe7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a45ffe7740714a57aad54fbc56164971144a6b7d))
+
 ## v0.10.2 (2023-11-12)
 
 ### Fix
