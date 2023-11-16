@@ -1,6 +1,6 @@
 import time
 import threading
-from bec_lib.core.devicemanager import DeviceStatus
+from bec_lib.devicemanager import DeviceStatus
 import os
 
 from typing import List

@@ -11,8 +11,10 @@ from ophyd import ADComponent as ADCpt
 
 from std_daq_client import StdDaqClient
 
-from bec_lib.core import BECMessage, MessageEndpoints, threadlocked
-from bec_lib.core import bec_logger
+from bec_lib import threadlocked
+from bec_lib.logger import bec_logger
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 
 from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
 
@@ -128,13 +130,13 @@ class Eiger9MSetup(CustomDetectorMixin):
                     "value"
                 ],
                 DetectorState.IDLE,
-            ),
-            (lambda: self.parent._stopped, True),
+            )
         ]
 
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
             timeout=self.parent.timeout - self.parent.timeout // 2,
+            check_stopped=True,
             all_signals=False,
         ):
             # Retry stop detector and wait for remaining time
@@ -142,9 +144,12 @@ class Eiger9MSetup(CustomDetectorMixin):
             if not self.wait_for_signals(
                 signal_conditions=signal_conditions,
                 timeout=self.parent.timeout - self.parent.timeout // 2,
+                check_stopped=True,
                 all_signals=False,
             ):
-                raise EigerTimeoutError("Failed to stop the acquisition. IOC did not update.")
+                raise EigerTimeoutError(
+                    f"Failed to stop detector, detector state {signal_conditions[0][0]}"
+                )
 
     def stop_detector_backend(self) -> None:
         """Close file writer"""
@@ -247,35 +252,6 @@ class Eiger9MSetup(CustomDetectorMixin):
         ):
             raise EigerError(f"Timeout of 3s reached for filepath {self.parent.filepath}")
 
-    def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
-        """
-        Publish the filepath to REDIS.
-
-        We publish two events here:
-        - file_event: event for the filewriter
-        - public_file: event for any secondary service (e.g. radial integ code)
-
-        Args:
-            done (bool): True if scan is finished
-            successful (bool): True if scan was successful
-        """
-        pipe = self.parent._producer.pipeline()
-        if successful is None:
-            msg = BECMessage.FileMessage(file_path=self.parent.filepath, done=done)
-        else:
-            msg = BECMessage.FileMessage(
-                file_path=self.parent.filepath, done=done, successful=successful
-            )
-        self.parent._producer.set_and_publish(
-            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
-            msg.dumps(),
-            pipe=pipe,
-        )
-        self.parent._producer.set_and_publish(
-            MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
-        )
-        pipe.execute()
-
     def arm_acquisition(self) -> None:
         """Arm Eiger detector for acquisition"""
         self.parent.cam.acquire.put(1)
@@ -293,6 +269,7 @@ class Eiger9MSetup(CustomDetectorMixin):
             check_stopped=True,
             all_signals=False,
         ):
+            self.parent.stop()
             raise EigerTimeoutError(
                 f"Failed to arm the acquisition. Detector state {signal_conditions[0][0]}"
             )
@@ -302,6 +279,35 @@ class Eiger9MSetup(CustomDetectorMixin):
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
             self.parent._stopped = True
+
+    def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """
+        Publish the filepath to REDIS.
+
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+        """
+        pipe = self.parent._producer.pipeline()
+        if successful is None:
+            msg = messages.FileMessage(file_path=self.parent.filepath, done=done)
+        else:
+            msg = messages.FileMessage(
+                file_path=self.parent.filepath, done=done, successful=successful
+            )
+        self.parent._producer.set_and_publish(
+            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
+            msg.dumps(),
+            pipe=pipe,
+        )
+        self.parent._producer.set_and_publish(
+            MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
+        )
+        pipe.execute()
 
     @threadlocked
     def finished(self):
@@ -375,6 +381,19 @@ class DetectorState(enum.IntEnum):
 
 
 class Eiger9McSAXS(PSIDetectorBase):
+    """
+    Eiger 9M detector class for cSAXS
+
+    Parent class: PSIDetectorBase
+
+    class attributes:
+        custom_prepare_cls (Eiger9MSetup): Custom detector setup class for cSAXS,
+                                           inherits from CustomDetectorMixin
+        cam (SLSDetectorCam): Detector camera
+        MIN_READOUT (float): Minimum readout time for the detector
+
+    """
+
     custom_prepare_cls = Eiger9MSetup
     cam = ADCpt(SLSDetectorCam, "cam1:")
     MIN_READOUT = 3e-3

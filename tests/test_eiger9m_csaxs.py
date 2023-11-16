@@ -114,6 +114,15 @@ def test_initialize_detector(
         assert mock_det.cam.trigger_mode.get() == trigger_source
 
 
+def test_trigger(mock_det):
+    """Test the trigger function:
+    Validate that trigger calls the custom_prepare.on_trigger() function
+    """
+    with mock.patch.object(mock_det.custom_prepare, "on_trigger") as mock_on_trigger:
+        mock_det.trigger()
+        mock_on_trigger.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "readout_time, expected_value",
     [
