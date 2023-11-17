@@ -2,6 +2,30 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.0 (2023-11-17)
+
+### Feature
+
+* Refactor falcon for psi_detector_base class; adapted eiger; added and debugged tests ([`bcc3210`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bcc321076153ccd6ae8419b95553b5b4916e82ad))
+* Add CustomDetectorMixin, and Eiger9M setup to separate core functionality in the ophyd integration ([`c8f05fe`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c8f05fe290485dd7703dfb7a4bfc660d7d01d67d))
+* Add docstring to detector base class; closes #12 ([`2252779`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/225277949d91febd4482475a12c1ea592b735385))
+* Add SLSDetectorBaseclass as a baseclass for detectors at SLS ([`13180b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/13180b56dac614206ca5a8ad088e223407b83977))
+
+### Fix
+
+* Fixed MIN_readout, and made it a class attribute with set/get functions ([`b9d0a5d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b9d0a5d86977ff08962a27ac507296ca5dae229c))
+* Add User_access to cSAXS falcon and eiger ([`e8ec101`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8ec101f5399ac7be2aeb1b1d69d6866d6d2f69b))
+* Removed __init__ from eiger9mcSAXS ([`c614873`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c614873f8f913e0c1d417b63cf6dea2f39708741))
+* Fix imports to match bec_lib changes ([`9db00ad`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9db00add047536c7aa35d2b08daafb248d5c8c01))
+* Fixed merge conflict ([`d46dafd`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d46dafdbe85b9f2a1c080297bd361a3445779d60))
+* Removed sls_detector_baseclass, add psi_detector_base, fixed tests and eiger9m_csaxs ([`90cd05e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/90cd05e68ea7640a6bc1a8b98d47f9edc7a7f3a0))
+* Add PSIDetectorBase ([`a8a1210`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a8a12103ea2108c5183a710ead04db4379627d83))
+* Small bugfix ([`ee5cf17`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ee5cf17a05ededda6eff25edece6d6f437d0f372))
+* Fixed imports to comply with bec_lib refactoring ([`79cfaf6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/79cfaf6dc03bad084673fe1945828c15bba4b6e8))
+* Bugfix ([`7fefb44`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7fefb44462c4bfa7853b0519b33ef492ace53050))
+* Add remaining function, propose mechanism to avoid calling stage twice ([`3e1a2b8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3e1a2b86c31a241ac92ef9808ad2b92fed020ec8))
+* Changed file_writer to det_fw ([`575b4e6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/575b4e6260e95d4c4c40d76b3fc38f258e43a381))
+
 ## v0.12.0 (2023-11-17)
 
 ### Feature
