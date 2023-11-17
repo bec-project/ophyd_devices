@@ -8,8 +8,8 @@ from typing import List
 from ophyd import Device
 from ophyd.device import Staged
 
-from bec_lib.core.file_utils import FileWriterMixin
-from bec_lib.core.bec_service import SERVICE_CONFIG
+from bec_lib.file_utils import FileWriterMixin
+from bec_lib.bec_service import SERVICE_CONFIG
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -20,6 +20,9 @@ class DetectorInitError(Exception):
     due to missing device manager or not started in sim_mode."""
 
     pass
+
+
+MIN_READOUT = 3e-3
 
 
 class CustomDetectorMixin:
@@ -165,7 +168,7 @@ class PSIDetectorBase(Device):
 
     custom_prepare_cls = CustomDetectorMixin
 
-    MIN_READOUT = 1e-3
+    MIN_READOUT = 3e-3
 
     # Specify which functions are revealed to the user in BEC client
     USER_ACCESS = [
