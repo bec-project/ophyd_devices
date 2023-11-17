@@ -394,6 +394,11 @@ class Eiger9McSAXS(PSIDetectorBase):
 
     """
 
+    # Specify which functions are revealed to the user in BEC client
+    USER_ACCESS = [
+        "describe",
+    ]
+
     custom_prepare_cls = Eiger9MSetup
     cam = ADCpt(SLSDetectorCam, "cam1:")
     MIN_READOUT = 3e-3

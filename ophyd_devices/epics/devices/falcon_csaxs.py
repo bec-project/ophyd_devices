@@ -314,6 +314,11 @@ class FalconcSAXS(PSIDetectorBase):
         MIN_READOUT (float)                 : Minimum readout time for the detector
     """
 
+    # Specify which functions are revealed to the user in BEC client
+    USER_ACCESS = [
+        "describe",
+    ]
+
     custom_prepare_cls = FalconSetup
     MIN_READOUT = 3e-3
 
