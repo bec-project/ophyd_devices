@@ -398,31 +398,6 @@ class Eiger9McSAXS(PSIDetectorBase):
     cam = ADCpt(SLSDetectorCam, "cam1:")
     MIN_READOUT = 3e-3
 
-    def __init__(
-        self,
-        prefix="",
-        *,
-        name,
-        kind=None,
-        read_attrs=None,
-        configuration_attrs=None,
-        parent=None,
-        device_manager=None,
-        sim_mode=False,
-        **kwargs,
-    ):
-        super().__init__(
-            prefix,
-            name=name,
-            kind=kind,
-            read_attrs=read_attrs,
-            configuration_attrs=configuration_attrs,
-            parent=parent,
-            device_manager=device_manager,
-            sim_mode=sim_mode,
-            **kwargs,
-        )
-
     def set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector.
         Check the TriggerSource enum for possible values

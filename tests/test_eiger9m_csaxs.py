@@ -29,9 +29,9 @@ def mock_det():
     with mock.patch.object(dm, "producer"):
         with mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
-        ) as filemixin, mock.patch(
+        ), mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
-        ) as mock_service_config:
+        ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
                 mock_cl.thread_class = threading.Thread
@@ -52,9 +52,9 @@ def test_init():
     with mock.patch.object(dm, "producer"):
         with mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
-        ) as filemixin, mock.patch(
+        ), mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
-        ) as mock_service_config:
+        ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
                 with mock.patch(
@@ -396,12 +396,12 @@ def test_unstage(
         mock_det._stopped = stopped
         if expected_exception:
             mock_det.unstage()
-            assert mock_det._stopped == True
+            assert mock_det._stopped is True
         else:
             mock_det.unstage()
             mock_finished.assert_called_once()
             mock_publish_file_location.assert_called_with(done=True, successful=True)
-            assert mock_det._stopped == False
+            assert mock_det._stopped is False
 
 
 def test_stop_detector_backend(mock_det):
@@ -456,7 +456,7 @@ def test_stop(mock_det):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_detector_backend.assert_called_once()
-        assert mock_det._stopped == True
+        assert mock_det._stopped is True
 
 
 @pytest.mark.parametrize(
@@ -520,13 +520,13 @@ def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_e
             with pytest.raises(Exception):
                 mock_det.timeout = 0.1
                 mock_det.custom_prepare.finished()
-                assert mock_det._stopped == stopped
+                assert mock_det._stopped is stopped
                 mock_stop_backend.assert_called()
                 mock_stop_det.assert_called_once()
         else:
             mock_det.custom_prepare.finished()
             if stopped:
-                assert mock_det._stopped == stopped
+                assert mock_det._stopped is stopped
 
             mock_stop_backend.assert_called()
             mock_stop_det.assert_called_once()
