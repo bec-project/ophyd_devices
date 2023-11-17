@@ -1,3 +1,4 @@
+# pylint: skip-file
 import pytest
 import threading
 from unittest import mock
