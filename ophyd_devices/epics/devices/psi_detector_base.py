@@ -64,7 +64,7 @@ class CustomDetectorMixin:
 
     def prepare_data_backend(self) -> None:
         """
-        Prepare the data backend for the scan
+        Prepare detector backend for the scan
         """
         pass
 
@@ -105,6 +105,24 @@ class CustomDetectorMixin:
         Raises (optional):
             DetectorTimeoutError: if detector cannot be stopped
         """
+        pass
+
+    def check_scanID(self) -> None:
+        """
+        Check if BEC is running on a new scanID
+        """
+        pass
+
+    def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
+        """
+        Publish the designated filepath from data backend to REDIS.
+
+        Typically, the following two message types are published:
+
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+        """
+        pass
 
     def wait_for_signals(
         self,
@@ -277,7 +295,6 @@ class PSIDetectorBase(Device):
         self.custom_prepare.prepare_detector()
         state = False
         self.custom_prepare.publish_file_location(done=state)
-        self.custom_prepare.arm_acquisition()
         # At the moment needed bc signal is not reliable, BEC too fast
         time.sleep(0.05)
         return super().stage()

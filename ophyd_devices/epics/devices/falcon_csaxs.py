@@ -1,5 +1,6 @@
 import enum
 import os
+from typing import List
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt
 from ophyd.mca import EpicsMCARecord
@@ -364,6 +365,11 @@ class FalconcSAXS(PSIDetectorBase):
         self.collect_mode.put(mapping)
         self.pixel_advance_mode.put(trigger)
         self.ignore_gate.put(ignore_gate)
+
+    def stage(self) -> List[object]:
+        rtr = super().stage()
+        self.custom_prepare.arm_acquisition()
+        return rtr
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import os
 
-from typing import Any
+from typing import Any, List
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import Device
@@ -413,6 +413,11 @@ class Eiger9McSAXS(PSIDetectorBase):
         """
         value = trigger_source
         self.cam.trigger_mode.put(value)
+
+    def stage(self) -> List[object]:
+        rtr = super().stage()
+        self.custom_prepare.arm_acquisition()
+        return rtr
 
 
 if __name__ == "__main__":
