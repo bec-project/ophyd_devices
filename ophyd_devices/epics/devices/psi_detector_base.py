@@ -1,5 +1,4 @@
 import time
-import threading
 from bec_lib.devicemanager import DeviceStatus
 import os
 
@@ -163,7 +162,7 @@ class CustomDetectorMixin:
             ]
             if (all_signals and all(checks)) or (not all_signals and any(checks)):
                 return True
-            if check_stopped == True and self.parent._stopped == True:
+            if check_stopped == True and self.parent.stopped == True:
                 return False
             if timer > timeout:
                 return False
@@ -199,15 +198,15 @@ class PSIDetectorBase(Device):
 
     custom_prepare_cls = CustomDetectorMixin
 
-    _MIN_READOUT = 1e-3
+    MIN_READOUT = 1e-3
 
-    @classmethod
-    def get_min_readout(cls):
-        return cls._MIN_READOUT
+    # @classmethod
+    # def get_min_readout(cls):
+    #     return cls._MIN_READOUT
 
-    @classmethod
-    def set_min_readout(cls, value):
-        cls._MIN_READOUT = value
+    # @classmethod
+    # def set_min_readout(cls, value):
+    #     cls._MIN_READOUT = value
 
     # Specify which functions are revealed to the user in BEC client
     USER_ACCESS = [
@@ -243,8 +242,7 @@ class PSIDetectorBase(Device):
         # sim_mode True allows the class to be started without BEC running
         # Init variables
         self.sim_mode = sim_mode
-        self._lock = threading.RLock()
-        self._stopped = False
+        self.stopped = False
         self.name = name
         self.service_cfg = None
         self.std_client = None
@@ -264,7 +262,7 @@ class PSIDetectorBase(Device):
             self.device_manager = bec_utils.DMMock()
             base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
             self.service_cfg = {"base_path": os.path.expanduser(base_path)}
-        self._producer = self.device_manager.producer
+        self.producer = self.device_manager.producer
         self._update_scaninfo()
         self._update_filewriter()
         self._init()
@@ -307,7 +305,7 @@ class PSIDetectorBase(Device):
             return super().stage()
 
         # Reset flag for detector stopped
-        self._stopped = False
+        self.stopped = False
         # Load metadata of the scan
         self.scaninfo.load_scan_metadata()
         # Prepare detector and file writer
@@ -328,7 +326,7 @@ class PSIDetectorBase(Device):
         """
         Unstage device in preparation for a scan
 
-        Returns directly if self._stopped,
+        Returns directly if self.stopped,
         otherwise checks with self._finished
         if data acquisition on device finished (an was successful)
 
@@ -341,12 +339,12 @@ class PSIDetectorBase(Device):
             List(object): list of objects that were unstaged
         """
         self.custom_prepare.check_scanID()
-        if self._stopped == True:
+        if self.stopped == True:
             return super().unstage()
         self.custom_prepare.finished()
         state = True
         self.custom_prepare.publish_file_location(done=state, successful=state)
-        self._stopped = False
+        self.stopped = False
         return super().unstage()
 
     def stop(self, *, success=False) -> None:
@@ -360,4 +358,4 @@ class PSIDetectorBase(Device):
         self.custom_prepare.stop_detector()
         self.custom_prepare.stop_detector_backend()
         super().stop(success=success)
-        self._stopped = True
+        self.stopped = True

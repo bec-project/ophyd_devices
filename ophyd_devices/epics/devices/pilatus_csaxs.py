@@ -86,9 +86,9 @@ class PilatusSetup(CustomDetectorMixin):
         readout_time = (
             self.parent.scaninfo.readout_time
             if hasattr(self.parent.scaninfo, "readout_time")
-            else self.parent.get_min_readout()
+            else self.parent.MIN_READOUT
         )
-        self.parent.readout_time = max(readout_time, self.parent.get_min_readout())
+        self.parent.readout_time = max(readout_time, self.parent.MIN_READOUT)
 
     def initialize_detector(self) -> None:
         """Initialize detector"""
@@ -336,7 +336,7 @@ class PilatusSetup(CustomDetectorMixin):
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
         """
-        pipe = self.parent._producer.pipeline()
+        pipe = self.parent.producer.pipeline()
         if successful is None:
             msg = messages.FileMessage(
                 file_path=self.parent.filepath,
@@ -350,12 +350,12 @@ class PilatusSetup(CustomDetectorMixin):
                 successful=successful,
                 metadata={"input_path": self.parent.filepath_raw},
             )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
             msg.dumps(),
             pipe=pipe,
         )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
@@ -422,7 +422,7 @@ class PilatuscSAXS(PSIDetectorBase):
     # specify Setup class
     custom_prepare_cls = PilatusSetup
     # specify minimum readout time for detector
-    PSIDetectorBase.set_min_readout(3e-3)
+    MIN_READOUT = 3e-3
     # specify class attributes
     cam = ADCpt(SLSDetectorCam, "cam1:")
 

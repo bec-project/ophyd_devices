@@ -1,4 +1,5 @@
 import enum
+import threading
 import time
 import numpy as np
 import os
@@ -24,13 +25,9 @@ logger = bec_logger.logger
 class EigerError(Exception):
     """Base class for exceptions in this module."""
 
-    pass
-
 
 class EigerTimeoutError(EigerError):
     """Raised when the Eiger does not respond in time."""
-
-    pass
 
 
 class Eiger9MSetup(CustomDetectorMixin):
@@ -40,13 +37,13 @@ class Eiger9MSetup(CustomDetectorMixin):
 
     """
 
-    def __init__(self, parent: Device = None, *args, **kwargs) -> None:
-        super().__init__(parent=parent, *args, **kwargs)
+    def __init__(self, *args, parent: Device = None, **kwargs) -> None:
+        super().__init__(*args, parent=parent, **kwargs)
         self.std_rest_server_url = (
             kwargs["file_writer_url"] if "file_writer_url" in kwargs else "http://xbl-daq-29:5000"
         )
         self.std_client = None
-        self._lock = self.parent._lock
+        self._lock = threading.RLock()
 
     def initialize_default_parameter(self) -> None:
         """Set default parameters for Eiger9M detector"""
@@ -57,9 +54,9 @@ class Eiger9MSetup(CustomDetectorMixin):
         readout_time = (
             self.parent.scaninfo.readout_time
             if hasattr(self.parent.scaninfo, "readout_time")
-            else self.parent.get_min_readout()
+            else self.parent.MIN_READOUT
         )
-        self.parent.readout_time = max(readout_time, self.parent.get_min_readout())
+        self.parent.readout_time = max(readout_time, self.parent.MIN_READOUT)
 
     def initialize_detector(self) -> None:
         """Initialize detector"""
@@ -181,7 +178,7 @@ class Eiger9MSetup(CustomDetectorMixin):
 
         # Check if energies are eV or keV, assume keV as the default
         unit = getattr(self.parent.cam.threshold_energy, "units", None)
-        if unit != None and unit == "eV":
+        if unit is not None and unit == "eV":
             factor = 1000
 
         # set energy on detector
@@ -246,14 +243,14 @@ class Eiger9MSetup(CustomDetectorMixin):
 
     def filepath_exists(self, filepath: str) -> None:
         """Check if filepath exists"""
-        signal_conditions = [(lambda: os.path.exists(os.path.dirname(self.parent.filepath)), True)]
+        signal_conditions = [(lambda: os.path.exists(os.path.dirname(filepath)), True)]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
             timeout=self.parent.timeout,
             check_stopped=False,
             all_signals=True,
         ):
-            raise EigerError(f"Timeout of 3s reached for filepath {self.parent.filepath}")
+            raise EigerError(f"Timeout of 3s reached for filepath {filepath}")
 
     def arm_acquisition(self) -> None:
         """Arm Eiger detector for acquisition"""
@@ -282,7 +279,7 @@ class Eiger9MSetup(CustomDetectorMixin):
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
-            self.parent._stopped = True
+            self.parent.stopped is True
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
         """
@@ -296,19 +293,19 @@ class Eiger9MSetup(CustomDetectorMixin):
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
         """
-        pipe = self.parent._producer.pipeline()
+        pipe = self.parent.producer.pipeline()
         if successful is None:
             msg = messages.FileMessage(file_path=self.parent.filepath, done=done)
         else:
             msg = messages.FileMessage(
                 file_path=self.parent.filepath, done=done, successful=successful
             )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
             msg.dumps(),
             pipe=pipe,
         )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
@@ -406,7 +403,7 @@ class Eiger9McSAXS(PSIDetectorBase):
     # specify Setup class
     custom_prepare_cls = Eiger9MSetup
     # specify minimum readout time for detector
-    PSIDetectorBase.set_min_readout(3e-3)
+    MIN_READOUT = 3e-3
     # specify class attributes
     cam = ADCpt(SLSDetectorCam, "cam1:")
 

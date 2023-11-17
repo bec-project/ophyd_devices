@@ -223,15 +223,15 @@ def test_publish_file_location(mock_det, scaninfo):
         mock.call(
             MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
             msg,
-            pipe=mock_det._producer.pipeline.return_value,
+            pipe=mock_det.producer.pipeline.return_value,
         ),
         mock.call(
             MessageEndpoints.file_event(mock_det.name),
             msg,
-            pipe=mock_det._producer.pipeline.return_value,
+            pipe=mock_det.producer.pipeline.return_value,
         ),
     ]
-    assert mock_det._producer.set_and_publish.call_args_list == expected_calls
+    assert mock_det.producer.set_and_publish.call_args_list == expected_calls
 
 
 @pytest.mark.parametrize(
@@ -281,16 +281,16 @@ def test_unstage(
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
-        mock_det._stopped = stopped
+        mock_det.stopped = stopped
         if expected_abort:
             mock_det.unstage()
-            assert mock_det._stopped == stopped
+            assert mock_det.stopped is stopped
             assert mock_publish_file_location.call_count == 0
         else:
             mock_det.unstage()
             mock_finished.assert_called_once()
             mock_publish_file_location.assert_called_with(done=True, successful=True)
-            assert mock_det._stopped == False
+            assert mock_det.stopped is stopped
 
 
 def test_stop(mock_det):
@@ -302,7 +302,7 @@ def test_stop(mock_det):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_detector_backend.assert_called_once()
-        assert mock_det._stopped == True
+        assert mock_det.stopped is True
 
 
 @pytest.mark.parametrize(
@@ -318,7 +318,7 @@ def test_finished(mock_det, stopped, scaninfo):
     ) as mock_stop_det, mock.patch.object(
         mock_det.custom_prepare, "stop_detector_backend"
     ) as mock_stop_file_writer:
-        mock_det._stopped = stopped
+        mock_det.stopped = stopped
         mock_det.dxp.current_pixel._read_pv.mock_data = int(
             scaninfo["num_points"] * scaninfo["frames_per_trigger"]
         )
@@ -328,6 +328,6 @@ def test_finished(mock_det, stopped, scaninfo):
         mock_det.scaninfo.frames_per_trigger = scaninfo["frames_per_trigger"]
         mock_det.scaninfo.num_points = scaninfo["num_points"]
         mock_det.custom_prepare.finished()
-        assert mock_det._stopped == stopped
+        assert mock_det.stopped is stopped
         mock_stop_det.assert_called_once()
         mock_stop_file_writer.assert_called_once()

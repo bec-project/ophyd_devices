@@ -21,13 +21,9 @@ logger = bec_logger.logger
 class FalconError(Exception):
     """Base class for exceptions in this module."""
 
-    pass
-
 
 class FalconTimeoutError(FalconError):
     """Raised when the Falcon does not respond in time."""
-
-    pass
 
 
 class DetectorState(enum.IntEnum):
@@ -114,8 +110,8 @@ class FalconSetup(CustomDetectorMixin):
 
     """
 
-    def __init__(self, parent: Device = None, *args, **kwargs) -> None:
-        super().__init__(parent=parent, *args, **kwargs)
+    def __init__(self, *args, parent: Device = None, **kwargs) -> None:
+        super().__init__(*args, parent=parent, **kwargs)
 
     def initialize_default_parameter(self) -> None:
         """
@@ -133,9 +129,9 @@ class FalconSetup(CustomDetectorMixin):
         readout_time = (
             self.parent.scaninfo.readout_time
             if hasattr(self.parent.scaninfo, "readout_time")
-            else self.parent.get_min_readout()
+            else self.parent.MIN_READOUT
         )
-        self.parent.readout_time = max(readout_time, self.parent.get_min_readout())
+        self.parent.readout_time = max(readout_time, self.parent.MIN_READOUT)
 
     def initialize_detector(self) -> None:
         """
@@ -264,19 +260,19 @@ class FalconSetup(CustomDetectorMixin):
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
         """
-        pipe = self.parent._producer.pipeline()
+        pipe = self.parent.producer.pipeline()
         if successful is None:
             msg = messages.FileMessage(file_path=self.parent.filepath, done=done)
         else:
             msg = messages.FileMessage(
                 file_path=self.parent.filepath, done=done, successful=successful
             )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
             msg.dumps(),
             pipe=pipe,
         )
-        self.parent._producer.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
@@ -339,7 +335,7 @@ class FalconcSAXS(PSIDetectorBase):
     # specify Setup class
     custom_prepare_cls = FalconSetup
     # specify minimum readout time for detector
-    PSIDetectorBase.set_min_readout(3e-3)
+    MIN_READOUT = 3e-3
 
     # specify class attributes
     dxp = Cpt(EpicsDXPFalcon, "dxp1:")

@@ -278,7 +278,7 @@ def test_stage(
         # TODO consider putting energy as variable in scaninfo
         mock_det.device_manager.add_device("mokev", value=12.4)
         mock_det.cam.beam_energy.put(scaninfo["mokev"])
-        mock_det._stopped = stopped
+        mock_det.stopped = stopped
         mock_det.cam.detector_state._read_pv.mock_data = detector_state
         with mock.patch.object(mock_det.custom_prepare, "prepare_data_backend") as mock_prep_fw:
             mock_det.filepath = scaninfo["filepath"]
@@ -393,15 +393,15 @@ def test_unstage(
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
-        mock_det._stopped = stopped
+        mock_det.stopped = stopped
         if expected_exception:
             mock_det.unstage()
-            assert mock_det._stopped is True
+            assert mock_det.stopped is True
         else:
             mock_det.unstage()
             mock_finished.assert_called_once()
             mock_publish_file_location.assert_called_with(done=True, successful=True)
-            assert mock_det._stopped is False
+            assert mock_det.stopped is False
 
 
 def test_stop_detector_backend(mock_det):
@@ -436,15 +436,15 @@ def test_publish_file_location(mock_det, scaninfo):
         mock.call(
             MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
             msg,
-            pipe=mock_det._producer.pipeline.return_value,
+            pipe=mock_det.producer.pipeline.return_value,
         ),
         mock.call(
             MessageEndpoints.file_event(mock_det.name),
             msg,
-            pipe=mock_det._producer.pipeline.return_value,
+            pipe=mock_det.producer.pipeline.return_value,
         ),
     ]
-    assert mock_det._producer.set_and_publish.call_args_list == expected_calls
+    assert mock_det.producer.set_and_publish.call_args_list == expected_calls
 
 
 def test_stop(mock_det):
@@ -456,7 +456,7 @@ def test_stop(mock_det):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_detector_backend.assert_called_once()
-        assert mock_det._stopped is True
+        assert mock_det.stopped is True
 
 
 @pytest.mark.parametrize(
@@ -520,13 +520,13 @@ def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_e
             with pytest.raises(Exception):
                 mock_det.timeout = 0.1
                 mock_det.custom_prepare.finished()
-                assert mock_det._stopped is stopped
+                assert mock_det.stopped is stopped
                 mock_stop_backend.assert_called()
                 mock_stop_det.assert_called_once()
         else:
             mock_det.custom_prepare.finished()
             if stopped:
-                assert mock_det._stopped is stopped
+                assert mock_det.stopped is stopped
 
             mock_stop_backend.assert_called()
             mock_stop_det.assert_called_once()
