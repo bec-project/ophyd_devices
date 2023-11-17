@@ -25,7 +25,7 @@ class FalconError(Exception):
 
 
 class FalconTimeoutError(FalconError):
-    """Raised when the Falcon does not respond in time during unstage."""
+    """Raised when the Falcon does not respond in time."""
 
     pass
 
@@ -38,7 +38,8 @@ class DetectorState(enum.IntEnum):
 
 
 class TriggerSource(enum.IntEnum):
-    """Trigger source for Falcon detector
+    """
+    Trigger source for Falcon detector
 
     Translates setttings for PV:pixel_advance_mode
     """
@@ -49,7 +50,8 @@ class TriggerSource(enum.IntEnum):
 
 
 class MappingSource(enum.IntEnum):
-    """Mapping source for Falcon detector
+    """
+    Mapping source for Falcon detector
 
     Translates setttings for PV:collect_mode
     """
@@ -59,7 +61,8 @@ class MappingSource(enum.IntEnum):
 
 
 class EpicsDXPFalcon(Device):
-    """DXP parameters for Falcon detector
+    """
+    DXP parameters for Falcon detector
 
     Base class to map EPICS PVs from DXP parameters to ophyd signals.
     """
@@ -83,7 +86,8 @@ class EpicsDXPFalcon(Device):
 
 
 class FalconHDF5Plugins(Device):
-    """HDF5 parameters for Falcon detector
+    """
+    HDF5 parameters for Falcon detector
 
     Base class to map EPICS PVs from HDF5 Plugin to ophyd signals.
     """
@@ -103,7 +107,8 @@ class FalconHDF5Plugins(Device):
 
 
 class FalconSetup(CustomDetectorMixin):
-    """Falcon setup class for cSAXS
+    """
+    Falcon setup class for cSAXS
 
     Parent class: CustomDetectorMixin
 
@@ -113,9 +118,12 @@ class FalconSetup(CustomDetectorMixin):
         super().__init__(parent=parent, *args, **kwargs)
 
     def initialize_default_parameter(self) -> None:
-        """Set default parameters for Falcon
+        """
+        Set default parameters for Falcon
+
         readout (float): readout time in seconds
         _value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro
+
         """
         self.parent._value_pixel_per_buffer = 20
         self.update_readout_time()
@@ -218,7 +226,7 @@ class FalconSetup(CustomDetectorMixin):
         self.parent.hdf5.capture.put(1)
 
     def arm_acquisition(self) -> None:
-        """Arm Eiger detector for acquisition"""
+        """Arm detector for acquisition"""
         self.parent.start_all.put(1)
         signal_conditions = [
             (
@@ -238,6 +246,7 @@ class FalconSetup(CustomDetectorMixin):
             )
 
     def check_scanID(self) -> None:
+        """Checks if scanID has changed and stops the scan if it has"""
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
@@ -273,9 +282,15 @@ class FalconSetup(CustomDetectorMixin):
         pipe.execute()
 
     def finished(self) -> None:
-        """Check if acquisition is finished.
+        """
+        Check if acquisition is finished.
 
-        For the Falcon we accept that it misses a trigger since we can reconstruct it from the data.
+        In case of the Falcon Sitoro, we check if the number of triggers is equal to the number of written frames.
+
+        In case this is not correct, we would NOT (!) raise an Error at this moment
+        because there is data to reassemble the pixels.
+
+        However, this decision could be revoked and handled differently.
         """
         signal_conditions = [
             (
@@ -307,12 +322,13 @@ class FalconcSAXS(PSIDetectorBase):
     Parent class: PSIDetectorBase
 
     class attributes:
-        custom_prepare_cls (Eiger9MSetup)   : Custom detector setup class for cSAXS,
-                                              inherits from CustomDetectorMixin
-        dxp (EpicsDXPFalcon)                : DXP parameters for Falcon detector
-        mca (EpicsMCARecord)                : MCA parameters for Falcon detector
-        hdf5 (FalconHDF5Plugins)            : HDF5 parameters for Falcon detector
-        MIN_READOUT (float)                 : Minimum readout time for the detector
+        custom_prepare_cls (FalconSetup)        : Custom detector setup class for cSAXS,
+                                                  inherits from CustomDetectorMixin
+        PSIDetectorBase.set_min_readout (float) : Minimum readout time for the detector
+        dxp (EpicsDXPFalcon)                    : DXP parameters for Falcon detector
+        mca (EpicsMCARecord)                    : MCA parameters for Falcon detector
+        hdf5 (FalconHDF5Plugins)                : HDF5 parameters for Falcon detector
+        MIN_READOUT (float)                     : Minimum readout time for the detector
     """
 
     # Specify which functions are revealed to the user in BEC client
@@ -370,6 +386,12 @@ class FalconcSAXS(PSIDetectorBase):
         self.ignore_gate.put(ignore_gate)
 
     def stage(self) -> List[object]:
+        """
+        Add functionality to stage, and arm the detector
+
+        Additional call to:
+        - custom_prepare.arm_acquisition()
+        """
         rtr = super().stage()
         self.custom_prepare.arm_acquisition()
         return rtr

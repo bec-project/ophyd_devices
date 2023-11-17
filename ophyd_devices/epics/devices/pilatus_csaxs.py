@@ -153,6 +153,7 @@ class PilatusSetup(CustomDetectorMixin):
         os.makedirs(filepath, exist_ok=True)
 
     def stop_detector_backend(self) -> None:
+        """Stop the file writer zmq service for pilatus_2"""
         self.close_file_writer()
         time.sleep(0.1)
         self.stop_file_writer()
@@ -260,7 +261,7 @@ class PilatusSetup(CustomDetectorMixin):
         time.sleep(0.1)
         logger.info(f"{res.status_code} -{res.text} - {res.content}")
 
-        # Sent requests.put to xbl-daq-34 to wait for data
+        # Send requests.put to xbl-daq-34 to wait for data
         url = "http://xbl-daq-34:8091/pilatus_2/wait"
         data_msg = [
             "zmqWriter",
@@ -313,12 +314,14 @@ class PilatusSetup(CustomDetectorMixin):
 
         For the pilatus detector, it is used to arm the detector for the acquisition,
         because the detector times out after ˜7-8 seconds without seeing a trigger.
+
         """
         self.arm_acquisition()
 
     def arm_acquisition(self) -> None:
+        """Arms the detector for the acquisition"""
         self.parent.cam.acquire.put(1)
-        # TODO Sleep needed, to be tested how long it is needed!
+        # TODO is this sleep needed? to be tested with detector and for how long
         time.sleep(0.5)
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
@@ -390,11 +393,16 @@ class PilatusSetup(CustomDetectorMixin):
         """Stop detector"""
         self.parent.cam.acquire.put(0)
 
+    def check_scanID(self) -> None:
+        """Checks if scanID has changed and stops the scan if it has"""
+        old_scanID = self.parent.scaninfo.scanID
+        self.parent.scaninfo.load_scan_metadata()
+        if self.parent.scaninfo.scanID != old_scanID:
+            self.parent._stopped = True
+
 
 class PilatuscSAXS(PSIDetectorBase):
     """Pilatus_2 300k detector for CSAXS
-
-    Eiger 9M detector class for cSAXS
 
     Parent class: PSIDetectorBase
 

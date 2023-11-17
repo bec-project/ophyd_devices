@@ -28,7 +28,7 @@ class EigerError(Exception):
 
 
 class EigerTimeoutError(EigerError):
-    """Raised when the Eiger does not respond in time during unstage."""
+    """Raised when the Eiger does not respond in time."""
 
     pass
 
@@ -156,8 +156,11 @@ class Eiger9MSetup(CustomDetectorMixin):
         self.std_client.stop_writer()
 
     def prepare_detector(self) -> None:
-        """Prepare detector for scan.
-        Includes checking the detector threshold, setting the acquisition parameters and setting the trigger source
+        """
+        Prepare detector for scan
+
+        Includes checking the detector threshold, setting the acquisition parameters
+        and setting the trigger source
         """
         self.set_detector_threshold()
         self.set_acquisition_params()
@@ -165,7 +168,7 @@ class Eiger9MSetup(CustomDetectorMixin):
 
     def set_detector_threshold(self) -> None:
         """
-        Set correct detector threshold to 1/2 of current X-ray energy, allow 5% tolerance
+        Set correct detector threshold to 1/2 of the current X-ray energy, allow 5% tolerance
 
         Threshold might be in ev or keV
         """
@@ -275,6 +278,7 @@ class Eiger9MSetup(CustomDetectorMixin):
             )
 
     def check_scanID(self) -> None:
+        """Checks if scanID has changed and stops the scan if it has"""
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
@@ -339,7 +343,8 @@ class Eiger9MSetup(CustomDetectorMixin):
 
 
 class SLSDetectorCam(Device):
-    """SLS Detector Camera - Eiger 9M
+    """
+    SLS Detector Camera - Eiger9M
 
     Base class to map EPICS PVs to ophyd signals.
     """
@@ -382,16 +387,15 @@ class DetectorState(enum.IntEnum):
 
 class Eiger9McSAXS(PSIDetectorBase):
     """
-    Eiger 9M detector class for cSAXS
+    Eiger9M detector for CSAXS
 
     Parent class: PSIDetectorBase
 
     class attributes:
-        custom_prepare_cls (Eiger9MSetup): Custom detector setup class for cSAXS,
-                                           inherits from CustomDetectorMixin
-        cam (SLSDetectorCam): Detector camera
-        MIN_READOUT (float): Minimum readout time for the detector
-
+        custom_prepare_cls (FalconSetup)        : Custom detector setup class for cSAXS,
+                                                  inherits from CustomDetectorMixin
+        PSIDetectorBase.set_min_readout (float) : Minimum readout time for the detector
+        Various EpicsPVs for controlling the detector
     """
 
     # Specify which functions are revealed to the user in BEC client
@@ -418,6 +422,12 @@ class Eiger9McSAXS(PSIDetectorBase):
         self.cam.trigger_mode.put(value)
 
     def stage(self) -> List[object]:
+        """
+        Add functionality to stage, and arm the detector
+
+        Additional call to:
+        - custom_prepare.arm_acquisition()
+        """
         rtr = super().stage()
         self.custom_prepare.arm_acquisition()
         return rtr
