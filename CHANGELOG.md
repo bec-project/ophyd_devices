@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.12.0 (2023-11-17)
+
+### Feature
+
+* Added syndynamiccomponents for BEC CI tests ([`824ae0b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/824ae0bde63f2ba5278e532812fe41d07f179099))
+
 ## v0.11.0 (2023-11-16)
 
 ### Feature
