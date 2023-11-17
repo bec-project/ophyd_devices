@@ -11,8 +11,6 @@ from ophyd import ADComponent as ADCpt
 
 from bec_lib import messages, MessageEndpoints, bec_logger
 
-from ophyd_devices.utils import bec_utils as bec_utils
-
 from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
 
 logger = bec_logger.logger
@@ -23,13 +21,9 @@ MIN_READOUT = 3e-3
 class PilatusError(Exception):
     """Base class for exceptions in this module."""
 
-    pass
-
 
 class PilatusTimeoutError(PilatusError):
     """Raised when the Pilatus does not respond in time during unstage."""
-
-    pass
 
 
 class TriggerSource(enum.IntEnum):
@@ -123,7 +117,7 @@ class PilatusSetup(CustomDetectorMixin):
 
         # Check if energies are eV or keV, assume keV as the default
         unit = getattr(self.parent.cam.threshold_energy, "units", None)
-        if unit != None and unit == "eV":
+        if unit is not None and unit == "eV":
             factor = 1000
 
         # set energy on detector
@@ -148,7 +142,7 @@ class PilatusSetup(CustomDetectorMixin):
         # Update the readout time of the detector
         self.update_readout_time()
 
-    def create_directory(filepath: str) -> None:
+    def create_directory(self, filepath: str) -> None:
         """Create directory if it does not exist"""
         os.makedirs(filepath, exist_ok=True)
 
@@ -199,7 +193,7 @@ class PilatusSetup(CustomDetectorMixin):
         self.parent.filepath = self.parent.filewriter.compile_full_filename(
             self.parent.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
         )
-        self.parent.cam.file_path.put(f"/dev/shm/zmq/")
+        self.parent.cam.file_path.put("/dev/shm/zmq/")
         self.parent.cam.file_name.put(
             f"{self.parent.scaninfo.username}_2_{self.parent.scaninfo.scan_number:05d}"
         )
@@ -282,7 +276,7 @@ class PilatusSetup(CustomDetectorMixin):
         except Exception as exc:
             logger.info(f"Pilatus2 wait threw Exception: {exc}")
 
-    def send_requests_put(self, url: str, data_msg: list = None, headers: dict = None) -> object:
+    def send_requests_put(self, url: str, data: list = None, headers: dict = None) -> object:
         """
         Send a put request to the given url
 
@@ -294,7 +288,7 @@ class PilatusSetup(CustomDetectorMixin):
         Returns:
             status code of the request
         """
-        return requests.put(url=url, data=json.dumps(data_msg), headers=headers)
+        return requests.put(url=url, data=json.dumps(data), headers=headers, timeout=5)
 
     def send_requests_delete(self, url: str, headers: dict = None) -> object:
         """
@@ -307,7 +301,7 @@ class PilatusSetup(CustomDetectorMixin):
         Returns:
             status code of the request
         """
-        return requests.delete(url=url, headers=headers)
+        return requests.delete(url=url, headers=headers, timeout=5)
 
     def pre_scan(self) -> None:
         """Pre_scan is an (optional) function that is executed by BEC just before the scan core
@@ -369,6 +363,7 @@ class PilatusSetup(CustomDetectorMixin):
 
         #TODO remove dependency from the mcs card
         """
+        # pylint: disable=protected-access
         signal_conditions = [
             (
                 lambda: self.parent.device_manager.devices.mcs.obj._staged,
@@ -384,7 +379,9 @@ class PilatusSetup(CustomDetectorMixin):
             self.stop_detector()
             self.stop_detector_backend()
             raise PilatusTimeoutError(
-                f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for the file writer"
+                f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state"
+                f" {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for"
+                " the file writer"
             )
         self.stop_detector()
         self.stop_detector_backend()
@@ -398,7 +395,7 @@ class PilatusSetup(CustomDetectorMixin):
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
-            self.parent._stopped = True
+            self.parent.stopped = True
 
 
 class PilatuscSAXS(PSIDetectorBase):

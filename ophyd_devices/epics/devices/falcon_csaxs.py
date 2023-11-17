@@ -110,18 +110,16 @@ class FalconSetup(CustomDetectorMixin):
 
     """
 
-    def __init__(self, *args, parent: Device = None, **kwargs) -> None:
-        super().__init__(*args, parent=parent, **kwargs)
-
     def initialize_default_parameter(self) -> None:
         """
         Set default parameters for Falcon
 
-        readout (float): readout time in seconds
-        _value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro
+        This will set:
+        - readout (float): readout time in seconds
+        - value_pixel_per_buffer (int): number of spectra in buffer of Falcon Sitoro
 
         """
-        self.parent._value_pixel_per_buffer = 20
+        self.parent.value_pixel_per_buffer = 20
         self.update_readout_time()
 
     def update_readout_time(self) -> None:
@@ -134,24 +132,20 @@ class FalconSetup(CustomDetectorMixin):
         self.parent.readout_time = max(readout_time, self.parent.MIN_READOUT)
 
     def initialize_detector(self) -> None:
-        """
-        Initialize Falcon detector.
-
-        The detector is operated in MCA mapping mode.
-
-        Parameters here affect the triggering, gating  etc.
-
-        This includes also the readout chunk size and whether data is segmented into spectra in EPICS.
-        """
+        """Initialize Falcon detector"""
         self.stop_detector()
         self.stop_detector_backend()
         self.parent.set_trigger(
             mapping_mode=MappingSource.MAPPING, trigger_source=TriggerSource.GATE, ignore_gate=0
         )
-        self.parent.preset_mode.put(1)  # 1 Realtime
-        self.parent.input_logic_polarity.put(0)  # 0 Normal, 1 Inverted
-        self.parent.auto_pixels_per_buffer.put(0)  # 0 Manual 1 Auto
-        self.parent.pixels_per_buffer.put(self.parent._value_pixel_per_buffer)
+        # 1 Realtime
+        self.parent.preset_mode.put(1)
+        # 0 Normal, 1 Inverted
+        self.parent.input_logic_polarity.put(0)
+        # 0 Manual 1 Auto
+        self.parent.auto_pixels_per_buffer.put(0)
+        # Sets the number of pixels/spectra in the buffer
+        self.parent.pixels_per_buffer.put(self.parent.value_pixel_per_buffer)
 
     def stop_detector(self) -> None:
         """Stops detector"""
@@ -211,7 +205,7 @@ class FalconSetup(CustomDetectorMixin):
         file_path, file_name = os.path.split(self.parent.filepath)
         self.parent.hdf5.file_path.put(file_path)
         self.parent.hdf5.file_name.put(file_name)
-        self.parent.hdf5.file_template.put(f"%s%s")
+        self.parent.hdf5.file_template.put("%s%s")
         self.parent.hdf5.num_capture.put(
             int(self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger)
         )
@@ -246,7 +240,7 @@ class FalconSetup(CustomDetectorMixin):
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
-            self.parent._stopped = True
+            self.parent.stopped = True
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
         """
@@ -288,14 +282,17 @@ class FalconSetup(CustomDetectorMixin):
 
         However, this decision could be revoked and handled differently.
         """
+        total_frames = int(
+            self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
+        )
         signal_conditions = [
             (
-                lambda: self.parent.dxp.current_pixel.get(),
-                int(self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger),
+                self.parent.dxp.current_pixel.get,
+                total_frames,
             ),
             (
-                lambda: self.parent.hdf5.array_counter.get(),
-                int(self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger),
+                self.parent.hdf5.array_counter.get,
+                total_frames,
             ),
         ]
         if not self.wait_for_signals(
@@ -305,7 +302,9 @@ class FalconSetup(CustomDetectorMixin):
             all_signals=True,
         ):
             logger.debug(
-                f"Falcon missed a trigger: received trigger {received_frames}, send data {written_frames} from total_frames {total_frames}"
+                f"Falcon missed a trigger: received trigger {self.parent.dxp.current_pixel.get()},"
+                f" send data {self.parent.hdf5.array_counter.get()} from total_frames"
+                f" {total_frames}"
             )
         self.stop_detector()
         self.stop_detector_backend()

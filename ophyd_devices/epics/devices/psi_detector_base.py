@@ -1,5 +1,4 @@
 import time
-from bec_lib.devicemanager import DeviceStatus
 import os
 
 from typing import List
@@ -9,6 +8,7 @@ from ophyd.device import Staged
 
 from bec_lib.file_utils import FileWriterMixin
 from bec_lib.bec_service import SERVICE_CONFIG
+from bec_lib.devicemanager import DeviceStatus
 
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
@@ -17,11 +17,6 @@ from ophyd_devices.utils import bec_utils
 class DetectorInitError(Exception):
     """Raised when initiation of the device class fails,
     due to missing device manager or not started in sim_mode."""
-
-    pass
-
-
-# MIN_READOUT = 3e-3
 
 
 class CustomDetectorMixin:
@@ -38,7 +33,7 @@ class CustomDetectorMixin:
     stage, unstage, trigger, stop and _init.
     """
 
-    def __init__(self, parent: Device = None, *args, **kwargs) -> None:
+    def __init__(self, *_args, parent: Device = None, **_kwargs) -> None:
         self.parent = parent
 
     def initialize_default_parameter(self) -> None:
@@ -48,7 +43,6 @@ class CustomDetectorMixin:
         Raises (optional):
             DetectorTimeoutError: if detector cannot be initialized
         """
-        pass
 
     def initialize_detector(self) -> None:
         """
@@ -57,7 +51,6 @@ class CustomDetectorMixin:
         Raises (optional):
             DetectorTimeoutError: if detector cannot be initialized
         """
-        pass
 
     def initialize_detector_backend(self) -> None:
         """
@@ -66,37 +59,31 @@ class CustomDetectorMixin:
         Raises (optional):
             DetectorTimeoutError: if filewriter cannot be initialized
         """
-        pass
 
     def prepare_detector(self) -> None:
         """
         Prepare detector for the scan
         """
-        pass
 
     def prepare_data_backend(self) -> None:
         """
         Prepare detector backend for the scan
         """
-        pass
 
     def stop_detector(self) -> None:
         """
         Stop the detector
         """
-        pass
 
     def stop_detector_backend(self) -> None:
         """
         Stop the detector backend
         """
-        pass
 
     def on_trigger(self) -> None:
         """
         Specify actions to be executed upon receiving trigger signal
         """
-        pass
 
     def pre_scan(self) -> None:
         """
@@ -106,7 +93,6 @@ class CustomDetectorMixin:
         It is convenient to execute time critical features of the detector,
         e.g. arming it, but it is recommended to keep this function as short/fast as possible.
         """
-        pass
 
     def finished(self) -> None:
         """
@@ -117,13 +103,11 @@ class CustomDetectorMixin:
         Raises (optional):
             DetectorTimeoutError: if detector cannot be stopped
         """
-        pass
 
     def check_scanID(self) -> None:
         """
         Check if BEC is running on a new scanID
         """
-        pass
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
         """
@@ -134,7 +118,6 @@ class CustomDetectorMixin:
         - file_event: event for the filewriter
         - public_file: event for any secondary service (e.g. radial integ code)
         """
-        pass
 
     def wait_for_signals(
         self,
@@ -162,7 +145,7 @@ class CustomDetectorMixin:
             ]
             if (all_signals and all(checks)) or (not all_signals and any(checks)):
                 return True
-            if check_stopped == True and self.parent.stopped == True:
+            if check_stopped is True and self.parent.stopped is True:
                 return False
             if timer > timeout:
                 return False
@@ -200,14 +183,6 @@ class PSIDetectorBase(Device):
 
     MIN_READOUT = 1e-3
 
-    # @classmethod
-    # def get_min_readout(cls):
-    #     return cls._MIN_READOUT
-
-    # @classmethod
-    # def set_min_readout(cls, value):
-    #     cls._MIN_READOUT = value
-
     # Specify which functions are revealed to the user in BEC client
     USER_ACCESS = [
         "describe",
@@ -237,9 +212,9 @@ class PSIDetectorBase(Device):
         )
         if device_manager is None and not sim_mode:
             raise DetectorInitError(
-                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add DeviceManager to initialization or init with sim_mode=True"
+                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add"
+                " DeviceManager to initialization or init with sim_mode=True"
             )
-        # sim_mode True allows the class to be started without BEC running
         # Init variables
         self.sim_mode = sim_mode
         self.stopped = False
@@ -339,7 +314,7 @@ class PSIDetectorBase(Device):
             List(object): list of objects that were unstaged
         """
         self.custom_prepare.check_scanID()
-        if self.stopped == True:
+        if self.stopped is True:
             return super().unstage()
         self.custom_prepare.finished()
         state = True

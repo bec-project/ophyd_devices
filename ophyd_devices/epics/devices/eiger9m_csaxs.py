@@ -105,7 +105,8 @@ class Eiger9MSetup(CustomDetectorMixin):
             )
         if not isinstance(value, type(old_value)):
             raise EigerError(
-                f"Type of new value {type(value)}:{value} does not match old value {type(old_value)}:{old_value}"
+                f"Type of new value {type(value)}:{value} does not match old value"
+                f" {type(old_value)}:{old_value}"
             )
 
         # Update config with new value and send back to client
@@ -225,7 +226,7 @@ class Eiger9MSetup(CustomDetectorMixin):
         except Exception as exc:
             time.sleep(5)
             if self.std_client.get_status()["state"] == "READY":
-                raise EigerTimeoutError(f"Timeout of start_writer_async with {exc}")
+                raise EigerTimeoutError(f"Timeout of start_writer_async with {exc}") from exc
 
         # Check status of std_daq
         signal_conditions = [
@@ -238,7 +239,8 @@ class Eiger9MSetup(CustomDetectorMixin):
             all_signals=True,
         ):
             raise EigerTimeoutError(
-                f"Timeout of 5s reached for std_daq start_writer_async with std_daq client status {self.std_client.get_status()}"
+                "Timeout of 5s reached for std_daq start_writer_async with std_daq client status"
+                f" {self.std_client.get_status()}"
             )
 
     def filepath_exists(self, filepath: str) -> None:
@@ -279,7 +281,7 @@ class Eiger9MSetup(CustomDetectorMixin):
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
-            self.parent.stopped is True
+            self.parent.stopped = True
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
         """
@@ -333,7 +335,9 @@ class Eiger9MSetup(CustomDetectorMixin):
             self.stop_detector()
             self.stop_detector_backend()
             raise EigerTimeoutError(
-                f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for the file writer"
+                f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state"
+                f" {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for"
+                " the file writer"
             )
         self.stop_detector()
         self.stop_detector_backend()

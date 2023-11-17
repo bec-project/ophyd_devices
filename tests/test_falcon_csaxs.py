@@ -45,7 +45,8 @@ def mock_det():
 
 
 @pytest.mark.parametrize(
-    "trigger_source, mapping_source, ignore_gate, pixels_per_buffer, detector_state, expected_exception",
+    "trigger_source, mapping_source, ignore_gate, pixels_per_buffer, detector_state,"
+    " expected_exception",
     [
         (1, 1, 0, 20, 0, False),
         (1, 1, 0, 20, 1, True),
@@ -72,7 +73,7 @@ def test_init_detector(
     Validation upon setting the correct PVs
 
     """
-    mock_det._value_pixel_per_buffer = pixels_per_buffer
+    mock_det.value_pixel_per_buffer = pixels_per_buffer
     mock_det.state._read_pv.mock_data = detector_state
     if expected_exception:
         with pytest.raises(FalconTimeoutError):
@@ -117,7 +118,7 @@ def test_initialize_default_parameter(mock_det):
         mock_det.custom_prepare, "update_readout_time"
     ) as mock_update_readout_time:
         mock_det.custom_prepare.initialize_default_parameter()
-        assert mock_det._value_pixel_per_buffer == 20
+        assert mock_det.value_pixel_per_buffer == 20
         mock_update_readout_time.assert_called_once()
 
 
