@@ -5,9 +5,11 @@ import warnings
 from typing import List
 
 import numpy as np
-from bec_lib import messages, MessageEndpoints, bec_logger
+from bec_lib import MessageEndpoints, bec_logger, messages
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, OphydObject, PositionerBase, Signal
+from ophyd import Device, DeviceStatus
+from ophyd import DynamicDeviceComponent as Dcpt
+from ophyd import OphydObject, PositionerBase, Signal
 from ophyd.sim import EnumSignal, SynSignal, _ReadbackSignal, _SetpointSignal
 from ophyd.utils import LimitError, ReadOnlyError
 
@@ -863,6 +865,10 @@ class SynGaussBEC(Device):
         self.sim_state["readback"] = self._compute()
         self.sim_state["readback_ts"] = ttime.time()
         return self.val.get()
+
+
+class SynDynamicComponents(Device):
+    messages = Dcpt({f"message{i}": (SynSignal, None, {"name": f"msg{i}"}) for i in range(1, 6)})
 
 
 class SynDeviceSubOPAAS(Device):
