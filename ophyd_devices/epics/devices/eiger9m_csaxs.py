@@ -94,7 +94,19 @@ class Eiger9MSetup(CustomDetectorMixin):
             )
 
     def update_std_cfg(self, cfg_key: str, value: Any) -> None:
-        """Update std_daq config with new e-account for the current beamtime"""
+        """
+        Update std_daq config
+
+        Checks that the new value matches the type of the former entry.
+
+        Args:
+            cfg_key (str)   : config key of value to be updated
+            value (Any)     : value to be updated for the specified key
+
+        Raises:
+            Raises EigerError if the key was not in the config before and if the new value does not match the type of the old value
+
+        """
 
         # Load config from client and check old value
         cfg = self.std_client.get_config()
@@ -116,7 +128,7 @@ class Eiger9MSetup(CustomDetectorMixin):
         logger.debug(f"Updated std_daq config for key {cfg_key} from {old_value} to {value}")
 
     def stop_detector(self) -> None:
-        """Stop the detector and wait for the proper status message"""
+        """Stop the detector"""
 
         # Stop detector
         self.parent.cam.acquire.put(0)
@@ -154,21 +166,16 @@ class Eiger9MSetup(CustomDetectorMixin):
         self.std_client.stop_writer()
 
     def prepare_detector(self) -> None:
-        """
-        Prepare detector for scan
-
-        Includes checking the detector threshold, setting the acquisition parameters
-        and setting the trigger source
-        """
+        """Prepare detector for scan"""
         self.set_detector_threshold()
         self.set_acquisition_params()
         self.parent.set_trigger(TriggerSource.GATING)
 
     def set_detector_threshold(self) -> None:
         """
-        Set correct detector threshold to 1/2 of the current X-ray energy, allow 5% tolerance
+        Set the detector threshold
 
-        Threshold might be in ev or keV
+        The function sets the detector threshold automatically to 1/2 of the beam energy.
         """
 
         # get current beam energy from device manageer

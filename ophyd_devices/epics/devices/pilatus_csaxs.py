@@ -304,10 +304,11 @@ class PilatusSetup(CustomDetectorMixin):
         return requests.delete(url=url, headers=headers, timeout=5)
 
     def pre_scan(self) -> None:
-        """Pre_scan is an (optional) function that is executed by BEC just before the scan core
+        """
+        Pre_scan function call
 
-        For the pilatus detector, it is used to arm the detector for the acquisition,
-        because the detector times out after ˜7-8 seconds without seeing a trigger.
+        This function is called just before the scan core.
+        Here it is used to arm the detector for the acquisition
 
         """
         self.arm_acquisition()
@@ -355,15 +356,9 @@ class PilatusSetup(CustomDetectorMixin):
         pipe.execute()
 
     def finished(self) -> None:
-        """
-        Check if acquisition is finished.
-
-        Be aware that we check here whether the mcs card is measuring at the moment,
-        we were missing a suitable different signal.
-
-        #TODO remove dependency from the mcs card
-        """
+        """Check if acquisition is finished."""
         # pylint: disable=protected-access
+        # TODO: at the moment this relies on device.mcs.obj._staged attribute
         signal_conditions = [
             (
                 lambda: self.parent.device_manager.devices.mcs.obj._staged,
@@ -429,6 +424,5 @@ class PilatuscSAXS(PSIDetectorBase):
         self.cam.trigger_mode.put(value)
 
 
-# Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
     pilatus_2 = PilatuscSAXS(name="pilatus_2", prefix="X12SA-ES-PILATUS300K:", sim_mode=True)

@@ -103,7 +103,6 @@ def test_init_detector(
     ],
 )
 def test_update_readout_time(mock_det, readout_time, expected_value):
-    # mock_det.scaninfo.readout_time = readout_time
     if readout_time is None:
         mock_det.custom_prepare.update_readout_time()
         assert mock_det.readout_time == expected_value

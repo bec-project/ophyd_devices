@@ -34,11 +34,7 @@ class DetectorState(enum.IntEnum):
 
 
 class TriggerSource(enum.IntEnum):
-    """
-    Trigger source for Falcon detector
-
-    Translates setttings for PV:pixel_advance_mode
-    """
+    """Trigger source for Falcon detector"""
 
     USER = 0
     GATE = 1
@@ -46,11 +42,7 @@ class TriggerSource(enum.IntEnum):
 
 
 class MappingSource(enum.IntEnum):
-    """
-    Mapping source for Falcon detector
-
-    Translates setttings for PV:collect_mode
-    """
+    """Mapping source for Falcon detector"""
 
     SPECTRUM = 0
     MAPPING = 1
@@ -272,16 +264,7 @@ class FalconSetup(CustomDetectorMixin):
         pipe.execute()
 
     def finished(self) -> None:
-        """
-        Check if acquisition is finished.
-
-        In case of the Falcon Sitoro, we check if the number of triggers is equal to the number of written frames.
-
-        In case this is not correct, we would NOT (!) raise an Error at this moment
-        because there is data to reassemble the pixels.
-
-        However, this decision could be revoked and handled differently.
-        """
+        """Check if scan finished succesfully"""
         total_frames = int(
             self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
         )
@@ -381,12 +364,7 @@ class FalconcSAXS(PSIDetectorBase):
         self.ignore_gate.put(ignore_gate)
 
     def stage(self) -> List[object]:
-        """
-        Add functionality to stage, and arm the detector
-
-        Additional call to:
-        - custom_prepare.arm_acquisition()
-        """
+        """Stage"""
         rtr = super().stage()
         self.custom_prepare.arm_acquisition()
         return rtr
