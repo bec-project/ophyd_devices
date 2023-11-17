@@ -57,9 +57,9 @@ class Eiger9MSetup(CustomDetectorMixin):
         readout_time = (
             self.parent.scaninfo.readout_time
             if hasattr(self.parent.scaninfo, "readout_time")
-            else self.parent.readout_time_min
+            else self.parent.get_min_readout()
         )
-        self.parent.readout_time = max(readout_time, self.parent.readout_time_min)
+        self.parent.readout_time = max(readout_time, self.parent.get_min_readout())
 
     def initialize_detector(self) -> None:
         """Initialize detector"""
@@ -399,9 +399,12 @@ class Eiger9McSAXS(PSIDetectorBase):
         "describe",
     ]
 
+    # specify Setup class
     custom_prepare_cls = Eiger9MSetup
+    # specify minimum readout time for detector
+    PSIDetectorBase.set_min_readout(3e-3)
+    # specify class attributes
     cam = ADCpt(SLSDetectorCam, "cam1:")
-    MIN_READOUT = 3e-3
 
     def set_trigger(self, trigger_source: TriggerSource) -> None:
         """Set trigger source for the detector.

@@ -22,10 +22,23 @@ class DetectorInitError(Exception):
     pass
 
 
-MIN_READOUT = 3e-3
+# MIN_READOUT = 3e-3
 
 
 class CustomDetectorMixin:
+    """
+    Mixin class for custom detector logic
+
+    This class is used to implement BL specific logic for the detector.
+    It is used in the PSIDetectorBase class.
+
+    For the integration of a new detector, the following functions should
+    help with integrating functionality, but additional ones can be added.
+
+    Check PSIDetectorBase for the functions that are called during relevant function calls of
+    stage, unstage, trigger, stop and _init.
+    """
+
     def __init__(self, parent: Device = None, *args, **kwargs) -> None:
         self.parent = parent
 
@@ -186,7 +199,15 @@ class PSIDetectorBase(Device):
 
     custom_prepare_cls = CustomDetectorMixin
 
-    MIN_READOUT = 3e-3
+    _MIN_READOUT = 1e-3
+
+    @classmethod
+    def get_min_readout(cls):
+        return cls._MIN_READOUT
+
+    @classmethod
+    def set_min_readout(cls, value):
+        cls._MIN_READOUT = value
 
     # Specify which functions are revealed to the user in BEC client
     USER_ACCESS = [
@@ -229,7 +250,6 @@ class PSIDetectorBase(Device):
         self.std_client = None
         self.scaninfo = None
         self.filewriter = None
-        self.readout_time_min = MIN_READOUT
         self.timeout = 5
         self.wait_for_connection(all_signals=True)
 
