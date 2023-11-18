@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.1 (2023-11-18)
+
+### Fix
+
+* Include all needed files in packaged distro ([`204f94e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/204f94e0e4496f8347772f869bb0722e6ffb9ccf))
+
 ## v0.13.0 (2023-11-17)
 
 ### Feature
