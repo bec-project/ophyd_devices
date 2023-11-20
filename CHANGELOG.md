@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.2 (2023-11-20)
+
+### Fix
+
+* Remove stop from falcon.custom_prepare.arm_acquisition; closes #23 ([`9e1a6da`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9e1a6daa6edbfe2a9e7c9b15f21af5785a119474))
+* Remove stop from pilatus.custom_prepare.finished ([`334eeb8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/334eeb83dc3e1c7c37ce41d2ba5f720c3880ef46))
+* Remove duplicated stop call from eiger.custom_prepare.finished ([`175700b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/175700b6ad135cb7491eb88431ecde56704fd0b4))
+
 ## v0.13.1 (2023-11-18)
 
 ### Fix
