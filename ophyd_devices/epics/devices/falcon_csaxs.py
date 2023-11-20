@@ -222,7 +222,6 @@ class FalconSetup(CustomDetectorMixin):
             check_stopped=True,
             all_signals=False,
         ):
-            self.parent.stop()
             raise FalconTimeoutError(
                 f"Failed to arm the acquisition. Detector state {signal_conditions[0][0]}"
             )
