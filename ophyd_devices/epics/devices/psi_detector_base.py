@@ -288,7 +288,8 @@ class PSIDetectorBase(Device):
         self.custom_prepare.prepare_detector()
         state = False
         self.custom_prepare.publish_file_location(done=state)
-        # At the moment needed bc signal is not reliable, BEC too fast
+        # At the moment needed bc signal might not be reliable, BEC too fast.
+        # Consider removing this overhead in future!
         time.sleep(0.05)
         return super().stage()
 
