@@ -371,8 +371,6 @@ class PilatusSetup(CustomDetectorMixin):
             check_stopped=True,
             all_signals=True,
         ):
-            self.stop_detector()
-            self.stop_detector_backend()
             raise PilatusTimeoutError(
                 f"Reached timeout with detector state {signal_conditions[0][0]}, std_daq state"
                 f" {signal_conditions[1][0]} and received frames of {signal_conditions[2][0]} for"
