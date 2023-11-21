@@ -61,6 +61,7 @@ class MCSSetup(CustomDetectorMixin):
     """Setup mixin class for the MCS card"""
 
     def __init__(self, *args, parent: Device = None, **kwargs) -> None:
+        super().__init__(*args, parent=parent, **kwargs)
         self._lock = threading.RLock()
         self._stream_ttl = 1800
         self.acquisition_done = False
@@ -70,7 +71,6 @@ class MCSSetup(CustomDetectorMixin):
             signal for signal in self.parent.component_names if signal.startswith("mca")
         ]
         self.mca_data = defaultdict(lambda: [])
-        super().__init__(*args, parent=parent, **kwargs)
 
     def initialize_detector(self) -> None:
         """Initialize detector"""
@@ -88,7 +88,7 @@ class MCSSetup(CustomDetectorMixin):
         self.parent.output_polarity.set(1)
         # do not start counting on start
         self.parent.count_on_start.set(0)
-        self.parent.stop_all.set(1)
+        self.stop_detector()
 
     def initialize_detector_backend(self) -> None:
         """Initialize detector backend"""
@@ -107,7 +107,8 @@ class MCSSetup(CustomDetectorMixin):
             sub_type=self.parent.SUB_PROGRESS,
             value=self.counter * int(self.parent.scaninfo.num_points / num_lines) + value,
             max_value=max_value,
-            done=bool(max_value == self.counter),
+            # TODO check if that is correct with
+            done=bool(max_value == value),  # == self.counter),
         )
 
     @threadlocked
@@ -182,7 +183,7 @@ class MCSSetup(CustomDetectorMixin):
         """Check if acquisition is finished, if not successful, rais MCSTimeoutError"""
         signal_conditions = [
             (
-                self.acquisition_done,
+                lambda: self.acquisition_done,
                 True,
             ),
             (
@@ -197,7 +198,7 @@ class MCSSetup(CustomDetectorMixin):
             all_signals=True,
         ):
             total_frames = self.counter * int(
-                self.parent.scaninfo.num_points / self.num_lines.get()
+                self.parent.scaninfo.num_points / self.parent.num_lines.get()
             ) + max(self.parent.current_channel.get(), 0)
             raise MCSTimeoutError(
                 f"Reached timeout with mcs in state {self.parent.acquiring.get()} and"
@@ -215,6 +216,10 @@ class MCSSetup(CustomDetectorMixin):
         self.acquisition_done = True
 
 
+class SIS38XX(Device):
+    """SIS38XX card for access to EPICs PVs at cSAXS beamline"""
+
+
 class MCScSAXS(PSIDetectorBase):
     """MCS card for cSAXS for implementation at cSAXS beamline"""
 
@@ -226,25 +231,19 @@ class MCScSAXS(PSIDetectorBase):
     # specify Setup class
     custom_prepare_cls = MCSSetup
     # specify minimum readout time for detector
-    MIN_READOUT = 3e-3
-
-    # PV access to MCA signals
-    mca1 = Cpt(EpicsSignalRO, "mca1.VAL", auto_monitor=True)
-    mca3 = Cpt(EpicsSignalRO, "mca3.VAL", auto_monitor=True)
-    mca4 = Cpt(EpicsSignalRO, "mca4.VAL", auto_monitor=True)
-    current_channel = Cpt(EpicsSignalRO, "CurrentChannel", auto_monitor=True)
+    MIN_READOUT = 0
 
     # PV access to SISS38XX card
     # Acquisition
     erase_all = Cpt(EpicsSignal, "EraseAll")
-    erase_start = Cpt(EpicsSignal, "EraseStart", trigger_value=1)
+    erase_start = Cpt(EpicsSignal, "EraseStart")  # ,trigger_value=1
     start_all = Cpt(EpicsSignal, "StartAll")
     stop_all = Cpt(EpicsSignal, "StopAll")
     acquiring = Cpt(EpicsSignal, "Acquiring")
     preset_real = Cpt(EpicsSignal, "PresetReal")
     elapsed_real = Cpt(EpicsSignal, "ElapsedReal")
     read_mode = Cpt(EpicsSignal, "ReadAll.SCAN")
-    read_all = Cpt(EpicsSignal, "DoReadAll.VAL", trigger_value=1)
+    read_all = Cpt(EpicsSignal, "DoReadAll.VAL")  # ,trigger_value=1
     num_use_all = Cpt(EpicsSignal, "NuseAll")
     current_channel = Cpt(EpicsSignal, "CurrentChannel")
     dwell = Cpt(EpicsSignal, "Dwell")
@@ -265,6 +264,12 @@ class MCScSAXS(PSIDetectorBase):
     model = Cpt(EpicsSignalRO, "Model", string=True)
     firmware = Cpt(EpicsSignalRO, "Firmware")
     max_channels = Cpt(EpicsSignalRO, "MaxChannels")
+
+    # PV access to MCA signals
+    mca1 = Cpt(EpicsSignalRO, "mca1.VAL", auto_monitor=True)
+    mca3 = Cpt(EpicsSignalRO, "mca3.VAL", auto_monitor=True)
+    mca4 = Cpt(EpicsSignalRO, "mca4.VAL", auto_monitor=True)
+    current_channel = Cpt(EpicsSignalRO, "CurrentChannel", auto_monitor=True)
 
     # Custom signal readout from device config
     num_lines = Cpt(
