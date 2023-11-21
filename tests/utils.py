@@ -5,6 +5,8 @@ from unittest import mock
 
 
 class SocketMock:
+    """Socket Mock. Used for testing"""
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -14,13 +16,16 @@ class SocketMock:
         self.open()
 
     def connect(self):
+        """Mock connect method"""
         print(f"connecting to {self.host} port {self.port}")
 
     def _put(self, msg_bytes):
+        """Mock put method"""
         self.buffer_put.append(msg_bytes)
         print(self.buffer_put)
 
     def _recv(self, buffer_length=1024):
+        """Mock receive method"""
         print(self.buffer_recv)
         if isinstance(self.buffer_recv, list):
             if len(self.buffer_recv) > 0:
@@ -31,23 +36,29 @@ class SocketMock:
         return self.buffer_recv
 
     def _initialize_socket(self):
-        pass
+        """Mock initialize socket method"""
 
     def put(self, msg):
+        """Mock put method"""
         return self._put(msg)
 
     def receive(self, buffer_length=1024):
+        """Mock receive method"""
         return self._recv(buffer_length=buffer_length)
 
     def open(self):
+        """Mock open method"""
         self._initialize_socket()
         self.is_open = True
 
     def close(self):
+        """Mock close method"""
+        # pylint disable=attribute-defined-outside-init
         self.sock = None
         self.is_open = False
 
     def flush_buffer(self):
+        """Mock flush buffer method"""
         self.buffer_put = []
         self.buffer_recv = ""
 
@@ -154,14 +165,18 @@ class MockPV:
             acc_cb(True, True, pv=self)
 
     def wait_for_connection(self, timeout=None):
+        """Wait for connection"""
         return self.connected
 
     def get_all_metadata_blocking(self, timeout):
+        """Get all metadata blocking"""
         md = self._args.copy()
         md.pop("value", None)
         return md
 
     def get_all_metadata_callback(self, callback, *, timeout):
+        """Get all metadata callback"""
+
         def get_metadata_thread(pvname):
             md = self.get_all_metadata_blocking(timeout=timeout)
             callback(pvname, md)
@@ -171,11 +186,13 @@ class MockPV:
     def put(
         self, value, wait=False, timeout=None, use_complete=False, callback=None, callback_data=None
     ):
+        """MOCK PV, put function"""
         self.mock_data = value
         if callback is not None:
             callback(None, None, None)
 
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
+        """Add callback"""
         return mock.MagicMock()
 
     def get_with_metadata(
@@ -189,6 +206,7 @@ class MockPV:
         use_monitor=True,
         as_namespace=False,
     ):
+        """Get MOCKPV data together with metadata"""
         return {"value": self.mock_data}
 
     def get(
@@ -200,6 +218,7 @@ class MockPV:
         with_ctrlvars=False,
         use_monitor=True,
     ):
+        """Get value from MOCKPV"""
         data = self.get_with_metadata(
             count=count,
             as_string=as_string,
@@ -230,33 +249,41 @@ class DeviceMock:
         self._enabled = True
 
     def read(self):
+        """Read method for DeviceMock"""
         return {self.name: {"value": self.read_buffer}}
 
     def readback(self):
+        """Readback method for DeviceMock"""
         return self.read_buffer
 
     @property
     def enabled_set(self) -> bool:
+        """enabled_set property"""
         return self._enabled_set
 
     @enabled_set.setter
     def enabled_set(self, val: bool):
+        """enabled_set setter"""
         self._enabled_set = val
 
     @property
     def enabled(self) -> bool:
+        """enabled property"""
         return self._enabled
 
     @enabled.setter
     def enabled(self, val: bool):
+        """enabled setter"""
         self._enabled = val
 
     @property
     def user_parameter(self):
+        """user_parameter property"""
         return self._config["userParameter"]
 
     @property
     def obj(self):
+        """obj property"""
         return self
 
 
@@ -272,6 +299,7 @@ class DMMock:
         self.producer = ProducerMock()
 
     def add_device(self, name: str, value: float = 0.0):
+        """Add device to the DeviceManagerMock"""
         self.devices[name] = DeviceMock(name, value)
 
 
