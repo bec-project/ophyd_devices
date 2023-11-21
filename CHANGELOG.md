@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.3 (2023-11-21)
+
+### Fix
+
+* Fix auto_monitor=True for MockPV by add add_callback = mock.MagicMock() ([`e7f7f9d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e7f7f9d6658a27ca98ac17ffb998efae51ec3497))
+* Renamed to prepare_detector_backend ([`16022c5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/16022c53ef9e3134fe486892c27f26e5c12fad2e))
+* Rename custome_prepare.prepare_detector_backend, bugfix in custom_prepare.wait_for_signals ([`f793ec7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f793ec7b1f3f2d03a686d592d4cd9c2e2f087faf))
+* Add __init__ and super().__init__ to falcon,eiger and pilatus ([`9e26fc2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9e26fc2a3c82e610d0c570db9a08a698c3394bc8))
+
+### Documentation
+
+* Imporive pylint score ([`5b27e6f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5b27e6fe1e20a50894c47144a412b9361ab1c4e6))
+* Add docstrings, improve pylint score ([`5874466`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/587446670444f245ec2c24db0355578921b8fe59))
+* Add docstring ([`cbe8c8c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cbe8c8c4e5a53a0b38a58e11b85b11307e92ced7))
+
 ## v0.13.2 (2023-11-20)
 
 ### Fix
