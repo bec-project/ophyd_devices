@@ -344,31 +344,6 @@ class FalconcSAXS(PSIDetectorBase):
     pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
     nd_array_mode = Cpt(EpicsSignal, "NDArrayMode")
 
-    def __init__(
-        self,
-        prefix="",
-        *,
-        name,
-        kind=None,
-        read_attrs=None,
-        configuration_attrs=None,
-        parent=None,
-        device_manager=None,
-        sim_mode=False,
-        **kwargs,
-    ):
-        super().__init__(
-            prefix=prefix,
-            name=name,
-            kind=kind,
-            read_attrs=read_attrs,
-            configuration_attrs=configuration_attrs,
-            parent=parent,
-            device_manager=device_manager,
-            sim_mode=sim_mode,
-            **kwargs,
-        )
-
     def set_trigger(
         self, mapping_mode: MappingSource, trigger_source: TriggerSource, ignore_gate: int = 0
     ) -> None:
