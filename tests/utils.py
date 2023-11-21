@@ -175,6 +175,9 @@ class MockPV:
         if callback is not None:
             callback(None, None, None)
 
+    def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
+        return mock.MagicMock()
+
     def get_with_metadata(
         self,
         count=None,
