@@ -34,6 +34,7 @@ class BECInfoMsgMock:
         self.frames_per_trigger = frames_per_trigger
 
     def get_bec_info_msg(self) -> dict:
+        """Get BECInfoMsg object"""
         info_msg = {
             "RID": self.mockrid,
             "queueID": self.mockqueueid,
