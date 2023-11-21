@@ -65,7 +65,7 @@ class CustomDetectorMixin:
         Prepare detector for the scan
         """
 
-    def prepare_data_backend(self) -> None:
+    def prepare_detector_backend(self) -> None:
         """
         Prepare detector backend for the scan
         """
@@ -143,10 +143,10 @@ class CustomDetectorMixin:
                 get_current_state() == condition
                 for get_current_state, condition in signal_conditions
             ]
-            if (all_signals and all(checks)) or (not all_signals and any(checks)):
-                return True
             if check_stopped is True and self.parent.stopped is True:
                 return False
+            if (all_signals and all(checks)) or (not all_signals and any(checks)):
+                return True
             if timer > timeout:
                 return False
             time.sleep(interval)
@@ -227,9 +227,7 @@ class PSIDetectorBase(Device):
         self.wait_for_connection(all_signals=True)
 
         # Init custom prepare class with BL specific logic
-        self.custom_prepare = self.custom_prepare_cls(
-            parent=self, **kwargs
-        )  # Eiger9MSetup(parent=self, **kwargs)
+        self.custom_prepare = self.custom_prepare_cls(parent=self, **kwargs)
         if not sim_mode:
             self._update_service_config()
             self.device_manager = device_manager
@@ -284,7 +282,7 @@ class PSIDetectorBase(Device):
         # Load metadata of the scan
         self.scaninfo.load_scan_metadata()
         # Prepare detector and file writer
-        self.custom_prepare.prepare_data_backend()
+        self.custom_prepare.prepare_detector_backend()
         self.custom_prepare.prepare_detector()
         state = False
         self.custom_prepare.publish_file_location(done=state)
