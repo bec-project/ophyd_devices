@@ -143,7 +143,7 @@ def test_stage(mock_det, scaninfo):
     This includes testing _prep_det
     """
     with mock.patch.object(mock_det, "set_trigger") as mock_set_trigger, mock.patch.object(
-        mock_det.custom_prepare, "prepare_data_backend"
+        mock_det.custom_prepare, "prepare_detector_backend"
     ) as mock_prep_data_backend, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location, mock.patch.object(

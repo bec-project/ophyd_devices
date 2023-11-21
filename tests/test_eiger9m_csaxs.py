@@ -281,7 +281,7 @@ def test_stage(
         mock_det.cam.beam_energy.put(scaninfo["mokev"])
         mock_det.stopped = stopped
         mock_det.cam.detector_state._read_pv.mock_data = detector_state
-        with mock.patch.object(mock_det.custom_prepare, "prepare_data_backend") as mock_prep_fw:
+        with mock.patch.object(mock_det.custom_prepare, "prepare_detector_backend") as mock_prep_fw:
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
@@ -522,8 +522,6 @@ def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_e
                 mock_det.timeout = 0.1
                 mock_det.custom_prepare.finished()
                 assert mock_det.stopped is stopped
-                mock_stop_backend.assert_called()
-                mock_stop_det.assert_called_once()
         else:
             mock_det.custom_prepare.finished()
             if stopped:

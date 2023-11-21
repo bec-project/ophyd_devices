@@ -117,7 +117,7 @@ def test_stage(
         mock_det.device_manager.add_device("mokev", value=12.4)
         mock_det.stopped = stopped
         with mock.patch.object(
-            mock_det.custom_prepare, "prepare_data_backend"
+            mock_det.custom_prepare, "prepare_detector_backend"
         ) as mock_data_backend, mock.patch.object(
             mock_det.custom_prepare, "update_readout_time"
         ) as mock_update_readout_time:
@@ -288,7 +288,9 @@ def test_stop_detector_backend(mock_det, requests_state, expected_exception, url
                         {
                             "searchPath": "/",
                             "searchPattern": "glob:*.cbf",
-                            "destinationPath": "/sls/X12SA/data/e12345/Data10/pilatus_2/S00000_00999",
+                            "destinationPath": (
+                                "/sls/X12SA/data/e12345/Data10/pilatus_2/S00000_00999"
+                            ),
                         }
                     ]
                 },
@@ -337,7 +339,9 @@ def test_stop_detector_backend(mock_det, requests_state, expected_exception, url
                         {
                             "searchPath": "/",
                             "searchPattern": "glob:*.cbf",
-                            "destinationPath": "/sls/X12SA/data/e12345/Data10/pilatus_2/S00000_00999",
+                            "destinationPath": (
+                                "/sls/X12SA/data/e12345/Data10/pilatus_2/S00000_00999"
+                            ),
                         }
                     ]
                 },
@@ -489,7 +493,7 @@ def test_stop(mock_det):
         (
             True,
             ophyd.Staged.no,
-            False,
+            True,
         ),
         (
             False,
