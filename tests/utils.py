@@ -13,6 +13,7 @@ class SocketMock:
         self.buffer_put = []
         self.buffer_recv = [b""]
         self.is_open = False
+        self.sock = None
         self.open()
 
     def connect(self):
@@ -24,6 +25,7 @@ class SocketMock:
         self.buffer_put.append(msg_bytes)
         print(self.buffer_put)
 
+    # pylint: disable=unused-argument
     def _recv(self, buffer_length=1024):
         """Mock receive method"""
         print(self.buffer_recv)
@@ -53,7 +55,6 @@ class SocketMock:
 
     def close(self):
         """Mock close method"""
-        # pylint disable=attribute-defined-outside-init
         self.sock = None
         self.is_open = False
 
@@ -164,10 +165,12 @@ class MockPV:
         for acc_cb in self.access_callbacks:
             acc_cb(True, True, pv=self)
 
+    # pylint disable: unused-argument
     def wait_for_connection(self, timeout=None):
         """Wait for connection"""
         return self.connected
 
+    # pylint disable: unused-argument
     def get_all_metadata_blocking(self, timeout):
         """Get all metadata blocking"""
         md = self._args.copy()
@@ -183,6 +186,7 @@ class MockPV:
 
         get_metadata_thread(pvname=self.pvname)
 
+    # pylint disable: unused-argument
     def put(
         self, value, wait=False, timeout=None, use_complete=False, callback=None, callback_data=None
     ):
@@ -191,10 +195,12 @@ class MockPV:
         if callback is not None:
             callback(None, None, None)
 
+    # pylint: disable=unused-argument
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
         """Add callback"""
         return mock.MagicMock()
 
+    # pylint: disable=unused-argument
     def get_with_metadata(
         self,
         count=None,
