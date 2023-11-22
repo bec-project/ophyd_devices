@@ -20,15 +20,20 @@ logger = bec_logger.logger
 
 
 class DelayGeneratorError(Exception):
-    """Exception raised for errors in the Delay Generator."""
+    """Exception raised for errors."""
 
 
 class DeviceInitError(DelayGeneratorError):
-    """Error raised when init of device class fails due to missing device manager or not started in sim_mode."""
+    """Error upon failed initialization, invoked by missing device manager or device not started in sim_mode."""
+
+
+class DelayGeneratorNotOkay(DelayGeneratorError):
+    """Error when DDG is not okay"""
 
 
 class DelayStatic(Device):
-    """Static axis for the T0 output channel
+    """
+    Static axis for the T0 output channel
 
     It allows setting the logic levels, but the timing is fixed.
     The signal is high after receiving the trigger until the end
@@ -62,7 +67,7 @@ class DelayStatic(Device):
 
 
 class DummyPositioner(PVPositioner):
-    """Dummy positioner for the DG645"""
+    """Dummy Positioner to set AO, AI and ReferenceMO."""
 
     setpoint = Component(EpicsSignal, "DelayAO", put_complete=True, kind=Kind.config)
     readback = Component(EpicsSignalRO, "DelayAI", kind=Kind.config)
@@ -71,10 +76,11 @@ class DummyPositioner(PVPositioner):
 
 
 class DelayPair(PseudoPositioner):
-    """Delay pair interface for DG645
+    """
+    Delay pair interface
 
-    Virtual motor interface to a pair of signals (on the frontpanel).
-    It offers a simple delay and pulse width interface for scanning.
+    Virtual motor interface to a pair of signals (on the frontpanel - AB/CD/EF/GH).
+    It offers a simple delay and pulse width interface.
     """
 
     # The pseudo positioner axes
@@ -107,10 +113,15 @@ class DelayPair(PseudoPositioner):
 
 class DDGCustomMixin:
     """
-    Mixin class for custom DelayGenerator logic
+    Mixin class for custom DelayGenerator logic within PSIDelayGeneratorBase.
 
-    This class is used to implement BL specific logic for the DDG.
-    It is used in the PSIDelayGeneratorBase class.
+    This class provides a parent class for implementation of BL specific logic of the device.
+    It is also possible to pass implementing certain methods, e.g. finished or on_trigger,
+    based on the setup and desired operation mode at the beamline.
+
+    Args:
+        parent (object): instance of PSIDelayGeneratorBase
+        **kwargs: keyword arguments
     """
 
     def __init__(self, *_args, parent: Device = None, **_kwargs) -> None:
@@ -118,41 +129,48 @@ class DDGCustomMixin:
 
     def initialize_default_parameter(self) -> None:
         """
-        Initialize default parameters for DDG
+        Method to initialize default parameters for DDG.
 
-        This method is called upon initiating the class.
-        It can be conveniently used to set default parameters for the DDG.
-        These may include, amplitudes, offsets, delays, etc.
+        Called upon initiating the base class.
+        It should be used to set the DDG default parameters.
+        These may include: amplitude, offsets, delays, etc.
         """
 
     def prepare_ddg(self) -> None:
         """
-        Prepare the DDG for the upcoming scan
+        Method to prepare the DDG for the upcoming scan.
 
-        This methods hosts the full logic for the upcoming scan.
-        It is called by the stage method and needs to fully prepare the DDGs for the upcoming scan.
+        Called by the stage method of the base class.
+        It should be used to set the DDG parameters for the upcoming scan.
         """
 
     def on_trigger(self) -> None:
-        """Define action executed on trigger methods"""
+        """Method executed upon trigger call in parent class"""
 
     def finished(self) -> None:
-        """Checks if DDG finished acquisition"""
+        """Method to check if DDG is finished with the scan"""
 
     def on_pre_scan(self) -> None:
         """
-        Called by pre scan hook
+        Method executed upon pre_scan call in parent class.
 
-        These actions get executed just before the trigger method/start of scan
+        Covenient to implement time sensitive actions to be executed right before start of the scan.
+        Example could be to open the shutter by triggering a pulse via pre_scan.
         """
 
     def check_scanID(self) -> None:
-        """
-        Check if BEC is running on a new scanID
-        """
+        """Method to check if there is a new scanID, called by stage."""
 
     def is_ddg_okay(self, raise_on_error=False) -> None:
-        """Check if DDG is okay, if not try to clear error"""
+        """
+        Method to check if DDG is okay
+
+        It checks the status PV of the DDG and tries to clear the error if it is not okay.
+        It will rerun itself and raise DelayGeneratorNotOkay if DDG is still not okay.
+
+        Args:
+            raise_on_error (bool, optional): raise exception if DDG is not okay. Defaults to False.
+        """
         status = self.parent.status.read()[self.parent.status.name]["value"]
         if status != "STATUS OK" and not raise_on_error:
             logger.warning(f"DDG returns {status}, trying to clear ERROR")
@@ -160,7 +178,7 @@ class DDGCustomMixin:
             time.sleep(1)
             self.is_ddg_okay(raise_on_error=True)
         elif status != "STATUS OK":
-            raise Exception(f"DDG failed to start with status: {status}")
+            raise DelayGeneratorNotOkay(f"DDG failed to start with status: {status}")
 
 
 class PSIDelayGeneratorBase(Device):
@@ -170,34 +188,35 @@ class PSIDelayGeneratorBase(Device):
     This class implements a thin Ophyd wrapper around the Stanford Research DG645
     digital delay generator.
 
-    Internally, the DG645 generates 8+1 signals:  A, B, C, D, E, F, G, H and T0
-    Front panel outputs T0, AB, CD, EF and GH are a combination of these signals.
-    Back panel outputs are directly routed signals. So signals are NOT INDEPENDENT.
+    The DG645 generates 8+1 signals: A, B, C, D, E, F, G, H and T0. Front panel outputs
+    T0, AB, CD, EF and GH are combinations of these signals. Back panel outputs are
+    directly routed signals. Signals are not independent.
 
-    Front panel signals:
-    All signals go high after their defined delays and go low after the trigger
-    holdoff period, i.e. this is the trigger window. Front panel outputs provide
-    a combination of these events.
+    Signal pairs, e.g. AB, CD, EF, GH, are implemented as DelayPair objects. They
+    have a TTL pulse width, delay and a reference signal to which they are being triggered.
+    In addition, the io layer allows setting amplitude, offset and polarity for each pair.
+
+    Detailed information can be found in the manual:
+    https://www.thinksrs.com/downloads/pdfs/manuals/DG645m.pdf
 
     Class attributes:
         custom_prepare_cls (object): class for custom prepare logic (BL specific)
 
     Args:
-        prefix (str): EPICS PV prefix for component (optional)
-        name (str): name of the device, as will be reported via read()
-        kind (str): member of class 'ophydobj.Kind', defaults to Kind.normal
-                    omitted -> readout ignored for read 'ophydobj.read()'
-                    normal -> readout for read
-                    config -> config parameter for 'ophydobj.read_configuration()'
-                    hinted -> which attribute is readout for read
-        read_attrs (list): sequence of attribute names to read
-        configuration_attrs (list): sequence of attribute names via config_parameters
-        parent (object): instance of the parent device
-        device_manager (object): bec device manager
-        sim_mode (bool): simulation mode, if True, no device manager is required
-        **kwargs: keyword arguments
-
-        attributes: lazy_wait_for_connection : bool
+        prefix (str)                : EPICS PV prefix for component (optional)
+        name (str)                  : name of the device, as will be reported via read()
+        kind (str)                  : member of class 'ophydobj.Kind', defaults to Kind.normal
+                                        omitted -> readout ignored for read 'ophydobj.read()'
+                                        normal -> readout for read
+                                        config -> config parameter for 'ophydobj.read_configuration()'
+                                        hinted -> which attribute is readout for read
+        read_attrs (list)           : sequence of attribute names to read
+        configuration_attrs (list)  : sequence of attribute names via config_parameters
+        parent (object)             : instance of the parent device
+        device_manager (object)     : bec device manager
+        sim_mode (bool)             : simulation mode, if True, no device manager is required
+        **kwargs                    : keyword arguments
+        attributes                  : lazy_wait_for_connection : bool
     """
 
     # Custom_prepare_cls
@@ -215,6 +234,7 @@ class PSIDelayGeneratorBase(Device):
         "reload_config",
     ]
 
+    # Assign PVs from DDG645
     trigger_burst_readout = Component(
         EpicsSignal, "EventStatusLI.PROC", name="trigger_burst_readout"
     )
@@ -230,7 +250,6 @@ class PSIDelayGeneratorBase(Device):
     channelEF = Component(DelayPair, "", name="EF", channel="EF")
     channelGH = Component(DelayPair, "", name="GH", channel="GH")
 
-    # Minimum time between triggers
     holdoff = Component(
         EpicsSignal,
         "TriggerHoldoffAI",
@@ -267,7 +286,6 @@ class PSIDelayGeneratorBase(Device):
         kind=Kind.config,
     )
     trigger_shot = Component(EpicsSignal, "TriggerDelayBO", name="trigger_shot", kind="config")
-    # Burst mode
     burstMode = Component(
         EpicsSignal,
         "BurstModeBI",
@@ -359,27 +377,30 @@ class PSIDelayGeneratorBase(Device):
         self.custom_prepare.is_ddg_okay()
 
     def _update_scaninfo(self) -> None:
-        """Update scaninfo from BecScaninfoMixing
-        This depends on device manager and operation/sim_mode
+        """
+        Method to updated scaninfo from BEC.
+
+        In sim_mode, scaninfo output is mocked - see bec_scaninfo_mixin.py
         """
         self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
         self.scaninfo.load_scan_metadata()
 
     def _init(self) -> None:
-        """Initialize detector, filewriter and set default parameters"""
+        """Method to initialize custom parameters of the DDG."""
         self.custom_prepare.initialize_default_parameter()
 
     def set_channels(self, signal: str, value: Any, channels: List = None) -> None:
         """
-        Sets value on signal in list all_channels
+        Method to set signals on DelayPair and DelayStatic channels.
 
-        Setting values works on DelayPair and DelayStatic channels.
+        Signals can be set on the DelayPair and DelayStatic channels. The method checks
+        if the signal is available on the channel and sets it. It works for both, DelayPair
+        and Delay Static although signals are hosted in different layers.
 
         Args:
-            signal (str): signal to set
-            value (Any): value to set
-            channels (List, optional): list of channels to set. Defaults to self.all_channels.
-
+            signal (str)                : signal to set (width, delay, amplitude, offset, polarity)
+            value (Any)                 : value to set
+            channels (List, optional)   : list of channels to set. Defaults to self.all_channels (T0,AB,CD,EF,GH)
         """
         if not channels:
             channels = self.all_channels
@@ -395,17 +416,18 @@ class PSIDelayGeneratorBase(Device):
 
     def stage(self) -> List[object]:
         """
-         Stage device in preparation for a scan
+        Method to stage the device.
+
+        Called in preparation for a scan.
 
         Internal Calls:
         - scaninfo.load_scan_metadata        : load scan metadata
         - custom_prepare.prepare_ddg         : prepare DDG for measurement
+        - is_ddg_okay                        : check if DDG is okay
 
         Returns:
             List(object): list of objects that were staged
-
         """
-        # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
         if self._staged != Staged.no:
             return super().stage()
         self.stopped = False
@@ -418,25 +440,35 @@ class PSIDelayGeneratorBase(Device):
         return super().stage()
 
     def trigger(self) -> DeviceStatus:
-        """Trigger the detector, called from BEC."""
+        """
+        Method to trigger the acquisition.
+
+        Internal Call:
+        - custom_prepare.on_trigger  : execute BL specific action
+        """
         self.custom_prepare.on_trigger()
         return super().trigger()
 
     def pre_scan(self) -> None:
-        """Pre scan hook, called before the scan starts"""
+        """
+        Method pre_scan gets executed directly before the scan
+
+        Internal Call:
+        - custom_prepare.on_pre_scan  : execute BL specific action
+        """
         self.custom_prepare.on_pre_scan()
 
     def unstage(self) -> List[object]:
         """
-        Unstage device in preparation for a scan
+        Method unstage gets called at the end of a scan.
 
-        Returns directly if self.stopped,
-        otherwise checks with self._finished
-        if data acquisition on device finished (an was successful)
+        If scan (self.stopped is True) is stopped, returns directly.
+        Otherwise, checks if the DDG finished acquisition
 
         Internal Calls:
         - custom_prepare.check_scanID          : check if scanID changed or detector stopped
         - custom_prepare.finished              : check if device finished acquisition (succesfully)
+        - is_ddg_okay                          : check if DDG is okay
 
         Returns:
             List(object): list of objects that were unstaged
@@ -451,9 +483,12 @@ class PSIDelayGeneratorBase(Device):
 
     def stop(self, *, success=False) -> None:
         """
-        Stop the DDG
+        Method to stop the DDG
 
-        #TODO check if the pulse sequence can be stopped, which PV should be called?
+        #TODO Check if the pulse generation can be interruppted
+
+        Internal Call:
+        - custom_prepare.is_ddg_okay          : check if DDG is okay
         """
         self.custom_prepare.is_ddg_okay()
         super().stop(success=success)
