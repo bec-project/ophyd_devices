@@ -14,11 +14,18 @@ logger = bec_logger.logger
 
 
 class DelayGeneratorError(Exception):
-    """Exception raised for errors in the Delay Generator."""
+    """Exception raised for errors."""
 
 
 class TriggerSource(enum.IntEnum):
-    """Trigger source options for DG645"""
+    """
+    Class for trigger options of DG645
+
+    Used to set the trigger source of the DG645 by setting the value
+    e.g. source.put(TriggerSource.Internal)
+    Exp:
+        TriggerSource.Internal
+    """
 
     INTERNAL = 0
     EXT_RISING_EDGE = 1
@@ -31,14 +38,14 @@ class TriggerSource(enum.IntEnum):
 
 class DDGSetup(DDGCustomMixin):
     """
-    Mixin class for custom DelayGenerator logic
+    Mixin class for DelayGenerator logic at cSAXS.
 
-    This class is used to implement BL specific logic for the DDG.
-    It is used in the PSIDelayGeneratorBase class.
+    At cSAXS, multiple DDGs were operated at the same time. There different behaviour is
+        implemented in the ddg_config signals that are passed via the device config.
     """
 
     def initialize_default_parameter(self) -> None:
-        """Initialize default parameters for DDG"""
+        """Method to initialize default parameters."""
         for ii, channel in enumerate(self.parent.all_channels):
             self.parent.set_channels("polarity", self.parent.polarity.get()[ii], channels=[channel])
 
@@ -64,10 +71,27 @@ class DDGSetup(DDGCustomMixin):
         self.parent.level.put(self.parent.thres_trig_level.get())
 
     def prepare_ddg(self) -> None:
-        """Prepare DDG for scan"""
+        """
+        Method to prepare scan logic of cSAXS
+
+        Two scantypes are supported: "step" and "fly":
+        - step: Scan is performed by stepping the motor and acquiring data at each step
+        - fly: Scan is performed by moving the motor with a constant velocity and acquiring data
+
+        Custom logic for different DDG behaviour during scans.
+
+        - set_high_on_exposure      : If True, then TTL signal is high during
+                                    the full exposure time of the scan (all frames).
+                                    E.g. Keep shutter open for the full scan.
+        - fixed_ttl_width           : fixed_ttl_width is a list of 5 values, one for each channel.
+                                    If the value is 0, then the width of the TTL pulse is determined,
+                                    no matter which parameters are passed from the scaninfo for exposure time
+        - set_trigger_source        : Specifies the default trigger source for the DDG. For cSAXS, relevant ones
+                                    were: SINGLE_SHOT, EXT_RISING_EDGE
+        """
         # scantype "step"
         if self.parent.scaninfo.scan_type == "step":
-            # define parameters
+            # High on exposure means that the signal
             if self.parent.set_high_on_exposure.get():
                 self.parent.set_trigger(
                     getattr(TriggerSource, self.parent.set_trigger_source.get())
@@ -175,51 +199,59 @@ class DDGSetup(DDGCustomMixin):
             raise Exception(f"Unknown scan type {self.parent.scaninfo.scan_type}")
 
     def on_trigger(self) -> None:
-        """Trigger DDG"""
+        """Method to be executed upon trigger"""
         if self.parent.source.read()[self.parent.source.name]["value"] == TriggerSource.SINGLE_SHOT:
             self.parent.trigger_shot.put(1)
 
     def check_scanID(self) -> None:
-        """Checks if scanID has changed and stops the scan if it has"""
+        """
+        Method to check if scanID has changed.
+
+        If yes, then it changes parent.stopped to True, which will stop further actions.
+        """
         old_scanID = self.parent.scaninfo.scanID
         self.parent.scaninfo.load_scan_metadata()
         if self.parent.scaninfo.scanID != old_scanID:
             self.parent.stopped = True
 
     def finished(self) -> None:
-        """Checks if DDG finished acquisition"""
+        """Method checks if DDG finished acquisition"""
 
     def on_pre_scan(self) -> None:
-        """Call by pre scan hook, action executed before scan starts"""
+        """
+        Method called by pre_scan hook in parent class.
+
+        Executes trigger if premove_trigger is Trus.
+        """
         if self.parent.premove_trigger.get() is True:
             self.parent.trigger_shot.put(1)
 
 
 class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
-    """DG645 delay generator
+    """
+    DG645 delay generator at cSAXS (multiple can be in use depending on the setup)
 
-    This class implements a thin Ophyd wrapper around the Stanford Research DG645
-    digital delay generator.
+    Default values for setting up DDG.
+    Note: checks of set calues are not (only partially) included, check manual for details on possible settings.
+    https://www.thinksrs.com/downloads/pdfs/manuals/DG645m.pdf
 
-    Internally, the DG645 generates 8+1 signals:  A, B, C, D, E, F, G, H and T0
-    Front panel outputs T0, AB, CD, EF and GH are a combination of these signals.
-    Back panel outputs are directly routed signals. So signals are NOT INDEPENDENT.
+    - delay_burst               : (float >=0) Delay between trigger and first pulse in burst mode
+    - delta_width               : (float >= 0) Add width to fast shutter signal to make sure its open during acquisition
+    - additional_triggers       : (int) add additional triggers to burst mode (mcs card needs +1 triggers per line)
+    - polarity                  : (list of 0/1) polarity for different channels
+    - amplitude                 : (float) amplitude voltage of TTLs
+    - offset                    : (float) offset for ampltitude
+    - thres_trig_level          : (float) threshold of trigger amplitude
 
-    Front panel signals:
-    All signals go high after their defined delays and go low after the trigger
-    holdoff period, i.e. this is the trigger window. Front panel outputs provide
-    a combination of these events.
+    Custom signals for logic in different DDGs during scans (for custom_prepare.prepare_ddg):
 
-    Option 1 back panel 5V signals:
-    All signals go high after their defined delays and go low after the trigger
-    holdoff period, i.e. this is the trigger window. The signals will stay high
-    until the end of the window.
-
-    Option 2 back panel 30V signals:
-    All signals go high after their defined delays for ~100ns. This is fixed by
-    electronics (30V needs quite some power). This is not implemented in the
-    current device
-
+    - set_high_on_exposure      : (bool): if True, then TTL signal should go high during the full acquisition time of a scan.
+    # TODO fixed_ttl_width and trigger_width could be combined in a single signal
+    - fixed_ttl_width           : (list of either 1 or 0), one for each channel.
+    - trigger_width             : (float) if fixed_ttl_width is True, then the width of the TTL pulse is set to this value.
+    - set_trigger_source        : (TriggerSource) specifies the default trigger source for the DDG.
+    - premove_trigger           : (bool) if True, then a trigger should be executed before the scan starts (to be implemented in on_pre_scan).
+    - set_high_on_stage         : (bool) if True, then TTL signal should go high already on stage.
     """
 
     custom_prepare_cls = DDGSetup
@@ -328,43 +360,35 @@ class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
         ddg_config=None,
         **kwargs,
     ):
-        """Signals for the DG645 configured via Device config
-
-        Args:
-            name (_type_): _description_
-            prefix (str, optional): _description_. Defaults to "".
-            kind (_type_, optional): _description_. Defaults to None.
-            read_attrs (_type_, optional): _description_. Defaults to None.
-            configuration_attrs (_type_, optional): _description_. Defaults to None.
-            parent (_type_, optional): _description_. Defaults to None.
-            device_manager (_type_, optional): _description_. Defaults to None.
-        Signals from ddg_config (device coinfig):
-            polarity (_list_, optional): Polarity for different channels
-            fixed_ttl_width (_list_, optional): If TTL pulse should get fixed width
-            amplitude (_type_, optional): Amplitude of trigger signal
-            offset (_type_, optional): _description_. Defaults to None.
-            thres_trig_level (_type_, optional): Threshold of trigger amplitude
-            delay_burst (_type_, float): Add delay for triggering in software trigger mode to allow fast shutter to open. Defaults to 0.
-            delta_width (_type_, float): Add width to fast shutter signal to make sure its open during acquisition. Defaults to 0.
-            delta_triggers (_type_, int): Add additional triggers to burst mode (mcs card needs +1 triggers per line). Defaults to 0.
-            set_high_on_exposure : Set signal high on exposure
-            set_high_on_stage : Set high on stage
-            set_trigger_source : Specify default trigger source
         """
+        Args:
+            prefix (str, optional): Prefix of the device. Defaults to "".
+            name (str): Name of the device.
+            kind (str, optional): Kind of the device. Defaults to None.
+            read_attrs (list, optional): List of attributes to read. Defaults to None.
+            configuration_attrs (list, optional): List of attributes to configure. Defaults to None.
+            parent (Device, optional): Parent device. Defaults to None.
+            device_manager (DeviceManagerBase, optional): DeviceManagerBase object. Defaults to None.
+            sim_mode (bool, optional): Simulation mode flag. Defaults to False.
+            ddg_config (dict, optional): Dictionary of ddg_config signals. Defaults to None.
 
+        """
+        # Default values for ddg_config signals
         self.ddg_config = {
+            # Setup default values
             f"{name}_delay_burst": 0,
             f"{name}_delta_width": 0,
             f"{name}_additional_triggers": 0,
             f"{name}_polarity": [1, 1, 1, 1, 1],
-            f"{name}_fixed_ttl_width": [0, 0, 0, 0, 0],
             f"{name}_amplitude": 4.5,
             f"{name}_offset": 0,
             f"{name}_thres_trig_level": 2.5,
+            # Values for different behaviour during scans
+            f"{name}_fixed_ttl_width": [0, 0, 0, 0, 0],
+            f"{name}_trigger_width": None,
             f"{name}_set_high_on_exposure": False,
             f"{name}_set_high_on_stage": False,
             f"{name}_set_trigger_source": "SINGLE_SHOT",
-            f"{name}_trigger_width": None,  # This somehow duplicates the logic of fixed_ttl_width
             f"{name}_premove_trigger": False,
         }
         if ddg_config is not None:
@@ -415,6 +439,7 @@ class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
         """Customized stage function"""
 
 
-# Automatically connect to test environmenr if directly invoked
 if __name__ == "__main__":
+    # Start delay generator in simulation mode.
+    # Note: To run, access to Epics must be available.
     dgen = DelayGeneratorcSAXS("delaygen:DG1:", name="dgen", sim_mode=True)
