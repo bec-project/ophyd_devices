@@ -28,6 +28,6 @@ from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
 from .eiger9m_csaxs import Eiger9McSAXS
 from .pilatus_csaxs import PilatuscSAXS
 from .falcon_csaxs import FalconcSAXS
-from .DelayGeneratorDG645 import DelayGeneratorDG645
+from .delay_generator_csaxs import DelayGeneratorcSAXS
 
 # from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
