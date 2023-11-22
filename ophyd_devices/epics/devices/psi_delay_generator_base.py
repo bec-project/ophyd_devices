@@ -374,7 +374,6 @@ class PSIDelayGeneratorBase(Device):
         self.producer = self.device_manager.producer
         self._update_scaninfo()
         self._init()
-        self.custom_prepare.is_ddg_okay()
 
     def _update_scaninfo(self) -> None:
         """
@@ -388,6 +387,7 @@ class PSIDelayGeneratorBase(Device):
     def _init(self) -> None:
         """Method to initialize custom parameters of the DDG."""
         self.custom_prepare.initialize_default_parameter()
+        self.custom_prepare.is_ddg_okay()
 
     def set_channels(self, signal: str, value: Any, channels: List = None) -> None:
         """
