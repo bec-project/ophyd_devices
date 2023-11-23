@@ -2,6 +2,24 @@
 
 <!--next-version-placeholder-->
 
+## v0.14.0 (2023-11-23)
+
+### Feature
+
+* Add test for class ([`19faece`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/19faece0a5e119e1f1403372c09825748de5e032))
+* Add delay_generator_csaxs ([`e5c90ee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e5c90ee2156ac076d7cea56975c1ed459adb8727))
+* Create base class for DDG at psi ([`d837ddf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d837ddfd1cd7935b4f472b976b925d2d70056cd7))
+
+### Fix
+
+* Bugfix and reorder call logic in _init ([`138d181`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/138d18168fa64a2dfb31218266e1f653a74ff4d5))
+* Fix imports of renamed classes ([`6780c52`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6780c523bd2192fc2234296987bdabeb45f81ee4))
+
+### Documentation
+
+* Reviewed docstrings ([`da44e5d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/da44e5d7bb122abda480a918327faf5d460cb396))
+* Reviewed docstrings ([`d295741`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d295741bd04930fc4397c89ac039a01c526d2d1e))
+
 ## v0.13.4 (2023-11-23)
 
 ### Fix
