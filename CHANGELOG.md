@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.4 (2023-11-23)
+
+### Fix
+
+* Bugfix: remove std_client from psi_det_base_class; closes #25 ([`3ad0daa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3ad0daa5bcefe585d4f89992e49c9856a55e6183))
+
 ## v0.13.3 (2023-11-21)
 
 ### Fix
