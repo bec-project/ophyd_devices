@@ -220,7 +220,6 @@ class PSIDetectorBase(Device):
         self.stopped = False
         self.name = name
         self.service_cfg = None
-        self.std_client = None
         self.scaninfo = None
         self.filewriter = None
         self.timeout = 5
