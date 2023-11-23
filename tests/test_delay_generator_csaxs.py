@@ -30,7 +30,7 @@ def mock_DDGSetup():
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 1,
-            "exposure_time": 0.1,
+            "exp_time": 0.1,
             "readout_time": 0.1,
         },
         {
@@ -38,7 +38,7 @@ def mock_DDGSetup():
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 5,
-            "exposure_time": 0.01,
+            "exp_time": 0.01,
             "readout_time": 0,
         },
         {
@@ -46,7 +46,7 @@ def mock_DDGSetup():
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 1,
-            "exposure_time": 1,
+            "exp_time": 1,
             "readout_time": 0.2,
         },
         {
@@ -54,7 +54,7 @@ def mock_DDGSetup():
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 5,
-            "exposure_time": 0.1,
+            "exp_time": 0.1,
             "readout_time": 0.4,
         },
     ]
@@ -104,7 +104,7 @@ def ddg_config_defaults(request):
         {
             "fixed_ttl_width": [0, 0, 0, 0, 0],
             "trigger_width": 0.1,
-            "set_high_on_exposure": False,
+            "set_high_on_exposure": True,
             "set_high_on_stage": False,
             "set_trigger_source": "SINGLE_SHOT",
             "premove_trigger": True,
@@ -256,12 +256,12 @@ def test_prepare_ddg(
         if ddg_config_scan["set_high_on_exposure"]:
             num_burst_cycle = 1 + ddg_config_defaults["additional_triggers"]
             exp_time = ddg_config_defaults["delta_width"] + scaninfo["frames_per_trigger"] * (
-                scaninfo["exposure_time"] + scaninfo["readout_time"]
+                scaninfo["exp_time"] + scaninfo["readout_time"]
             )
             total_exposure = exp_time
             delay_burst = ddg_config_defaults["delay_burst"]
         else:
-            exp_time = ddg_config_defaults["delta_width"] + scaninfo["exposure_time"]
+            exp_time = ddg_config_defaults["delta_width"] + scaninfo["exp_time"]
             total_exposure = exp_time + scaninfo["readout_time"]
             delay_burst = ddg_config_defaults["delay_burst"]
             num_burst_cycle = (
@@ -272,19 +272,19 @@ def test_prepare_ddg(
             num_burst_cycle = 1 + ddg_config_defaults["additional_triggers"]
             exp_time = (
                 ddg_config_defaults["delta_width"]
-                + scaninfo["num_points"] * scaninfo["exposure_time"]
+                + scaninfo["num_points"] * scaninfo["exp_time"]
                 + (scaninfo["num_points"] - 1) * scaninfo["readout_time"]
             )
             total_exposure = exp_time
             delay_burst = ddg_config_defaults["delay_burst"]
         else:
-            exp_time = ddg_config_defaults["delta_width"] + scaninfo["exposure_time"]
+            exp_time = ddg_config_defaults["delta_width"] + scaninfo["exp_time"]
             total_exposure = exp_time + scaninfo["readout_time"]
             delay_burst = ddg_config_defaults["delay_burst"]
             num_burst_cycle = scaninfo["num_points"] + ddg_config_defaults["additional_triggers"]
 
     assert mock_DDGSetup.parent.burst_enable.called_once_with(
-        num_burst_cycle, delay_burst, total_exposure, config="first"
+        mock.call(num_burst_cycle, delay_burst, total_exposure, config="first")
     )
     if not ddg_config_scan["trigger_width"]:
         calls = mock.call("width", exp_time)
@@ -295,8 +295,9 @@ def test_prepare_ddg(
     if ddg_config_scan["set_high_on_exposure"]:
         calls = [
             mock.call("width", value, channels=[channel])
-            for channel, value in zip(
-                ddg_config_defaults["fixed_ttl_width"], channel_pairs["all_channels"]
+            for value, channel in zip(
+                ddg_config_scan["fixed_ttl_width"], channel_pairs["all_channels"]
             )
+            if value != 0
         ]
         assert mock_DDGSetup.parent.set_channels.has_calls(calls)
