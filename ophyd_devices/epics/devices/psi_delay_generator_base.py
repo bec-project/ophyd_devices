@@ -1,4 +1,5 @@
 import time
+import enum
 from typing import Any, List
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
 from ophyd import PVPositioner, Signal, DeviceStatus
@@ -29,6 +30,25 @@ class DeviceInitError(DelayGeneratorError):
 
 class DelayGeneratorNotOkay(DelayGeneratorError):
     """Error when DDG is not okay"""
+
+
+class TriggerSource(enum.IntEnum):
+    """
+    Class for trigger options of DG645
+
+    Used to set the trigger source of the DG645 by setting the value
+    e.g. source.put(TriggerSource.Internal)
+    Exp:
+        TriggerSource.Internal
+    """
+
+    INTERNAL = 0
+    EXT_RISING_EDGE = 1
+    EXT_FALLING_EDGE = 2
+    SS_EXT_RISING_EDGE = 3
+    SS_EXT_FALLING_EDGE = 4
+    SINGLE_SHOT = 5
+    LINE = 6
 
 
 class DelayStatic(Device):
@@ -413,6 +433,37 @@ class PSIDelayGeneratorBase(Device):
                 continue
             if "io" in channel.component_names and signal in channel.io.component_names:
                 getattr(channel.io, signal).set(value)
+
+    def set_trigger(self, trigger_source: TriggerSource) -> None:
+        """Set trigger source on DDG - possible values defined in TriggerSource enum"""
+        value = int(trigger_source)
+        self.source.put(value)
+
+    def burst_enable(self, count, delay, period, config="all"):
+        """Enable the burst mode"""
+        # Validate inputs
+        count = int(count)
+        assert count > 0, "Number of bursts must be positive"
+        assert delay >= 0, "Burst delay must be larger than 0"
+        assert period > 0, "Burst period must be positive"
+        assert config in [
+            "all",
+            "first",
+        ], "Supported burst configs are 'all' and 'first'"
+
+        self.burstMode.put(1)
+        self.burstCount.put(count)
+        self.burstDelay.put(delay)
+        self.burstPeriod.put(period)
+
+        if config == "all":
+            self.burstConfig.put(0)
+        elif config == "first":
+            self.burstConfig.put(1)
+
+    def burst_disable(self):
+        """Disable burst mode"""
+        self.burstMode.put(0)
 
     def stage(self) -> List[object]:
         """
