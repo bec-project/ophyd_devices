@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.14.1 (2023-11-23)
+
+### Fix
+
+* Bugfix tests DDG ([`9e67a7a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9e67a7a7d469af0505b60bb29ed54b15ac083806))
+
 ## v0.14.0 (2023-11-23)
 
 ### Feature
