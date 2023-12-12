@@ -82,13 +82,15 @@ pytest:
       cobertura: coverage.xml
 
 tests-3.10:
-  extends: "tests-3.9"
   stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.10
+  needs: ["pytest"]
+  script:
+    - pytest -v --random-order ./tests
   allow_failure: true
 
 tests-3.11:
-  extends: "tests-3.9"
+  extends: "tests-3.10"
   stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.11
   allow_failure: true
