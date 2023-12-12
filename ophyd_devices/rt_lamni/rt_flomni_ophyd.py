@@ -9,6 +9,8 @@ from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
+from prettytable import PrettyTable
+
 from ophyd_devices.rt_lamni.rt_ophyd import (
     BECConfigError,
     RtCommunicationError,
@@ -21,7 +23,6 @@ from ophyd_devices.rt_lamni.rt_ophyd import (
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
-from prettytable import PrettyTable
 
 logger = bec_logger.logger
 
@@ -122,8 +123,7 @@ class RtFlomniController(RtController):
         fsamx_in = fsamx.user_parameter.get("in")
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.3):
             raise RtError(
-                "Something is wrong. fsamx is very far from the samx_in position. Don't dare"
-                " correct automatically."
+                "Something is wrong. fsamx is very far from the samx_in position. Don't dare correct automatically."
             )
 
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.01):
@@ -156,8 +156,7 @@ class RtFlomniController(RtController):
             self.rt_pid_voltage = rtx.user_parameter.get("rt_pid_voltage")
             if self.rt_pid_voltage is None:
                 raise RtError(
-                    "rt_pid_voltage not set in rtx user parameters. Please run"
-                    " feedback_enable_with_reset first."
+                    "rt_pid_voltage not set in rtx user parameters. Please run feedback_enable_with_reset first."
                 )
             logger.info(f"Using PID voltage from rtx user parameter: {self.rt_pid_voltage}")
         expected_voltage = self.rt_pid_voltage + fovx / 2 * 7 / 100

@@ -30,5 +30,3 @@ from .specMotors import (
 )
 from .SpmBase import SpmBase
 from .XbpmBase import XbpmBase, XbpmCsaxsOp
-
-# from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
