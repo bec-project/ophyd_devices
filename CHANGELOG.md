@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## v0.15.0 (2023-12-12)
+
+### Feature
+
+* Update ci to default to python3.9 ([`849e152`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/849e15284f6e1f90e970c0706b158116aed29afa))
+
+### Fix
+
+* Add python 3.12 to ci pipeline ([`31b9646`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/31b964663c5384de2a6c8858ca3ac8f2cabf5bbb))
+* Fix syntax/bug ([`069f89f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/069f89f0e7083d5893619f6335f16b5f52352a1b))
+
+### Documentation
+
+* Add files ([`ae5c27f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ae5c27f045e21aaae11ae5b937f46ecaa2633f8b))
+
 ## v0.14.1 (2023-11-23)
 
 ### Fix
