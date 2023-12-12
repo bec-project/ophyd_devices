@@ -161,7 +161,7 @@ def test_on_pre_scan(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_sc
     # Call the function you want to test
     mock_DDGSetup.on_pre_scan()
     if ddg_config_scan["premove_trigger"]:
-        assert mock_DDGSetup.parent.trigger_shot.put.called_once_with(1)
+        mock_DDGSetup.parent.trigger_shot.put.assert_called_once_with(1)
 
 
 @pytest.mark.parametrize("source", ["SINGLE_SHOT", "EXT_RISING_EDGE"])
@@ -177,11 +177,11 @@ def test_on_trigger(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_sca
     # Call the function you want to test
     mock_DDGSetup.parent.source.name = "source"
     mock_DDGSetup.parent.source.read.return_value = {
-        mock_DDGSetup.parent.source.name: {"value": source}
+        mock_DDGSetup.parent.source.name: {"value": getattr(TriggerSource, source)}
     }
     mock_DDGSetup.on_trigger()
     if source == "SINGLE_SHOT":
-        assert mock_DDGSetup.parent.trigger_shot.put.called_once_with(1)
+        mock_DDGSetup.parent.trigger_shot.put.assert_called_once_with(1)
 
 
 def test_initialize_default_parameter(
@@ -249,7 +249,7 @@ def test_prepare_ddg(
     mock_DDGSetup.parent.all_delay_pairs = channel_pairs["all_delay_pairs"]
 
     mock_DDGSetup.prepare_ddg()
-    assert mock_DDGSetup.parent.set_trigger.called_once_with(
+    mock_DDGSetup.parent.set_trigger.assert_called_once_with(
         getattr(TriggerSource, ddg_config_scan["set_trigger_source"])
     )
     if scaninfo["scan_type"] == "step":
@@ -283,15 +283,18 @@ def test_prepare_ddg(
             delay_burst = ddg_config_defaults["delay_burst"]
             num_burst_cycle = scaninfo["num_points"] + ddg_config_defaults["additional_triggers"]
 
-    assert mock_DDGSetup.parent.burst_enable.called_once_with(
-        mock.call(num_burst_cycle, delay_burst, total_exposure, config="first")
+    # mock_DDGSetup.parent.burst_enable.assert_called_once_with(
+    #     mock.call(num_burst_cycle, delay_burst, total_exposure, config="first")
+    # )
+    mock_DDGSetup.parent.burst_enable.assert_called_once_with(
+        num_burst_cycle, delay_burst, total_exposure, config="first"
     )
     if not ddg_config_scan["trigger_width"]:
-        calls = mock.call("width", exp_time)
-        assert mock_DDGSetup.parent.set_channels.has_calls(calls)
+        call = mock.call("width", exp_time)
+        assert call in mock_DDGSetup.parent.set_channels.mock_calls
     else:
-        calls = mock.call("width", ddg_config_scan["trigger_width"])
-        assert mock_DDGSetup.parent.set_channels.has_calls(calls)
+        call = mock.call("width", ddg_config_scan["trigger_width"])
+        assert call in mock_DDGSetup.parent.set_channels.mock_calls
     if ddg_config_scan["set_high_on_exposure"]:
         calls = [
             mock.call("width", value, channels=[channel])
@@ -300,4 +303,5 @@ def test_prepare_ddg(
             )
             if value != 0
         ]
-        assert mock_DDGSetup.parent.set_channels.has_calls(calls)
+        if calls:
+            assert all(calls in mock_DDGSetup.parent.set_channels.mock_calls)
