@@ -3,13 +3,13 @@ from unittest import mock
 import pytest
 from utils import SocketMock
 
-from ophyd_devices.galil.galil_ophyd import GalilController, GalilMotor
+from ophyd_devices.galil.fgalil_ophyd import FlomniGalilController, FlomniGalilMotor
 
 
 @pytest.fixture(scope="function")
 def leyey():
-    GalilController._reset_controller()
-    leyey_motor = GalilMotor(
+    FlomniGalilController._reset_controller()
+    leyey_motor = FlomniGalilMotor(
         "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
     )
     leyey_motor.controller.on()
@@ -20,9 +20,9 @@ def leyey():
 
 @pytest.fixture(scope="function")
 def leyex():
-    GalilController._reset_controller()
-    leyex_motor = GalilMotor(
-        "A", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+    FlomniGalilController._reset_controller()
+    leyex_motor = FlomniGalilMotor(
+        "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
     )
     leyex_motor.controller.on()
     yield leyex_motor
@@ -76,10 +76,10 @@ def test_axis_put(leyey, target_pos, socket_put_messages, socket_get_messages):
                 b"ndir=1\r",
                 b"XQ#NEWPAR\r",
                 b"XQ#FES\r",
-                b"MG_BGA\r",
-                b"MGbcklact[axis]\r",
                 b"MG_XQ0\r",
-                b"MG_XQ2\r",
+                b"MG _MOA\r",
+                b"MG_XQ0\r",
+                b"MG _MOA\r",
                 b"MG _LRA, _LFA\r",
             ],
             [b":", b":", b":", b":", b"0", b"0", b"-1", b"-1", b"1.000 0.000"],
@@ -92,10 +92,10 @@ def test_axis_put(leyey, target_pos, socket_put_messages, socket_get_messages):
                 b"ndir=-1\r",
                 b"XQ#NEWPAR\r",
                 b"XQ#FES\r",
-                b"MG_BGB\r",
-                b"MGbcklact[axis]\r",
                 b"MG_XQ0\r",
-                b"MG_XQ2\r",
+                b"MG _MOB\r",
+                b"MG_XQ0\r",
+                b"MG _MOB\r",
                 b"MG _LRB, _LFB\r",
             ],
             [b":", b":", b":", b":", b"0", b"0", b"-1", b"-1", b"0.000 1.000"],
@@ -118,10 +118,10 @@ def test_drive_axis_to_limit(leyex, axis_nr, direction, socket_put_messages, soc
                 b"naxis=0\r",
                 b"XQ#NEWPAR\r",
                 b"XQ#FRM\r",
-                b"MG_BGA\r",
-                b"MGbcklact[axis]\r",
                 b"MG_XQ0\r",
-                b"MG_XQ2\r",
+                b"MG _MOA\r",
+                b"MG_XQ0\r",
+                b"MG _MOA\r",
                 b"MG axisref[0]\r",
             ],
             [b":", b":", b":", b"0", b"0", b"-1", b"-1", b"1.00"],
@@ -132,10 +132,10 @@ def test_drive_axis_to_limit(leyex, axis_nr, direction, socket_put_messages, soc
                 b"naxis=1\r",
                 b"XQ#NEWPAR\r",
                 b"XQ#FRM\r",
-                b"MG_BGB\r",
-                b"MGbcklact[axis]\r",
                 b"MG_XQ0\r",
-                b"MG_XQ2\r",
+                b"MG _MOB\r",
+                b"MG_XQ0\r",
+                b"MG _MOB\r",
                 b"MG axisref[1]\r",
             ],
             [b":", b":", b":", b"0", b"0", b"-1", b"-1", b"1.00"],
@@ -147,3 +147,26 @@ def test_find_reference(leyex, axis_nr, socket_put_messages, socket_get_messages
     leyex.controller.sock.buffer_recv = socket_get_messages
     leyex.controller.find_reference(axis_nr)
     assert leyex.controller.sock.buffer_put == socket_put_messages
+
+
+@pytest.mark.parametrize(
+    "axis_Id,socket_put_messages,socket_get_messages,triggered",
+    [
+        ("A", [b"MG @IN[14]\r"], [b" 1.0000\n"], True),
+        ("B", [b"MG @IN[14]\r"], [b" 0.0000\n"], False),
+    ],
+)
+def test_fosaz_light_curtain_is_triggered(
+    axis_Id, socket_put_messages, socket_get_messages, triggered
+):
+    """test that the light curtain is triggered"""
+    fosaz = FlomniGalilMotor(
+        axis_Id, name="fosaz", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
+    )
+    fosaz.controller.on()
+    fosaz.controller.sock.flush_buffer()
+    fosaz.controller.sock.buffer_recv = socket_get_messages
+    assert fosaz.controller.fosaz_light_curtain_is_triggered() == triggered
+    assert fosaz.controller.sock.buffer_put == socket_put_messages
+    fosaz.controller.off()
+    fosaz.controller._reset_controller()

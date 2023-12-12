@@ -369,11 +369,7 @@ class GalilMotorIsMoving(GalilSignalRO):
     def get(self):
         val = super().get()
         if val is not None:
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                value=val,
-                timestamp=time.time(),
-            )
+            self._run_subs(sub_type=self.SUB_VALUE, value=val, timestamp=time.time())
         return val
 
 
@@ -385,11 +381,7 @@ class GalilAxesReferenced(GalilSignalRO):
 
 class GalilMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        GalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(GalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(GalilSetpointSignal, signal_name="setpoint")
     motor_resolution = Cpt(GalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -520,18 +512,10 @@ class GalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")
@@ -593,6 +577,7 @@ class GalilMotor(Device, PositionerBase):
 
 
 if __name__ == "__main__":
+    # pytest: skip-file
     mock = False
     if not mock:
         leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
