@@ -4,6 +4,7 @@ from ophyd.quadem import QuadEM
 from ophyd.sim import SynAxis, SynPeriodicSignal, SynSignal
 
 from .devices.delay_generator_csaxs import DelayGeneratorcSAXS
+from .devices.flomni_sample_storage import FlomniSampleStorage
 from .devices.InsertionDevice import InsertionDevice
 from .devices.slits import SlitH, SlitV
 from .devices.specMotors import (
@@ -20,7 +21,7 @@ from .devices.specMotors import (
     PmMonoBender,
 )
 from .devices.SpmBase import SpmBase
-from .devices.XbpmBase import XbpmBase, XbpmCsaxsOp
 
 # X07MA specific devices
 from .devices.X07MADevices import *
+from .devices.XbpmBase import XbpmBase, XbpmCsaxsOp
