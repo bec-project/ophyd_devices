@@ -1,7 +1,7 @@
 # This file is a template, and might need editing before it works on your project.
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: $CI_DOCKER_REGISTRY/python:3.8
+image: $CI_DOCKER_REGISTRY/python:3.9
 
 #commands to run in the Docker container before starting each job.
 before_script:
@@ -80,14 +80,6 @@ pytest:
     reports:
       junit: report.xml
       cobertura: coverage.xml
-
-tests-3.9:
-  stage: AdditionalTests
-  image: $CI_DOCKER_REGISTRY/python:3.9
-  needs: ["pytest"]
-  script:
-    - pytest -v --random-order ./tests
-  allow_failure: true
 
 tests-3.10:
   extends: "tests-3.9"
