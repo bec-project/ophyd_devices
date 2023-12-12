@@ -122,7 +122,8 @@ class RtFlomniController(RtController):
         fsamx_in = fsamx.user_parameter.get("in")
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.3):
             raise RtError(
-                "Something is wrong. fsamx is very far from the samx_in position. Don't dare correct automatically."
+                "Something is wrong. fsamx is very far from the samx_in position. Don't dare"
+                " correct automatically."
             )
 
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.01):
@@ -155,7 +156,8 @@ class RtFlomniController(RtController):
             self.rt_pid_voltage = rtx.user_parameter.get("rt_pid_voltage")
             if self.rt_pid_voltage is None:
                 raise RtError(
-                    "rt_pid_voltage not set in rtx user parameters. Please run feedback_enable_with_reset first."
+                    "rt_pid_voltage not set in rtx user parameters. Please run"
+                    " feedback_enable_with_reset first."
                 )
             logger.info(f"Using PID voltage from rtx user parameter: {self.rt_pid_voltage}")
         expected_voltage = self.rt_pid_voltage + fovx / 2 * 7 / 100
@@ -171,7 +173,7 @@ class RtFlomniController(RtController):
             fsamx = self.get_device_manager().devices.fsamx
             fsamx.enabled_set = True
             fsamx.obj.controller.socket_put_confirmed("axspeed[4]=0.1*stppermm[4]")
-            fsamx.obj.pid_x_correction -= (self.get_pid_x() - expected_voltage) * 0.01
+            fsamx.obj.pid_x_correction -= (self.get_pid_x() - expected_voltage) * 0.007
             logger.info(f"Correcting fsamx by {fsamx.obj.pid_x_correction}")
             fsamx_in = fsamx.user_parameter.get("in")
             fsamx.obj.move(fsamx_in + cenx / 1000 + fsamx.obj.pid_x_correction, wait=True)
@@ -234,7 +236,7 @@ class RtFlomniController(RtController):
             logger.info("Cyclic Error Compensation: y-axis is NOT initialized")
 
     def set_rotation_angle(self, val: float) -> None:
-        self.socket_put(f"a{(-val)/180*np.pi}")
+        self.socket_put(f"a{val/180*np.pi}")
 
     def laser_tracker_on(self):
         self.laser_update_tracker_info()
@@ -369,10 +371,12 @@ class RtFlomniController(RtController):
     def start_scan(self):
         if not self.feedback_is_running():
             logger.error(
-                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+                "Cannot start scan because feedback loop is not running or there is an"
+                " interferometer error."
             )
             raise RtError(
-                "Cannot start scan because feedback loop is not running or there is an interferometer error."
+                "Cannot start scan because feedback loop is not running or there is an"
+                " interferometer error."
             )
             # here exception
         (mode, number_of_positions_planned, current_position_in_scan) = self.get_scan_status()
@@ -465,15 +469,16 @@ class RtFlomniController(RtController):
         )
 
         logger.info(
-            f"Flomni statistics: Average of all standard deviations: x {self.average_stdeviations_x_st_fzp/number_of_samples_to_read}, y {self.average_stdeviations_y_st_fzp/number_of_samples_to_read}."
+            "Flomni statistics: Average of all standard deviations: x"
+            f" {self.average_stdeviations_x_st_fzp/number_of_samples_to_read}, y"
+            f" {self.average_stdeviations_y_st_fzp/number_of_samples_to_read}."
         )
 
     def publish_device_data(self, signals, pointID):
         self.get_device_manager().producer.send(
             MessageEndpoints.device_read("rt_flomni"),
             messages.DeviceMessage(
-                signals=signals,
-                metadata={"pointID": pointID, **self.readout_metadata},
+                signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
             ).dumps(),
         )
 
@@ -527,7 +532,8 @@ class RtFlomniSetpointSignal(RtSetpointSignal):
         """
         if not self.parent.controller.feedback_is_running():
             raise RtError(
-                "The interferometer feedback is not running. Either it is turned off or and interferometer error occured."
+                "The interferometer feedback is not running. Either it is turned off or and"
+                " interferometer error occured."
             )
         self.set_with_feedback_disabled(val)
 
@@ -545,11 +551,7 @@ class RtFlomniFeedbackRunning(RtSignalRO):
 
 class RtFlomniMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        RtFlomniReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(RtFlomniReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(RtFlomniSetpointSignal, signal_name="setpoint")
 
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
@@ -673,11 +675,7 @@ class RtFlomniMotor(Device, PositionerBase):
             while not self.controller.slew_rate_limiters_on_target():
                 print("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.01)
             print("Move finished")
             self._done_moving()
