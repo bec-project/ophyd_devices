@@ -52,6 +52,11 @@ class GalilController(Controller):
         "socket_put_and_receive",
         "socket_put_confirmed",
         "lgalil_is_air_off_and_orchestra_enabled",
+        "drive_axis_to_limit",
+        "find_reference",
+        "get_motor_limit_switch",
+        "is_motor_on",
+        "all_axes_referenced",
     ]
 
     @threadlocked
@@ -143,10 +148,11 @@ class GalilController(Controller):
         self.socket_put_confirmed(f"naxis={axis_Id_numeric}")
         self.socket_put_confirmed(f"ndir={direction_flag}")
         self.socket_put_confirmed("XQ#NEWPAR")
+        time.sleep(0.005)
         self.socket_put_confirmed("XQ#FES")
-        time.sleep(0.1)
+        time.sleep(0.01)
         while self.is_axis_moving(None, axis_Id_numeric):
-            time.sleep(0.1)
+            time.sleep(0.01)
 
         axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
         # check if we actually hit the limit

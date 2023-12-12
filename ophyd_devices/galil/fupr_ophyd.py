@@ -63,6 +63,18 @@ class FuprGalilReadbackSignal(GalilReadbackSignal):
         step_mm = self.parent.motor_resolution.get()
         return current_pos / step_mm
 
+    def read(self):
+        self._metadata["timestamp"] = time.time()
+        val = super().read()
+        if self.parent.axis_Id_numeric == 0:
+            try:
+                rt = self.parent.device_manager.devices[self.parent.rt]
+                if rt.enabled:
+                    rt.obj.controller.set_rotation_angle(val[self.parent.name]["value"])
+            except KeyError:
+                logger.warning("Failed to set RT value during readback.")
+        return val
+
 
 class FuprGalilSetpointSignal(GalilSetpointSignal):
     @retry_once
