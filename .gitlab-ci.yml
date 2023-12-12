@@ -94,6 +94,12 @@ tests-3.11:
   stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.11
   allow_failure: true
+
+tests-3.12:
+  extends: "tests-3.10"
+  stage: AdditionalTests
+  image: $CI_DOCKER_REGISTRY/python:3.12
+  allow_failure: true
   
 semver:
   stage: Deploy
