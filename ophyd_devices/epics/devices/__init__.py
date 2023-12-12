@@ -3,7 +3,7 @@ from ophyd import EpicsMotor, EpicsSignal, EpicsSignalRO
 from ophyd.quadem import QuadEM
 from ophyd.sim import SynAxis, SynPeriodicSignal, SynSignal
 
-from .DelayGeneratorDG645 import DelayGeneratorDG645
+from .delay_generator_csaxs import DelayGeneratorcSAXS
 from .eiger9m_csaxs import Eiger9McSAXS
 
 # cSAXS
@@ -11,8 +11,9 @@ from .epics_motor_ex import EpicsMotorEx
 from .falcon_csaxs import FalconcSAXS
 from .flomni_sample_storage import FlomniSampleStorage
 from .InsertionDevice import InsertionDevice
-from .mcs_csaxs import McsCsaxs
+from .mcs_csaxs import MCScSAXS
 from .pilatus_csaxs import PilatuscSAXS
+from .psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 from .slits import SlitH, SlitV
 from .specMotors import (
     Bpm4i,
@@ -29,3 +30,5 @@ from .specMotors import (
 )
 from .SpmBase import SpmBase
 from .XbpmBase import XbpmBase, XbpmCsaxsOp
+
+# from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
