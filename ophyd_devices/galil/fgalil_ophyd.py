@@ -132,11 +132,7 @@ class FlomniGalilAxesReferenced(GalilAxesReferenced):
 
 class FlomniGalilMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        FlomniGalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(FlomniGalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(FlomniGalilSetpointSignal, signal_name="setpoint")
     motor_resolution = Cpt(FlomniGalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(FlomniGalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -272,18 +268,10 @@ class FlomniGalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")

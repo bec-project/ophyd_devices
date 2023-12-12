@@ -9,8 +9,6 @@ from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
-from prettytable import PrettyTable
-
 from ophyd_devices.galil.galil_ophyd import (
     BECConfigError,
     GalilAxesReferenced,
@@ -25,6 +23,7 @@ from ophyd_devices.galil.galil_ophyd import (
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from prettytable import PrettyTable
 
 logger = bec_logger.logger
 
@@ -120,11 +119,7 @@ class FuprGalilAxesReferenced(GalilAxesReferenced):
 class FuprGalilMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
     MOTOR_RESOLUTION = 25600
-    readback = Cpt(
-        GalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(FuprGalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(FuprGalilSetpointSignal, signal_name="setpoint")
     motor_resolution = Cpt(FuprGalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(FuprGalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -170,7 +165,7 @@ class FuprGalilMotor(Device, PositionerBase):
             raise BECConfigError(
                 "device_mapping has been specified but the device_manager cannot be accessed."
             )
-        self.rt = self.device_mapping.get("rt")
+        self.rt = self.device_mapping.get("rt", "rtx")
 
         super().__init__(
             prefix,
@@ -259,18 +254,10 @@ class FuprGalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")
