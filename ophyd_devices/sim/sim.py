@@ -2,7 +2,6 @@ import os
 import threading
 import time as ttime
 import warnings
-from typing import List
 
 import numpy as np
 from bec_lib import MessageEndpoints, bec_logger, messages
@@ -301,7 +300,7 @@ class SynSLSDetector(Device):
         threading.Thread(target=acquire, daemon=True).start()
         return status
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
         scan_msg = messages.ScanStatusMessage.loads(msg)
         self.metadata = {
@@ -316,7 +315,7 @@ class SynSLSDetector(Device):
         )
         return super().stage()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         signals = {"config": self.sim_state, "data": self.file_name}
         msg = messages.DeviceMessage(signals=signals, metadata=self.metadata)
         self.device_manager.producer.set_and_publish(

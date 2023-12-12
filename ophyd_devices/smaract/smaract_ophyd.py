@@ -1,7 +1,6 @@
 import logging
 import threading
 import time
-from typing import List
 
 import numpy as np
 from bec_lib import bec_logger
@@ -275,10 +274,10 @@ class SmaractMotor(Device, PositionerBase):
         """The engineering units (EGU) for positions"""
         return "mm"
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         return super().stage()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         return super().unstage()
 
     def stop(self, *, success=False):

@@ -1,6 +1,5 @@
 import enum
 import threading
-from typing import List
 from collections import defaultdict
 import numpy as np
 
@@ -317,7 +316,7 @@ class MCScSAXS(PSIDetectorBase):
         value = int(trigger_source)
         self.input_mode.set(value)
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         """stage the detector for upcoming acquisition"""
         rtr = super().stage()
         self.custom_prepare.arm_acquisition()

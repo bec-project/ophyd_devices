@@ -1,7 +1,6 @@
 import functools
 import threading
 import time
-from typing import List
 
 import numpy as np
 from bec_lib import bec_logger

@@ -1,6 +1,6 @@
 import time
 import enum
-from typing import Any, List
+from typing import Any
 from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
 from ophyd import PVPositioner, Signal, DeviceStatus
 from ophyd.pseudopos import (
@@ -409,7 +409,7 @@ class PSIDelayGeneratorBase(Device):
         self.custom_prepare.initialize_default_parameter()
         self.custom_prepare.is_ddg_okay()
 
-    def set_channels(self, signal: str, value: Any, channels: List = None) -> None:
+    def set_channels(self, signal: str, value: Any, channels: list = None) -> None:
         """
         Method to set signals on DelayPair and DelayStatic channels.
 
@@ -420,7 +420,7 @@ class PSIDelayGeneratorBase(Device):
         Args:
             signal (str)                : signal to set (width, delay, amplitude, offset, polarity)
             value (Any)                 : value to set
-            channels (List, optional)   : list of channels to set. Defaults to self.all_channels (T0,AB,CD,EF,GH)
+            channels (list, optional)   : list of channels to set. Defaults to self.all_channels (T0,AB,CD,EF,GH)
         """
         if not channels:
             channels = self.all_channels
@@ -465,7 +465,7 @@ class PSIDelayGeneratorBase(Device):
         """Disable burst mode"""
         self.burstMode.put(0)
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         """
         Method to stage the device.
 
@@ -477,7 +477,7 @@ class PSIDelayGeneratorBase(Device):
         - is_ddg_okay                        : check if DDG is okay
 
         Returns:
-            List(object): list of objects that were staged
+            list(object): list of objects that were staged
         """
         if self._staged != Staged.no:
             return super().stage()
@@ -509,7 +509,7 @@ class PSIDelayGeneratorBase(Device):
         """
         self.custom_prepare.on_pre_scan()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         """
         Method unstage gets called at the end of a scan.
 
@@ -522,7 +522,7 @@ class PSIDelayGeneratorBase(Device):
         - is_ddg_okay                          : check if DDG is okay
 
         Returns:
-            List(object): list of objects that were unstaged
+            list(object): list of objects that were unstaged
         """
         self.custom_prepare.check_scanID()
         if self.stopped is True:

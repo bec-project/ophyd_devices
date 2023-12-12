@@ -1,7 +1,6 @@
 import functools
 import threading
 import time
-from typing import List
 
 import numpy as np
 from bec_lib import messages, MessageEndpoints, bec_logger
@@ -827,10 +826,10 @@ class RtLamniMotor(Device, PositionerBase):
 
     # how is this used later?
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         return super().stage()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         return super().unstage()
 
     def stop(self, *, success=False):

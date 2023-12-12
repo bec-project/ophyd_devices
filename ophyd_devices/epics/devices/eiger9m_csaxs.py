@@ -4,7 +4,7 @@ import time
 import numpy as np
 import os
 
-from typing import Any, List
+from typing import Any
 
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd import Device
@@ -426,7 +426,7 @@ class Eiger9McSAXS(PSIDetectorBase):
         value = trigger_source
         self.cam.trigger_mode.put(value)
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         """
         Add functionality to stage, and arm the detector
 

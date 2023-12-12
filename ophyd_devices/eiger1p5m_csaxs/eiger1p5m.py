@@ -1,8 +1,7 @@
 import os
 import time
-from typing import List
 
-from bec_lib import messages, MessageEndpoints, bec_logger
+from bec_lib import MessageEndpoints, bec_logger, messages
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, EpicsSignal, EpicsSignalRO, Signal
 
@@ -91,7 +90,7 @@ class Eiger1p5MDetector(Device):
         floor_dir = scan_number // scan_bundle * scan_bundle
         return f"S{floor_dir:0{leading_zeros}d}-{floor_dir+scan_bundle-1:0{leading_zeros}d}/S{scan_number:0{leading_zeros}d}"
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         scan_msg = self._get_current_scan_msg()
         self.metadata = {
             "scanID": scan_msg.content["scanID"],
@@ -141,7 +140,7 @@ class Eiger1p5MDetector(Device):
 
         return super().stage()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         time_waited = 0
         sleep_time = 0.2
         framesexpected = self.frames.get()

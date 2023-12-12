@@ -1,8 +1,6 @@
 import time
 import os
 
-from typing import List
-
 from ophyd import Device
 from ophyd.device import Staged
 
@@ -260,7 +258,7 @@ class PSIDetectorBase(Device):
         self.custom_prepare.initialize_detector()
         self.custom_prepare.initialize_detector_backend()
 
-    def stage(self) -> List[object]:
+    def stage(self) -> list[object]:
         """
          Stage device in preparation for a scan
 
@@ -269,7 +267,7 @@ class PSIDetectorBase(Device):
         - _prep_detector              : prepare detector for measurement
 
         Returns:
-            List(object): list of objects that were staged
+            list(object): list of objects that were staged
 
         """
         # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
@@ -295,7 +293,7 @@ class PSIDetectorBase(Device):
         self.custom_prepare.on_trigger()
         return super().trigger()
 
-    def unstage(self) -> List[object]:
+    def unstage(self) -> list[object]:
         """
         Unstage device in preparation for a scan
 
@@ -309,7 +307,7 @@ class PSIDetectorBase(Device):
         - custom_prepare.publish_file_location : publish file location to bec
 
         Returns:
-            List(object): list of objects that were unstaged
+            list(object): list of objects that were unstaged
         """
         self.custom_prepare.check_scanID()
         if self.stopped is True:
