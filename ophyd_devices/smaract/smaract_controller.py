@@ -9,10 +9,7 @@ import numpy as np
 from prettytable import PrettyTable
 from typeguard import typechecked
 
-from ophyd_devices.smaract.smaract_errors import (
-    SmaractCommunicationError,
-    SmaractErrorCode,
-)
+from ophyd_devices.smaract.smaract_errors import SmaractCommunicationError, SmaractErrorCode
 from ophyd_devices.utils.controller import Controller, axis_checked, threadlocked
 
 logger = logging.getLogger("smaract_controller")
@@ -118,11 +115,7 @@ class SmaractController(Controller):
 
     @threadlocked
     def socket_put_and_receive(
-        self,
-        val: str,
-        remove_trailing_chars=True,
-        check_for_errors=True,
-        raise_if_not_status=False,
+        self, val: str, remove_trailing_chars=True, check_for_errors=True, raise_if_not_status=False
     ) -> str:
         self.socket_put(val)
         return_val = ""
@@ -195,7 +188,7 @@ class SmaractController(Controller):
             return bool(int(return_val.split(",")[1]))
 
     def all_axes_referenced(self) -> bool:
-        return all([self.is_axis_referenced(ax) for ax in self._axis if ax is not None])
+        return all(self.axis_is_referenced(ax) for ax in self._axis if ax is not None)
 
     @retry_once
     @axis_checked
@@ -265,8 +258,7 @@ class SmaractController(Controller):
             frequency (int): Frequency in Hz that the steps are performed with. The valid range is 1..18,500. Default: 2000.
         """
         self.socket_put_and_receive(
-            f"MST{axis_Id_numeric},{steps},{amplitude},{frequency}",
-            raise_if_not_status=True,
+            f"MST{axis_Id_numeric},{steps},{amplitude},{frequency}", raise_if_not_status=True
         )
 
     @retry_once
@@ -440,14 +432,7 @@ class SmaractController(Controller):
     def describe(self) -> None:
         t = PrettyTable()
         t.title = f"{self.__class__.__name__} on {self.sock.host}:{self.sock.port}"
-        t.field_names = [
-            "Axis",
-            "Name",
-            "Connected",
-            "Referenced",
-            "Closed Loop Speed",
-            "Position",
-        ]
+        t.field_names = ["Axis", "Name", "Connected", "Referenced", "Closed Loop Speed", "Position"]
         for ax in range(self._axes_per_controller):
             axis = self._axis[ax]
             if axis is not None:
@@ -512,7 +497,7 @@ class SmaractController(Controller):
     def _message_starts_with(self, msg: str, leading_chars: str) -> bool:
         if msg.startswith(leading_chars):
             return True
-        else:
-            raise SmaractCommunicationError(
-                f"Expected to receive a return message starting with {leading_chars} but instead received '{msg}'"
-            )
+        raise SmaractCommunicationError(
+            f"Expected to receive a return message starting with {leading_chars} but instead"
+            f" received '{msg}'"
+        )
