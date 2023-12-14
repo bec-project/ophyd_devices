@@ -6,6 +6,7 @@ from .npoint.npoint import NPointAxis
 from .rt_lamni import RtLamniMotor
 from .sim.sim import (
     SynAxisMonitor,
+    SimPositioner as SynAxisOPAAS,
     SimPositioner,
     SynDeviceOPAAS,
     SynFlyer,
