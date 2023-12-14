@@ -1,9 +1,11 @@
 from .sim import (
     SynAxisMonitor,
-    SynAxisOPAAS,
+    SimPositioner,
     SynDynamicComponents,
     SynFlyer,
     SynSignalRO,
     SynSLSDetector,
 )
 from .sim_xtreme import SynXtremeOtf
+
+from .sim_signals import ReadbackSignal, SetpointSignal, IsMovingSignal
