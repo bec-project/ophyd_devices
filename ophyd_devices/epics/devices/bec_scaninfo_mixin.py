@@ -16,7 +16,7 @@ class BECInfoMsgMock:
         mockrid: str = "mockrid1111",
         mockqueueid: str = "mockqueueID111",
         scan_number: int = 1,
-        exp_time: float = 12e-3,
+        exp_time: float = 15e-3,
         num_points: int = 500,
         readout_time: float = 3e-3,
         scan_type: str = "fly",
