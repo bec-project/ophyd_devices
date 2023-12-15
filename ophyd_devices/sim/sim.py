@@ -588,7 +588,7 @@ class SimPositioner(Device, PositionerBase):
         self.tolerance = kwargs.pop("tolerance", 0.05)
         self._stopped = False
 
-        # self.dummy_controller = DummyController()
+        self.dummy_controller = DummyController()
 
         # initialize inner dictionary with simulated state
         self.sim_state = {}
