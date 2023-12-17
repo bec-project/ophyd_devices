@@ -1,13 +1,11 @@
-import time
 import os
+import time
 
+from bec_lib.bec_service import SERVICE_CONFIG
+from bec_lib.device import DeviceStatus
+from bec_lib.file_utils import FileWriterMixin
 from ophyd import Device
 from ophyd.device import Staged
-
-from bec_lib.file_utils import FileWriterMixin
-from bec_lib.bec_service import SERVICE_CONFIG
-from bec_lib.devicemanager import DeviceStatus
-
 from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
@@ -182,9 +180,7 @@ class PSIDetectorBase(Device):
     MIN_READOUT = 1e-3
 
     # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = [
-        "describe",
-    ]
+    USER_ACCESS = ["describe"]
 
     def __init__(
         self,
