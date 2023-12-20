@@ -80,6 +80,9 @@ pytest:
     reports:
       junit: report.xml
       cobertura: coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
 tests-3.10:
   stage: AdditionalTests
