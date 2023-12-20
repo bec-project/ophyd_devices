@@ -32,8 +32,12 @@ class GrashopperTimeoutError(GrashopperError):
 class AutoMode(enum.IntEnum):
     """Acquire time auto for Grashopper detector.
 
-    class for acquire_auto and gain_auto, however, the PV readbacks
-    for both only show OFF and continuous
+    class for acquire_auto and gain_auto
+
+    Off:        Gain tap balancing is user controlled using Gain.
+    Once:       Gain tap balancing is automatically adjusted once by the device.
+                Once it has converged, it automatically returns to the Off state.
+    Continuous: Gain tap balancing is constantly adjusted by the device.
     """
 
     OFF = 0
@@ -307,22 +311,14 @@ class SLSDetectorCam(Device):
     Base class to map EPICS PVs to ophyd signals.
     """
 
-    ### related to acquire_time_auto settings??
-    acquire_time = ADCpt(
-        EpicsSignal, "AcquireTime", kind=Kind.omitted
-    )  # seems to have no effect...
-    num_exposures = ADCpt(
-        EpicsSignal, "NumExposures", kind=Kind.omitted
-    )  # seems to have no effect...
-    ###
+    ## Deprecated PVs, to be checked!
+    # acquire_time = ADCpt(EpicsSignal, "AcquireTime", kind=Kind.omitted)
+    # num_exposures = ADCpt(EpicsSignal, "NumExposures", kind=Kind.omitted)
+    # acquire_period = ADCpt(EpicsSignalWithRBV, "AcquirePeriod", kind=Kind.config)
 
     # Control PVs
-    acquire_time_auto = ADCpt(
-        EpicsSignal, "AcquireTimeAuto", kind=Kind.config
-    )  # Only goes to off or continuous
-    # Acquire period can be set to 1ms, but acquire_period/framerate will go to 87Hz, and acquisition follows framerate..
-    # Use frame_rate only, convert acquisition time to framerate in ophyd class
-    acquire_period = ADCpt(EpicsSignalWithRBV, "AcquirePeriod", kind=Kind.config)
+    acquire_time_auto = ADCpt(EpicsSignal, "AcquireTimeAuto", kind=Kind.config)
+
     frame_rate = ADCpt(EpicsSignalWithRBV, "FrameRate", kind=Kind.normal)
     num_images = ADCpt(EpicsSignalWithRBV, "NumImages", kind=Kind.normal)
     num_images_counter = ADCpt(EpicsSignalRO, "NumImagesCounter_RBV", kind=Kind.normal)
@@ -348,7 +344,6 @@ class SLSDetectorCam(Device):
 
     gain = ADCpt(EpicsSignalWithRBV, "Gain", kind=Kind.config)
     gain_auto = ADCpt(EpicsSignalWithRBV, "GainAuto", kind=Kind.config)
-    # gain_auto 0: Off, 1: Once, 2: Continuous | RBV only shows off or continuous
     video_mode = ADCpt(EpicsSignalWithRBV, "VideoMode", kind=Kind.config)
     pixel_format = ADCpt(EpicsSignalWithRBV, "PixelFormat", kind=Kind.config)
     # Desired to set this in future?
@@ -450,4 +445,3 @@ class GrashopperTOMCAT(PSIDetectorBase):
 if __name__ == "__main__":
     hopper = GrashopperTOMCAT(name="hopper", prefix="X02DA-PG-USB:", sim_mode=True)
     hopper.wait_for_connection(all_signals=True)
-    print(hopper.read())
