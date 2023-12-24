@@ -202,7 +202,6 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
         self.parent.cam.image_mode.put(ImageMode.MULTIPLE)
         self.parent.cam.acquire_time_auto.put(AutoMode.CONTINUOUS)
         self.set_exposure_time(self.parent.scaninfo.exp_time)
-        self.parent.cam.image_mode.put(ImageMode.MULTIPLE)
         self.parent.set_trigger(TriggerSource.SOFTWARE)
         self.parent.cam.set_image_counter.put(0)
         self.set_acquisition_params()
