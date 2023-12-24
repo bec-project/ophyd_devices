@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.0 (2023-12-24)
+
+### Feature
+
+* Add detector, grashopper tomcat to repository ([`ca726c6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ca726c606605085e2849402cd0fae3865550514f))
+
+### Fix
+
+* Fix cobertura syntax in ci-pipeline ([`40eb699`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/40eb6999c73bf18af875a3665e1f0006bd645d44))
+
 ## v0.15.0 (2023-12-12)
 
 ### Feature
