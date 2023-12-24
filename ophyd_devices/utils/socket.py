@@ -179,18 +179,29 @@ class SocketSignal(abc.ABC, Signal):
 class SocketIO:
     """SocketIO helper class for TCP IP connections"""
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, max_retry=10):
         self.host = host
         self.port = port
         self.is_open = False
+        self.max_retry = max_retry
         self._initialize_socket()
 
     def connect(self):
         print(f"connecting to {self.host} port {self.port}")
         # self.sock.create_connection((host, port))
-        if self.sock is None:
-            self._initialize_socket()
-        self.sock.connect((self.host, self.port))
+        retry_count = 0
+        while True:
+            try:
+                if self.sock is None:
+                    self._initialize_socket()
+                self.sock.connect((self.host, self.port))
+                break
+            except Exception as exc:
+                self.sock = None
+                time.sleep(2)
+                retry_count += 1
+                if retry_count > self.max_retry:
+                    raise exc
 
     def _put(self, msg_bytes):
         logger.debug(f"put message: {msg_bytes}")

@@ -3,14 +3,13 @@ import functools
 import json
 import logging
 import os
+import time
 
 import numpy as np
+from prettytable import PrettyTable
 from typeguard import typechecked
 
-from ophyd_devices.smaract.smaract_errors import (
-    SmaractCommunicationError,
-    SmaractErrorCode,
-)
+from ophyd_devices.smaract.smaract_errors import SmaractCommunicationError, SmaractErrorCode
 from ophyd_devices.utils.controller import Controller, axis_checked, threadlocked
 
 logger = logging.getLogger("smaract_controller")
@@ -73,7 +72,13 @@ class SmaractSensors:
 class SmaractController(Controller):
     _axes_per_controller = 6
     _initialized = False
-    USER_ACCESS = ["socket_put_and_receive", "smaract_show_all", "move_open_loop_steps"]
+    USER_ACCESS = [
+        "socket_put_and_receive",
+        "smaract_show_all",
+        "move_open_loop_steps",
+        "find_reference_mark",
+        "describe",
+    ]
 
     def __init__(
         self,
@@ -110,14 +115,22 @@ class SmaractController(Controller):
 
     @threadlocked
     def socket_put_and_receive(
-        self,
-        val: str,
-        remove_trailing_chars=True,
-        check_for_errors=True,
-        raise_if_not_status=False,
+        self, val: str, remove_trailing_chars=True, check_for_errors=True, raise_if_not_status=False
     ) -> str:
         self.socket_put(val)
-        return_val = self.socket_get()
+        return_val = ""
+        max_wait_time = 1
+        elapsed_time = 0
+        sleep_time = 0.01
+        while True:
+            ret = self.socket_get()
+            return_val += ret
+            if ret.endswith("\n"):
+                break
+            time.sleep(sleep_time)
+            elapsed_time += sleep_time
+            if elapsed_time > max_wait_time:
+                break
         if remove_trailing_chars:
             return_val = self._remove_trailing_characters(return_val)
             logger.debug(f"Sending {val}; Returned {return_val}")
@@ -175,7 +188,7 @@ class SmaractController(Controller):
             return bool(int(return_val.split(",")[1]))
 
     def all_axes_referenced(self) -> bool:
-        return all([self.is_axis_referenced(ax) for ax in self._axis if ax is not None])
+        return all(self.axis_is_referenced(ax) for ax in self._axis if ax is not None)
 
     @retry_once
     @axis_checked
@@ -234,19 +247,18 @@ class SmaractController(Controller):
     @axis_checked
     @typechecked
     def move_open_loop_steps(
-        self, axis_Id_numeric: int, steps: int, amplitude: int = 2000, frequency: int = 500
+        self, axis_Id_numeric: int, steps: int, amplitude: int = 4000, frequency: int = 2000
     ) -> None:
-        """Move open loop steps
+        """Move open loop steps. It performs a burst of steps with the given parameters.
 
         Args:
             axis_Id_numeric (int): Axis number.
-            steps (float): Relative position to move to in mm.
-            hold_time (int, optional): Specifies how long (in milliseconds) the position is actively held after reaching the target. The valid range is 0..60,000. A 0 deactivates this feature, a value of 60,000 is infinite (until manually stopped, see S command). Defaults to 1000.
-
+            steps (int): Number and direction of steps to perform. The valid range is -30,000..30,000. A value of 0 stops the positioner, but see S command. A value of 30,000 or -30,000 performs an unbounded move. This should be used with caution since the positioner will only stop on an S command.
+            amplitude (int): Amplitude that the steps are performed with. Lower amplitude values result in a smaller step width. The parameter must be given as a 12bit value (range 0..4,095). 0 corresponds to 0V, 4,095 to 100V. Default: 4000
+            frequency (int): Frequency in Hz that the steps are performed with. The valid range is 1..18,500. Default: 2000.
         """
         self.socket_put_and_receive(
-            f"MST{axis_Id_numeric},{steps},{amplitude},{frequency}",
-            raise_if_not_status=True,
+            f"MST{axis_Id_numeric},{steps},{amplitude},{frequency}", raise_if_not_status=True
         )
 
     @retry_once
@@ -376,6 +388,15 @@ class SmaractController(Controller):
 
     @retry_once
     @axis_checked
+    def find_reference_mark(
+        self, axis_Id_numeric: int, direction: int, holdTime: int, autoZero: int
+    ) -> None:
+        return_val = self.socket_put_and_receive(
+            f"FRM{axis_Id_numeric},{direction},{holdTime},{autoZero}"
+        )
+
+    @retry_once
+    @axis_checked
     def set_closed_loop_move_speed(self, axis_Id_numeric: int, move_speed: float) -> None:
         """This command configures the speed control feature of a channel for closed-loop commands move_axis_to_absolute_position. By default the speed control is inactive. In this state the behavior of closed-loop commands is influenced by the maximum driving frequency. If a movement speed is configured, all following closed-loop commands will be executed with the new speed.
 
@@ -411,15 +432,8 @@ class SmaractController(Controller):
     def describe(self) -> None:
         t = PrettyTable()
         t.title = f"{self.__class__.__name__} on {self.sock.host}:{self.sock.port}"
-        t.field_names = [
-            "Axis",
-            "Name",
-            "Connected",
-            "Referenced",
-            "Closed Loop Speed",
-            "Position",
-        ]
-        for ax in range(self._Smaract_axis_per_controller):
+        t.field_names = ["Axis", "Name", "Connected", "Referenced", "Closed Loop Speed", "Position"]
+        for ax in range(self._axes_per_controller):
             axis = self._axis[ax]
             if axis is not None:
                 t.add_row(
@@ -428,7 +442,7 @@ class SmaractController(Controller):
                         axis.name,
                         axis.connected,
                         self.axis_is_referenced(axis.axis_Id_numeric),
-                        self.get_closed_loop_move_speed(axis.axis_Id),
+                        self.get_closed_loop_move_speed(axis.axis_Id_numeric),
                         axis.readback.read().get(axis.name).get("value"),
                     ]
                 )
@@ -483,7 +497,7 @@ class SmaractController(Controller):
     def _message_starts_with(self, msg: str, leading_chars: str) -> bool:
         if msg.startswith(leading_chars):
             return True
-        else:
-            raise SmaractCommunicationError(
-                f"Expected to receive a return message starting with {leading_chars} but instead received '{msg}'"
-            )
+        raise SmaractCommunicationError(
+            f"Expected to receive a return message starting with {leading_chars} but instead"
+            f" received '{msg}'"
+        )

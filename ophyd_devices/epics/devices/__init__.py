@@ -1,7 +1,20 @@
-from .slits import SlitH, SlitV
-from .XbpmBase import XbpmBase, XbpmCsaxsOp
-from .SpmBase import SpmBase
+# Standard ophyd classes
+from ophyd import EpicsMotor, EpicsSignal, EpicsSignalRO
+from ophyd.quadem import QuadEM
+from ophyd.sim import SynAxis, SynPeriodicSignal, SynSignal
+
+from .delay_generator_csaxs import DelayGeneratorcSAXS
+from .eiger9m_csaxs import Eiger9McSAXS
+
+# cSAXS
+from .epics_motor_ex import EpicsMotorEx
+from .falcon_csaxs import FalconcSAXS
+from .flomni_sample_storage import FlomniSampleStorage
 from .InsertionDevice import InsertionDevice
+from .mcs_csaxs import MCScSAXS
+from .pilatus_csaxs import PilatuscSAXS
+from .psi_detector_base import CustomDetectorMixin, PSIDetectorBase
+from .slits import SlitH, SlitV
 from .specMotors import (
     Bpm4i,
     EnergyKev,
@@ -15,19 +28,7 @@ from .specMotors import (
     PmDetectorRotation,
     PmMonoBender,
 )
-
-# Standard ophyd classes
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsMotor
-from ophyd.sim import SynAxis, SynSignal, SynPeriodicSignal
-from ophyd.quadem import QuadEM
-
-# cSAXS
-from .epics_motor_ex import EpicsMotorEx
-from .mcs_csaxs import MCScSAXS
-from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
-from .eiger9m_csaxs import Eiger9McSAXS
-from .pilatus_csaxs import PilatuscSAXS
-from .falcon_csaxs import FalconcSAXS
-from .delay_generator_csaxs import DelayGeneratorcSAXS
+from .SpmBase import SpmBase
+from .XbpmBase import XbpmBase, XbpmCsaxsOp
 
 # from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin

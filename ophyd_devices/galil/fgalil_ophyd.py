@@ -8,8 +8,6 @@ from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
 from ophyd.utils import LimitError, ReadOnlyError
-from prettytable import PrettyTable
-
 from ophyd_devices.galil.galil_ophyd import (
     BECConfigError,
     GalilAxesReferenced,
@@ -20,15 +18,31 @@ from ophyd_devices.galil.galil_ophyd import (
     GalilMotorResolution,
     GalilReadbackSignal,
     GalilSetpointSignal,
+    GalilSignalRO,
     retry_once,
 )
 from ophyd_devices.utils.controller import Controller, threadlocked
 from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from prettytable import PrettyTable
 
 logger = bec_logger.logger
 
 
 class FlomniGalilController(GalilController):
+    USER_ACCESS = [
+        "describe",
+        "show_running_threads",
+        "galil_show_all",
+        "socket_put_and_receive",
+        "socket_put_confirmed",
+        "drive_axis_to_limit",
+        "find_reference",
+        "get_motor_limit_switch",
+        "fosaz_light_curtain_is_triggered",
+        "is_motor_on",
+        "all_axes_referenced",
+    ]
+
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
         if axis_Id is None and axis_Id_numeric is not None:
             axis_Id = self.axis_Id_numeric_to_alpha(axis_Id_numeric)
@@ -40,13 +54,67 @@ class FlomniGalilController(GalilController):
         # TODO: check if all axes are referenced in all controllers
         return super().all_axes_referenced()
 
+    def fosaz_light_curtain_is_triggered(self) -> bool:
+        """
+        Check the light curtain status for fosaz
 
-class FlomniGalilReadbackSignal(GalilReadbackSignal):
-    pass
+        Returns:
+            bool: True if the light curtain is triggered
+        """
+
+        return int(float(self.socket_put_and_receive("MG @IN[14]").strip())) == 1
+
+
+class FlomniGalilReadbackSignal(GalilSignalRO):
+    @retry_once
+    @threadlocked
+    def _socket_get(self) -> float:
+        """Get command for the readback signal
+
+        Returns:
+            float: Readback value after adjusting for sign and motor resolution.
+        """
+
+        current_pos = float(self.controller.socket_put_and_receive(f"TD{self.parent.axis_Id}"))
+        current_pos *= self.parent.sign
+        step_mm = self.parent.motor_resolution.get()
+        return current_pos / step_mm
+
+    def read(self):
+        self._metadata["timestamp"] = time.time()
+        val = super().read()
+        return val
 
 
 class FlomniGalilSetpointSignal(GalilSetpointSignal):
-    pass
+    @retry_once
+    @threadlocked
+    def _socket_set(self, val: float) -> None:
+        """Set a new target value / setpoint value. Before submission, the target value is adjusted for the axis' sign.
+        Furthermore, it is ensured that all axes are referenced before a new setpoint is submitted.
+
+        Args:
+            val (float): Target value / setpoint value
+
+        Raises:
+            GalilError: Raised if not all axes are referenced.
+
+        """
+        target_val = val * self.parent.sign
+        self.setpoint = target_val
+        axes_referenced = self.controller.all_axes_referenced()
+        if axes_referenced:
+            while self.controller.is_thread_active(0):
+                time.sleep(0.1)
+
+            self.controller.socket_put_confirmed(f"naxis={self.parent.axis_Id_numeric}")
+            self.controller.socket_put_confirmed(f"ntarget={target_val:.3f}")
+            self.controller.socket_put_confirmed("movereq=1")
+            self.controller.socket_put_confirmed("XQ#NEWPAR")
+            while self.controller.is_thread_active(0):
+                time.sleep(0.005)
+        else:
+            raise GalilError("Not all axes are referenced.")
 
 
 class FlomniGalilMotorResolution(GalilMotorResolution):
@@ -63,11 +131,7 @@ class FlomniGalilAxesReferenced(GalilAxesReferenced):
 
 class FlomniGalilMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        GalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(FlomniGalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(FlomniGalilSetpointSignal, signal_name="setpoint")
     motor_resolution = Cpt(FlomniGalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(FlomniGalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -114,6 +178,7 @@ class FlomniGalilMotor(Device, PositionerBase):
                 "device_mapping has been specified but the device_manager cannot be accessed."
             )
         self.rt = self.device_mapping.get("rt")
+        self.pid_x_correction = 0
 
         super().__init__(
             prefix,
@@ -202,18 +267,10 @@ class FlomniGalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")

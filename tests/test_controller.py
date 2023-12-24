@@ -14,6 +14,7 @@ def test_controller_off():
 
         # make sure it is indempotent
         controller.off()
+    controller._reset_controller()
 
 
 def test_controller_on():
@@ -28,3 +29,4 @@ def test_controller_on():
     # make sure it is indempotent
     controller.on()
     socket_cls().open.assert_called_once()
+    controller._reset_controller()
