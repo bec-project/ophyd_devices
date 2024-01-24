@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.17.0 (2024-01-24)
+
+### Feature
+
+* Added tests for connecting devices ([`8c6d0f5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8c6d0f50cdb61843532c7a2f2a03a421acdb126a))
+* Added static_device_test ([`bb02a61`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bb02a619e56749c03d3efadb0364e845fc4a7724))
+
 ## v0.16.0 (2023-12-24)
 
 ### Feature
