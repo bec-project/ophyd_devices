@@ -149,7 +149,7 @@ class StaticDeviceTest:
         try:
             obj, _ = device_manager.construct_device_obj(conf, None)
 
-            device_manager.connect_device(obj)
+            device_manager.connect_device(obj, wait_for_all=True)
             return 0
 
         except Exception as e:
