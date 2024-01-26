@@ -15,7 +15,9 @@ if __name__ == "__main__":
             "pyepics",
             "pytest",
         ],
-        extras_require={"dev": ["pytest", "pytest-random-order", "black", "coverage"]},
+        extras_require={
+            "dev": ["pytest", "pytest-random-order", "black", "coverage", "bec-device-server"]
+        },
         package_data={"ophyd_devices.smaract": ["smaract_sensors.json"]},
         entry_points={"console_scripts": ["ophyd_test = ophyd_devices:launch"]},
         version=__version__,
