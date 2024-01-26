@@ -18,7 +18,7 @@ except ImportError:
     device_manager = None
 
 
-class StaticDeviceTest:  # pragma: no cover
+class StaticDeviceTest:
     """Class to perform tests on an ophyd device config file."""
 
     def __init__(self, config: str, output_file: TextIOWrapper) -> None:
@@ -293,7 +293,7 @@ def launch() -> None:
         device_config_test.run(clargs.connect)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     sys.argv = ["", "--config", "../bec/bec_lib/bec_lib/configs/demo_config.yaml", "--connect"]
