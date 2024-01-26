@@ -19,6 +19,7 @@ except ImportError:
 
 
 class StaticDeviceTest:
+    # pragma: no cover
     """Class to perform tests on an ophyd device config file."""
 
     def __init__(self, config: str, output_file: TextIOWrapper) -> None:
