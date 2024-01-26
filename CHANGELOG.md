@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.17.1 (2024-01-26)
+
+### Fix
+
+* Changed default for connecting to a device ([`802eb29`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/802eb295562ecc39f833d4baba8820a892c674a2))
+
 ## v0.17.0 (2024-01-24)
 
 ### Feature
