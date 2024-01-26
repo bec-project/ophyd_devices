@@ -1,5 +1,6 @@
 import argparse
 import copy
+import traceback
 from io import TextIOWrapper
 
 import ophyd
@@ -147,14 +148,41 @@ class StaticDeviceTest:
             int: 0 if all checks passed, 1 otherwise
         """
         try:
-            obj, _ = device_manager.construct_device_obj(conf, None)
+            conf_in = copy.deepcopy(conf)
+            conf_in["name"] = name
+            obj, _ = device_manager.construct_device_obj(conf_in, None)
 
             device_manager.connect_device(obj, wait_for_all=True)
+            assert obj.connected is True
+            self.check_basic_ophyd_methods(obj)
+            obj.destroy()
+            if hasattr(obj, "component_names") and obj.component_names:
+                assert obj.connected is False
+                assert obj._destroyed is True
             return 0
 
-        except Exception as e:
-            self.print_and_write(f"ERROR: {name} is not connectable: {e}")
+        except Exception:
+            content = traceback.format_exc()
+            self.print_and_write(f"ERROR: {name} is not connectable: {content}")
             return 1
+
+    def check_basic_ophyd_methods(self, obj: ophyd.OphydObject) -> int:
+        """
+        Check if the basic ophyd methods work
+
+        Args:
+            obj(ophyd.OphydObject): device object
+
+        Returns:
+
+        """
+
+        assert isinstance(obj.name, str)
+        assert isinstance(obj.read(), dict)
+        assert isinstance(obj.read_configuration(), dict)
+        assert isinstance(obj.describe(), dict)
+        assert isinstance(obj.describe_configuration(), dict)
+        assert isinstance(obj.hints, dict)
 
     def validate_schema(self, name: str, conf: dict) -> None:
         """
