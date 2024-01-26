@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.18.0 (2024-01-26)
+
+### Feature
+
+* Added basic function tests ([`b54b5d4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b54b5d4b00150ef581247da495804cc5e801e24e))
+
 ## v0.17.1 (2024-01-26)
 
 ### Fix
