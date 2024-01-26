@@ -1,6 +1,7 @@
 """
 ophyd device classes for X07MA beamline
 """
+
 import time
 import traceback
 from collections import OrderedDict

@@ -86,12 +86,10 @@ class SocketSignal(abc.ABC, Signal):
     SUB_SETPOINT = "setpoint"
 
     @abc.abstractmethod
-    def _socket_get(self):
-        ...
+    def _socket_get(self): ...
 
     @abc.abstractmethod
-    def _socket_set(self, val):
-        ...
+    def _socket_set(self, val): ...
 
     def get(self):
         self._readback = self._socket_get()

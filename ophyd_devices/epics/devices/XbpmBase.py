@@ -87,9 +87,7 @@ class XbpmSim(XbpmBase):
 
         # define normalized 2D gaussian
         def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
-            return np.exp(
-                -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
-            )
+            return np.exp(-((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0)))
 
         # Generator for dynamic values
         self._MX = 0.75 * self._MX + 0.25 * (10.0 * np.random.random() - 5.0)
