@@ -3,6 +3,17 @@
 # https://hub.docker.com/r/library/python/tags/
 image: $CI_DOCKER_REGISTRY/python:3.9
 
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+
 #commands to run in the Docker container before starting each job.
 before_script:
   - pip install -e .[dev]
@@ -11,7 +22,7 @@ before_script:
 # different stages in the pipeline
 stages:
   - Formatter
-  - Test
+  - test # must be called test for security/secret-detection to work
   - AdditionalTests
   - Deploy
 
@@ -70,7 +81,7 @@ pylint-check:
 
 
 pytest:
-  stage: Test
+  stage: test
   script:
     - pip install coverage
     - coverage run --source=./ophyd_devices -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
