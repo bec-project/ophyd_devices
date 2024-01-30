@@ -103,7 +103,14 @@ tests-3.12:
   stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.12
   allow_failure: true
-  
+
+trigger_bec:
+  trigger:
+    project: bec/bec
+    strategy: depend
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+
 semver:
   stage: Deploy
   needs: ["pytest"]
