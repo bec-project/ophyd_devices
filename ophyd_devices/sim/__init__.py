@@ -1,11 +1,10 @@
 from .sim import (
-    SynAxisMonitor,
     SimPositioner,
+    SimMonitor,
+    SimCamera,
     SynDynamicComponents,
     SynFlyer,
-    SynSignalRO,
-    SynSLSDetector,
 )
 from .sim_xtreme import SynXtremeOtf
 
-from .sim_signals import ReadbackSignal, SetpointSignal, IsMovingSignal
+from .sim_signals import SetableSignal, ReadOnlySignal, ComputedReadOnlySignal
