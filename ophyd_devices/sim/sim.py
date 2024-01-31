@@ -195,7 +195,7 @@ class SimCamera(Device):
     save_file = Cpt(SetableSignal, name="save_file", value=False, kind=Kind.config)
 
     # image shape, only adjustable via config.
-    image_shape = Cpt(ReadOnlySignal, name="image_shape", value=SHAPE, kind=Kind.config)
+    image_shape = Cpt(SetableSignal, name="image_shape", value=SHAPE, kind=Kind.config)
     image = Cpt(
         ComputedReadOnlySignal,
         name="image",
@@ -232,7 +232,6 @@ class SimCamera(Device):
                 for _ in range(self.burst.get()):
                     # Send data for each trigger
                     self._run_subs(sub_type=self.SUB_MONITOR, value=self.image.get())
-                    ttime.sleep(self.exp_time.get())
                     if self._stopped:
                         raise DeviceStop
             except DeviceStop:
