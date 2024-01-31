@@ -78,7 +78,9 @@ pylint-check:
       - ./pylint/
     expire_in: 1 week
 
-
+secret_detection:
+  before_script:
+    - ''
 
 pytest:
   stage: test
