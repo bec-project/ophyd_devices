@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.0 (2024-01-31)
+
+### Feature
+
+* Refactor simulation, introduce SimCamera, SimMonitor in addition to existing classes ([`f311ce5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f311ce5d1c082c107f782916c2fb724a34a92099))
+* Introduce new general class to simulate data for devices ([`8cc955b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8cc955b202bd7b45acba06322779079e7a8423a3))
+* Move signals to own file and refactor access pattern to sim_state data. ([`6f3c238`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6f3c2383b5d572cf1f6d51acecb63c786ac16196))
+
+### Fix
+
+* Temporal fix for imports ([`6cac04a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6cac04aa5227340f4e5758e4bfcc1798acbc1ed7))
+
 ## v0.18.0 (2024-01-26)
 
 ### Feature
