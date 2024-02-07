@@ -251,7 +251,6 @@ class SimPositioner(Device, PositionerBase):
     low_limit_travel = Cpt(SetableSignal, value=0, kind=Kind.omitted)
     unused = Cpt(Signal, value=1, kind=Kind.omitted)
 
-    # TODO add short description to these two lines and explain what this does
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
 
