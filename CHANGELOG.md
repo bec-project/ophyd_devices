@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.1 (2024-02-07)
+
+### Fix
+
+* Remove set and from sim_signals ([`bd128ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd128ea8a459d08f6018c0d8459a534d6a828073))
+
 ## v0.19.0 (2024-01-31)
 
 ### Feature
