@@ -89,9 +89,10 @@ class BecScaninfoMixin:
             messages.ScanStatusMessage: messages.ScanStatusMessage object
         """
         if not self.sim_mode:
-            # TODO what if no scan info is there yet!
             msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-            return messages.ScanStatusMessage.loads(msg)
+            if not isinstance(msg, messages.ScanStatusMessage):
+                return None
+            return msg
 
         return messages.ScanStatusMessage(
             scanID="1",
