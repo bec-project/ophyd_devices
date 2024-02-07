@@ -139,10 +139,6 @@ class ReadOnlySignal(Signal):
         """Put method, should raise ReadOnlyError since the signal is readonly."""
         raise ReadOnlyError(f"The signal {self.name} is readonly.")
 
-    def set(self, value) -> None:
-        """Set method, should raise ReadOnlyError since the signal is readonly."""
-        raise ReadOnlyError(f"The signal {self.name} is readonly.")
-
     def describe(self):
         """Describe the readback signal.
 
@@ -212,10 +208,6 @@ class ComputedReadOnlySignal(Signal):
 
     def put(self, value) -> None:
         """Put method, should raise ReadOnlyError since the signal is readonly."""
-        raise ReadOnlyError(f"The signal {self.name} is readonly.")
-
-    def set(self, value) -> None:
-        """Set method, should raise ReadOnlyError since the signal is readonly."""
         raise ReadOnlyError(f"The signal {self.name} is readonly.")
 
     def describe(self):
