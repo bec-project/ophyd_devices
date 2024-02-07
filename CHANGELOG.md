@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.2 (2024-02-07)
+
+### Fix
+
+* Fixed bec_scaninfo_mixin ([`ec3ea35`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ec3ea35744e300fa363be3724f5e6c7b81abe7f1))
+
 ## v0.19.1 (2024-02-07)
 
 ### Fix
