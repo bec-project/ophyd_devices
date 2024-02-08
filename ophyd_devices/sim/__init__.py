@@ -8,3 +8,5 @@ from .sim import (
 from .sim_xtreme import SynXtremeOtf
 
 from .sim_signals import SetableSignal, ReadOnlySignal, ComputedReadOnlySignal
+
+from .sim_frameworks import SlitLookup

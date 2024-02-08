@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 
 import enum
-import inspect
 import time as ttime
 import numpy as np
 
@@ -52,37 +51,22 @@ class SimulatedDataBase:
         self._all_params = defaultdict(dict)
         self.device_manager = device_manager
         self._simulation_type = None
-        self.lookup_table = getattr(self.parent, "lookup_table", None)
+        self.lookup_table = getattr(self.parent, "lookup_table", [])
         self.init_paramaters(**kwargs)
         self._active_params = self._all_params.get(self._simulation_type, None)
-        # self.register_in_lookup_table()
-
-    #     self.lookup_table = self.update_lookup_table()
-
-    # def update_lookup_table(self) -> None:
-    #     """Update the lookup table with the new value for the signal."""
-    #     table = getattr(self.device_manager.lookup_table, self.parent.name, None)
-
-    #     return getattr(self.device_manager.lookup_table, self.parent.name, None)
-
-    # def register_in_lookup_table(self) -> None:
-    #     """Register the simulated device in the lookup table."""
-    #     self.device_manager.lookup_table[self.parent.name] = {"obj": self, "method": "_compute_sim_state", "args": (), "kwargs": {}}
 
     def execute_simulation_method(self, *args, method=None, **kwargs) -> any:
         """Execute the method from the lookup table."""
-
-        if self.lookup_table and self.parent.name in self.lookup_table:
-            # obj = self.parent.lookup_table[self.parent.name]["obj"]
-            method = self.lookup_table[self.parent.name]["method"]
-            args = self.lookup_table[self.parent.name]["args"]
-            kwargs = self.lookup_table[self.parent.name]["kwargs"]
-            # Do I need args and kwargs! Why!!
+        if self.lookup_table and self.device_manager.devices.get(self.lookup_table[0]) is not None:
+            sim_device = self.device_manager.devices.get(self.lookup_table[0])
+            # pylint: disable=protected-access
+            if sim_device.enabled is True:
+                method = sim_device.obj.lookup[self.parent.name]["method"]
+                args = sim_device.obj.lookup[self.parent.name]["args"]
+                kwargs = sim_device.obj.lookup[self.parent.name]["kwargs"]
 
         if method is not None:
-            method_arguments = list(inspect.signature(method).parameters.keys())
-            if all([True for arg in method_arguments if arg in args or arg in kwargs]):
-                return method(*args, **kwargs)
+            return method(*args, **kwargs)
         raise SimulatedDataException(f"Method {method} is not available for {self.parent.name}")
 
     def init_paramaters(self, **kwargs):
@@ -330,7 +314,7 @@ class SimulatedDataCamera(SimulatedDataBase):
                 },
             },
             SimulationType.GAUSSIAN: {
-                "amp": 500,
+                "amp": 100,
                 "cen_off": np.array([0, 0]),
                 "cov": np.array([[10, 5], [5, 10]]),
                 "noise": NoiseType.NONE,

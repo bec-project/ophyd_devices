@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import threading
 import time as ttime
@@ -68,10 +69,16 @@ class SimMonitor(Device):
         self.precision = precision
         self.init_sim_params = sim_init
         self.sim = self.sim_cls(parent=self, device_manager=device_manager, **kwargs)
+        self._lookup_table = []
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
+
+    @property
+    def lookup_table(self) -> None:
+        """lookup_table property"""
+        return self._lookup_table
 
 
 class SimCamera(Device):
@@ -127,6 +134,7 @@ class SimCamera(Device):
     ):
         self.device_manager = device_manager
         self.init_sim_params = sim_init
+        self._lookup_table = []
         self.sim = self.sim_cls(parent=self, device_manager=device_manager, **kwargs)
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
@@ -134,6 +142,11 @@ class SimCamera(Device):
         self._staged = False
         self.scaninfo = None
         self._update_scaninfo()
+
+    @property
+    def lookup_table(self) -> None:
+        """lookup_table property"""
+        return self._lookup_table
 
     def trigger(self) -> DeviceStatus:
         """Trigger the camera to acquire images.
@@ -277,6 +290,7 @@ class SimPositioner(Device, PositionerBase):
         self.precision = precision
         self.tolerance = tolerance
         self.init_sim_params = sim
+        self._lookup_table = []
 
         self.speed = speed
         self.update_frequency = update_frequency
@@ -286,7 +300,7 @@ class SimPositioner(Device, PositionerBase):
         # initialize inner dictionary with simulated state
         self.sim = self.sim_cls(parent=self, **kwargs)
 
-        super().__init__(name=name, labels=labels, kind=kind, **kwargs)
+        super().__init__(name=name, labels=labels, parent=parent, kind=kind, **kwargs)
         # Rename self.readback.name to self.name, also in self.sim_state
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
@@ -310,6 +324,11 @@ class SimPositioner(Device, PositionerBase):
     def high_limit(self):
         """Return the high limit of the simulated device."""
         return self.limits[1]
+
+    @property
+    def lookup_table(self) -> None:
+        """lookup_table property"""
+        return self._lookup_table
 
     def check_value(self, value: any):
         """
@@ -519,4 +538,4 @@ class SynDeviceSubOPAAS(Device):
 class SynDeviceOPAAS(Device):
     x = Cpt(SimPositioner, name="x")
     y = Cpt(SimPositioner, name="y")
-    z = Cpt(SimPositioner, name="z")
+    z = Cpt(SynDeviceSubOPAAS, name="z")
