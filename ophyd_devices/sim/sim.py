@@ -12,7 +12,7 @@ from ophyd import OphydObject, PositionerBase, Signal
 from ophyd.sim import EnumSignal, SynSignal
 from ophyd.utils import LimitError, ReadOnlyError
 
-from ophyd_devices.sim.sim_signals import ReadbackSignal, SetpointSignal, IsMovingSignal
+from ophyd_devices.sim.sim_signals import IsMovingSignal, ReadbackSignal, SetpointSignal
 
 logger = bec_logger.logger
 
@@ -24,9 +24,7 @@ class DeviceStop(Exception):
 class SynSignalRO(Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._metadata.update(
-            write_access=False,
-        )
+        self._metadata.update(write_access=False)
 
     def wait_for_connection(self, timeout=0):
         super().wait_for_connection(timeout)
@@ -40,10 +38,7 @@ class SynSignalRO(Signal):
 class _ReadbackSignalCompute(Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._metadata.update(
-            connected=True,
-            write_access=False,
-        )
+        self._metadata.update(connected=True, write_access=False)
 
     def get(self):
         readback = self.parent._compute()
@@ -73,10 +68,7 @@ class _ReadbackSignalCompute(Signal):
 class _ReadbackSignalRand(Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._metadata.update(
-            connected=True,
-            write_access=False,
-        )
+        self._metadata.update(connected=True, write_access=False)
 
     def get(self):
         self._readback = np.random.rand()
@@ -261,6 +253,7 @@ class DummyController:
         "_func_with_args_and_kwargs",
         "_func_with_kwargs",
         "_func_without_args_kwargs",
+        "_property_var",
     ]
     some_var = 10
     another_var = 20
@@ -273,6 +266,10 @@ class DummyController:
 
     def _func_with_args(self, *args):
         return args
+
+    @property
+    def _property_var(self):
+        return 10
 
     def _func_with_args_and_kwargs(self, *args, **kwargs):
         return args, kwargs
@@ -377,9 +374,7 @@ class SynFlyer(Device, PositionerBase):
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
-                            device=device.name,
-                            status=1,
-                            metadata={"pointID": ii, **metadata},
+                            device=device.name, status=1, metadata={"pointID": ii, **metadata}
                         ).dumps(),
                     )
             device.device_manager.producer.send(
@@ -388,9 +383,7 @@ class SynFlyer(Device, PositionerBase):
             device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
-                    device=device.name,
-                    status=0,
-                    metadata={"pointID": num_pos, **metadata},
+                    device=device.name, status=0, metadata={"pointID": num_pos, **metadata}
                 ).dumps(),
             )
             print("done")
@@ -481,9 +474,7 @@ class SynFlyerLamNI(Device, PositionerBase):
                     device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
-                            device=device.name,
-                            status=1,
-                            metadata={"pointID": ii, **metadata},
+                            device=device.name, status=1, metadata={"pointID": ii, **metadata}
                         ).dumps(),
                     )
             device.device_manager.producer.send(
@@ -492,9 +483,7 @@ class SynFlyerLamNI(Device, PositionerBase):
             device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
-                    device=device.name,
-                    status=0,
-                    metadata={"pointID": num_pos, **metadata},
+                    device=device.name, status=0, metadata={"pointID": num_pos, **metadata}
                 ).dumps(),
             )
             print("done")
@@ -751,10 +740,7 @@ class SynGaussBEC(Device):
     sigma = Cpt(Signal, value=1, kind="config")
     motor = Cpt(Signal, value="samx", kind="config")
     noise = Cpt(
-        EnumSignal,
-        value="none",
-        kind="config",
-        enum_strings=("none", "poisson", "uniform"),
+        EnumSignal, value="none", kind="config", enum_strings=("none", "poisson", "uniform")
     )
     noise_multiplier = Cpt(Signal, value=1, kind="config")
 
