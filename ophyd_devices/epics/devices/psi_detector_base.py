@@ -6,7 +6,7 @@ from bec_lib.device import DeviceStatus
 from bec_lib.file_utils import FileWriterMixin
 from ophyd import Device
 from ophyd.device import Staged
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 

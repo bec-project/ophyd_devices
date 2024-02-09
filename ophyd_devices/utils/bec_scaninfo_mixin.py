@@ -103,7 +103,10 @@ class BecScaninfoMixin:
     def get_username(self) -> str:
         """Get username"""
         if not self.sim_mode:
-            return self.device_manager.producer.get(MessageEndpoints.account()).decode()
+            msg = self.device_manager.producer.get(MessageEndpoints.account())
+            if not isinstance(msg, str):
+                return os.getlogin()
+            return self.device_manager.producer.get(MessageEndpoints.account())
         return os.getlogin()
 
     def load_scan_metadata(self) -> None:

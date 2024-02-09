@@ -11,7 +11,7 @@ from ophyd.pseudopos import (
 )
 from ophyd.device import Staged
 
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 from bec_lib import bec_logger
