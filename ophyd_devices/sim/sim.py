@@ -14,7 +14,7 @@ from ophyd.sim import SynSignal
 from ophyd.utils import LimitError
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.sim.sim_data import SimulatedDataBase, SimulatedDataCamera, SimulatedDataMonitor
-from ophyd_devices.sim.sim_additional_devices import DummyController
+from ophyd_devices.sim.sim_test_devices import DummyController
 
 from ophyd_devices.sim.sim_signals import SetableSignal, ReadOnlySignal, ComputedReadOnlySignal
 
@@ -215,7 +215,7 @@ class SimCamera(Device):
         """
         if self._stopped is True or not self._staged:
             return super().unstage()
-        self._send_data_to_bec()
+        # self._send_data_to_bec()
 
         return super().unstage()
 

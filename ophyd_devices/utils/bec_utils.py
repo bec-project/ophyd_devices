@@ -154,35 +154,6 @@ class DMMock:
         self.devices[name] = DeviceMock(name, value)
 
 
-# class MockProducer:
-#     def set_and_publish(self, endpoint: str, msgdump: str):
-#         logger.info(f"BECMessage to {endpoint} with msg dump {msgdump}")
-
-
-# class MockDeviceManager:
-#     def __init__(self) -> None:
-#         self.devices = devices()
-
-
-# class OphydObject:
-#     def __init__(self) -> None:
-#         self.name = "mock_mokev"
-#         self.obj = mokev()
-
-
-# class devices:
-#     def __init__(self):
-#         self.mokev = OphydObject()
-
-
-# class mokev:
-#     def __init__(self):
-#         self.name = "mock_mokev"
-
-#     def read(self):
-#         return {self.name: {"value": 16.0, "timestamp": time.time()}}
-
-
 class ConfigSignal(Signal):
     def __init__(
         self,

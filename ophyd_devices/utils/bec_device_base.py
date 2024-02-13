@@ -1,5 +1,5 @@
 class BECDeviceBase:
-    """Base class for BEC devices with minimal functionality."""
+    """Base class for BEC devices with zero functionality."""
 
     def __init__(self, name: str, *args, **kwargs):
         self.name = name
