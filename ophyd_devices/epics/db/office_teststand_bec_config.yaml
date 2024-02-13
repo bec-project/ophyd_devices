@@ -1,0 +1,28 @@
+es1_roty:
+  description: 'Test rotation stage'
+  deviceClass: EpicsMotor 
+  deviceConfig: {prefix: 'X02DA-ES1-SMP1:ROTY'}
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+
+es1_aa1:
+  description: 'Rotation stage controller status'
+  deviceClass: epics:devices:aa1Controller 
+  deviceConfig: {prefix: 'X02DA-ES1-SMP1:CTRL:'}
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+
+
+es1_aa1Tasks:
+  description: 'AA1 task management'
+  deviceClass: epics:devices:aa1Tasks 
+  deviceConfig: {prefix: 'X02DA-ES1-SMP1:TASK:'}
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+
+
+
+
