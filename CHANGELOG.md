@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.1 (2024-02-13)
+
+### Fix
+
+* Use getpass.getuser instead of os.getlogin to retrieve user name ([`bd42d9d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd42d9d56093316f4a9f90a3329b6b5a6d1c851e))
+
 ## v0.20.0 (2024-02-13)
 
 ### Feature
