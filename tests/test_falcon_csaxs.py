@@ -27,7 +27,7 @@ def mock_det():
     prefix = "X12SA-SITORO:"
     sim_mode = False
     dm = DMMock()
-    with mock.patch.object(dm, "producer"):
+    with mock.patch.object(dm, "connector"):
         with mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
         ) as filemixin, mock.patch(
@@ -215,24 +215,24 @@ def test_publish_file_location(mock_det, scaninfo):
         done=scaninfo["done"], successful=scaninfo["successful"]
     )
     if scaninfo["successful"] is None:
-        msg = messages.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"]).dumps()
+        msg = messages.FileMessage(file_path=scaninfo["filepath"], done=scaninfo["done"])
     else:
         msg = messages.FileMessage(
             file_path=scaninfo["filepath"], done=scaninfo["done"], successful=scaninfo["successful"]
-        ).dumps()
+        )
     expected_calls = [
         mock.call(
             MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
             msg,
-            pipe=mock_det.producer.pipeline.return_value,
+            pipe=mock_det.connector.pipeline.return_value,
         ),
         mock.call(
             MessageEndpoints.file_event(mock_det.name),
             msg,
-            pipe=mock_det.producer.pipeline.return_value,
+            pipe=mock_det.connector.pipeline.return_value,
         ),
     ]
-    assert mock_det.producer.set_and_publish.call_args_list == expected_calls
+    assert mock_det.connector.set_and_publish.call_args_list == expected_calls
 
 
 @pytest.mark.parametrize(

@@ -391,7 +391,7 @@ class PSIDelayGeneratorBase(Device):
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-        self.producer = self.device_manager.producer
+        self.connector = self.device_manager.connector
         self._update_scaninfo()
         self._init()
 

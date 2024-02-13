@@ -81,8 +81,7 @@ class Eiger1p5MDetector(Device):
         self.username = "e20588"  # TODO get from config
 
     def _get_current_scan_msg(self) -> messages.ScanStatusMessage:
-        msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
-        return messages.ScanStatusMessage.loads(msg)
+        return self.device_manager.connector.get(MessageEndpoints.scan_status())
 
     def _get_scan_dir(self, scan_bundle, scan_number, leading_zeros=None):
         if leading_zeros is None:
@@ -159,9 +158,7 @@ class Eiger1p5MDetector(Device):
         self.detector_control.put("stop")
         signals = {"config": self.read(), "data": self.file_name}
         msg = messages.DeviceMessage(signals=signals, metadata=self.metadata)
-        self.device_manager.producer.set_and_publish(
-            MessageEndpoints.device_read(self.name), msg.dumps()
-        )
+        self.device_manager.connector.set_and_publish(MessageEndpoints.device_read(self.name), msg)
         self._stopped = False
         return super().unstage()
 
