@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.3 (2024-02-10)
+
+### Fix
+
+* Add imports for core config updates ([`fdb2da5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fdb2da5839e72359b53c3837292eeced957e43de))
+
 ## v0.19.2 (2024-02-07)
 
 ### Fix
