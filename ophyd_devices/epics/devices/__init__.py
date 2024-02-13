@@ -30,3 +30,4 @@ from .specMotors import (
 )
 from .SpmBase import SpmBase
 from .XbpmBase import XbpmBase, XbpmCsaxsOp
+from .AerotechAutomation1 import aa1Controller, aa1Tasks
