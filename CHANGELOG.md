@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.0 (2024-02-13)
+
+### Feature
+
+* Add BECDeviceBase to ophyd_devices.utils ([`8ee5022`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ee502242457f3ac63c122f81e7600e300fdf73a))
+
+### Fix
+
+* Separated core simulation classes from additional devices ([`2225daf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2225dafb7438f576d7033e220910b4cf8769fd33))
+
 ## v0.19.3 (2024-02-10)
 
 ### Fix
