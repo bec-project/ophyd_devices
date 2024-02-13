@@ -192,22 +192,6 @@ class SimCamera(Device):
         self._stopped = False
         return super().stage()
 
-    def _send_data_to_bec(self) -> None:
-        """Send data to BEC.
-
-        Reads out all signals of type Kind.config, and send them to BEC.
-        Happens once for each scan.
-        """
-        config_readout = {
-            signal.item.name: signal.item.get()
-            for signal in self.walk_signals()
-            if signal.item._kind == Kind.config
-        }
-
-        signals = {"config": config_readout, "data": self.file_path.get()}
-        msg = messages.DeviceMessage(signals=signals, metadata=self.scaninfo.metadata)
-        self.device_manager.producer.set_and_publish(MessageEndpoints.device_read(self.name), msg)
-
     def unstage(self) -> list[object]:
         """Unstage the device
 
@@ -215,7 +199,6 @@ class SimCamera(Device):
         """
         if self._stopped is True or not self._staged:
             return super().unstage()
-        # self._send_data_to_bec()
 
         return super().unstage()
 
