@@ -1,4 +1,4 @@
-import os
+import getpass
 
 from bec_lib import DeviceManagerBase, messages, MessageEndpoints, bec_logger
 
@@ -103,12 +103,12 @@ class BecScaninfoMixin:
     def get_username(self) -> str:
         """Get username"""
         if self.sim_mode:
-            return os.getlogin()
+            return getpass.getuser()
 
         msg = self.device_manager.producer.get(MessageEndpoints.account())
         if msg:
             return msg
-        return os.getlogin()
+        return getpass.getuser()
 
     def load_scan_metadata(self) -> None:
         """Load scan metadata
