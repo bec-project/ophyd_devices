@@ -2,6 +2,19 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.0 (2024-02-16)
+
+### Feature
+
+* **galil:** Added lights on/off ([`366f592`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/366f592e08a4cb50ddae7b3f8ba3aa214574f61f))
+* Flomni stages ([`5e9d3ae`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5e9d3aed17ce02142f12ba69ea562d6c30b41ae3))
+* Flomni stages ([`b808659`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b808659d4d8b1af262d6f62174b027b0736a005a))
+
+### Fix
+
+* Fixed import after rebase conflict ([`747aa36`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/747aa36837fa823cd2f05e294e2ee9ee83074f43))
+* Online changes during flomni comm ([`4760456`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4760456e6318b66fa26f35205f669dbbf7d0e777))
+
 ## v0.20.1 (2024-02-13)
 
 ### Fix
