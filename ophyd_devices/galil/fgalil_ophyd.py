@@ -42,6 +42,8 @@ class FlomniGalilController(GalilController):
         "fosaz_light_curtain_is_triggered",
         "is_motor_on",
         "all_axes_referenced",
+        "lights_off",
+        "lights_on",
     ]
 
     def is_axis_moving(self, axis_Id, axis_Id_numeric) -> bool:
@@ -64,6 +66,18 @@ class FlomniGalilController(GalilController):
         """
 
         return int(float(self.socket_put_and_receive("MG @IN[14]").strip())) == 1
+
+    def lights_off(self) -> None:
+        """
+        Turn off the lights
+        """
+        self.socket_put_confirmed("CB15")
+
+    def lights_on(self) -> None:
+        """
+        Turn on the lights
+        """
+        self.socket_put_confirmed("SB15")
 
 
 class FlomniGalilReadbackSignal(GalilSignalRO):
