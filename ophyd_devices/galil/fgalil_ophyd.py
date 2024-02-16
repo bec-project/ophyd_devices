@@ -1,4 +1,3 @@
-import functools
 import threading
 import time
 
@@ -7,24 +6,21 @@ from bec_lib import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
-from ophyd.utils import LimitError, ReadOnlyError
-from prettytable import PrettyTable
+from ophyd.utils import LimitError
 
 from ophyd_devices.galil.galil_ophyd import (
     BECConfigError,
     GalilAxesReferenced,
-    GalilCommunicationError,
     GalilController,
     GalilError,
     GalilMotorIsMoving,
     GalilMotorResolution,
-    GalilReadbackSignal,
     GalilSetpointSignal,
     GalilSignalRO,
     retry_once,
 )
-from ophyd_devices.utils.controller import Controller, threadlocked
-from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconnected
+from ophyd_devices.utils.controller import threadlocked
+from ophyd_devices.utils.socket import SocketIO, raise_if_disconnected
 
 logger = bec_logger.logger
 
@@ -310,7 +306,7 @@ class FlomniGalilMotor(Device, PositionerBase):
     def axis_Id(self, val):
         if isinstance(val, str):
             if len(val) != 1:
-                raise ValueError(f"Only single-character axis_Ids are supported.")
+                raise ValueError("Only single-character axis_Ids are supported.")
             self._axis_Id_alpha = val
             self._axis_Id_numeric = ord(val.lower()) - 97
         else:
@@ -324,7 +320,7 @@ class FlomniGalilMotor(Device, PositionerBase):
     def axis_Id_numeric(self, val):
         if isinstance(val, int):
             if val > 26:
-                raise ValueError(f"Numeric value exceeds supported range.")
+                raise ValueError("Numeric value exceeds supported range.")
             self._axis_Id_alpha = val
             self._axis_Id_numeric = (chr(val + 97)).capitalize()
         else:
