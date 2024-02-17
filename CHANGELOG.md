@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.0 (2024-02-17)
+
+### Feature
+
+* Add simulation framework for pinhole scan ([`491e105`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/491e105af0871449cd0f48b08c126023aa28445b))
+* Extend sim_data to allow execution from function of secondary devices extracted from lookup ([`851a088`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/851a088b81cfd7e9d323955f923174a394155bfd))
+
 ## v0.21.1 (2024-02-17)
 
 ### Fix
