@@ -126,9 +126,9 @@ class RtFlomniController(RtController):
             )
 
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.01):
-            fsamx.enabled_set = True
+            fsamx.read_only = False
             fsamx.obj.move(fsamx_in, wait=True)
-            fsamx.enabled_set = False
+            fsamx.read_only = True
             time.sleep(1)
 
         self.socket_put("l1")
@@ -169,13 +169,13 @@ class RtFlomniController(RtController):
             wait_on_exit = True
             self.socket_put("v0")
             fsamx = self.get_device_manager().devices.fsamx
-            fsamx.enabled_set = True
+            fsamx.read_only = False
             fsamx.obj.controller.socket_put_confirmed("axspeed[4]=0.1*stppermm[4]")
             fsamx.obj.pid_x_correction -= (self.get_pid_x() - expected_voltage) * 0.007
             logger.info(f"Correcting fsamx by {fsamx.obj.pid_x_correction}")
             fsamx_in = fsamx.user_parameter.get("in")
             fsamx.obj.move(fsamx_in + cenx / 1000 + fsamx.obj.pid_x_correction, wait=True)
-            fsamx.enabled_set = False
+            fsamx.read_only = True
             time.sleep(0.1)
             self.laser_tracker_on()
             time.sleep(0.01)

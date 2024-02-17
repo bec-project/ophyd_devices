@@ -2,11 +2,9 @@ import time
 
 from bec_lib import bec_logger
 from bec_lib.devicemanager import DeviceContainer
-
-from ophyd import Signal, Kind
+from ophyd import Kind, Signal
 
 from ophyd_devices.utils.socket import data_shape, data_type
-
 
 logger = bec_logger.logger
 DEFAULT_EPICSSIGNAL_VALUE = object()
@@ -18,7 +16,7 @@ class DeviceMock:
         self.name = name
         self.read_buffer = value
         self._config = {"deviceConfig": {"limits": [-50, 50]}, "userParameter": None}
-        self._enabled_set = True
+        self._read_only = False
         self._enabled = True
 
     def read(self):
@@ -28,12 +26,12 @@ class DeviceMock:
         return self.read_buffer
 
     @property
-    def enabled_set(self) -> bool:
-        return self._enabled_set
+    def read_only(self) -> bool:
+        return self._read_only
 
-    @enabled_set.setter
-    def enabled_set(self, val: bool):
-        self._enabled_set = val
+    @read_only.setter
+    def read_only(self, val: bool):
+        self._read_only = val
 
     @property
     def enabled(self) -> bool:
@@ -191,14 +189,7 @@ class ConfigSignal(Signal):
         self._readback = getattr(self.parent, self.storage_name)[self.name]
         return self._readback
 
-    def put(
-        self,
-        value,
-        connection_timeout=1,
-        callback=None,
-        timeout=1,
-        **kwargs,
-    ):
+    def put(self, value, connection_timeout=1, callback=None, timeout=1, **kwargs):
         """Using channel access, set the write PV to `value`.
 
         Keyword arguments are passed on to callbacks
@@ -224,10 +215,7 @@ class ConfigSignal(Signal):
         getattr(self.parent, self.storage_name)[self.name] = value
         super().put(value, timestamp=timestamp, force=True)
         self._run_subs(
-            sub_type=self.SUB_VALUE,
-            old_value=old_value,
-            value=value,
-            timestamp=timestamp,
+            sub_type=self.SUB_VALUE, old_value=old_value, value=value, timestamp=timestamp
         )
 
     def describe(self):

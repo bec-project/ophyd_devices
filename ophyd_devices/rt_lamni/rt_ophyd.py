@@ -405,8 +405,7 @@ class RtController(Controller):
         self.get_device_manager().producer.send(
             MessageEndpoints.device_read("rt_lamni"),
             messages.DeviceMessage(
-                signals=signals,
-                metadata={"pointID": pointID, **self.readout_metadata},
+                signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
             ).dumps(),
         )
 
@@ -502,7 +501,7 @@ class RtController(Controller):
                 f"Device {device_name} is not configured and cannot be enabled/disabled."
             )
             return
-        self.get_device_manager().devices[device_name].enabled_set = enabled
+        self.get_device_manager().devices[device_name].read_only = not enabled
 
 
 class RtSignalBase(SocketSignal):
@@ -593,11 +592,7 @@ class RtMotorIsMoving(RtSignalRO):
     def get(self):
         val = super().get()
         if val is not None:
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                value=val,
-                timestamp=time.time(),
-            )
+            self._run_subs(sub_type=self.SUB_VALUE, value=val, timestamp=time.time())
         return val
 
 
@@ -612,11 +607,7 @@ class RtFeedbackRunning(RtSignalRO):
 
 class RtMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        RtReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(RtReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(RtSetpointSignal, signal_name="setpoint")
 
     motor_is_moving = Cpt(RtMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -739,11 +730,7 @@ class RtMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 print("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.01)
             print("Move finished")
             self._done_moving()

@@ -1,7 +1,7 @@
+from unittest import mock
+
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.tests.utils import ProducerMock
-
-from unittest import mock
 
 
 class SocketMock:
@@ -251,7 +251,7 @@ class DeviceMock:
         self.name = name
         self.read_buffer = value
         self._config = {"deviceConfig": {"limits": [-50, 50]}, "userParameter": None}
-        self._enabled_set = True
+        self._read_only = False
         self._enabled = True
 
     def read(self):
@@ -263,14 +263,14 @@ class DeviceMock:
         return self.read_buffer
 
     @property
-    def enabled_set(self) -> bool:
-        """enabled_set property"""
-        return self._enabled_set
+    def read_only(self) -> bool:
+        """read only property"""
+        return self._read_only
 
-    @enabled_set.setter
-    def enabled_set(self, val: bool):
-        """enabled_set setter"""
-        self._enabled_set = val
+    @read_only.setter
+    def read_only(self, val: bool):
+        """read only setter"""
+        self._read_only = val
 
     @property
     def enabled(self) -> bool:

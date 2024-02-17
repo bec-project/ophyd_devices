@@ -3,7 +3,7 @@ import threading
 import time
 
 import numpy as np
-from bec_lib import messages, MessageEndpoints, bec_logger
+from bec_lib import MessageEndpoints, bec_logger, messages
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.status import wait as status_wait
@@ -435,8 +435,7 @@ class RtLamniController(Controller):
         self.get_device_manager().producer.send(
             MessageEndpoints.device_read("rt_lamni"),
             messages.DeviceMessage(
-                signals=signals,
-                metadata={"pointID": pointID, **self.readout_metadata},
+                signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
             ).dumps(),
         )
 
@@ -532,7 +531,7 @@ class RtLamniController(Controller):
                 f"Device {device_name} is not configured and cannot be enabled/disabled."
             )
             return
-        self.get_device_manager().devices[device_name].enabled_set = enabled
+        self.get_device_manager().devices[device_name].read_only = not enabled
 
 
 class RtLamniSignalBase(SocketSignal):
@@ -623,11 +622,7 @@ class RtLamniMotorIsMoving(RtLamniSignalRO):
     def get(self):
         val = super().get()
         if val is not None:
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                value=val,
-                timestamp=time.time(),
-            )
+            self._run_subs(sub_type=self.SUB_VALUE, value=val, timestamp=time.time())
         return val
 
 
@@ -642,11 +637,7 @@ class RtLamniFeedbackRunning(RtLamniSignalRO):
 
 class RtLamniMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        RtLamniReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(RtLamniReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(RtLamniSetpointSignal, signal_name="setpoint")
 
     motor_is_moving = Cpt(RtLamniMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -769,11 +760,7 @@ class RtLamniMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 print("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.01)
             print("Move finished")
             self._done_moving()
