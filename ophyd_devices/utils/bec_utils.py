@@ -122,17 +122,17 @@ class ProducerMock:
 
 class PipelineMock:
     _pipe_buffer = []
-    _connector = None
+    _producer = None
 
-    def __init__(self, connector) -> None:
-        self._connector = connector
+    def __init__(self, producer) -> None:
+        self._producer = producer
 
     def execute(self):
-        if not self._connector.store_data:
+        if not self._producer.store_data:
             self._pipe_buffer = []
             return []
         res = [
-            getattr(self._connector, method)(*args, **kwargs)
+            getattr(self._producer, method)(*args, **kwargs)
             for method, args, kwargs in self._pipe_buffer
         ]
         self._pipe_buffer = []
@@ -142,13 +142,13 @@ class PipelineMock:
 class DMMock:
     """Mock for DeviceManager
 
-    The mocked DeviceManager creates a device containert and a connector.
+    The mocked DeviceManager creates a device containert and a producer.
 
     """
 
     def __init__(self):
         self.devices = DeviceContainer()
-        self.connector = ProducerMock()
+        self.producer = ProducerMock()
 
     def add_device(self, name: str, value: float = 0.0):
         self.devices[name] = DeviceMock(name, value)

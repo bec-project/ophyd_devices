@@ -357,8 +357,8 @@ class SynXtremeOtfReplay(FlyerInterface, Device):
         }
         msg = messages.DeviceMessage(
             signals=signals, metadata=self._device_manager.devices.otf.metadata
-        )
-        self._device_manager.connector.set_and_publish(
+        ).dumps()
+        self._device_manager.producer.set_and_publish(
             MessageEndpoints.device_readback("signals"), msg
         )
 

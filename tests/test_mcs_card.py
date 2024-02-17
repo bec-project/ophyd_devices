@@ -32,7 +32,7 @@ def mock_det():
     prefix = "X12SA-MCS:"
     sim_mode = False
     dm = DMMock()
-    with mock.patch.object(dm, "connector"):
+    with mock.patch.object(dm, "producer"):
         with mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
         ) as filemixin, mock.patch(
@@ -53,7 +53,7 @@ def test_init():
     prefix = "X12SA-ES-EIGER9M:"
     sim_mode = False
     dm = DMMock()
-    with mock.patch.object(dm, "connector"):
+    with mock.patch.object(dm, "producer"):
         with mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
         ), mock.patch(
@@ -184,7 +184,7 @@ def test_send_data_to_bec(mock_det, metadata, mca_data):
     mock_det.custom_prepare._send_data_to_bec()
     device_metadata = mock_det.scaninfo.scan_msg.metadata
     metadata.update({"async_update": "append", "num_lines": mock_det.num_lines.get()})
-    data = messages.DeviceMessage(signals=dict(mca_data), metadata=device_metadata)
+    data = messages.DeviceMessage(signals=dict(mca_data), metadata=device_metadata).dumps()
     calls = mock.call(
         topic=MessageEndpoints.device_async_readback(
             scanID=metadata["scanID"], device=mock_det.name
@@ -193,7 +193,7 @@ def test_send_data_to_bec(mock_det, metadata, mca_data):
         expire=1800,
     )
 
-    assert mock_det.connector.xadd.call_args == calls
+    assert mock_det.producer.xadd.call_args == calls
 
 
 @pytest.mark.parametrize(

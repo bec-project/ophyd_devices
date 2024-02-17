@@ -115,32 +115,34 @@ class SynFlyerLamNI(Device, PositionerBase):
                             }
                         },
                         metadata={"pointID": ii, **metadata},
-                    )
+                    ).dumps()
                 )
                 ttime.sleep(exp_time)
                 elapsed_time += exp_time
                 if elapsed_time > buffer_time:
                     elapsed_time = 0
-                    device.device_manager.connector.send(
-                        MessageEndpoints.device_read(device.name), bundle
+                    device.device_manager.producer.send(
+                        MessageEndpoints.device_read(device.name), bundle.dumps()
                     )
                     bundle = messages.BundleMessage()
-                    device.device_manager.connector.set_and_publish(
+                    device.device_manager.producer.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
                             device=device.name,
                             status=1,
                             metadata={"pointID": ii, **metadata},
-                        ),
+                        ).dumps(),
                     )
-            device.device_manager.connector.send(MessageEndpoints.device_read(device.name), bundle)
-            device.device_manager.connector.set_and_publish(
+            device.device_manager.producer.send(
+                MessageEndpoints.device_read(device.name), bundle.dumps()
+            )
+            device.device_manager.producer.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
                     device=device.name,
                     status=0,
                     metadata={"pointID": num_pos, **metadata},
-                ),
+                ).dumps(),
             )
             print("done")
 

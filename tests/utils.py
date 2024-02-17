@@ -296,13 +296,13 @@ class DeviceMock:
 class DMMock:
     """Mock for DeviceManager
 
-    The mocked DeviceManager creates a device containert and a connector.
+    The mocked DeviceManager creates a device containert and a producer.
 
     """
 
     def __init__(self):
         self.devices = DeviceContainer()
-        self.connector = ProducerMock()
+        self.producer = ProducerMock()
 
     def add_device(self, name: str, value: float = 0.0):
         """Add device to the DeviceManagerMock"""

@@ -96,7 +96,7 @@ class BecScaninfoMixin:
             messages.ScanStatusMessage: messages.ScanStatusMessage object
         """
         if not self.sim_mode:
-            msg = self.device_manager.connector.get(MessageEndpoints.scan_status())
+            msg = self.device_manager.producer.get(MessageEndpoints.scan_status())
             if not isinstance(msg, messages.ScanStatusMessage):
                 return None
             return msg
@@ -112,7 +112,7 @@ class BecScaninfoMixin:
         if self.sim_mode:
             return getpass.getuser()
 
-        msg = self.device_manager.connector.get(MessageEndpoints.account())
+        msg = self.device_manager.producer.get(MessageEndpoints.account())
         if msg:
             return msg
         return getpass.getuser()

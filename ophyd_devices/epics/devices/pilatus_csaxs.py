@@ -331,7 +331,7 @@ class PilatusSetup(CustomDetectorMixin):
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
         """
-        pipe = self.parent.connector.pipeline()
+        pipe = self.parent.producer.pipeline()
         if successful is None:
             msg = messages.FileMessage(
                 file_path=self.parent.filepath,
@@ -345,13 +345,13 @@ class PilatusSetup(CustomDetectorMixin):
                 successful=successful,
                 metadata={"input_path": self.parent.filepath_raw},
             )
-        self.parent.connector.set_and_publish(
+        self.parent.producer.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
-            msg,
+            msg.dumps(),
             pipe=pipe,
         )
-        self.parent.connector.set_and_publish(
-            MessageEndpoints.file_event(self.parent.name), msg, pipe=pipe
+        self.parent.producer.set_and_publish(
+            MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
         )
         pipe.execute()
 
