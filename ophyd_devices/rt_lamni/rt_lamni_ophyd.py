@@ -308,9 +308,9 @@ class RtLamniController(Controller):
 
     def _update_flyer_device_info(self):
         flyer_info = self._get_flyer_device_info()
-        self.get_device_manager().producer.set(
+        self.get_device_manager().connector.set(
             MessageEndpoints.device_info("rt_scan"),
-            messages.DeviceInfoMessage(device="rt_scan", info=flyer_info).dumps(),
+            messages.DeviceInfoMessage(device="rt_scan", info=flyer_info),
         )
 
     def _get_flyer_device_info(self) -> dict:
@@ -385,11 +385,11 @@ class RtLamniController(Controller):
 
         # if not (mode==2 or mode==3):
         #    error
-        self.get_device_manager().producer.set_and_publish(
+        self.get_device_manager().connector.set_and_publish(
             MessageEndpoints.device_status("rt_scan"),
             messages.DeviceStatusMessage(
                 device="rt_scan", status=1, metadata=self.readout_metadata
-            ).dumps(),
+            ),
         )
         # while scan is running
         while mode > 0:
@@ -420,11 +420,11 @@ class RtLamniController(Controller):
             signals = self._get_signals_from_table(return_table)
             self.publish_device_data(signals=signals, pointID=int(return_table[0]))
 
-        self.get_device_manager().producer.set_and_publish(
+        self.get_device_manager().connector.set_and_publish(
             MessageEndpoints.device_status("rt_scan"),
             messages.DeviceStatusMessage(
                 device="rt_scan", status=0, metadata=self.readout_metadata
-            ).dumps(),
+            ),
         )
 
         logger.info(
@@ -432,11 +432,11 @@ class RtLamniController(Controller):
         )
 
     def publish_device_data(self, signals, pointID):
-        self.get_device_manager().producer.send(
+        self.get_device_manager().connector.send(
             MessageEndpoints.device_read("rt_lamni"),
             messages.DeviceMessage(
                 signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
-            ).dumps(),
+            ),
         )
 
     def feedback_status_angle_lamni(self) -> bool:

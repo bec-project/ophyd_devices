@@ -1,7 +1,7 @@
 from unittest import mock
 
 from bec_lib.devicemanager import DeviceContainer
-from bec_lib.tests.utils import ProducerMock
+from bec_lib.tests.utils import ConnectorMock
 
 
 class SocketMock:
@@ -296,13 +296,13 @@ class DeviceMock:
 class DMMock:
     """Mock for DeviceManager
 
-    The mocked DeviceManager creates a device containert and a producer.
+    The mocked DeviceManager creates a device containert and a connector.
 
     """
 
     def __init__(self):
         self.devices = DeviceContainer()
-        self.producer = ProducerMock()
+        self.connector = ConnectorMock()
 
     def add_device(self, name: str, value: float = 0.0):
         """Add device to the DeviceManagerMock"""

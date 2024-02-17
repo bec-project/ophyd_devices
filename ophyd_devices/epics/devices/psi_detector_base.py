@@ -228,7 +228,7 @@ class PSIDetectorBase(Device):
             self.device_manager = bec_utils.DMMock()
             base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
             self.service_cfg = {"base_path": os.path.expanduser(base_path)}
-        self.producer = self.device_manager.producer
+        self.connector = self.device_manager.connector
         self._update_scaninfo()
         self._update_filewriter()
         self._init()
