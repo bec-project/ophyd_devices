@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.1 (2024-02-17)
+
+### Fix
+
+* **deprecation:** Remove all remaining .dumps(), .loads() and producer->connector ([`4159f3e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4159f3e3ec20727b395808118f3c0c166d9d1c0c))
+
 ## v0.21.0 (2024-02-16)
 
 ### Feature
