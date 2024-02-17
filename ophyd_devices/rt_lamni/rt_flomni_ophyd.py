@@ -298,10 +298,11 @@ class RtFlomniController(RtController):
         }
 
     def laser_tracker_galil_enable(self):
-        self.get_device_manager().devices.ftrackz.obj.controller.socket_put_confirmed("tracken=1")
-        self.get_device_manager().devices.ftrackz.obj.controller.socket_put_confirmed("trackyct=0")
-        self.get_device_manager().devices.ftrackz.obj.controller.socket_put_confirmed("trackzct=0")
-        self.get_device_manager().devices.ftrackz.obj.controller.socket_put_confirmed("XQ#Tracker")
+        ftrackz_con = self.get_device_manager().devices.ftrackz.obj.controller
+        ftrackz_con.socket_put_confirmed("tracken=1")
+        ftrackz_con.socket_put_confirmed("trackyct=0")
+        ftrackz_con.socket_put_confirmed("trackzct=0")
+        ftrackz_con.socket_put_confirmed("XQ#Tracker")
 
     def laser_tracker_on_target(self) -> bool:
         self.laser_update_tracker_info()

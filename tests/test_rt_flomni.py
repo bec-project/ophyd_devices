@@ -4,6 +4,7 @@ import pytest
 from utils import SocketMock
 
 from ophyd_devices.rt_lamni import RtFlomniController, RtFlomniMotor
+from ophyd_devices.rt_lamni.rt_ophyd import RtError
 
 
 @pytest.fixture()
@@ -56,3 +57,33 @@ def test_feedback_enable_with_reset(rt_flomni):
 
                     rt_flomni.feedback_enable_with_reset()
                     laser_tracker_on.assert_called_once()
+
+
+def test_move_samx_to_scan_region(rt_flomni):
+    device_manager = rt_flomni.get_device_manager()
+    device_manager.devices.rtx.user_parameter.get.return_value = 1
+    rt_flomni.move_samx_to_scan_region(20, 2)
+    assert mock.call(b"v0\n") not in rt_flomni.sock.put.mock_calls
+    assert mock.call(b"v1\n") in rt_flomni.sock.put.mock_calls
+
+
+def test_feedback_enable_without_reset(rt_flomni):
+    with mock.patch.object(rt_flomni, "set_device_enabled") as set_device_enabled:
+        with mock.patch.object(rt_flomni, "feedback_is_running", return_value=True):
+            with mock.patch.object(rt_flomni, "laser_tracker_on") as laser_tracker_on:
+                rt_flomni.feedback_enable_without_reset()
+                laser_tracker_on.assert_called_once()
+                assert mock.call(b"l3\n") in rt_flomni.sock.put.mock_calls
+                assert mock.call("fsamx", False) in set_device_enabled.mock_calls
+                assert mock.call("fsamy", False) in set_device_enabled.mock_calls
+                assert mock.call("foptx", False) in set_device_enabled.mock_calls
+                assert mock.call("fopty", False) in set_device_enabled.mock_calls
+
+
+def test_feedback_enable_without_reset_raises(rt_flomni):
+    with mock.patch.object(rt_flomni, "feedback_is_running", return_value=False):
+        with mock.patch.object(rt_flomni, "laser_tracker_on") as laser_tracker_on:
+            with pytest.raises(RtError):
+                rt_flomni.feedback_enable_without_reset()
+                laser_tracker_on.assert_called_once()
+                assert mock.call(b"l3\n") in rt_flomni.sock.put.mock_calls
