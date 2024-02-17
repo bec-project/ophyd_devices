@@ -121,6 +121,8 @@ trigger_bec:
   trigger:
     project: bec/bec
     strategy: depend
+  variables:
+    OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
