@@ -1,4 +1,5 @@
 import getpass
+import warnings
 
 from bec_lib import DeviceManagerBase, messages, MessageEndpoints, bec_logger
 
@@ -65,6 +66,12 @@ class BecScaninfoMixin:
         self, device_manager: DeviceManagerBase = None, sim_mode: bool = False, bec_info_msg=None
     ) -> None:
         self.device_manager = device_manager
+        if self.device_manager and hasattr(self.device_manager, "producer"):
+            warnings.warn(
+                "The producer attribute is deprecated and will be removed in the future.",
+                DeprecationWarning,
+            )
+            self.device_manager.connector = self.device_manager.producer
         self.sim_mode = sim_mode
         self.scan_msg = None
         self.scanID = None
