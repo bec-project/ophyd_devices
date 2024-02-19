@@ -29,6 +29,6 @@ from .eiger9m_csaxs import Eiger9McSAXS
 from .pilatus_csaxs import PilatuscSAXS
 from .falcon_csaxs import FalconcSAXS
 from .delay_generator_csaxs import DelayGeneratorcSAXS
-from .AerotechAutomation1 import aa1Controller, aa1Tasks
+from .AerotechAutomation1 import aa1Controller, aa1Tasks, aa1GlobalVariables, aa1GlobalVariableBindings, aa1AxisPsoDistance, aa1AxisDriveDataCollection, EpicsMotorX
 
 # from .psi_detector_base import PSIDetectorBase, CustomDetectorMixin
