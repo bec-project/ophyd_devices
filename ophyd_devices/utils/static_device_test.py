@@ -7,6 +7,8 @@ import ophyd
 import yaml
 from bec_lib.scibec_validator import SciBecValidator
 
+from ophyd_devices.utils.bec_device_base import BECDeviceBase
+
 try:
     from bec_plugins import devices as plugin_devices
 except ImportError:
@@ -176,7 +178,7 @@ class StaticDeviceTest:
         Returns:
 
         """
-
+        assert isinstance(obj, BECDeviceBase)
         assert isinstance(obj.name, str)
         assert isinstance(obj.read(), dict)
         assert isinstance(obj.read_configuration(), dict)
