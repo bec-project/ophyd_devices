@@ -1,15 +1,16 @@
-class BECDeviceBase:
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class BECDeviceBase(Protocol):
     """Base class for BEC devices with zero functionality."""
 
-    def __init__(self, name: str, *args, **kwargs):
-        self.name = name
-        self._connected = True
-        self._destroyed = False
+    name: str
+    _destroyed: bool
 
     @property
-    def hints(self):
+    def hints(self) -> dict:
         """hints property"""
-        return {}
 
     @property
     def connected(self) -> bool:
@@ -19,12 +20,10 @@ class BECDeviceBase:
         Returns:
             bool: True if connected, False otherwise
         """
-        return self._connected
 
     @connected.setter
     def connected(self, value: bool):
         """connected setter"""
-        self._connected = value
 
     def describe(self) -> dict:
         """describe method
@@ -35,7 +34,6 @@ class BECDeviceBase:
         Returns:
             dict: Dictionary with dictionaries with signal descriptions ('source', 'dtype', 'shape')
         """
-        return {}
 
     def describe_configuration(self) -> dict:
         """describe method
@@ -46,7 +44,6 @@ class BECDeviceBase:
         Returns:
             dict: Dictionary with dictionaries with signal descriptions ('source', 'dtype', 'shape')
         """
-        return {}
 
     def read_configuration(self) -> dict:
         """read_configuration method
@@ -57,7 +54,6 @@ class BECDeviceBase:
             dict: Dictionary with nested dictionary of signals with kind.config:
             {'signal_name' : {'value' : .., "timestamp" : ..}, ...}
         """
-        return {}
 
     def read(self) -> dict:
         """read method
@@ -68,8 +64,6 @@ class BECDeviceBase:
             dict: Dictionary with nested dictionary of signals with kind.normal or kind.hinted:
             {'signal_name' : {'value' : .., "timestamp" : ..}, ...}
         """
-        return {}
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Destroy method"""
-        self._destroyed = True
