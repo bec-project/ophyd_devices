@@ -191,11 +191,11 @@ class aa1Tasks(Device):
         """ Read a file from the controller """
         # Have to use CHAR array due to EPICS LSI bug...
         self.fileName.set(filename).wait()
-        filebytes = self._fileRead.get().astype(np.uint8).tobytes()
+        filebytes = self._fileRead.get()
         # C-strings terminate with trailing zero
         if filebytes[-1]==0:
             filebytes = filebytes[:-1]
-        filetext = filebytes.decode('ascii')
+        filetext = filebytes
         return filetext
     
     def writeFile(self, filename: str, filetext: str) -> None:
@@ -206,14 +206,14 @@ class aa1Tasks(Device):
     def runScript(self, filename: str, taskIndex: int==2, filetext=None, settle_time=0.5) -> None:
         """ Run a script file that either exists, or is newly created and compiled"""
         
-        self.configure(text=filetext, filename=filename, taskIndex=taskIndex)
+        self.configure({'text': filetext, 'filename': filename, 'taskIndex': taskIndex})
         self.trigger().wait()
                 
     def execute(self, text: str, taskIndex: int=3, mode: str=0, settle_time=0.5):
         """ Run a short text command on the Automation1 controller"""
         
         print(f"Executing program on task: {taskIndex}")        
-        self.configure(text=text, taskIndex=taskIndex, mode=mode)
+        self.configure({'text': text, 'taskIndex': taskIndex, 'mode': mode})
         self.trigger().wait()
     
         if mode in [0, "None", None]:
@@ -248,7 +248,8 @@ class aa1Tasks(Device):
         if (filename is None) and (text not in [None, ""]):
             # Direct command execution
             print("Preparing for direct command execution")
-            self._executeMode.set(kwargs['mode']).wait()
+            if mode is not None:
+                self._executeMode.set(mode).wait()
             self._textToExecute = text
         elif (filename is not None) and (text in [None, ""]):
             # Execute existing file
