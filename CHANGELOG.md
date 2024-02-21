@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.23.0 (2024-02-21)
+
+### Feature
+
+* **static_device_test:** Added check against BECDeviceBase protocol ([`82cfefb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/82cfefb3b969f0fdebc357f8bd5b404ec503d7ce))
+
+### Fix
+
+* Separate BECDevice and BECDeviceBase ([`2f2cef1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f2cef10f7fb77e502cbf274a6b350f2feb0ad22))
+
 ## v0.22.0 (2024-02-17)
 
 ### Feature
