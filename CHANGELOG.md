@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.23.1 (2024-02-21)
+
+### Fix
+
+* Replaced outdated enable_set by read_only ([`f91d0c4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f91d0c482d194e5f69c7206d0f6ad0971f84b0e1))
+
 ## v0.23.0 (2024-02-21)
 
 ### Feature
