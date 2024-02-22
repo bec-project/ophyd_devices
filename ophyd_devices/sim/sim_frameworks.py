@@ -10,7 +10,7 @@ class DeviceProxy(BECDeviceBase):
     """DeviceProxy class inherits from BECDeviceBase."""
 
 
-class SlitLookup(DeviceProxy):
+class SlitProxy(DeviceProxy):
     """
     Simulation framework to immidate the behaviour of slits.
 
@@ -27,11 +27,12 @@ class SlitLookup(DeviceProxy):
 
     slit_sim:
         readoutPriority: on_request
-        deviceClass: SlitLookup
+        deviceClass: SlitProxy
         deviceConfig:
             eiger:
-                cen_off: [0, 0] # [x,y]
-                cov: [[1000, 500], [200, 1000]] # [[x,x],[y,y]]
+                signal_name: image
+                center_offset: [0, 0] # [x,y]
+                covariance: [[1000, 500], [200, 1000]] # [[x,x],[y,y]]
                 pixel_size: 0.01
                 ref_motors: [samx, samy]
                 slit_width: [1, 1]
@@ -61,7 +62,9 @@ class SlitLookup(DeviceProxy):
         print(self.__doc__)
 
     def _update_device_config(self, config: dict) -> None:
-        """Update the config from the device_config for the pinhole lookup table.
+        """
+        BEC will call this method on every object upon initializing devices to pass over the deviceConfig
+        from the config file. It can be conveniently be used to hand over initial parameters to the device.
 
         Args:
             config (dict): Config dictionary.
@@ -83,8 +86,8 @@ class SlitLookup(DeviceProxy):
         """Compile the lookup table for the simulated camera."""
         for device_name in self.config.keys():
             self._lookup[device_name] = {
-                # "obj": self,
                 "method": self._compute,
+                "signal_name": self.config[device_name]["signal_name"],
                 "args": (device_name,),
                 "kwargs": {},
             }
@@ -96,22 +99,28 @@ class SlitLookup(DeviceProxy):
 
         Args:
             device_name (str): Name of the device.
+            signal_name (str): Name of the signal.
 
         Returns:
             np.ndarray: Lookup table for the simulated camera.
         """
         device_obj = self.device_manager.devices.get(device_name).obj
-        params = device_obj.sim._all_params.get("gauss")
+        params = device_obj.sim.sim_params
         shape = device_obj.image_shape.get()
         params.update(
             {
                 "noise": NoiseType.POISSON,
-                "cov": np.array(self.config[device_name]["cov"]),
-                "cen_off": np.array(self.config[device_name]["cen_off"]),
+                "covariance": np.array(self.config[device_name]["covariance"]),
+                "center_offset": np.array(self.config[device_name]["center_offset"]),
             }
         )
+        amp = params.get("amplitude")
+        cov = params.get("covariance")
+        cen_off = params.get("center_offset")
 
-        pos, offset, cov, amp = device_obj.sim._prepare_params_gauss(params, shape)
+        pos, offset, cov, amp = device_obj.sim._prepare_params_gauss(
+            amp=amp, cov=cov, offset=cen_off, shape=shape
+        )
         v = device_obj.sim._compute_multivariate_gaussian(pos=pos, cen_off=offset, cov=cov, amp=amp)
         device_pos = self.config[device_name]["pixel_size"] * pos
         valid_mask = self._create_mask(
@@ -122,8 +131,15 @@ class SlitLookup(DeviceProxy):
         )
         valid_mask = self._blur_image(valid_mask, sigma=self._gaussian_blur_sigma)
         v *= valid_mask
-        v = device_obj.sim._add_noise(v, params["noise"])
-        v = device_obj.sim._add_hot_pixel(v, params["hot_pixel"])
+        v = device_obj.sim._add_noise(
+            v, noise=params["noise"], noise_multiplier=params["noise_multiplier"]
+        )
+        v = device_obj.sim._add_hot_pixel(
+            v,
+            coords=params["hot_pixel_coords"],
+            hot_pixel_types=params["hot_pixel_types"],
+            values=params["hot_pixel_values"],
+        )
         return v
 
     def _blur_image(self, image: np.ndarray, sigma: float = 1) -> np.ndarray:
@@ -159,6 +175,6 @@ class SlitLookup(DeviceProxy):
 
 if __name__ == "__main__":
     # Example usage
-    pinhole = SlitLookup(name="pinhole", device_manager=None)
+    pinhole = SlitProxy(name="pinhole", device_manager=None)
     pinhole.describe()
     print(pinhole)

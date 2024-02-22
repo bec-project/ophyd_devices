@@ -8,13 +8,15 @@ from .npoint.npoint import NPointAxis
 from .rt_lamni import RtFlomniMotor, RtLamniMotor
 from .sim.sim import SimCamera
 from .sim.sim import SimMonitor
+from .sim.sim import SimFlyer
+from .sim.sim import SimFlyer as SynFlyer
 from .sim.sim import SimMonitor as SynAxisMonitor
 from .sim.sim import SimMonitor as SynGaussBEC
 from .sim.sim import SimPositioner
 from .sim.sim import SimPositioner as SynAxisOPAAS
-from .sim.sim import SynDeviceOPAAS, SynFlyer
+from .sim.sim import SynDeviceOPAAS
 from .sim.sim_signals import ReadOnlySignal
-from .sim.sim_frameworks import DeviceProxy, SlitLookup
+from .sim.sim_frameworks import DeviceProxy, SlitProxy
 from .sim.sim_signals import ReadOnlySignal as SynSignalRO
 from .sls_devices.sls_devices import SLSInfo, SLSOperatorMessages
 from .smaract.smaract_ophyd import SmaractMotor

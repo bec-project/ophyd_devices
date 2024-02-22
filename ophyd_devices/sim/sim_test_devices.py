@@ -14,6 +14,7 @@ class DummyControllerDevice(Device):
 class DummyController:
     USER_ACCESS = [
         "some_var",
+        "some_var_property",
         "controller_show_all",
         "_func_with_args",
         "_func_with_args_and_kwargs",
@@ -23,11 +24,19 @@ class DummyController:
     some_var = 10
     another_var = 20
 
+    def __init__(self) -> None:
+        self._some_var_property = None
+        self.connected = False
+
+    @property
+    def some_var_property(self):
+        return self._some_var_property
+
     def on(self):
-        self._connected = True
+        self.connected = True
 
     def off(self):
-        self._connected = False
+        self.connected = False
 
     def _func_with_args(self, *args):
         return args

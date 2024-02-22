@@ -1,23 +1,32 @@
-from collections import defaultdict
 import os
 import threading
 import time as ttime
-import warnings
-
 import numpy as np
+
 from bec_lib import MessageEndpoints, bec_logger, messages
+
 from ophyd import Component as Cpt
 from ophyd import DynamicDeviceComponent as Dcpt
 from ophyd import Device, DeviceStatus, Kind
-from ophyd import PositionerBase, Signal
+from ophyd import PositionerBase
+
+from ophyd.flyers import FlyerInterface
+
 from ophyd.sim import SynSignal
+from ophyd.status import StatusBase
 
 from ophyd.utils import LimitError
+
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
-from ophyd_devices.sim.sim_data import SimulatedDataBase, SimulatedDataCamera, SimulatedDataMonitor
+
+from ophyd_devices.sim.sim_data import (
+    SimulatedPositioner,
+    SimulatedDataCamera,
+    SimulatedDataMonitor,
+)
 from ophyd_devices.sim.sim_test_devices import DummyController
 
-from ophyd_devices.sim.sim_signals import SetableSignal, ReadOnlySignal, ComputedReadOnlySignal
+from ophyd_devices.sim.sim_signals import SetableSignal, ReadOnlySignal
 
 logger = bec_logger.logger
 
@@ -46,11 +55,11 @@ class SimMonitor(Device):
 
     """
 
-    USER_ACCESS = ["sim"]
+    USER_ACCESS = ["sim", "registered_proxies"]
 
     sim_cls = SimulatedDataMonitor
 
-    readback = Cpt(ComputedReadOnlySignal, value=0, kind=Kind.hinted)
+    readback = Cpt(ReadOnlySignal, value=0, kind=Kind.hinted, compute_readback=True)
 
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
@@ -69,16 +78,16 @@ class SimMonitor(Device):
         self.precision = precision
         self.init_sim_params = sim_init
         self.sim = self.sim_cls(parent=self, device_manager=device_manager, **kwargs)
-        self._lookup_table = []
+        self._registered_proxies = {}
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
 
     @property
-    def lookup_table(self) -> None:
-        """lookup_table property"""
-        return self._lookup_table
+    def registered_proxies(self) -> None:
+        """Dictionary of registered signal_names and proxies."""
+        return self._registered_proxies
 
 
 class SimCamera(Device):
@@ -100,7 +109,7 @@ class SimCamera(Device):
 
     """
 
-    USER_ACCESS = ["sim"]
+    USER_ACCESS = ["sim", "registered_proxies"]
 
     sim_cls = SimulatedDataCamera
     SHAPE = (100, 100)
@@ -116,9 +125,10 @@ class SimCamera(Device):
 
     image_shape = Cpt(SetableSignal, name="image_shape", value=SHAPE, kind=Kind.config)
     image = Cpt(
-        ComputedReadOnlySignal,
+        ReadOnlySignal,
         name="image",
         value=np.empty(SHAPE, dtype=np.uint16),
+        compute_readback=True,
         kind=Kind.omitted,
     )
 
@@ -134,7 +144,7 @@ class SimCamera(Device):
     ):
         self.device_manager = device_manager
         self.init_sim_params = sim_init
-        self._lookup_table = []
+        self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, device_manager=device_manager, **kwargs)
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
@@ -144,9 +154,9 @@ class SimCamera(Device):
         self._update_scaninfo()
 
     @property
-    def lookup_table(self) -> None:
-        """lookup_table property"""
-        return self._lookup_table
+    def registered_proxies(self) -> None:
+        """Dictionary of registered signal_names and proxies."""
+        return self._registered_proxies
 
     def trigger(self) -> DeviceStatus:
         """Trigger the camera to acquire images.
@@ -225,30 +235,29 @@ class SimPositioner(Device, PositionerBase):
     """
     A simulated device mimicing any 1D Axis device (position, temperature, rotation).
 
+    >>> motor = SimPositioner(name="motor")
+
     Parameters
     ----------
-    name : string, keyword only
-    readback_func : callable, optional
-        When the Device is set to ``x``, its readback will be updated to
-        ``f(x)``. This can be used to introduce random noise or a systematic
-        offset.
-        Expected signature: ``f(x) -> value``.
-    value : object, optional
-        The initial value. Default is 0.
-    delay : number, optional
-        Simulates how long it takes the device to "move". Default is 0 seconds.
-    precision : integer, optional
-        Digits of precision. Default is 3.
-    parent : Device, optional
-        Used internally if this Signal is made part of a larger Device.
-    kind : a member the Kind IntEnum (or equivalent integer), optional
-        Default is Kind.normal. See Kind for options.
+    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.\
+    Optional parameters:
+    ----------
+    delay (int)             : If 0, execution of move will be instant. If 1, exectution will depend on motor velocity. Default is 1.
+    update_frequency (int)  : Frequency in Hz of the update of the simulated state during a move. Default is 2 Hz.
+    precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
+    tolerance (float)       : Tolerance of the positioner to accept reaching target positions. Default is 0.5.
+    limits (tuple)          : Tuple of the low and high limits of the positioner. Overrides low/high_limit_travel is specified. Default is None.
+    parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.
+    kind                    : A member the Kind IntEnum (or equivalent integer), optional. Default is Kind.normal. See Kind for options.
+    device_manager          : DeviceManager from BEC, optional . Within startup of simulation, device_manager is passed on automatically.
+    sim_init (dict)         : Dictionary to initiate parameters of the simulation, check simulation type defaults for more details.
+
     """
 
     # Specify which attributes are accessible via BEC client
-    USER_ACCESS = ["sim", "readback", "speed", "dummy_controller"]
+    USER_ACCESS = ["sim", "readback", "speed", "dummy_controller", "registered_proxies"]
 
-    sim_cls = SimulatedDataBase
+    sim_cls = SimulatedPositioner
 
     # Define the signals as class attributes
     readback = Cpt(ReadOnlySignal, name="readback", value=0, kind=Kind.hinted)
@@ -256,59 +265,60 @@ class SimPositioner(Device, PositionerBase):
     motor_is_moving = Cpt(SetableSignal, value=0, kind=Kind.normal)
 
     # Config signals
-    velocity = Cpt(SetableSignal, value=1, kind=Kind.config)
+    velocity = Cpt(SetableSignal, value=100, kind=Kind.config)
     acceleration = Cpt(SetableSignal, value=1, kind=Kind.config)
 
     # Ommitted signals
     high_limit_travel = Cpt(SetableSignal, value=0, kind=Kind.omitted)
     low_limit_travel = Cpt(SetableSignal, value=0, kind=Kind.omitted)
-    unused = Cpt(Signal, value=1, kind=Kind.omitted)
+    unused = Cpt(SetableSignal, value=1, kind=Kind.omitted)
 
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
-        *,
         name,
-        readback_func=None,
-        value=0,
-        delay=1,
-        speed=1,
+        *,
+        delay: int = 1,
         update_frequency=2,
         precision=3,
-        parent=None,
-        labels=None,
-        kind=None,
-        limits=None,
         tolerance: float = 0.5,
-        sim: dict = None,
+        limits=None,
+        parent=None,
+        kind=None,
+        device_manager=None,
+        sim_init: dict = None,
+        # TODO remove after refactoring config
+        speed: float = 100,
         **kwargs,
     ):
-        # Whether motions should be instantaneous or depend on motor velocity
         self.delay = delay
+        self.device_manager = device_manager
         self.precision = precision
         self.tolerance = tolerance
-        self.init_sim_params = sim
-        self._lookup_table = []
+        self.init_sim_params = sim_init
+        self._registered_proxies = {}
 
-        self.speed = speed
         self.update_frequency = update_frequency
         self._stopped = False
         self.dummy_controller = DummyController()
 
-        # initialize inner dictionary with simulated state
         self.sim = self.sim_cls(parent=self, **kwargs)
 
-        super().__init__(name=name, labels=labels, parent=parent, kind=kind, **kwargs)
-        # Rename self.readback.name to self.name, also in self.sim_state
+        super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
-        # Init limits from deviceConfig
         if limits is not None:
             assert len(limits) == 2
             self.low_limit_travel.put(limits[0])
             self.high_limit_travel.put(limits[1])
+
+    # @property
+    # def connected(self):
+    #     """Return the connected state of the simulated device."""
+    #     return self.dummy_controller.connected
 
     @property
     def limits(self):
@@ -325,11 +335,11 @@ class SimPositioner(Device, PositionerBase):
         """Return the high limit of the simulated device."""
         return self.limits[1]
 
-    @property
-    def lookup_table(self) -> None:
-        """lookup_table property"""
-        return self._lookup_table
+    def registered_proxies(self) -> None:
+        """Dictionary of registered signal_names and proxies."""
+        return self._registered_proxies
 
+    # pylint: disable=arguments-differ
     def check_value(self, value: any):
         """
         Check that requested position is within existing limits.
@@ -375,42 +385,41 @@ class SimPositioner(Device, PositionerBase):
 
         st = DeviceStatus(device=self)
         if self.delay:
-            # If self.delay is not 0, we use the speed and updated frequency of the device to compute the motion
+
             def move_and_finish():
                 """Move the simulated device and finish the motion."""
                 success = True
                 try:
-                    # Compute final position with some jitter
                     move_val = self._get_sim_state(
                         self.setpoint.name
                     ) + self.tolerance * np.random.uniform(-1, 1)
-                    # Compute the number of updates needed to reach the final position with the given speed
+
                     updates = np.ceil(
-                        np.abs(old_setpoint - move_val) / self.speed * self.update_frequency
+                        np.abs(old_setpoint - move_val)
+                        / self.velocity.get()
+                        * self.update_frequency
                     )
-                    # Loop over the updates and update the state of the simulated device
+
                     for ii in np.linspace(old_setpoint, move_val, int(updates)):
                         ttime.sleep(1 / self.update_frequency)
                         update_state(ii)
-                    # Update the state of the simulated device to the final position
+
                     update_state(move_val)
                     self._set_sim_state(self.motor_is_moving, 0)
                 except DeviceStop:
                     success = False
                 finally:
                     self._stopped = False
-                # Call function from positioner base to indicate that motion finished with success
                 self._done_moving(success=success)
-                # Set status to finished
+                self._set_sim_state(self.motor_is_moving.name, 0)
                 st.set_finished()
 
-            # Start motion in Thread
             threading.Thread(target=move_and_finish, daemon=True).start()
 
         else:
-            # If self.delay is 0, we move the simulated device instantaneously
             update_state(value)
             self._done_moving()
+            self._set_sim_state(self.motor_is_moving.name, 0)
             st.set_finished()
         return st
 
@@ -420,7 +429,7 @@ class SimPositioner(Device, PositionerBase):
         self._stopped = True
 
     @property
-    def position(self):
+    def position(self) -> float:
         """Return the current position of the simulated device."""
         return self.readback.get()
 
@@ -430,57 +439,81 @@ class SimPositioner(Device, PositionerBase):
         return "mm"
 
 
-class SynFlyer(Device, PositionerBase):
+class SimFlyer(Device, PositionerBase, FlyerInterface):
+    """A simulated device mimicing any 2D Flyer device (position, temperature, rotation).
+
+    The corresponding simulation class is sim_cls=SimulatedPositioner, more details on defaults within the simulation class.
+
+    >>> flyer = SimFlyer(name="flyer")
+
+    Parameters
+    ----------
+    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.
+    precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
+    parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.
+    kind                    : A member the Kind IntEnum (or equivalent integer), optional. Default is Kind.normal. See Kind for options.
+    device_manager          : DeviceManager from BEC, optional . Within startup of simulation, device_manager is passed on automatically.
+    """
+
+    USER_ACCESS = ["sim", "registered_proxies"]
+
+    sim_cls = SimulatedPositioner
+
+    readback = Cpt(
+        ReadOnlySignal, name="readback", value=0, kind=Kind.hinted, compute_readback=False
+    )
+
     def __init__(
         self,
+        name: str,
         *,
-        name,
-        readback_func=None,
-        value=0,
-        delay=0,
-        speed=1,
-        update_frequency=2,
-        precision=3,
+        precision: int = 3,
         parent=None,
-        labels=None,
         kind=None,
         device_manager=None,
+        # TODO remove after refactoring config
+        speed: float = 100,
+        delay: int = 1,
+        update_frequency: int = 100,
         **kwargs,
     ):
-        if readback_func is None:
 
-            def readback_func(x):
-                return x
-
-        sentinel = object()
-        loop = kwargs.pop("loop", sentinel)
-        if loop is not sentinel:
-            warnings.warn(
-                f"{self.__class__} no longer takes a loop as input.  "
-                "Your input will be ignored and may raise in the future",
-                stacklevel=2,
-            )
-        self.sim_state = {}
-        self._readback_func = readback_func
-        self.delay = delay
+        self.sim = self.sim_cls(parent=self, device_manager=device_manager, **kwargs)
         self.precision = precision
-        self.tolerance = kwargs.pop("tolerance", 0.5)
         self.device_manager = device_manager
+        self._registered_proxies = {}
 
-        # initialize values
-        self.sim_state["readback"] = readback_func(value)
-        self.sim_state["readback_ts"] = ttime.time()
+        super().__init__(name=name, parent=parent, kind=kind, **kwargs)
+        self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
+        self.readback.name = self.name
 
-        super().__init__(name=name, parent=parent, labels=labels, kind=kind, **kwargs)
+    @property
+    def registered_proxies(self) -> None:
+        """Dictionary of registered signal_names and proxies."""
+        return self._registered_proxies
 
     @property
     def hints(self):
+        """Return the hints of the simulated device."""
         return {"fields": ["flyer_samx", "flyer_samy"]}
 
+    @property
+    def egu(self) -> str:
+        """Return the engineering units of the simulated device."""
+        return "mm"
+
+    def complete(self) -> StatusBase:
+        """Complete the motion of the simulated device."""
+        status = DeviceStatus(self)
+        status.set_finished()
+        return status
+
     def kickoff(self, metadata, num_pos, positions, exp_time: float = 0):
+        """Kickoff the flyer to execute code during the scan."""
         positions = np.asarray(positions)
 
         def produce_data(device, metadata):
+            """Simulate the data being produced by the flyer."""
             buffer_time = 0.2
             elapsed_time = 0
             bundle = messages.BundleMessage()
@@ -529,10 +562,6 @@ class SynFlyer(Device, PositionerBase):
         flyer.start()
 
 
-class SynDynamicComponents(Device):
-    messages = Dcpt({f"message{i}": (SynSignal, None, {"name": f"msg{i}"}) for i in range(1, 6)})
-
-
 class SynDeviceSubOPAAS(Device):
     zsub = Cpt(SimPositioner, name="zsub")
 
@@ -541,3 +570,12 @@ class SynDeviceOPAAS(Device):
     x = Cpt(SimPositioner, name="x")
     y = Cpt(SimPositioner, name="y")
     z = Cpt(SynDeviceSubOPAAS, name="z")
+
+
+class SynDynamicComponents(Device):
+    messages = Dcpt({f"message{i}": (SynSignal, None, {"name": f"msg{i}"}) for i in range(1, 6)})
+
+
+if __name__ == "__main__":
+    cam = SimCamera(name="cam")
+    cam.image.read()
