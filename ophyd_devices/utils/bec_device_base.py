@@ -1,4 +1,5 @@
 from typing import Protocol, runtime_checkable
+from ophyd import Kind
 
 
 @runtime_checkable
@@ -7,6 +8,22 @@ class BECDevice(Protocol):
 
     name: str
     _destroyed: bool
+
+    @property
+    def kind(self) -> int:
+        """kind property"""
+
+    @kind.setter
+    def kind(self, value: int):
+        """kind setter"""
+
+    @property
+    def parent(self):
+        """Property to find the parent device"""
+
+    @property
+    def root(self):
+        """Property to fint the root device"""
 
     @property
     def hints(self) -> dict:
@@ -76,10 +93,36 @@ class BECDeviceBase:
 
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, *args, parent=None, kind=None, **kwargs):
         self.name = name
         self._connected = True
         self._destroyed = False
+        self._parent = parent
+        self._kind = kind if kind else Kind.normal
+
+    @property
+    def kind(self) -> int:
+        """Kind property, stems from ophyd."""
+        return self._kind
+
+    @kind.setter
+    def kind(self, value: int):
+        """kind setter"""
+        self._kind = value
+
+    @property
+    def parent(self):
+        """Property to find the parent device"""
+        return self._parent
+
+    @property
+    def root(self):
+        """Property to fint the root device"""
+        root = self
+        while True:
+            if root.parent is None:
+                return root
+            root = root.parent
 
     @property
     def hints(self) -> dict:
