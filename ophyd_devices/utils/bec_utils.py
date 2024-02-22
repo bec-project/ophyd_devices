@@ -2,7 +2,7 @@ import time
 
 from bec_lib import bec_logger
 from bec_lib.devicemanager import DeviceContainer
-from ophyd import Kind, Signal
+from ophyd import Device, Kind, Signal
 
 from ophyd_devices.utils.socket import data_shape, data_type
 
@@ -244,3 +244,19 @@ class ConfigSignal(Signal):
                 "shape": data_shape(val),
             }
         }
+
+
+class DeviceClassConnectionError(Device):
+
+    @property
+    def connected(self):
+        return False
+
+    def wait_for_connection(self, all_signals=False, timeout=2):
+        raise RuntimeError("Connection error")
+
+
+class DeviceClassInitError(Device):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        raise RuntimeError("Init error")
