@@ -247,6 +247,10 @@ class ConfigSignal(Signal):
 
 
 class DeviceClassConnectionError(Device):
+    """
+    Device that always raises a connection error when trying to connect.
+    It is used to test the wait_for_connection method in the DeviceServer.
+    """
 
     @property
     def connected(self):
@@ -257,6 +261,11 @@ class DeviceClassConnectionError(Device):
 
 
 class DeviceClassInitError(Device):
+    """
+    Device that always raises an error when trying to construct the object.
+    It is used to test the error handling in the DeviceServer.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         raise RuntimeError("Init error")
