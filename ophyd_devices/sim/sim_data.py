@@ -424,6 +424,12 @@ class SimulatedDataMonitor(SimulatedDataBase):
             self.update_sim_state(signal_name, value)
 
     def _compute(self, *args, **kwargs) -> float:
+        """
+        Compute the return value for given motor position and active model.
+
+        Returns:
+            float: Value computed by the active model.
+        """
         mot_name = self.sim_params["ref_motor"]
         if self.device_manager and mot_name in self.device_manager.devices:
             motor_pos = self.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
@@ -561,8 +567,14 @@ class SimulatedDataCamera(SimulatedDataBase):
         """Compute a return value for SimulationType2D constant."""
         try:
             shape = self.parent.image_shape.get()
-            v = self._model_params.get("amplitude") * np.ones(shape, dtype=np.uint16)
-            return self._add_noise(v, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.float64)
+            v = self._add_noise(v, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+            return self._add_hot_pixel(
+                v,
+                coords=self.sim_params["hot_pixel_coords"],
+                hot_pixel_types=self.sim_params["hot_pixel_types"],
+                values=self.sim_params["hot_pixel_values"],
+            )
         except SimulatedDataException as exc:
             raise SimulatedDataException(
                 f"Could not compute constant for {self.parent.name} with {exc} raised. Deactivate eiger to continue."
