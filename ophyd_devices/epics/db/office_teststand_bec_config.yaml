@@ -1,6 +1,7 @@
 es1_roty:
   description: 'Test rotation stage'
-  deviceClass: EpicsMotor 
+#  deviceClass: EpicsMotor 
+  deviceClass: epics:devices:EpicsMotorX 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:ROTY'}
   onFailure: buffer
   enabled: true
