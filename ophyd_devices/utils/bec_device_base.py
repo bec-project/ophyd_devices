@@ -10,11 +10,11 @@ class BECDevice(Protocol):
     _destroyed: bool
 
     @property
-    def kind(self) -> int:
+    def kind(self) -> Kind:
         """kind property"""
 
     @kind.setter
-    def kind(self, value: int):
+    def kind(self, value: Kind):
         """kind setter"""
 
     @property
@@ -101,12 +101,12 @@ class BECDeviceBase:
         self._kind = kind if kind else Kind.normal
 
     @property
-    def kind(self) -> int:
+    def kind(self) -> Kind:
         """Kind property, stems from ophyd."""
         return self._kind
 
     @kind.setter
-    def kind(self, value: int):
+    def kind(self, value: Kind):
         """kind setter"""
         self._kind = value
 
