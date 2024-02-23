@@ -2,6 +2,20 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.0 (2024-02-23)
+
+### Feature
+
+* Add lmfit for SimMonitor, refactored sim_data with baseclass, introduce slitproxy ([`800c22e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/800c22e9592e288f8fe8dea2fb572b81742c6841))
+
+### Fix
+
+* Extend bec_device with root, parent, kind ([`db00803`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/db00803f539791ceefd5f4f0424b00c0e2ae91e6))
+
+### Documentation
+
+* Added doc strings ([`2da6379`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2da6379e8eb346d856a68a8e5bc678dfff5b1600))
+
 ## v0.23.1 (2024-02-21)
 
 ### Fix
