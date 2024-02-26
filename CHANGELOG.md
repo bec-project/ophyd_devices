@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.1 (2024-02-26)
+
+### Fix
+
+* SimCamera return uint16, SimMonitor uint32 ([`dc9634b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/dc9634b73988b5c3cd430008eac5c94319b33ae1))
+
 ## v0.24.0 (2024-02-23)
 
 ### Feature
