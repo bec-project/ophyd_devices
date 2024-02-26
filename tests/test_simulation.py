@@ -1,6 +1,97 @@
-from ophyd_devices.utils.bec_device_base import BECDeviceBase, BECDevice
+from unittest import mock
+import pytest
+import numpy as np
 
+from ophyd_devices.utils.bec_device_base import BECDeviceBase, BECDevice
+from ophyd_devices.sim.sim import SimMonitor, SimCamera, SimPositioner
+
+from tests.utils import DMMock
 from ophyd import Device, Signal
+
+
+@pytest.fixture(scope="function")
+def monitor(name="monitor"):
+    """Fixture for SimMonitor."""
+    dm = DMMock()
+    mon = SimMonitor(name=name, device_manager=dm)
+    yield mon
+
+
+@pytest.fixture(scope="function")
+def camera(name="camera"):
+    """Fixture for SimCamera."""
+    dm = DMMock()
+    cam = SimCamera(name=name, device_manager=dm)
+    yield cam
+
+
+@pytest.fixture(scope="function")
+def positioner(name="positioner"):
+    """Fixture for SimPositioner."""
+    dm = DMMock()
+    pos = SimPositioner(name=name, device_manager=dm)
+    yield pos
+
+
+def test_monitor__init__(monitor):
+    """Test the __init__ method of SimMonitor."""
+    assert isinstance(monitor, SimMonitor)
+    assert isinstance(monitor, BECDevice)
+
+
+def test_monitor_readback(monitor):
+    """Test the readback method of SimMonitor."""
+    for model_name in monitor.sim.sim_get_models():
+        monitor.sim.sim_select_model(model_name)
+        assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
+
+
+def test_camera__init__(camera):
+    """Test the __init__ method of SimMonitor."""
+    assert isinstance(camera, SimCamera)
+    assert isinstance(camera, BECDevice)
+
+
+def test_camera_readback(camera):
+    """Test the readback method of SimMonitor."""
+    for model_name in camera.sim.sim_get_models():
+        camera.sim.sim_select_model(model_name)
+        assert camera.image.read()[camera.image.name]["value"].shape == camera.SHAPE
+        assert isinstance(camera.image.read()[camera.image.name]["value"][0, 0], camera.BIT_DEPTH)
+
+
+def test_positioner__init__(positioner):
+    """Test the __init__ method of SimPositioner."""
+    assert isinstance(positioner, SimPositioner)
+    assert isinstance(positioner, BECDevice)
+
+
+def test_positioner_move(positioner):
+    """Test the move method of SimPositioner."""
+    positioner.move(0).wait()
+    assert np.isclose(positioner.read()[positioner.name]["value"], 0, atol=positioner.tolerance)
+    positioner.move(10).wait()
+    assert np.isclose(positioner.read()[positioner.name]["value"], 10, atol=positioner.tolerance)
+
+
+@pytest.mark.parametrize("proxy_active", [True, False])
+def test_sim_camera_proxies(camera, proxy_active):
+    """Test mocking compute_method with framework class"""
+    camera.device_manager.add_device("test_proxy")
+    if proxy_active:
+        camera._registered_proxies["test_proxy"] = camera.image.name
+    else:
+        camera._registered_proxies = {}
+    proxy = camera.device_manager.devices["test_proxy"]
+    mock_method = mock.MagicMock()
+    mock_obj = proxy.obj
+    mock_obj.lookup = mock.MagicMock()
+    mock_obj.lookup.return_value = {camera.name: {"method": mock_method, "args": 1, "kwargs": 1}}
+    camera.image.read()
+    if proxy_active:
+        assert len(mock_obj.lookup.mock_calls) > 0
+    elif not proxy_active:
+        assert len(mock_obj.lookup.mock_calls) == 0
 
 
 def test_BECDeviceBase():
