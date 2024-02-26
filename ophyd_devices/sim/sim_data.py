@@ -401,6 +401,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
             except TypeError:
                 is_model = False
             if is_model and name not in [
+                "ComplexConstantModel",
                 "Gaussian2dModel",
                 "ExpressionModel",
                 "Model",
@@ -455,7 +456,8 @@ class SimulatedDataMonitor(SimulatedDataBase):
             v = np.random.poisson(v)
             return v
         elif noise == NoiseType.UNIFORM:
-            v += np.round(np.random.uniform(-1, 1) * noise_multiplier).astype(self.bit_depth)
+            noise = np.ceil(np.random.uniform(0, 1) * noise_multiplier).astype(int)
+            v += noise * (np.random.randint(0, 2) * 2 - 1)
             return v
         return v
 
@@ -549,7 +551,7 @@ class SimulatedDataCamera(SimulatedDataBase):
             )
         else:
             value = self._compute_empty_image()
-        value = value.astype(self.bit_depth)
+        value = self.bit_depth(value)
         self.update_sim_state(signal_name, value)
 
     def _compute_empty_image(self) -> np.ndarray:
@@ -570,7 +572,7 @@ class SimulatedDataCamera(SimulatedDataBase):
         """Compute a return value for SimulationType2D constant."""
         try:
             shape = self.parent.image_shape.get()
-            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.uint16)
+            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.float32)
             v = self._add_noise(v, self.sim_params["noise"], self.sim_params["noise_multiplier"])
             return self._add_hot_pixel(
                 v,
