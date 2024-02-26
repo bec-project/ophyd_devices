@@ -58,8 +58,9 @@ class SimMonitor(Device):
     USER_ACCESS = ["sim", "registered_proxies"]
 
     sim_cls = SimulatedDataMonitor
+    BIT_DEPTH = np.uint32
 
-    readback = Cpt(ReadOnlySignal, value=0, kind=Kind.hinted, compute_readback=True)
+    readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
 
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
@@ -113,6 +114,7 @@ class SimCamera(Device):
 
     sim_cls = SimulatedDataCamera
     SHAPE = (100, 100)
+    BIT_DEPTH = np.uint16
 
     SUB_MONITOR = "monitor"
     _default_sub = SUB_MONITOR
@@ -127,7 +129,7 @@ class SimCamera(Device):
     image = Cpt(
         ReadOnlySignal,
         name="image",
-        value=np.empty(SHAPE, dtype=np.uint16),
+        value=np.empty(SHAPE, dtype=BIT_DEPTH),
         compute_readback=True,
         kind=Kind.omitted,
     )

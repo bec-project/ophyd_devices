@@ -329,6 +329,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
     def __init__(self, *args, parent=None, device_manager=None, **kwargs) -> None:
         self._model_lookup = self.init_lmfit_models()
         super().__init__(*args, parent=parent, device_manager=device_manager, **kwargs)
+        self.bit_depth = self.parent.BIT_DEPTH
         self._init_default()
 
     def _get_additional_params(self) -> None:
@@ -421,9 +422,9 @@ class SimulatedDataMonitor(SimulatedDataBase):
         if compute_readback:
             method = self._compute
             value = self.execute_simulation_method(method=method, signal_name=signal_name)
-            self.update_sim_state(signal_name, value)
+            self.update_sim_state(signal_name, self.bit_depth(value))
 
-    def _compute(self, *args, **kwargs) -> float:
+    def _compute(self, *args, **kwargs) -> int:
         """
         Compute the return value for given motor position and active model.
 
@@ -436,25 +437,24 @@ class SimulatedDataMonitor(SimulatedDataBase):
         else:
             motor_pos = 0
         method = self._model
-        value = float(method.eval(params=self._model_params, x=motor_pos))
+        value = int(method.eval(params=self._model_params, x=motor_pos))
         return self._add_noise(value, self.sim_params["noise"], self.sim_params["noise_multiplier"])
 
-    def _add_noise(self, v: float, noise: NoiseType, noise_multiplier: float) -> float:
+    def _add_noise(self, v: int, noise: NoiseType, noise_multiplier: float) -> int:
         """
         Add the currently activated noise to the simulated data.
         If NoiseType.NONE is active, the value will be returned
 
         Args:
-            v (float): Value to add noise to.
+            v (int): Value to add noise to.
         Returns:
-            float: Value with added noise.
+            int: Value with added noise.
         """
         if noise == NoiseType.POISSON:
-            ceiled_v = np.ceil(v)
-            v = np.random.poisson(ceiled_v, 1)[0] if ceiled_v > 0 else ceiled_v
+            v = np.random.poisson(v)
             return v
         elif noise == NoiseType.UNIFORM:
-            v += np.random.uniform(-1, 1) * noise_multiplier
+            v += np.round(np.random.uniform(-1, 1) * noise_multiplier).astype(int)
             return v
         return v
 
@@ -467,6 +467,7 @@ class SimulatedDataCamera(SimulatedDataBase):
         self._all_default_model_params = defaultdict(dict)
         self._init_default_camera_params()
         super().__init__(*args, parent=parent, device_manager=device_manager, **kwargs)
+        self.bit_depth = self.parent.BIT_DEPTH
         self._init_default()
 
     def _init_default(self) -> None:
@@ -547,6 +548,7 @@ class SimulatedDataCamera(SimulatedDataBase):
             )
         else:
             value = self._compute_empty_image()
+        value = value.astype(self.bit_depth)
         self.update_sim_state(signal_name, value)
 
     def _compute_empty_image(self) -> np.ndarray:
@@ -567,7 +569,7 @@ class SimulatedDataCamera(SimulatedDataBase):
         """Compute a return value for SimulationType2D constant."""
         try:
             shape = self.parent.image_shape.get()
-            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.float64)
+            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.uint16)
             v = self._add_noise(v, self.sim_params["noise"], self.sim_params["noise_multiplier"])
             return self._add_hot_pixel(
                 v,
@@ -682,10 +684,12 @@ class SimulatedDataCamera(SimulatedDataBase):
             noise (NoiseType): Type of noise to add.
         """
         if noise == NoiseType.POISSON:
-            v = np.random.poisson(np.round(v), v.shape)
+            v = np.random.poisson(np.round(v), v.shape).astype("uint16")
             return v
         if noise == NoiseType.UNIFORM:
-            v += np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)
+            v += np.round(np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)).astype(
+                "uint16"
+            )
             return v
         if noise == NoiseType.NONE:
             return v
