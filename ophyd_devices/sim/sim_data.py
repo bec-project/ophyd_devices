@@ -422,7 +422,8 @@ class SimulatedDataMonitor(SimulatedDataBase):
         if compute_readback:
             method = self._compute
             value = self.execute_simulation_method(method=method, signal_name=signal_name)
-            self.update_sim_state(signal_name, self.bit_depth(value))
+            value = self.bit_depth(value)
+            self.update_sim_state(signal_name, value)
 
     def _compute(self, *args, **kwargs) -> int:
         """
@@ -454,7 +455,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
             v = np.random.poisson(v)
             return v
         elif noise == NoiseType.UNIFORM:
-            v += np.round(np.random.uniform(-1, 1) * noise_multiplier).astype(int)
+            v += np.round(np.random.uniform(-1, 1) * noise_multiplier).astype(self.bit_depth)
             return v
         return v
 
@@ -684,12 +685,10 @@ class SimulatedDataCamera(SimulatedDataBase):
             noise (NoiseType): Type of noise to add.
         """
         if noise == NoiseType.POISSON:
-            v = np.random.poisson(np.round(v), v.shape).astype("uint16")
+            v = np.random.poisson(np.round(v), v.shape)
             return v
         if noise == NoiseType.UNIFORM:
-            v += np.round(np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)).astype(
-                "uint16"
-            )
+            v += np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)
             return v
         if noise == NoiseType.NONE:
             return v
