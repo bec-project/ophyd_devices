@@ -39,11 +39,27 @@ def test_monitor__init__(monitor):
     assert isinstance(monitor, BECDevice)
 
 
-def test_monitor_readback(monitor):
+@pytest.mark.parametrize("center", [-10, 0, 10])
+def test_monitor_readback(monitor, center):
     """Test the readback method of SimMonitor."""
     for model_name in monitor.sim.sim_get_models():
         monitor.sim.sim_select_model(model_name)
+        monitor.sim.sim_params["noise_multipler"] = 10
+        if "c" in monitor.sim.sim_params:
+            monitor.sim.sim_params["c"] = center
+        elif "center" in monitor.sim.sim_params:
+            monitor.sim.sim_params["center"] = center
         assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
+        expected_value = monitor.sim._model.eval(monitor.sim._model_params, x=0)
+        print(expected_value, monitor.read()[monitor.name]["value"])
+        tolerance = (
+            monitor.sim.sim_params["noise_multipler"] + 1
+        )  # due to ceiling in calculation, but maximum +1int
+        assert np.isclose(
+            monitor.read()[monitor.name]["value"],
+            expected_value,
+            atol=monitor.sim.sim_params["noise_multipler"] + 1,
+        )
 
 
 def test_camera__init__(camera):

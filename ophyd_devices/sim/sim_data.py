@@ -453,12 +453,12 @@ class SimulatedDataMonitor(SimulatedDataBase):
             int: Value with added noise.
         """
         if noise == NoiseType.POISSON:
-            v = np.random.poisson(v)
+            v = np.ceil(np.random.poisson(v)).astype(int)
             return v
         elif noise == NoiseType.UNIFORM:
             noise = np.ceil(np.random.uniform(0, 1) * noise_multiplier).astype(int)
             v += noise * (np.random.randint(0, 2) * 2 - 1)
-            return v
+            return v if v > 0 else 0
         return v
 
 
