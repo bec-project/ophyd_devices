@@ -456,9 +456,9 @@ class SimulatedDataMonitor(SimulatedDataBase):
             v = np.random.poisson(v)
             return v
         elif noise == NoiseType.UNIFORM:
-            noise = np.random.uniform(-1, 1) * noise_multiplier
-            v += noise
-            return v if v > 0 else v
+            noise = np.ceil(np.random.uniform(0, 1) * noise_multiplier).astype(int)
+            v += noise * (np.random.randint(0, 2) * 2 - 1)
+            return v if v > 0 else 0
         return v
 
 
