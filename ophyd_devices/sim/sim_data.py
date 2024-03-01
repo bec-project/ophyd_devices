@@ -423,7 +423,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
         if compute_readback:
             method = self._compute
             value = self.execute_simulation_method(method=method, signal_name=signal_name)
-            value = self.bit_depth(value)
+            value = self.bit_depth(np.max(value, 0))
             self.update_sim_state(signal_name, value)
 
     def _compute(self, *args, **kwargs) -> int:
@@ -453,12 +453,12 @@ class SimulatedDataMonitor(SimulatedDataBase):
             int: Value with added noise.
         """
         if noise == NoiseType.POISSON:
-            v = np.ceil(np.random.poisson(v)).astype(int)
+            v = np.random.poisson(v)
             return v
         elif noise == NoiseType.UNIFORM:
-            noise = np.ceil(np.random.uniform(0, 1) * noise_multiplier).astype(int)
-            v += noise * (np.random.randint(0, 2) * 2 - 1)
-            return v if v > 0 else 0
+            noise = np.random.uniform(-1, 1) * noise_multiplier
+            v += noise
+            return v
         return v
 
 
