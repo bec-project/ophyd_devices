@@ -458,7 +458,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
         elif noise == NoiseType.UNIFORM:
             noise = np.random.uniform(-1, 1) * noise_multiplier
             v += noise
-            return v
+            return v if v > 0 else v
         return v
 
 
