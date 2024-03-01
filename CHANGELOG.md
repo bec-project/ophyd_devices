@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.2 (2024-03-01)
+
+### Fix
+
+* Sim_monitor negative readback fixed ([`91e587b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/91e587b09271a436e7405c44dda60ea4b536865b))
+
 ## v0.24.1 (2024-02-26)
 
 ### Fix
