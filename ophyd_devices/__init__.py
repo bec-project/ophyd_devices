@@ -16,7 +16,7 @@ from .sim.sim import SimPositioner
 from .sim.sim import SimPositioner as SynAxisOPAAS
 from .sim.sim import SynDeviceOPAAS
 from .sim.sim_signals import ReadOnlySignal
-from .sim.sim_frameworks import DeviceProxy, SlitProxy
+from .sim.sim_frameworks import DeviceProxy, SlitProxy, H5ImageReplayProxy
 from .sim.sim_signals import ReadOnlySignal as SynSignalRO
 from .sls_devices.sls_devices import SLSInfo, SLSOperatorMessages
 from .smaract.smaract_ophyd import SmaractMotor

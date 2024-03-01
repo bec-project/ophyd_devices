@@ -1,13 +1,82 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
+from abc import ABC, abstractmethod
+
+import h5py
+import hdf5plugin
+
+from ophyd import Staged, Kind
 
 from collections import defaultdict
 from ophyd_devices.sim.sim_data import NoiseType
+from ophyd_devices.sim.sim_signals import CustomSetableSignal
 from ophyd_devices.utils.bec_device_base import BECDeviceBase
 
 
-class DeviceProxy(BECDeviceBase):
-    """DeviceProxy class inherits from BECDeviceBase."""
+class DeviceProxy(BECDeviceBase, ABC):
+    """DeviceProxy class inherits from BECDeviceBase.
+
+    It is an abstract class that is meant to be used as a base class for all device proxies.
+    The minimum requirement for a device proxy is to implement the _compute method.
+    """
+
+    def __init__(
+        self,
+        name,
+        *args,
+        device_manager=None,
+        **kwargs,
+    ):
+        self.name = name
+        self.device_manager = device_manager
+        self.config = None
+        self._lookup = defaultdict(dict)
+        super().__init__(name, *args, device_manager=device_manager, **kwargs)
+        self._signals = dict()
+
+    @property
+    def lookup(self):
+        """lookup property"""
+        return self._lookup
+
+    @lookup.setter
+    def lookup(self, update: dict) -> None:
+        """lookup setter"""
+        self._lookup.update(update)
+
+    def _update_device_config(self, config: dict) -> None:
+        """
+        BEC will call this method on every object upon initializing devices to pass over the deviceConfig
+        from the config file. It can be conveniently be used to hand over initial parameters to the device.
+
+        Args:
+            config (dict): Config dictionary.
+        """
+        self.config = config
+        self._compile_lookup()
+
+    def _compile_lookup(self):
+        """Compile the lookup table for the device."""
+        for device_name in self.config.keys():
+            self._lookup[device_name] = {
+                "method": self._compute,
+                "signal_name": self.config[device_name]["signal_name"],
+                "args": (device_name,),
+                "kwargs": {},
+            }
+
+    @abstractmethod
+    def _compute(self, device_name: str, *args, **kwargs) -> any:
+        """
+        The purpose of this method is to compute the readback value for the signal of the device
+        that this proxy is attached to. This method is meant to be overriden by the user.
+        P
+
+        Args:
+            device_name (str): Name of the device.
+
+        Returns:
+        """
 
 
 class SlitProxy(DeviceProxy):
@@ -26,7 +95,7 @@ class SlitProxy(DeviceProxy):
     `dev.eiger.get_device_config()` or update it `dev.eiger.get_device_config({'eiger' : {'pixel_size': 0.1}})`
 
     slit_sim:
-        readoutPriority: on_request
+        readoutPriority: baseline
         deviceClass: SlitProxy
         deviceConfig:
             eiger:
@@ -50,47 +119,12 @@ class SlitProxy(DeviceProxy):
         device_manager=None,
         **kwargs,
     ):
-        self.name = name
-        self.device_manager = device_manager
-        self.config = None
-        self._lookup = defaultdict(dict)
         self._gaussian_blur_sigma = 5
-        super().__init__(name, *args, **kwargs)
+        super().__init__(name, *args, device_manager=device_manager, **kwargs)
 
     def help(self) -> None:
         """Print documentation for the SlitLookup device."""
         print(self.__doc__)
-
-    def _update_device_config(self, config: dict) -> None:
-        """
-        BEC will call this method on every object upon initializing devices to pass over the deviceConfig
-        from the config file. It can be conveniently be used to hand over initial parameters to the device.
-
-        Args:
-            config (dict): Config dictionary.
-        """
-        self.config = config
-        self._compile_lookup()
-
-    @property
-    def lookup(self):
-        """lookup property"""
-        return self._lookup
-
-    @lookup.setter
-    def lookup(self, update: dict) -> None:
-        """lookup setter"""
-        self._lookup.update(update)
-
-    def _compile_lookup(self):
-        """Compile the lookup table for the simulated camera."""
-        for device_name in self.config.keys():
-            self._lookup[device_name] = {
-                "method": self._compute,
-                "signal_name": self.config[device_name]["signal_name"],
-                "args": (device_name,),
-                "kwargs": {},
-            }
 
     def _compute(self, device_name: str, *args, **kwargs) -> np.ndarray:
         """
@@ -173,8 +207,166 @@ class SlitProxy(DeviceProxy):
         return np.prod(mask, axis=2)
 
 
+class H5ImageReplayProxy(DeviceProxy):
+    """This Proxy clas can be used to reply images from an h5 file.
+
+    If the requested images is larger than the available iamges, the images will be replayed from the beginning.
+
+    h5_image_sim:
+        readoutPriority: baseline
+        deviceClass: H5ImageReplayProxy
+        deviceConfig:
+            eiger:
+                signal_name: image
+                file_source: /path/to/h5file.h5
+                h5_entry: /entry/data
+        enabled: true
+        readOnly: false
+    """
+
+    USER_ACCESS = ["file_source", "h5_entry"]
+
+    def __init__(
+        self,
+        name,
+        *args,
+        device_manager=None,
+        **kwargs,
+    ):
+        self.h5_file = None
+        self.h5_dataset = None
+        self._number_of_images = None
+        self.mode = "r"
+        self._staged = Staged.no
+        self._image = None
+        self._index = 0
+        super().__init__(name, *args, device_manager=device_manager, **kwargs)
+        self.file_source = CustomSetableSignal(
+            name="file_source", value="", parent=self, kind=Kind.normal
+        )
+        self.h5_entry = CustomSetableSignal(
+            name="h5_entry", value="", parent=self, kind=Kind.normal
+        )
+
+    @property
+    def component_names(self) -> list[str]:
+        """Return the names of the components."""
+        return ["file_source", "h5_entry"]
+
+    def _update_device_config(self, config: dict) -> None:
+        super()._update_device_config(config)
+        if len(config.keys()) > 1:
+            raise RuntimeError(
+                f"The current implementation of device {self.name} can only data for a single device. The config hosts multiple keys {config.keys()}"
+            )
+        self._init_signals()
+
+    def _init_signals(self):
+        """Initialize the signals for the device."""
+        if "file_source" in self.config[list(self.config.keys())[0]]:
+            self.file_source.set(self.config[list(self.config.keys())[0]]["file_source"])
+        if "h5_entry" in self.config[list(self.config.keys())[0]]:
+            self.h5_entry.set(self.config[list(self.config.keys())[0]]["h5_entry"])
+
+    def _open_h5_file(self) -> None:
+        """Open an HDF5 fiel and return a reference to the dataset without loading its content.
+
+        Args:
+            fname (str): File name.
+            enty (str): Entry name.
+            mode (str): Mode of the file, default "r".
+
+        Returns:
+            h5py.Dataset: Reference to the dataset.
+        """
+        self.h5_file = h5py.File(self.file_source.get(), mode=self.mode)
+        self.h5_dataset = self.h5_file[self.h5_entry.get()]
+        self._number_of_images = self.h5_dataset.shape[0]
+
+    def _close_h5_file(self) -> None:
+        """Close the HDF5 file."""
+        self.h5_file.close()
+
+    def stop(self) -> None:
+        """Stop the device."""
+        if self.h5_file:
+            self._close_h5_file()
+        self.h5_file = None
+        self.h5_dataset = None
+        self._number_of_images = None
+        self._index = 0
+
+    def stage(self) -> list[object]:
+        """Stage the device.
+        This opens the HDF5 file, unstaging will close it.
+        """
+
+        if self._staged != Staged.no:
+            return [self]
+        try:
+            self._open_h5_file()
+        except Exception as exc:
+            if self.h5_file:
+                self.stop()
+            raise FileNotFoundError(
+                f"Could not open h5file {self.file_source.get()} or access data set {self.h5_dataset.get()} in file"
+            ) from exc
+
+        self._staged = Staged.yes
+        return [self]
+
+    def unstage(self) -> list[object]:
+        """Unstage the device."""
+        if self.h5_file:
+            self.stop()
+        self._staged = Staged.no
+        return [self]
+
+    def _load_image(self):
+        """Get the image from the h5 file.
+
+        Args:
+            index (int): Index of the image.
+
+        Returns:
+            np.ndarray: Image.
+        """
+        if self.h5_file:
+            slice_nr = self._index % self._number_of_images
+            self._index = self._index + 1
+            self._image = self.h5_dataset[slice_nr, ...]
+            return
+        try:
+            self.stage()
+            slice_nr = self._index % self._number_of_images
+            self._index = self._index + 1
+            self._image = self.h5_dataset[slice_nr, ...]
+            self.unstage()
+        except Exception as exc:
+            raise FileNotFoundError(
+                f"Could not open h5file {self.file_source.get()} or access data set {self.h5_dataset.get()} in file"
+            ) from exc
+
+    def _compute(self, device_name: str, *args, **kwargs) -> np.ndarray:
+        """Compute the image.
+
+        Returns:
+            np.ndarray: Image.
+        """
+        self._load_image()
+        return self._image
+
+
 if __name__ == "__main__":
     # Example usage
-    pinhole = SlitProxy(name="pinhole", device_manager=None)
-    pinhole.describe()
-    print(pinhole)
+    tmp = H5ImageReplayProxy(name="tmp", device_manager=None)
+    config = {
+        "eiger": {
+            "signal_name": "image",
+            "file_source": "/Users/appel_c/switchdrive/Sharefolder/AgBH_2D_gridscan/projection_000006_data_000001.h5",
+            "h5_entry": "/entry/data/data",
+        }
+    }
+    tmp._update_device_config(config)
+    tmp.stage()
+    print(tmp)
