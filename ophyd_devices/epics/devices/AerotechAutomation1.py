@@ -6,11 +6,17 @@ import warnings
 import numpy as np
 import time
 
-from AerotechAutomation1Enums import (DataCollectionMode, DataCollectionFrequency, 
-    AxisDataSignal, PsoWindowInput, DriveDataCaptureInput, DriveDataCaptureTrigger,
-    TaskDataSignal, SystemDataSignal, TomcatSequencerState)
+try:
+    from .AerotechAutomation1Enums import *
+    from .AerotechAutomation1Enums import (DataCollectionMode, DataCollectionFrequency, 
+        AxisDataSignal, PsoWindowInput, DriveDataCaptureInput, DriveDataCaptureTrigger,
+        TaskDataSignal, SystemDataSignal, TomcatSequencerState)
+except:
+    from AerotechAutomation1Enums import *
+    from AerotechAutomation1Enums import (DataCollectionMode, DataCollectionFrequency, 
+        AxisDataSignal, PsoWindowInput, DriveDataCaptureInput, DriveDataCaptureTrigger,
+        TaskDataSignal, SystemDataSignal, TomcatSequencerState)
 
-from AerotechAutomation1Enums import *
 from typing import Union
 from collections import OrderedDict
 
@@ -31,13 +37,19 @@ class EpicsMotorX(EpicsMotor):
     def configure(self, d: dict):
         if "target" in d:
             self._targetPosition = d['target']
+            del d['target']
         if "position" in d:
             self._targetPosition = d['position']
-        #super().configure(d)
+            del d['position']
+        return super().configure(d)
 
     def kickoff(self):
         self._startPosition = float( self.position)
         return self.move(self._targetPosition, wait=False)
+
+    def move(self, position, wait=True, **kwargs):
+        self._startPosition = float( self.position)
+        return super().move(position, wait, **kwargs) 
 
     def _progress_update(self, value, **kwargs) -> None:
         """Progress update on the scan"""
@@ -663,6 +675,7 @@ class aa1AxisPsoBase(Device):
     dstEventsEna = Component(EpicsSignal, "DIST:EVENTS",  put_complete=True, kind=Kind.omitted)
     dstCounterEna = Component(EpicsSignal, "DIST:COUNTER", put_complete=True, kind=Kind.omitted)
     dstCounterVal = Component(EpicsSignalRO, "DIST:CTR0_RBV", auto_monitor=True, kind=Kind.hinted)
+    dstArrayIdx = Component(EpicsSignalRO, "DIST:IDX_RBV", auto_monitor=True, kind=Kind.hinted)
     dstArrayDepleted = Component(EpicsSignalRO, "DIST:ARRAY-DEPLETED-RBV", auto_monitor=True, kind=Kind.hinted)
     
     dstDirection = Component(EpicsSignal, "DIST:EVENTDIR",  put_complete=True, kind=Kind.omitted)    
@@ -730,12 +743,31 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
     For a more detailed description of additional signals and masking plase 
     refer to Automation1's online manual.
     """   
+    SUB_PROGRESS = "progress"
     
     def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
         """ __init__ MUST have a full argument list"""
         super().__init__(prefix=prefix, name=name, kind=kind, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, **kwargs)
         self._Vdistance = 3.141592
-        
+        self.subscribe(self._progress_update, "progress", run=False)
+
+    def _progress_update(self, value, **kwargs) -> None:
+        """Progress update on the scan"""
+        if self.dstArrayDepleted.value:
+            print("PSO array depleted")
+            self._run_subs( sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1, )
+            return
+
+        progress = 1
+        max_value = 1
+        print(f"PSO array proggress: {progress}")
+        self._run_subs(
+            sub_type=self.SUB_PROGRESS,
+            value=int(progress), max_value=max_value, done=int(np.isclose(max_value, progress, 1e-3)), )
+
+
+
+
     # ########################################################################
     # PSO high level interface
     def configure(self, d: dict={}) -> tuple:
@@ -800,18 +832,17 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
         self.outSource.set("Waveform").wait()      
 
         new = self.read_configuration()
+        print("PSO configured")
         return (old, new)
         
     # ########################################################################
     # Bluesky step scan interface
-    def stage(self, settle_time=None):
-        self.dstEventsEna.set("On").wait()
-        if hasattr(self, "_distanceValue") and isinstance(self._distanceValue, (np.ndarray, list, tuple)):       
-            self.dstArrayRearm.set(1).wait()
-        self.dstCounterEna.set("On").wait()         
-        if settle_time is not None:
-            sleep(settle_time)
-        return super().stage()
+    def complete(self, settle_time=0.1) -> DeviceStatus:
+        """ DDC just reads back whatever is available in the buffers"""
+        sleep(settle_time)
+        status  = DeviceStatus(self)
+        status.set_finished()
+        return status
 
     def trigger(self): 
         return super().trigger()        
@@ -832,6 +863,7 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
         self.dstCounterEna.set("On").wait()         
         status = DeviceStatus(self)
         status.set_finished()
+        print("PSO kicked off")
         return status
     
     def complete(self) -> DeviceStatus:
@@ -848,7 +880,10 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
                 return result
             
             # Subscribe and wait for update
-            status = SubscriptionStatus(self.status, notRunning, settle_time=0.5)                
+            #status = SubscriptionStatus(self.status, notRunning, settle_time=0.5)    
+            # Data capture can be stopped any time
+            status = DeviceStatus(self)
+            status.set_finished()            
         else:
             # In distance trigger mode there's no specific goal
             status = DeviceStatus(self)
@@ -1007,6 +1042,7 @@ class aa1AxisDriveDataCollection(Device):
     
     # ########################################################################
     # General module status
+    state = Component(EpicsSignalRO, "STATE", auto_monitor=True, kind=Kind.hinted)
     nsamples_rbv = Component(EpicsSignalRO, "SAMPLES_RBV", auto_monitor=True, kind=Kind.hinted)
     _switch = Component(EpicsSignal, "ACQUIRE", put_complete=True, kind=Kind.omitted)
     _input0 = Component(EpicsSignal, "INPUT0", put_complete=True, kind=Kind.config)
@@ -1021,6 +1057,26 @@ class aa1AxisDriveDataCollection(Device):
     
     _buffer0 = Component(EpicsSignalRO, "BUFFER0", auto_monitor=True, kind=Kind.hinted)
     _buffer1 = Component(EpicsSignalRO, "BUFFER1", auto_monitor=True, kind=Kind.hinted)
+
+    SUB_PROGRESS = "progress"
+
+    def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
+        super().__init__(prefix=prefix, name=name, kind=kind, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, **kwargs)
+        self.subscribe(self._progress_update, "progress", run=False)
+
+    def _progress_update(self, value, **kwargs) -> None:
+        """Progress update on the scan"""
+        if self.state.value not in (2, "Acquiring"):
+            self._run_subs( sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1, )
+            return
+
+        progress = 1
+        max_value = 1
+        self._run_subs(
+            sub_type=self.SUB_PROGRESS,
+            value=int(progress), max_value=max_value, done=int(np.isclose(max_value, progress, 1e-3)), )
+
+
 
     def configure(self, d: dict={}) -> tuple:
         npoints = int(d['npoints'])
@@ -1058,7 +1114,8 @@ class aa1AxisDriveDataCollection(Device):
 
     def complete(self, settle_time=0.1) -> DeviceStatus:
         """ DDC just reads back whatever is available in the buffers"""
-        status  = DeviceStatus(self, settle_time=settle_time)
+        sleep(settle_time)
+        status  = DeviceStatus(self)
         status.set_finished()
         return status
            
