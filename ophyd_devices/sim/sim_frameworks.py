@@ -208,9 +208,9 @@ class SlitProxy(DeviceProxy):
 
 
 class H5ImageReplayProxy(DeviceProxy):
-    """This Proxy clas can be used to reply images from an h5 file.
+    """This Proxy class can be used to replay images from an h5 file.
 
-    If the requested images is larger than the available iamges, the images will be replayed from the beginning.
+    If the number of requested images is larger than the number of available iamges, the images will be replayed from the beginning.
 
     h5_image_sim:
         readoutPriority: baseline
@@ -236,7 +236,6 @@ class H5ImageReplayProxy(DeviceProxy):
         self.h5_file = None
         self.h5_dataset = None
         self._number_of_images = None
-        self.mode = "r"
         self._staged = Staged.no
         self._image = None
         self._index = 0
@@ -257,7 +256,7 @@ class H5ImageReplayProxy(DeviceProxy):
         super()._update_device_config(config)
         if len(config.keys()) > 1:
             raise RuntimeError(
-                f"The current implementation of device {self.name} can only data for a single device. The config hosts multiple keys {config.keys()}"
+                f"The current implementation of device {self.name} can only replay data for a single device. The config has information about multiple devices {config.keys()}"
             )
         self._init_signals()
 
@@ -269,17 +268,8 @@ class H5ImageReplayProxy(DeviceProxy):
             self.h5_entry.set(self.config[list(self.config.keys())[0]]["h5_entry"])
 
     def _open_h5_file(self) -> None:
-        """Open an HDF5 fiel and return a reference to the dataset without loading its content.
-
-        Args:
-            fname (str): File name.
-            enty (str): Entry name.
-            mode (str): Mode of the file, default "r".
-
-        Returns:
-            h5py.Dataset: Reference to the dataset.
-        """
-        self.h5_file = h5py.File(self.file_source.get(), mode=self.mode)
+        """Opens the HDF5 file found in the file_source signal and the HDF5 dataset specified by the h5_entry signal."""
+        self.h5_file = h5py.File(self.file_source.get(), mode="r")
         self.h5_dataset = self.h5_file[self.h5_entry.get()]
         self._number_of_images = self.h5_dataset.shape[0]
 
@@ -298,7 +288,7 @@ class H5ImageReplayProxy(DeviceProxy):
 
     def stage(self) -> list[object]:
         """Stage the device.
-        This opens the HDF5 file, unstaging will close it.
+        This opens the HDF5 dataset, unstaging will close it.
         """
 
         if self._staged != Staged.no:
@@ -316,21 +306,14 @@ class H5ImageReplayProxy(DeviceProxy):
         return [self]
 
     def unstage(self) -> list[object]:
-        """Unstage the device."""
+        """Unstage the device, also closes the HDF5 dataset"""
         if self.h5_file:
             self.stop()
         self._staged = Staged.no
         return [self]
 
     def _load_image(self):
-        """Get the image from the h5 file.
-
-        Args:
-            index (int): Index of the image.
-
-        Returns:
-            np.ndarray: Image.
-        """
+        """Try loading the image from the h5 dataset, and set it to self._image."""
         if self.h5_file:
             slice_nr = self._index % self._number_of_images
             self._index = self._index + 1
