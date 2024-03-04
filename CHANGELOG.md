@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.0 (2024-03-04)
+
+### Feature
+
+* Add proxy for h5 image replay for SimCamera ([`5496b59`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5496b59ae2254495845a0fae2754cdd935b4fb7b))
+
+### Fix
+
+* Add dependency for env ([`eb4e10e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/eb4e10e86bba9b55623d089572f104d21d96601e))
+* Fix bug in computation of negative data within SimMonitor ([`f4141f0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f4141f0dbf8d98f1d1591c66ccd147099019afc7))
+
 ## v0.24.2 (2024-03-01)
 
 ### Fix
