@@ -1,0 +1,87 @@
+// Snap-and-step
+//  Test program for high speed step scanning with individual triggers on PSO output.
+//  The file expects external parameter validation. 
+
+
+
+program
+    // External parameters
+    var $fStartPosition as real = {{ scan.startpos }}
+	var $iNumSteps as integer = {{ scan.numsteps }}
+	var $fStepSize as real = {{ scan.stepsize }}
+	var $fExposureTimeSec as real = {{ scan.exptime }}
+    var $fVelJog as real = {{ scan.travel or 200 }}
+    var $fVelScan as real = {{ scan.velocity or 50 }}
+    var $fAcceleration = {{ scan.acceleration or 500 }}
+
+    // Internal
+    var $axis as axis = ROTY
+    var $ii as integer
+
+    // Set acceleration
+    SetupAxisRampType($axis, RampType.Linear)
+    SetupAxisRampValue($axis,0,$fAcceleration)    
+    
+    // Move to start position before the scan
+    var $fPosNext as real = $fStartPosition
+    MoveAbsolute($axis, $fPosNext, $fVelJog)
+    WaitForInPosition($axis)  
+    
+    // Configure PSO (to manual event generation)
+    PsoDistanceEventsOff($axis)
+    PsoWindowConfigureEvents($axis, PsoWindowEventMode.None)
+	PsoWaveformConfigurePulseFixedTotalTime($axis, 50)
+	PsoWaveformConfigurePulseFixedOnTime($axis, 20)
+	PsoWaveformConfigurePulseFixedCount($axis, 1)
+	PsoWaveformApplyPulseConfiguration($axis)
+    PsoWaveformConfigureMode($axis, PsoWaveformMode.Pulse)
+    PsoOutputConfigureSource($axis, PsoOutputSource.Waveform)   
+    PsoWaveformOn($axis)	
+ 
+     // Configure Drive Data Collection
+    var $iDdcArrayAddr as integer = 8388608
+    var $iDdcArraySize as integer = iMaximum(5000, $iNumSteps)
+    var $iDdcSafeSpace as integer = 4096
+
+    DriveDataCaptureConfigureInput($axis, 0, DriveDataCaptureInput.PrimaryFeedback);
+    DriveDataCaptureConfigureInput($axis, 1, DriveDataCaptureInput.AnalogInput0 );
+
+    DriveDataCaptureConfigureTrigger($axis, 0, DriveDataCaptureTrigger.PsoOutput );
+    DriveDataCaptureConfigureTrigger($axis, 1, DriveDataCaptureTrigger.PsoOutput );
+ 
+    DriveDataCaptureConfigureArray($axis, 0, $iDdcArrayAddr, $iDdcArraySize);
+    DriveDataCaptureConfigureArray($axis, 1, $iDdcArrayAddr + $iDdcSafeSpace + 8 * $iDdcArraySize, $iDdcArraySize); 
+
+    // Directly before scan
+    PsoDistanceCounterOn($axis)
+    DriveDataCaptureOn($axis, 0)
+    DriveDataCaptureOn($axis, 1)
+
+    ///////////////////////////////////////////////////////////   
+    // Start the actual scanning
+    ///////////////////////////////////////////////////////////
+    for $ii = 0 to ($iNumSteps-1)
+        MoveAbsolute($axis, $fPosNext, $fVelScan)
+        WaitForInPosition($axis)        
+		PsoEventGenerateSingle($axis)
+        Dwell($fExposureTimeSec)
+		$fPosNext = $fPosNext + $fStepSize
+    end
+
+    // Directly after scan
+    PsoWaveformOff($axis)
+    DriveDataCaptureOff($axis, 0)
+    DriveDataCaptureOff($axis, 1)
+end
+
+// Demonstrates using a switch/case conditional.
+function iMaximum($A as integer, $B as integer) as integer	
+	var $retVal
+	if ($A > $B)
+		$retVal = $A
+	else
+		$retVal = $B
+	end
+	return $retVal
+end
+
