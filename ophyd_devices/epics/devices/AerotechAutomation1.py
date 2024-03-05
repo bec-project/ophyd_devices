@@ -119,6 +119,7 @@ class aa1Tasks(Device):
         it and run it directly on a certain thread. But there's no way to 
         retrieve the source code.
     """
+    SUB_PROGRESS = "progress"
     _failure = Component(EpicsSignalRO, "FAILURE", kind=Kind.hinted)
     errStatus = Component(EpicsSignalRO, "ERRW", auto_monitor=True, kind=Kind.hinted)
     warnStatus = Component(EpicsSignalRO, "WARNW", auto_monitor=True, kind=Kind.hinted)    
@@ -139,7 +140,23 @@ class aa1Tasks(Device):
         self._textToExecute = None 
         self._isConfigured = False
         self._isStepConfig = False
+        self.subscribe(self._progress_update, "progress", run=False)
     
+    def _progress_update(self, value, **kwargs) -> None:
+        """Progress update on the scan"""        
+        value = self.progress()
+        self._run_subs( sub_type=self.SUB_PROGRESS, value=value, max_value=1, done=1, )
+
+    def _progress(self) -> None:
+        """Progress update on the scan"""
+        if self._currentTaskMonitor is None:
+            return 1
+        else:
+            if self._currentTaskMonitor.status.value in ["Running", 4]:
+                return 0
+            else:
+                return 1
+
     def readFile(self, filename: str) -> str:
         """ Read a file from the controller """
         # Have to use CHAR array due to EPICS LSI bug...
@@ -198,7 +215,8 @@ class aa1Tasks(Device):
         old = self.read_configuration()
         self.taskIndex.set(taskIndex).wait() 
         self._textToExecute = None
-        #self._currentTaskMonitor = aa1TaskState()
+        self._currentTaskMonitor = aa1TaskState(prefix=self.prefix+f"T{taskIndex}:", name="taskmon")
+        self._currentTaskMonitor.wait_for_connection()
             
         # Choose the right execution mode
         if (filename is None) and (text not in [None, ""]):
@@ -270,11 +288,22 @@ class aa1Tasks(Device):
 
     def complete(self) -> DeviceStatus:
         """ Execute the script on the configured task"""
+        print("Called aa1Task.complete()")
         #return self._currentTaskMonitor.complete()
-        status = DeviceStatus(self)
-        status.set_finished()
+        #status = DeviceStatus(self)
+        #status.set_finished()
+        #return status
+        timestamp_ = 0
+        def notRunning(*args, old_value, value, timestamp, **kwargs):
+            nonlocal timestamp_       
+            result = False if (timestamp_== 0) else (value not in ["Running", 4])   
+            timestamp_ = timestamp
+            print(result)
+            return result    
+        # Subscribe and wait for update
+        status = SubscriptionStatus(self._currentTaskMonitor.status, notRunning, settle_time=0.5)        
         return status
-    
+
     def describe_collect(self) -> OrderedDict:
         dd = OrderedDict()
         dd['success'] = {'source': "internal", 'dtype': 'integer', 'shape': [], 'units': '', 'lower_ctrl_limit': 0, 'upper_ctrl_limit': 0}
@@ -300,12 +329,14 @@ class aa1TaskState(Device):
 
     def complete(self) -> StatusBase:
         """ Bluesky flyer interface"""
+        print("Called aa1TaskState.complete()")
         # Define wait until the busy flag goes down (excluding initial update)
         timestamp_ = 0
         def notRunning(*args, old_value, value, timestamp, **kwargs):
             nonlocal timestamp_       
             result = False if (timestamp_== 0) else (value not in ["Running", 4])   
             timestamp_ = timestamp
+            print(result)
             return result
         
         # Subscribe and wait for update
