@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.1 (2024-03-05)
+
+### Fix
+
+* Device_status should use set ([`6d179ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6d179ea8a8e41374cfe2b92939e0b71b7962f7cb))
+* Device_read should use set_and_publish ([`afd7912`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/afd7912329b14bc916e14fd565ebcf7506ecb045))
+
 ## v0.25.0 (2024-03-04)
 
 ### Feature
