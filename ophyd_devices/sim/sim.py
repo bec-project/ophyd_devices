@@ -1,32 +1,26 @@
 import os
 import threading
 import time as ttime
+
 import numpy as np
-
 from bec_lib import MessageEndpoints, bec_logger, messages
-
 from ophyd import Component as Cpt
+from ophyd import Device, DeviceStatus
 from ophyd import DynamicDeviceComponent as Dcpt
-from ophyd import Device, DeviceStatus, Kind
-from ophyd import PositionerBase
-
+from ophyd import Kind, PositionerBase
 from ophyd.flyers import FlyerInterface
-
 from ophyd.sim import SynSignal
 from ophyd.status import StatusBase
-
 from ophyd.utils import LimitError
 
-from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
-
 from ophyd_devices.sim.sim_data import (
-    SimulatedPositioner,
     SimulatedDataCamera,
     SimulatedDataMonitor,
+    SimulatedPositioner,
 )
+from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_test_devices import DummyController
-
-from ophyd_devices.sim.sim_signals import SetableSignal, ReadOnlySignal
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
 logger = bec_logger.logger
 
@@ -135,14 +129,7 @@ class SimCamera(Device):
     )
 
     def __init__(
-        self,
-        name,
-        *,
-        kind=None,
-        parent=None,
-        sim_init: dict = None,
-        device_manager=None,
-        **kwargs,
+        self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
         self.device_manager = device_manager
         self.init_sim_params = sim_init
@@ -535,25 +522,23 @@ class SimFlyer(Device, PositionerBase, FlyerInterface):
                 elapsed_time += exp_time
                 if elapsed_time > buffer_time:
                     elapsed_time = 0
-                    device.device_manager.connector.send(
+                    device.device_manager.connector.set_and_publish(
                         MessageEndpoints.device_read(device.name), bundle
                     )
                     bundle = messages.BundleMessage()
                     device.device_manager.connector.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
-                            device=device.name,
-                            status=1,
-                            metadata={"pointID": ii, **metadata},
+                            device=device.name, status=1, metadata={"pointID": ii, **metadata}
                         ),
                     )
-            device.device_manager.connector.send(MessageEndpoints.device_read(device.name), bundle)
+            device.device_manager.connector.set_and_publish(
+                MessageEndpoints.device_read(device.name), bundle
+            )
             device.device_manager.connector.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
-                    device=device.name,
-                    status=0,
-                    metadata={"pointID": num_pos, **metadata},
+                    device=device.name, status=0, metadata={"pointID": num_pos, **metadata}
                 ),
             )
             print("done")

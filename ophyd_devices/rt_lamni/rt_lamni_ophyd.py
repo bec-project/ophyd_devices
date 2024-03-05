@@ -432,7 +432,7 @@ class RtLamniController(Controller):
         )
 
     def publish_device_data(self, signals, pointID):
-        self.get_device_manager().connector.send(
+        self.get_device_manager().connector.set_and_publish(
             MessageEndpoints.device_read("rt_lamni"),
             messages.DeviceMessage(
                 signals=signals, metadata={"pointID": pointID, **self.readout_metadata}

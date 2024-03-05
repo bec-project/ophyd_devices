@@ -1,10 +1,9 @@
-import time as ttime
 import threading
+import time as ttime
+
 import numpy as np
-
-from ophyd import OphydObject, Device, PositionerBase
-
-from bec_lib import messages, MessageEndpoints
+from bec_lib import MessageEndpoints, messages
+from ophyd import Device, OphydObject, PositionerBase
 
 
 class DummyControllerDevice(Device):
@@ -130,25 +129,21 @@ class SynFlyerLamNI(Device, PositionerBase):
                 elapsed_time += exp_time
                 if elapsed_time > buffer_time:
                     elapsed_time = 0
-                    device.device_manager.connector.send(
+                    device.device_manager.connector.set_and_publish(
                         MessageEndpoints.device_read(device.name), bundle
                     )
                     bundle = messages.BundleMessage()
                     device.device_manager.connector.set_and_publish(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
-                            device=device.name,
-                            status=1,
-                            metadata={"pointID": ii, **metadata},
+                            device=device.name, status=1, metadata={"pointID": ii, **metadata}
                         ),
                     )
             device.device_manager.connector.send(MessageEndpoints.device_read(device.name), bundle)
             device.device_manager.connector.set_and_publish(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
-                    device=device.name,
-                    status=0,
-                    metadata={"pointID": num_pos, **metadata},
+                    device=device.name, status=0, metadata={"pointID": num_pos, **metadata}
                 ),
             )
             print("done")
