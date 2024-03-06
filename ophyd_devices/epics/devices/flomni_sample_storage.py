@@ -82,36 +82,35 @@ class FlomniSampleStorage(Device):
     def is_sample_in_gripper(self) -> bool:
         val = self.sample_in_gripper.get()
         return bool(val)
-    
+
     def get_sample_name(self, slot_nr) -> str:
         val = getattr(self.sample_names, f"sample{slot_nr}").get()
         return str(val)
-    
+
     def show_all(self):
         t = PrettyTable()
         t.title = "flOMNI sample storage"
         field_names = [""]
-        field_names.extend(str(ax) for ax in range(1,11))
-        for ct in range(0,2):
+        field_names.extend(str(ax) for ax in range(1, 11))
+        for ct in range(0, 2):
             t.field_names = field_names
             row = ["Container " + str(ct)]
             row.extend(
-                    "used" if self.is_sample_slot_used(slot_nr) else "free"
-                    for slot_nr in range((ct*10)+1,(ct*10)+11)
-                )
-            t.add_row(row)     
+                "used" if self.is_sample_slot_used(slot_nr) else "free"
+                for slot_nr in range((ct * 10) + 1, (ct * 10) + 11)
+            )
+            t.add_row(row)
         print(t)
         print("\n\nFollowing samples are currently loaded:\n")
-        for ct in range(1,21):
+        for ct in range(1, 21):
             if self.is_sample_slot_used(ct):
                 print(f"  Position {ct:2.0f}: {self.get_sample_name(ct)}")
         if self.sample_in_gripper.get():
-            print(f"\nGripper:        {self.sample_in_gripper_name.get()}\n")
+            print(f"\n  Gripper:        {self.sample_in_gripper_name.get()}\n")
         else:
-            print(f"\nGripper:        no sample\n")
+            print(f"\n  Gripper:        no sample\n")
 
         if self.is_sample_slot_used(0):
-            print(f"flOMNI stage:   {self.get_sample_name(0)}\n")
+            print(f"  flOMNI stage:   {self.get_sample_name(0)}\n")
         else:
-            print(f"flOMNI stage:   no sample\n")
-              
+            print(f"  flOMNI stage:   no sample\n")
