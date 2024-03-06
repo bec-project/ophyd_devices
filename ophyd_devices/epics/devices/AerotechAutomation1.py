@@ -123,6 +123,7 @@ class aa1Tasks(Device):
     _failure = Component(EpicsSignalRO, "FAILURE", kind=Kind.hinted)
     errStatus = Component(EpicsSignalRO, "ERRW", auto_monitor=True, kind=Kind.hinted)
     warnStatus = Component(EpicsSignalRO, "WARNW", auto_monitor=True, kind=Kind.hinted)    
+    taskStates = Component(EpicsSignalRO, "STATES-RBV", auto_monitor=True, kind=Kind.hinted)
     taskIndex = Component(EpicsSignal, "TASKIDX", kind=Kind.config, put_complete=True)
     switch = Component(EpicsSignal, "SWITCH", kind=Kind.config, put_complete=True)
     _execute = Component(EpicsSignal, "EXECUTE", string=True, kind=Kind.config,  put_complete=True)
@@ -136,7 +137,7 @@ class aa1Tasks(Device):
     def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
         """ __init__ MUST have a full argument list"""
         super().__init__(prefix=prefix, name=name, kind=kind, read_attrs=read_attrs, configuration_attrs=configuration_attrs, parent=parent, **kwargs)
-        self._currentTaskMonitor = None
+        self._currentTask = None
         self._textToExecute = None 
         self._isConfigured = False
         self._isStepConfig = False
@@ -215,8 +216,7 @@ class aa1Tasks(Device):
         old = self.read_configuration()
         self.taskIndex.set(taskIndex).wait() 
         self._textToExecute = None
-        self._currentTaskMonitor = aa1TaskState(prefix=self.prefix+f"T{taskIndex}:", name="taskmon")
-        self._currentTaskMonitor.wait_for_connection()
+        self._currentTask = taskIndex
             
         # Choose the right execution mode
         if (filename is None) and (text not in [None, ""]):
@@ -289,19 +289,17 @@ class aa1Tasks(Device):
     def complete(self) -> DeviceStatus:
         """ Execute the script on the configured task"""
         print("Called aa1Task.complete()")
-        #return self._currentTaskMonitor.complete()
-        #status = DeviceStatus(self)
-        #status.set_finished()
-        #return status
         timestamp_ = 0
-        def notRunning(*args, old_value, value, timestamp, **kwargs):
+        taskIdx = int(self.taskIndex.get())
+        def notRunning2(*args, old_value, value, timestamp, **kwargs):
             nonlocal timestamp_       
-            result = False if (timestamp_== 0) else (value not in ["Running", 4])   
+            result = False if value[taskIdx] in ["Running", 4] else True   
             timestamp_ = timestamp
             print(result)
-            return result    
+            return result  
+
         # Subscribe and wait for update
-        status = SubscriptionStatus(self._currentTaskMonitor.status, notRunning, settle_time=0.5)        
+        status = SubscriptionStatus(self.taskStates, notRunning2, settle_time=0.5)   
         return status
 
     def describe_collect(self) -> OrderedDict:
