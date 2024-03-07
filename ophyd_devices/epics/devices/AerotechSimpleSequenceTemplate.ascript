@@ -1,0 +1,140 @@
+//  Test program for simple zig-zag line scanning with PSO window output
+//   "enable" signal and DDC synchronized to external trigger input. 
+//  The file expects external parameter validation 
+//  The PSO locations arrays are set externally from EPICS PV
+// 
+
+enum ScanType
+    Pos = 0
+    Neg = 1
+    PosNeg = 2
+    NegPos = 3
+end
+
+
+program
+    //////////////////////////////////////////////////////////////////////////
+    // External parameters - USE THEESE 
+    var $fStartPosition as real = {{ scan.startpos }}
+    var $fScanRange as real = $fStartPosition + {{ scan.scanrange }}
+    var $iNumRepeat as integer = {{ scan.nrepeat }}
+    var $eScanType as ScanType = ScanType.{{ scan.scandir or 'Pos' }}
+    var $iNumDdcRead as integer = {{ scan.npoints }}
+
+
+    var $fVelJog as real = {{ scan.jogvel or 200 }}
+    var $fVelScan as real = {{ scan.scanvel }}
+    var $fAcceleration = {{ scan.scanacc or 500 }}
+    var $fSafeDist = 10.0
+    
+    //////////////////////////////////////////////////////////////////////////
+    // Internal parameters - dont use
+    var $axis as axis = ROTY
+    var $ii as integer    
+    var $iDdcSafeSpace as integer = 4096
+
+    // Set acceleration
+    SetupAxisRampType($axis, RampType.Linear)
+    SetupAxisRampValue($axis,0,$fAcceleration)    
+    var $fAccDistance as real = 0.5 * $fVelScan * $fVelScan / $fAcceleration + $fSafeDist
+    
+    // set the actual scan range
+    var $fPosStart as real
+    var $fPosEnd as real 
+    if $eScanType == ScanType.Pos
+        $fPosStart = $fStartPosition - $fAccDistance
+        $fPosEnd = $fStartPosition + $fScanRange + $fAccDistance
+    elseif $eScanType == ScanType.Neg
+        $fPosStart = $fStartPosition + $fAccDistance
+        $fPosEnd = $fStartPosition - $fScanRange - $fAccDistance
+    elseif $eScanType == ScanType.PosNeg
+        $fPosStart = $fStartPosition - $fAccDistance
+        $fPosEnd = $fStartPosition + $fScanRange + $fAccDistance
+    elseif $eScanType == ScanType.NegPos
+        $fPosStart = $fStartPosition + $fAccDistance
+        $fPosEnd = $fStartPosition - $fScanRange - $fAccDistance
+    end
+
+    // Move to start position before the scan
+    MoveAbsolute($axis, $fPosStart, $fVelJog)
+    WaitForInPosition($axis)  
+    
+    // Configure PSO
+    PsoDistanceCounterOff($axis)
+    PsoDistanceEventsOff($axis)
+    PsoWindowConfigureEvents($axis, PsoWindowEventMode.None)
+    PsoWaveformOff($axis)	
+    PsoOutputConfigureSource($axis, PsoOutputSource.Waveform)
+    var $iPsoArrayAddr as integer = 0   
+    // Simple PSO trigger pattern
+    var $iPsoArrayPos[] as real =  [{% for psoDist in scan.psoBoundsPos[:-1] %} UnitsToCounts($axis, {{ psoDist }}), {% endfor %} UnitsToCounts($axis, {{ scan.psoBoundsPos[-1] }})]
+    // var $iPsoArrayPos[] as real =  [UnitsToCounts($axis, $fAccDistance), {% for psoDist in scan.psoBoundsPos[:-1] %} UnitsToCounts($axis, psoDist), {% endfor %}]
+    // var $iPsoArrayNeg[] as real =  [UnitsToCounts($axis, $fAccDistance), {% for psoDist in scan.psoBoundsNeg[:-1] %} UnitsToCounts($axis, psoDist), {% endfor %}]
+
+    DriveArrayWrite($axis, $iPsoArrayPos, $iPsoArrayAddr, length($iPsoArrayPos), DriveArrayType.PsoDistanceEventDistances)
+    PsoDistanceConfigureArrayDistances($axis, $iPsoArrayAddr, length($iPsoArrayPos), 0)
+    PsoDistanceEventsOn($axis)
+    
+    PsoWaveformConfigureMode($axis, PsoWaveformMode.Toggle)
+    PsoWaveformOn($axis)
+ 
+     // Configure Drive Data Collection
+    var $iDdcArrayAddr as integer = 8388608
+    var $iDdcArraySize as integer = $iNumDdcRead
+
+    DriveDataCaptureConfigureInput($axis, 0, DriveDataCaptureInput.PrimaryFeedback);
+    DriveDataCaptureConfigureInput($axis, 1, DriveDataCaptureInput.AnalogInput0 );
+
+    DriveDataCaptureConfigureTrigger($axis, 0, DriveDataCaptureTrigger.PsoOutput );
+    DriveDataCaptureConfigureTrigger($axis, 1, DriveDataCaptureTrigger.PsoOutput );
+ 
+    DriveDataCaptureConfigureArray($axis, 0, $iDdcArrayAddr, $iDdcArraySize);
+    DriveDataCaptureConfigureArray($axis, 1, $iDdcArrayAddr + $iDdcSafeSpace + 8 * $iDdcArraySize, $iDdcArraySize); 
+
+    // Directly before scan
+    PsoDistanceCounterOn($axis)
+    DriveDataCaptureOn($axis, 0)
+    DriveDataCaptureOn($axis, 1)
+
+    ///////////////////////////////////////////////////////////   
+    // Start the actual scanning
+    ///////////////////////////////////////////////////////////
+    for $ii = 0 to ($iNumRepeat-1)
+        PsoDistanceConfigureArrayDistances($axis, $iPsoArrayAddr, length($iPsoArrayPos), 0)
+
+        if $eScanType == ScanType.Pos 
+            MoveAbsolute($axis, $fPosEnd, $fVelScan)
+            WaitForInPosition($axis)        
+            MoveAbsolute($axis, $fPosStart, $fVelScan)
+            WaitForInPosition($axis)
+        elseif $eScanType == ScanType.Neg 
+            MoveAbsolute($axis, $fPosEnd, $fVelScan)
+            WaitForInPosition($axis)        
+            MoveAbsolute($axis, $fPosStart, $fVelScan)
+            WaitForInPosition($axis)
+        elseif $eScanType == ScanType.PosNeg 
+            if ($ii % 2) == 0
+                MoveAbsolute($axis, $fPosEnd, $fVelScan)
+                WaitForInPosition($axis)        
+            elseif ($ii % 2) == 1
+                MoveAbsolute($axis, $fPosStart, $fVelScan)
+                WaitForInPosition($axis)
+            end
+        elseif $eScanType == ScanType.NegPos 
+            if ($ii % 2) == 0
+                MoveAbsolute($axis, $fPosEnd, $fVelScan)
+                WaitForInPosition($axis)        
+            elseif ($ii % 2) == 1
+                MoveAbsolute($axis, $fPosStart, $fVelScan)
+                WaitForInPosition($axis)
+            end
+        end
+        Dwell(0.2)
+    end
+
+    // Directly after scan
+    PsoDistanceCounterOff($axis)
+    DriveDataCaptureOff($axis, 0)
+    DriveDataCaptureOff($axis, 1)
+end
+
