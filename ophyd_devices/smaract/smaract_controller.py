@@ -78,6 +78,8 @@ class SmaractController(Controller):
         "move_open_loop_steps",
         "find_reference_mark",
         "describe",
+        "axis_is_referenced",
+        "all_axes_referenced",
     ]
 
     def __init__(
