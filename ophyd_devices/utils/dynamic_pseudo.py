@@ -73,6 +73,9 @@ class ComputedSignal(SignalRO):
                 representation of a function that takes the input signals as arguments
                 and returns the computed value.
 
+        Example:
+            >>> signal.compute_method = "def test(a, b): return a.get() + b.get()"
+
         """
         return self._compute_method
 
@@ -94,6 +97,9 @@ class ComputedSignal(SignalRO):
 
         Args:
             *input_vars: The input signals to be used for the computation
+
+        Example:
+            >>> signal.input_signals = ["samx_readback", "samx_readback"]
 
         """
         return self._input_signals
