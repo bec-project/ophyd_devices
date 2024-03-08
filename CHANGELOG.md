@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.0 (2024-03-08)
+
+### Feature
+
+* Added computed signal ([`d9f09b0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d9f09b0d866f97a859c9b437474928e7a9e8c1b6))
+
+### Documentation
+
+* Improved doc strings for computed signal ([`c68c3c1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c68c3c1b54ecff2c51417168ee3e91b4056831fc))
+
 ## v0.25.3 (2024-03-08)
 
 ### Fix
