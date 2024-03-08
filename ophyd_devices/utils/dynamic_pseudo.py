@@ -3,6 +3,7 @@ This module provides a class for creating a pseudo signal that is computed from 
 """
 
 from functools import reduce
+from typing import Callable
 
 from ophyd import SignalRO
 from ophyd.ophydobj import Kind
@@ -63,7 +64,7 @@ class ComputedSignal(SignalRO):
         self._run_subs(sub_type=self.SUB_VALUE, old_value=None, value=self.get())
 
     @property
-    def compute_method(self):
+    def compute_method(self) -> Callable | None:
         """
         Set the compute method for the pseudo signal
 
@@ -117,6 +118,7 @@ class ComputedSignal(SignalRO):
         self._input_signals = signals
 
     def get(self):
-        if self._compute_method:
-            return self._compute_method(*self._input_signals)
+        if self.compute_method:
+            # pylint: disable=not-callable
+            return self.compute_method(*self.input_signals)
         return None
