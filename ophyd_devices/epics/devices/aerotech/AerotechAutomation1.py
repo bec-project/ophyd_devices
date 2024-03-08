@@ -496,6 +496,14 @@ class aa1GlobalVariables(Device):
     
     Read operations take as input the memory address and the size
     Write operations work with the memory address and value
+
+    Usage:
+        var = aa1Tasks(AA1_IOC_NAME+":VAR:", name="var")
+        var.wait_for_connection()
+        ret = var.readInt(42)
+        var.writeFloat(1000, np.random.random(1024))
+        ret_arr = var.readFloat(1000, 1024)
+
     """
     # Status monitoring
     num_real = Component(EpicsSignalRO, "NUM-REAL_RBV", kind=Kind.config)
@@ -607,14 +615,11 @@ class aa1GlobalVariables(Device):
 
         
 class aa1GlobalVariableBindings(Device):
-    """ Global variables
+    """ Polled global variables
     
-    This class provides an interface to directly read/write global variables 
-    on the Automation1 controller. These variables are accesible from script
-    files and are thus a convenient way to interface with the outside word.
-    
-    Read operations take as input the memory address and the size
-    Write operations work with the memory address and value
+    This class provides an interface to read/write the first few global variables 
+    on the Automation1 controller. These variables are continuously polled
+    and are thus a convenient way to interface scripts with the outside word.
     """
     int0 = Component(EpicsSignalRO, "INT0_RBV", auto_monitor=True, name="int0", kind=Kind.hinted)
     int1 = Component(EpicsSignalRO, "INT1_RBV", auto_monitor=True, name="int1", kind=Kind.hinted)
@@ -647,7 +652,8 @@ class aa1AxisIo(Device):
     
     This class provides convenience wrappers around the Aerotech API's axis 
     specific IO functionality. Note that this is a low-speed API, actual work
-    should be done in AeroScript. Only one IO pin is polled simultaneously!
+    should be done in AeroScript. Only one pin can be writen directly but 
+    several can be polled!
     """
     polllvl = Component(EpicsSignal, "POLLLVL", put_complete=True, kind=Kind.config)
     ai0 = Component(EpicsSignalRO, "AI0-RBV", auto_monitor=True, kind=Kind.hinted)
@@ -774,7 +780,7 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
     used as exposure enable, as individual trigger or as a series of triggers 
     per each event. 
     As a first approach, the module follows a simple pipeline structure:
-        Genrator --> Event --> Waveform --> Output
+        Genrator (distance) --> Event --> Waveform --> Output
            
     The module provides configuration interface to common functionality, such 
     as fixed distance or array based triggering and can serve as a base for
@@ -782,7 +788,20 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
     coming from 32 bit PSO positions.
     For a more detailed description of additional signals and masking plase 
     refer to Automation1's online manual.
-    """   
+
+    Usage:
+        # Configure the PSO to raise an 'enable' signal for 180 degrees
+        pso = aa1AxisPsoDistance(AA1_IOC_NAME+":ROTY:PSO:", name="pso")
+        pso.wait_for_connection()
+        pso.configure(d={'distance': [180, 0.1], 'wmode': "toggle"})
+        pso.kickoff().wait()
+
+        # Configure the PSO to emmit 5 triggers every 1.8 degrees
+        pso = aa1AxisPsoDistance(AA1_IOC_NAME+":ROTY:PSO:", name="pso")
+        pso.wait_for_connection()
+        pso.configure(d={'distance': 1.8, 'wmode': "pulsed", 'n_pulse': 5})
+        pso.kickoff().wait()
+    """
     SUB_PROGRESS = "progress"
     
     def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
@@ -804,9 +823,6 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
         self._run_subs(
             sub_type=self.SUB_PROGRESS,
             value=int(progress), max_value=max_value, done=int(np.isclose(max_value, progress, 1e-3)), )
-
-
-
 
     # ########################################################################
     # PSO high level interface
@@ -1078,6 +1094,15 @@ class aa1AxisDriveDataCollection(Device):
     
     The default configuration is using a fixed memory mapping allowing up to 
     1 million recorded data points on an XC4e (this depends on controller).
+
+    Usage:
+        # Configure the DDC with default internal triggers
+        ddc = aa1AxisPsoDistance(AA1_IOC_NAME+":ROTY:DDC:", name="ddc")
+        ddc.wait_for_connection()
+        ddc.configure(d={'npoints': 5000})
+        ddc.kickoff().wait()
+        ...
+        ret = yield from ddc.collect()
     """
     
     # ########################################################################

@@ -83,6 +83,11 @@ For some reason it can't be a dynamically created ophyd object.
         return status        
 '''
 
+### Collect does not yield
+
+In Bluesky collect can be a generator, in BEC it should return the result.
+
+
 
 ### Scans
 
