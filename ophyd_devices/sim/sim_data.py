@@ -691,6 +691,7 @@ class SimulatedDataCamera(SimulatedDataBase):
             return v
         if noise == NoiseType.UNIFORM:
             v += np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)
+            v[v <= 0] = 0
             return v
         if noise == NoiseType.NONE:
             return v

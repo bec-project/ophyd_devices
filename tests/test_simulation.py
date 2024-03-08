@@ -68,12 +68,23 @@ def test_camera__init__(camera):
     assert isinstance(camera, BECDevice)
 
 
-def test_camera_readback(camera):
+@pytest.mark.parametrize("amplitude, noise_multiplier", [(0, 1), (100, 10), (1000, 50)])
+def test_camera_readback(camera, amplitude, noise_multiplier):
     """Test the readback method of SimMonitor."""
     for model_name in camera.sim.sim_get_models():
         camera.sim.sim_select_model(model_name)
-        assert camera.image.read()[camera.image.name]["value"].shape == camera.SHAPE
-        assert isinstance(camera.image.read()[camera.image.name]["value"][0, 0], camera.BIT_DEPTH)
+        camera.sim.sim_params = {"noise_multiplier": noise_multiplier}
+        camera.sim.sim_params = {"amplitude": amplitude}
+        camera.sim.sim_params = {"noise": "poisson"}
+        assert camera.image.get().shape == camera.SHAPE
+        assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
+        camera.sim.sim_params = {"noise": "uniform"}
+        camera.sim.sim_params = {"hot_pixel_coords": []}
+        camera.sim.sim_params = {"hot_pixel_values": []}
+        camera.sim.sim_params = {"hot_pixel_types": []}
+        assert camera.image.get().shape == camera.SHAPE
+        assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
+        assert (camera.image.get() <= (amplitude + noise_multiplier + 1)).all()
 
 
 def test_positioner__init__(positioner):
