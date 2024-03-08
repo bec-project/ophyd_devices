@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.2 (2024-03-08)
+
+### Fix
+
+* **smaract:** Added user access for axis_is_referenced and all_axes_referenced ([`4fbba73`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4fbba7393adbb01ebf80667b205a1dbaab9bb15c))
+* **smaract:** Fixed axes_referenced ([`a9f58d2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9f58d2b5686370a07766ed72903f82f5e2d9cb1))
+
 ## v0.25.1 (2024-03-05)
 
 ### Fix
