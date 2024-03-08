@@ -21,11 +21,10 @@ from typing import Union
 from collections import OrderedDict
 
 
-#class EpicsMotorX(EpicsMotor):
-#    pass
-
 
 class EpicsMotorX(EpicsMotor):
+    """ Special motor class that provides flyer interface and progress bar. 
+    """
     SUB_PROGRESS = "progress"
 
     def __init__(self, prefix="", *, name, kind=None, read_attrs=None, configuration_attrs=None, parent=None, **kwargs):
@@ -64,19 +63,9 @@ class EpicsMotorX(EpicsMotor):
             value=int(100*progress), max_value=max_value, done=int(np.isclose(max_value, progress, 1e-3)), )
 
 
-class EpicsSignalPassive(Device):
-    value = Component(EpicsSignalRO, "", kind=Kind.omitted)
-    proc = Component(EpicsSignal, ".PROC", kind=Kind.omitted, put_complete=True)
-    def get(self):
-         self.proc.set(1).wait()
-         return self.value.get()
-
-
 class EpicsPassiveRO(EpicsSignalRO):
-    """Special helper class to work around a bug in ophyd (caproto backend)
-        that reads CHAR array strigs as uint16 arrays.
+    """ Small helper class to read PVs that need to be processed first.
     """
-    
     def __init__(self, read_pv, *, string=False, name=None, **kwargs):       
         super().__init__(read_pv, string=string, name=name, **kwargs)
         self._proc = EpicsSignal(read_pv+".PROC", kind=Kind.omitted, put_complete=True)
@@ -113,14 +102,33 @@ class aa1Tasks(Device):
     
         The place to manage tasks and AeroScript user files on the controller. 
         You can read/write/compile/execute AeroScript files and also retrieve 
-        saved data files from the controller.
+        saved data files from the controller. It will also work around an ophyd
+        bug that swallows failures.
         
-        Execute does not require to store the script in a file, it will compile
+        Execution does not require to store the script in a file, it will compile
         it and run it directly on a certain thread. But there's no way to 
         retrieve the source code.
+        
+        Write a text into a file on the aerotech controller and execute it with kickoff.
+        '''
+        script="var $axis as axis = ROTY\\nMoveAbsolute($axis, 42, 90)"
+        tsk = aa1Tasks(AA1_IOC_NAME+":TASK:", name="tsk")
+        tsk.wait_for_connection()
+        tsk.configure({'text': script, 'filename': "foobar.ascript", 'taskIndex': 4})
+        tsk.kickoff().wait()
+        '''
+
+        Just execute an ascript file already on the aerotech controller.
+        '''
+        tsk = aa1Tasks(AA1_IOC_NAME+":TASK:", name="tsk")
+        tsk.wait_for_connection()
+        tsk.configure({'filename': "foobar.ascript", 'taskIndex': 4})
+        tsk.kickoff().wait()
+        '''
+
     """
     SUB_PROGRESS = "progress"
-    _failure = Component(EpicsSignalRO, "FAILURE", kind=Kind.hinted)
+    _failure = Component(EpicsSignalRO, "FAILURE", auto_monitor=True, kind=Kind.hinted)
     errStatus = Component(EpicsSignalRO, "ERRW", auto_monitor=True, kind=Kind.hinted)
     warnStatus = Component(EpicsSignalRO, "WARNW", auto_monitor=True, kind=Kind.hinted)    
     taskStates = Component(EpicsSignalRO, "STATES-RBV", auto_monitor=True, kind=Kind.hinted)
@@ -239,8 +247,11 @@ class aa1Tasks(Device):
             self._textToExecute = None
         else:
             raise RuntimeError("Unsupported filename-text combo")
+
+        if self._failure.value:
+            raise RuntimeError("Failed to launch task, please check the Aerotech IOC")
+
         self._isConfigured = True
-        
         new = self.read_configuration()
         return (old, new)
             
@@ -455,7 +466,7 @@ class aa1DataAcquisition(Device):
         return data
 
     # DAQ data readback
-    data_rb = Component(EpicsSignalPassive, "DATA", kind=Kind.hinted)
+    data_rb = Component(EpicsPassiveRO, "DATA", kind=Kind.hinted)
     data_rows = Component(EpicsSignalRO, "DATA_ROWS", auto_monitor=True, kind=Kind.hinted)
     data_cols = Component(EpicsSignalRO, "DATA_COLS", auto_monitor=True, kind=Kind.hinted)
     data_stat = Component(EpicsSignalRO, "DATA_AVG", auto_monitor=True, kind=Kind.hinted)
