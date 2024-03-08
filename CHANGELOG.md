@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.3 (2024-03-08)
+
+### Fix
+
+* Fix type conversion for SimCamera uniform noise ([`238ecb5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/238ecb5ff84b55f028b75df32fccdc3685609d69))
+
 ## v0.25.2 (2024-03-08)
 
 ### Fix
