@@ -188,7 +188,9 @@ class SmaractController(Controller):
             return bool(int(return_val.split(",")[1]))
 
     def all_axes_referenced(self) -> bool:
-        return all(self.axis_is_referenced(ax) for ax in self._axis if ax is not None)
+        return all(
+            self.axis_is_referenced(ax.axis_Id_numeric) for ax in self._axis if ax is not None
+        )
 
     @retry_once
     @axis_checked
