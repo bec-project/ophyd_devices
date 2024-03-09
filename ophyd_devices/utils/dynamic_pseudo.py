@@ -5,8 +5,11 @@ This module provides a class for creating a pseudo signal that is computed from 
 from functools import reduce
 from typing import Callable
 
+from bec_lib import bec_logger
 from ophyd import SignalRO
 from ophyd.ophydobj import Kind
+
+logger = bec_logger.logger
 
 
 def rgetattr(obj, attr, *args):
@@ -40,7 +43,7 @@ class ComputedSignal(SignalRO):
         rtolerance=None,
         metadata=None,
         cl=None,
-        attr_name=""
+        attr_name="",
     ):
         super().__init__(
             name=name,
@@ -59,6 +62,7 @@ class ComputedSignal(SignalRO):
         self._input_signals = []
         self._signal_subs = []
         self._compute_method = None
+        self._compute_method_str = None
 
     def _signal_callback(self, *args, **kwargs):
         self._run_subs(sub_type=self.SUB_VALUE, old_value=None, value=self.get())
@@ -77,18 +81,22 @@ class ComputedSignal(SignalRO):
             >>> signal.compute_method = "def test(a, b): return a.get() + b.get()"
 
         """
-        return self._compute_method
+        return self._compute_method_str
 
     @compute_method.setter
     def compute_method(self, method: str):
+        logger.info(f"Updating compute method for {self.name}.")
+        method = method.strip()
         if not method.startswith("def"):
             raise ValueError("The compute method should be a string representation of a function")
 
         # get the function name
         function_name = method.split("(")[0].split(" ")[1]
+        method = method.replace(function_name, "user_compute_method")
+        self._compute_method_str = method
         # pylint: disable=exec-used
         exec(method)
-        self._compute_method = locals()[function_name]
+        self._compute_method = locals()["user_compute_method"]
 
     @property
     def input_signals(self):
@@ -124,7 +132,9 @@ class ComputedSignal(SignalRO):
         self._input_signals = signals
 
     def get(self):
-        if self.compute_method:
+        if self._compute_method:
             # pylint: disable=not-callable
-            return self.compute_method(*self.input_signals)
+            if self.input_signals:
+                return self._compute_method(*self.input_signals)
+            return self._compute_method()
         return None

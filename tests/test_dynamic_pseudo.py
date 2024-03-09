@@ -27,4 +27,6 @@ def test_computed_signal(device_manager_with_devices):
     signal.input_signals = ["a_readback", "b_readback"]
     assert signal.get() == 40
 
-    assert callable(signal.compute_method)
+    # pylint: disable=protected-access
+    assert callable(signal._compute_method)
+    assert signal._compute_method_str == "def user_compute_method(a, b): return a.get() + b.get()"
