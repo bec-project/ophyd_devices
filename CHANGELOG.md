@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.1 (2024-03-10)
+
+### Fix
+
+* Fixed dynamic pseudo ([`33e4458`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/33e4458c59cce44e93d9f3bae44ce41028688471))
+
 ## v0.26.0 (2024-03-08)
 
 ### Feature
