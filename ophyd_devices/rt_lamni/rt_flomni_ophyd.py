@@ -33,12 +33,14 @@ class RtFlomniController(RtController):
         "feedback_disable",
         "feedback_enable_without_reset",
         "feedback_enable_with_reset",
+        "feedback_is_running",
         "add_pos_to_scan",
         "clear_trajectory_generator",
         "show_cyclic_error_compensation",
         "laser_tracker_on",
         "laser_tracker_off",
         "laser_tracker_show_all",
+        "show_signal_strength_interferometer",
     ]
 
     def __init__(
@@ -103,6 +105,7 @@ class RtFlomniController(RtController):
         self.move_to_zero()
 
         if not self.slew_rate_limiters_on_target() or np.abs(self.pid_y()) > 0.1:
+            print("Please wait, slew rate limiters not on target.")
             logger.info("Please wait, slew rate limiters not on target.")
         while not self.slew_rate_limiters_on_target() or np.abs(self.pid_y()) > 0.1:
             time.sleep(0.05)
@@ -121,6 +124,9 @@ class RtFlomniController(RtController):
         fsamx.obj.controller.socket_put_confirmed("axspeed[4]=0.1*stppermm[4]")
         fsamx_in = fsamx.user_parameter.get("in")
         if not np.isclose(fsamx.obj.readback.get(), fsamx_in, atol=0.3):
+            print(
+                "Something is wrong. fsamx is very far from the samx_in position. Don't dare correct automatically."
+            )
             raise RtError(
                 "Something is wrong. fsamx is very far from the samx_in position. Don't dare correct automatically."
             )
@@ -135,6 +141,7 @@ class RtFlomniController(RtController):
         time.sleep(0.4)
 
         if not self.feedback_is_running():
+            print("Feedback is not running; likely an error in the interferometer.")
             raise RtError("Feedback is not running; likely an error in the interferometer.")
 
         time.sleep(1.5)
@@ -148,6 +155,7 @@ class RtFlomniController(RtController):
         self.set_device_enabled("fsamy", False)
         self.set_device_enabled("foptx", False)
         self.set_device_enabled("fopty", False)
+        print("rt feedback is now enabled.")
 
     def move_samx_to_scan_region(self, fovx: float, cenx: float):
         if self.rt_pid_voltage is None:
@@ -196,6 +204,7 @@ class RtFlomniController(RtController):
         time.sleep(0.01)
 
         if not self.feedback_is_running():
+            print("Feedback is not running; likely an error in the interferometer.")
             raise RtError("Feedback is not running; likely an error in the interferometer.")
 
         self.set_device_enabled("fsamx", False)
@@ -215,6 +224,7 @@ class RtFlomniController(RtController):
 
         fsamx = self.get_device_manager().devices.fsamx
         fsamx.obj.controller.socket_put_confirmed("axspeed[4]=025*stppermm[4]")
+        print("rt feedback is now disalbed.")
 
     def get_pid_x(self) -> float:
         voltage = float(self.socket_put_and_receive("g").strip())
@@ -228,10 +238,12 @@ class RtFlomniController(RtController):
             logger.info("Cyclic Error Compensation: y-axis is initialized")
         else:
             logger.info("Cyclic Error Compensation: y-axis is NOT initialized")
+            print("Cyclic Error Compensation: y-axis is NOT initialized")
         if cec1 == 32:
             logger.info("Cyclic Error Compensation: x-axis is initialized")
         else:
-            logger.info("Cyclic Error Compensation: y-axis is NOT initialized")
+            logger.info("Cyclic Error Compensation: x-axis is NOT initialized")
+            print("Cyclic Error Compensation: x-axis is NOT initialized")
 
     def set_rotation_angle(self, val: float) -> None:
         self.socket_put(f"a{val/180*np.pi}")
@@ -241,6 +253,7 @@ class RtFlomniController(RtController):
 
         if not self.tracker_info["enabled_z"] or not self.tracker_info["enabled_y"]:
             logger.info("Enabling the laser tracker. Please wait...")
+            print("Enabling the laser tracker. Please wait...")
 
             tracker_intensity = self.tracker_info["tracker_intensity"]
             if (
@@ -248,6 +261,7 @@ class RtFlomniController(RtController):
                 or tracker_intensity < self.tracker_info["threshold_intensity_z"]
             ):
                 logger.info(self.tracker_info)
+                print("The tracker cannot be enabled because the beam intensity it low.")
                 raise RtError("The tracker cannot be enabled because the beam intensity it low.")
 
             self.move_to_zero()
@@ -263,9 +277,12 @@ class RtFlomniController(RtController):
 
         self.laser_tracker_wait_on_target()
         logger.info("Laser tracker running!")
+        print("Laser tracker running!")
 
     def laser_tracker_off(self):
         self.socket_put("T0")
+        logger.info("Disabled the laser tracker")
+        print("Disabled the laser tracker")
 
     def laser_tracker_show_all(self):
         self.laser_update_tracker_info()
@@ -321,6 +338,7 @@ class RtFlomniController(RtController):
             time.sleep(0.5)
             count += 1
             if count > max_repeat:
+                print("Failed to reach laser target position.")
                 raise RtError("Failed to reach laser target position.")
 
     def slew_rate_limiters_on_target(self) -> bool:
@@ -530,6 +548,10 @@ class RtFlomniSetpointSignal(RtSetpointSignal):
 
         """
         if not self.parent.controller.feedback_is_running():
+            print(
+                "The interferometer feedback is not running. Either it is turned off or and"
+                " interferometer error occured."
+            )
             raise RtError(
                 "The interferometer feedback is not running. Either it is turned off or and"
                 " interferometer error occured."
