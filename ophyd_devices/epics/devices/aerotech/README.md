@@ -1,13 +1,6 @@
-
-
-
-
-
-
-
-
 ## Integration log for the Ophyd integration for the Aerotech Automation1 EPICS IOC
 
+This is a short collection of reverse engineered wisdom from integrating the first complex device to BEC. The integration involved both the ophyd part and the corresponding scan API. It might not be fully accurate and some issues are probably misdiagnosed.
 
 ## Avoid the safespace API!!!
 
@@ -28,9 +21,10 @@ The BEC has it's own event model, that's different from vanilla Bluesky. Particu
 
 What's more is that unless it's explicitly specified in the scan, **ALL** ophyd devices (even listeners) get staged and unstaged for every scan. This either makes device management mandatory or raises the need to explicitly prevent this in custom scans.
 
-### Scan server hangs
+### The BEC hangs or deadlocks
 
-Unfortunately a common behavior.
+Unfortunately a common behavior that manifests in . Common causes include the described issue with num_pos or raising an exception from the Ophyd layer. I'll expand this later.
+
 
 ### Class 
 
@@ -128,41 +122,6 @@ class ProggressMotor(EpicsMotor):
 calculated 
 
 Otherwise 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
