@@ -269,237 +269,235 @@ class AxisDataSignal:
     AuxiliaryFeedbackServo = 426
     DriveStackUsage = 427
     ShuntResistorTemperature = 436
-    
+
 
 class TaskDataSignal:
-   ProgramLineNumber = 17
-   CoordinatedFlags = 40
-   CoordinatedArcStartAngle = 53
-   CoordinatedArcEndAngle = 54
-   CoordinatedArcRadius = 55
-   CoordinatedArcRadiusError = 56
-   CoordinatedPositionCommand = 57
-   CoordinatedSpeedCommand = 58
-   CoordinatedAccelerationCommand = 59
-   CoordinatedTotalDistance = 60
-   CoordinatedPercentDone = 61
-   CoordinatedPositionCommandBackwardsDiff = 62
-   TaskParameter = 69
-   TaskError = 70
-   TaskWarning = 71
-   CoordinatedSpeedTargetActual = 86
-   DependentCoordinatedSpeedTargetActual = 87
-   ActiveFixtureOffset = 88
-   TaskStatus0 = 90
-   TaskStatus1 = 91
-   TaskStatus2 = 92
-   SpindleSpeedTarget = 93
-   CoordinateSystem1I = 96
-   CoordinateSystem1J = 97
-   CoordinateSystem1K = 98
-   CoordinateSystem1Plane = 99
-   ToolNumberActive = 100
-   Mfo = 101
-   CoordinatedSpeedTarget = 102
-   DependentCoordinatedSpeedTarget = 103
-   CoordinatedAccelerationRate = 104
-   CoordinatedDecelerationRate = 105
-   CoordinatedAccelerationTime = 106
-   CoordinatedDecelerationTime = 107
-   TaskMode = 108
-   TaskState = 117
-   TaskStateInternal = 118
-   ExecutionMode = 121
-   EnableAlignmentAxes = 127
-   CoordinatedGalvoLaserOutput = 133
-   CoordinatedMotionRate = 145
-   CoordinatedTaskCommand = 146
-   EnableState = 166
-   LookaheadMovesExamined = 200
-   ProfileControlMask = 231
-   CoordinatedArcRadiusReciprocal = 253
-   MotionEngineStage = 254
-   CoordinatedTimeScale = 256
-   CoordinatedTimeScaleDerivative = 257
-   IfovSpeedScale = 266
-   IfovSpeedScaleAverage = 267
-   IfovGenerationFrameCounter = 268
-   IfovGenerationTimeOriginal = 269
-   IfovGenerationTimeModified = 270
-   IfovCoordinatedPositionCommand = 271
-   IfovCoordinatedSpeedCommand = 272
-   IfovCenterPointH = 276
-   IfovCenterPointV = 277
-   IfovTrajectoryCount = 278
-   IfovTrajectoryIndex = 279
-   IfovAttemptCode = 280
-   IfovGenerationFrameIndex = 281
-   IfovMaximumVelocity = 282
-   IfovIdealVelocity = 283
-   TaskInternalDebug = 284
-   IfovCoordinatedAccelerationCommand = 285
-   IfovFovPositionH = 286
-   IfovFovPositionV = 287
-   IfovFovDimensionH = 288
-   IfovFovDimensionV = 289
-   MotionBufferElements = 311
-   MotionBufferMoves = 312
-   MotionLineNumber = 313
-   MotionBufferRetraceMoves = 314
-   MotionBufferRetraceElements = 315
-   MotionBufferIndex = 316
-   MotionBufferIndexLookahead = 317
-   MotionBufferProcessingBlocked = 318
-   ActiveMoveValid = 319
-   TaskExecutionLines = 320
-   SchedulerTaskHolds = 321
-   SchedulerProgramLoopRuns = 322
-   SchedulerTaskBlocked = 323
-   CriticalSectionsActive = 324
-   AxesSlowdownReason = 331
-   TaskExecutionTime = 333
-   TaskExecutionTimeMaximum = 334
-   TaskExecutionLinesMaximum = 335
-   LookaheadDecelReason = 338
-   LookaheadDecelMoves = 339
-   LookaheadDecelDistance = 340
-   ProgramCounter = 341
-   StackPointer = 342
-   FramePointer = 343
-   StringStackPointer = 344
-   ProgramLineNumberSourceFileId = 349
-   MotionLineNumberSourceFileId = 350
-   ProgramLineNumberSourcePathId = 351
-   MotionLineNumberSourcePathId = 352
-   StringArgumentStackPointer = 354
-   CoordinatedAccelerationSCurvePercentage = 369
-   CoordinatedDecelerationSCurvePercentage = 370
-   DependentCoordinatedAccelerationRate = 373
-   DependentCoordinatedDecelerationRate = 374
-   CriticalSectionTimeout = 375
-   CommandQueueCapacity = 421
-   CommandQueueUnexecutedCount = 422
-   CommandQueueTimesEmptied = 423
-   CommandQueueExecutedCount = 424
-
-
-
+    ProgramLineNumber = 17
+    CoordinatedFlags = 40
+    CoordinatedArcStartAngle = 53
+    CoordinatedArcEndAngle = 54
+    CoordinatedArcRadius = 55
+    CoordinatedArcRadiusError = 56
+    CoordinatedPositionCommand = 57
+    CoordinatedSpeedCommand = 58
+    CoordinatedAccelerationCommand = 59
+    CoordinatedTotalDistance = 60
+    CoordinatedPercentDone = 61
+    CoordinatedPositionCommandBackwardsDiff = 62
+    TaskParameter = 69
+    TaskError = 70
+    TaskWarning = 71
+    CoordinatedSpeedTargetActual = 86
+    DependentCoordinatedSpeedTargetActual = 87
+    ActiveFixtureOffset = 88
+    TaskStatus0 = 90
+    TaskStatus1 = 91
+    TaskStatus2 = 92
+    SpindleSpeedTarget = 93
+    CoordinateSystem1I = 96
+    CoordinateSystem1J = 97
+    CoordinateSystem1K = 98
+    CoordinateSystem1Plane = 99
+    ToolNumberActive = 100
+    Mfo = 101
+    CoordinatedSpeedTarget = 102
+    DependentCoordinatedSpeedTarget = 103
+    CoordinatedAccelerationRate = 104
+    CoordinatedDecelerationRate = 105
+    CoordinatedAccelerationTime = 106
+    CoordinatedDecelerationTime = 107
+    TaskMode = 108
+    TaskState = 117
+    TaskStateInternal = 118
+    ExecutionMode = 121
+    EnableAlignmentAxes = 127
+    CoordinatedGalvoLaserOutput = 133
+    CoordinatedMotionRate = 145
+    CoordinatedTaskCommand = 146
+    EnableState = 166
+    LookaheadMovesExamined = 200
+    ProfileControlMask = 231
+    CoordinatedArcRadiusReciprocal = 253
+    MotionEngineStage = 254
+    CoordinatedTimeScale = 256
+    CoordinatedTimeScaleDerivative = 257
+    IfovSpeedScale = 266
+    IfovSpeedScaleAverage = 267
+    IfovGenerationFrameCounter = 268
+    IfovGenerationTimeOriginal = 269
+    IfovGenerationTimeModified = 270
+    IfovCoordinatedPositionCommand = 271
+    IfovCoordinatedSpeedCommand = 272
+    IfovCenterPointH = 276
+    IfovCenterPointV = 277
+    IfovTrajectoryCount = 278
+    IfovTrajectoryIndex = 279
+    IfovAttemptCode = 280
+    IfovGenerationFrameIndex = 281
+    IfovMaximumVelocity = 282
+    IfovIdealVelocity = 283
+    TaskInternalDebug = 284
+    IfovCoordinatedAccelerationCommand = 285
+    IfovFovPositionH = 286
+    IfovFovPositionV = 287
+    IfovFovDimensionH = 288
+    IfovFovDimensionV = 289
+    MotionBufferElements = 311
+    MotionBufferMoves = 312
+    MotionLineNumber = 313
+    MotionBufferRetraceMoves = 314
+    MotionBufferRetraceElements = 315
+    MotionBufferIndex = 316
+    MotionBufferIndexLookahead = 317
+    MotionBufferProcessingBlocked = 318
+    ActiveMoveValid = 319
+    TaskExecutionLines = 320
+    SchedulerTaskHolds = 321
+    SchedulerProgramLoopRuns = 322
+    SchedulerTaskBlocked = 323
+    CriticalSectionsActive = 324
+    AxesSlowdownReason = 331
+    TaskExecutionTime = 333
+    TaskExecutionTimeMaximum = 334
+    TaskExecutionLinesMaximum = 335
+    LookaheadDecelReason = 338
+    LookaheadDecelMoves = 339
+    LookaheadDecelDistance = 340
+    ProgramCounter = 341
+    StackPointer = 342
+    FramePointer = 343
+    StringStackPointer = 344
+    ProgramLineNumberSourceFileId = 349
+    MotionLineNumberSourceFileId = 350
+    ProgramLineNumberSourcePathId = 351
+    MotionLineNumberSourcePathId = 352
+    StringArgumentStackPointer = 354
+    CoordinatedAccelerationSCurvePercentage = 369
+    CoordinatedDecelerationSCurvePercentage = 370
+    DependentCoordinatedAccelerationRate = 373
+    DependentCoordinatedDecelerationRate = 374
+    CriticalSectionTimeout = 375
+    CommandQueueCapacity = 421
+    CommandQueueUnexecutedCount = 422
+    CommandQueueTimesEmptied = 423
+    CommandQueueExecutedCount = 424
 
 
 class SystemDataSignal:
-   VirtualBinaryInput = 46
-   VirtualBinaryOutput = 47
-   VirtualRegisterInput = 48
-   VirtualRegisterOutput = 49
-   Timer = 51
-   TimerPerformance = 52
-   GlobalReal = 67
-   CommunicationRealTimeErrors = 81
-   LibraryCommand = 119
-   DataCollectionSampleTime = 120
-   DataCollectionSampleIndex = 129
-   ModbusClientConnected = 134
-   ModbusServerConnected = 135
-   ModbusClientError = 136
-   ModbusServerError = 137
-   StopWatchTimer = 157
-   ScopetrigId = 163
-   EstimatedProcessorUsage = 177
-   DataCollectionStatus = 188
-   SignalLogState = 198
-   SafeZoneViolationMask = 207
-   SafeZoneActiveMask = 229
-   ModbusClientInputWords = 240
-   ModbusClientOutputWords = 241
-   ModbusClientInputBits = 242
-   ModbusClientOutputBits = 243
-   ModbusClientOutputBitsStatus = 244
-   ModbusClientOutputWordsStatus = 245
-   ModbusServerInputWords = 246
-   ModbusServerOutputWords = 247
-   ModbusServerInputBits = 248
-   ModbusServerOutputBits = 249
-   SystemParameter = 265
-   ThermoCompSensorTemperature = 305
-   ThermoCompControllingTemperature = 306
-   ThermoCompCompensatingTemperature = 307
-   ThermoCompStatus = 308
-   GlobalInteger = 345
-   AliveAxesMask = 348
-   SignalLogPointsStored = 377
-   ControllerInitializationWarning = 379
-   StopWatchTimerMin = 416
-   StopWatchTimerMax = 417
-   StopWatchTimerAvg = 418
-   EthercatEnabled = 428
-   EthercatError = 429
-   EthercatTxPdo = 430
-   EthercatTxPdoSize = 431
-   EthercatRxPdo = 432
-   EthercatRxPdoSize = 433
-   EthercatState = 437
-   ModbusClientEnabled = 438
-   ModbusServerEnabled = 439
-    
-    
-    
-class DataCollectionFrequency:
-	Undefined = 0
-	Fixed1kHz = 1
-	Fixed10kHz = 2
-	Fixed20kHz = 3
-	Fixed100kHz = 4
-	Fixed200kHz = 5
+    VirtualBinaryInput = 46
+    VirtualBinaryOutput = 47
+    VirtualRegisterInput = 48
+    VirtualRegisterOutput = 49
+    Timer = 51
+    TimerPerformance = 52
+    GlobalReal = 67
+    CommunicationRealTimeErrors = 81
+    LibraryCommand = 119
+    DataCollectionSampleTime = 120
+    DataCollectionSampleIndex = 129
+    ModbusClientConnected = 134
+    ModbusServerConnected = 135
+    ModbusClientError = 136
+    ModbusServerError = 137
+    StopWatchTimer = 157
+    ScopetrigId = 163
+    EstimatedProcessorUsage = 177
+    DataCollectionStatus = 188
+    SignalLogState = 198
+    SafeZoneViolationMask = 207
+    SafeZoneActiveMask = 229
+    ModbusClientInputWords = 240
+    ModbusClientOutputWords = 241
+    ModbusClientInputBits = 242
+    ModbusClientOutputBits = 243
+    ModbusClientOutputBitsStatus = 244
+    ModbusClientOutputWordsStatus = 245
+    ModbusServerInputWords = 246
+    ModbusServerOutputWords = 247
+    ModbusServerInputBits = 248
+    ModbusServerOutputBits = 249
+    SystemParameter = 265
+    ThermoCompSensorTemperature = 305
+    ThermoCompControllingTemperature = 306
+    ThermoCompCompensatingTemperature = 307
+    ThermoCompStatus = 308
+    GlobalInteger = 345
+    AliveAxesMask = 348
+    SignalLogPointsStored = 377
+    ControllerInitializationWarning = 379
+    StopWatchTimerMin = 416
+    StopWatchTimerMax = 417
+    StopWatchTimerAvg = 418
+    EthercatEnabled = 428
+    EthercatError = 429
+    EthercatTxPdo = 430
+    EthercatTxPdoSize = 431
+    EthercatRxPdo = 432
+    EthercatRxPdoSize = 433
+    EthercatState = 437
+    ModbusClientEnabled = 438
+    ModbusServerEnabled = 439
 
-    
+
+class DataCollectionFrequency:
+    Undefined = 0
+    Fixed1kHz = 1
+    Fixed10kHz = 2
+    Fixed20kHz = 3
+    Fixed100kHz = 4
+    Fixed200kHz = 5
+
+
 class DataCollectionMode:
-	Snapshot = 0
-	Continouous = 1
+    Snapshot = 0
+    Continouous = 1
 
 
 # Specifies the PSO distance input settings for the XC4e drive.
 class PsoDistanceInput:
-	XC4PrimaryFeedback = 130
-	XC4AuxiliaryFeedback = 131
-	XC4SyncPortA = 132
-	XC4SyncPortB = 133
-	XC4DrivePulseStream = 134
-	XC4ePrimaryFeedback = 135
-	XC4eAuxiliaryFeedback = 136
-	XC4eSyncPortA = 137
-	XC4eSyncPortB = 138
-	XC4eDrivePulseStream = 139
-    
-    
+    XC4PrimaryFeedback = 130
+    XC4AuxiliaryFeedback = 131
+    XC4SyncPortA = 132
+    XC4SyncPortB = 133
+    XC4DrivePulseStream = 134
+    XC4ePrimaryFeedback = 135
+    XC4eAuxiliaryFeedback = 136
+    XC4eSyncPortA = 137
+    XC4eSyncPortB = 138
+    XC4eDrivePulseStream = 139
+
+
 class PsoWindowInput:
-	XC4PrimaryFeedback = 130
-	XC4AuxiliaryFeedback = 131
-	XC4SyncPortA = 132
-	XC4SyncPortB = 133
-	XC4DrivePulseStream = 134
-	XC4ePrimaryFeedback = 135
-	XC4eAuxiliaryFeedback = 136
-	XC4eSyncPortA = 137
-	XC4eSyncPortB = 138
-	XC4eDrivePulseStream = 139
-	XL5ePrimaryFeedback = 145,
-	XL5eAuxiliaryFeedback = 146,
-	XL5eSyncPortA = 147,
-	XL5eSyncPortB = 148,
-	XL5eDrivePulseStream = 149,
+    XC4PrimaryFeedback = 130
+    XC4AuxiliaryFeedback = 131
+    XC4SyncPortA = 132
+    XC4SyncPortB = 133
+    XC4DrivePulseStream = 134
+    XC4ePrimaryFeedback = 135
+    XC4eAuxiliaryFeedback = 136
+    XC4eSyncPortA = 137
+    XC4eSyncPortB = 138
+    XC4eDrivePulseStream = 139
+    XL5ePrimaryFeedback = (145,)
+    XL5eAuxiliaryFeedback = (146,)
+    XL5eSyncPortA = (147,)
+    XL5eSyncPortB = (148,)
+    XL5eDrivePulseStream = (149,)
+
 
 # @brief Specifies the PSO output pin settings for each drive.
 class XC4ePsoOutputPin:
-	DedicatedOutput = 111
-	AuxiliaryMarkerDifferential = 112
-	AuxiliaryMarkerSingleEnded = 113
-    
+    DedicatedOutput = 111
+    AuxiliaryMarkerDifferential = 112
+    AuxiliaryMarkerSingleEnded = 113
+
+
 class XC4PsoOutputPin:
-	DedicatedOutput = 108
-	AuxiliaryMarkerDifferential = 109
-	AuxiliaryMarkerSingleEnded = 110
-    
-    
+    DedicatedOutput = 108
+    AuxiliaryMarkerDifferential = 109
+    AuxiliaryMarkerSingleEnded = 110
+
+
 """
 # @brief Specifies the PSO distance input settings for each drive.
 class Automation1PsoDistanceInput:
@@ -834,81 +832,70 @@ class Automation1PsoOutputPin:
 
 
 class DriveDataCaptureInput:
-	PositionCommand = 0
-	PrimaryFeedback = 1
-	AuxiliaryFeedback = 2
-	AnalogInput0 = 3
-	AnalogInput1 = 4
-	AnalogInput2 = 5
-	AnalogInput3 = 6
+    PositionCommand = 0
+    PrimaryFeedback = 1
+    AuxiliaryFeedback = 2
+    AnalogInput0 = 3
+    AnalogInput1 = 4
+    AnalogInput2 = 5
+    AnalogInput3 = 6
 
 
 class DriveDataCaptureTrigger:
-	PsoOutput = 0
-	PsoEvent = 1
-	HighSpeedInput0RisingEdge = 2
-	HighSpeedInput0FallingEdge = 3
-	HighSpeedInput1RisingEdge = 4
-	HighSpeedInput1FallingEdge = 5
-	AuxiliaryMarkerRisingEdge = 6
-	AuxiliaryMarkerFallingEdge = 7
-
-
+    PsoOutput = 0
+    PsoEvent = 1
+    HighSpeedInput0RisingEdge = 2
+    HighSpeedInput0FallingEdge = 3
+    HighSpeedInput1RisingEdge = 4
+    HighSpeedInput1FallingEdge = 5
+    AuxiliaryMarkerRisingEdge = 6
+    AuxiliaryMarkerFallingEdge = 7
 
 
 class PsoOutputPin:
-	GL4None = 100,
-	GL4LaserOutput0 = 101,
-	XL4sNone = 102,
-	XL4sLaserOutput0 = 103,
-	XR3None = 104,
-	XR3PsoOutput1 = 105,
-	XR3PsoOutput2 = 106,
-	XR3PsoOutput3 = 107,
-	XC4DedicatedOutput = 108,
-	XC4AuxiliaryMarkerDifferential = 109,
-	XC4AuxiliaryMarkerSingleEnded = 110,
-	XC4eDedicatedOutput = 111,
-	XC4eAuxiliaryMarkerDifferential = 112,
-	XC4eAuxiliaryMarkerSingleEnded = 113,
-	XC6eDedicatedOutput = 114,
-	XC6eAuxiliaryMarkerDifferential = 115,
-	XC6eAuxiliaryMarkerSingleEnded = 116,
-	XL5eDedicatedOutput = 117,
-	XL5eAuxiliaryMarkerDifferential = 118,
-	XL5eAuxiliaryMarkerSingleEnded = 119,
-	XC2DedicatedOutput = 120,
-	XC2eDedicatedOutput = 121,
-	XL2eDedicatedOutput = 122,
-	XI4DedicatedOutput = 123,
-	iXC4DedicatedOutput = 124,
-	iXC4AuxiliaryMarkerDifferential = 125,
-	iXC4AuxiliaryMarkerSingleEnded = 126,
-	iXC4eDedicatedOutput = 127,
-	iXC4eAuxiliaryMarkerDifferential = 128,
-	iXC4eAuxiliaryMarkerSingleEnded = 129,
-	iXC6eDedicatedOutput = 130,
-	iXC6eAuxiliaryMarkerDifferential = 131,
-	iXC6eAuxiliaryMarkerSingleEnded = 132,
-	iXL5eDedicatedOutput = 133,
-	iXL5eAuxiliaryMarkerDifferential = 134,
-	iXL5eAuxiliaryMarkerSingleEnded = 135,
-	iXR3None = 136,
-	iXR3PsoOutput1 = 137,
-	iXR3PsoOutput2 = 138,
-	iXR3PsoOutput3 = 139,
-	GI4None = 140,
-	GI4LaserOutput0 = 141,
-	iXC2DedicatedOutput = 142,
-	iXC2eDedicatedOutput = 143,
-	iXL2eDedicatedOutput = 144,
-	iXI4DedicatedOutput = 145,
-    
-    
-    
-    
-    
-    
-    
-    
-
+    GL4None = (100,)
+    GL4LaserOutput0 = (101,)
+    XL4sNone = (102,)
+    XL4sLaserOutput0 = (103,)
+    XR3None = (104,)
+    XR3PsoOutput1 = (105,)
+    XR3PsoOutput2 = (106,)
+    XR3PsoOutput3 = (107,)
+    XC4DedicatedOutput = (108,)
+    XC4AuxiliaryMarkerDifferential = (109,)
+    XC4AuxiliaryMarkerSingleEnded = (110,)
+    XC4eDedicatedOutput = (111,)
+    XC4eAuxiliaryMarkerDifferential = (112,)
+    XC4eAuxiliaryMarkerSingleEnded = (113,)
+    XC6eDedicatedOutput = (114,)
+    XC6eAuxiliaryMarkerDifferential = (115,)
+    XC6eAuxiliaryMarkerSingleEnded = (116,)
+    XL5eDedicatedOutput = (117,)
+    XL5eAuxiliaryMarkerDifferential = (118,)
+    XL5eAuxiliaryMarkerSingleEnded = (119,)
+    XC2DedicatedOutput = (120,)
+    XC2eDedicatedOutput = (121,)
+    XL2eDedicatedOutput = (122,)
+    XI4DedicatedOutput = (123,)
+    iXC4DedicatedOutput = (124,)
+    iXC4AuxiliaryMarkerDifferential = (125,)
+    iXC4AuxiliaryMarkerSingleEnded = (126,)
+    iXC4eDedicatedOutput = (127,)
+    iXC4eAuxiliaryMarkerDifferential = (128,)
+    iXC4eAuxiliaryMarkerSingleEnded = (129,)
+    iXC6eDedicatedOutput = (130,)
+    iXC6eAuxiliaryMarkerDifferential = (131,)
+    iXC6eAuxiliaryMarkerSingleEnded = (132,)
+    iXL5eDedicatedOutput = (133,)
+    iXL5eAuxiliaryMarkerDifferential = (134,)
+    iXL5eAuxiliaryMarkerSingleEnded = (135,)
+    iXR3None = (136,)
+    iXR3PsoOutput1 = (137,)
+    iXR3PsoOutput2 = (138,)
+    iXR3PsoOutput3 = (139,)
+    GI4None = (140,)
+    GI4LaserOutput0 = (141,)
+    iXC2DedicatedOutput = (142,)
+    iXC2eDedicatedOutput = (143,)
+    iXL2eDedicatedOutput = (144,)
+    iXI4DedicatedOutput = (145,)
