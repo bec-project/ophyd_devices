@@ -1,7 +1,7 @@
 # This file is a template, and might need editing before it works on your project.
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: $CI_DOCKER_REGISTRY/python:3.9
+image: $CI_DOCKER_REGISTRY/python:3.10
 
 workflow:
   rules:
@@ -87,7 +87,7 @@ pytest:
   script:
     - pip install coverage
     - coverage run --source=./ophyd_devices -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
-    - coverage report 
+    - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
@@ -97,22 +97,16 @@ pytest:
         coverage_format: cobertura
         path: coverage.xml
 
-tests-3.10:
+tests-3.11:
   stage: AdditionalTests
-  image: $CI_DOCKER_REGISTRY/python:3.10
+  image: $CI_DOCKER_REGISTRY/python:3.11
   needs: ["pytest"]
   script:
     - pytest -v --random-order ./tests
   allow_failure: true
 
-tests-3.11:
-  extends: "tests-3.10"
-  stage: AdditionalTests
-  image: $CI_DOCKER_REGISTRY/python:3.11
-  allow_failure: true
-
 tests-3.12:
-  extends: "tests-3.10"
+  extends: "tests-3.11"
   stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.12
   allow_failure: true
@@ -121,6 +115,8 @@ trigger_bec:
   trigger:
     project: bec/bec
     strategy: depend
+  variables:
+    OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
@@ -144,10 +140,10 @@ semver:
     - export REPOSITORY_USERNAME=__token__
     - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
     - >
-      semantic-release publish -v DEBUG 
-      -D version_variable=./setup.py:__version__ 
-      -D hvcs=gitlab 
-      
+      semantic-release publish -v DEBUG
+      -D version_variable=./setup.py:__version__
+      -D hvcs=gitlab
+
   allow_failure: false
   rules:
     - if: '$CI_COMMIT_REF_NAME == "master"'

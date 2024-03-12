@@ -62,6 +62,18 @@ class FuprGalilReadbackSignal(GalilReadbackSignal):
         step_mm = self.parent.motor_resolution.get()
         return current_pos / step_mm
 
+    def read(self):
+        self._metadata["timestamp"] = time.time()
+        val = super().read()
+        if self.parent.axis_Id_numeric == 0:
+            try:
+                rt = self.parent.device_manager.devices[self.parent.rt]
+                if rt.enabled:
+                    rt.obj.controller.set_rotation_angle(val[self.parent.name]["value"])
+            except KeyError:
+                logger.warning("Failed to set RT value during readback.")
+        return val
+
 
 class FuprGalilSetpointSignal(GalilSetpointSignal):
     @retry_once
@@ -107,11 +119,7 @@ class FuprGalilAxesReferenced(GalilAxesReferenced):
 class FuprGalilMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
     MOTOR_RESOLUTION = 25600
-    readback = Cpt(
-        GalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(FuprGalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(FuprGalilSetpointSignal, signal_name="setpoint")
     motor_resolution = Cpt(FuprGalilMotorResolution, signal_name="resolution", kind="config")
     motor_is_moving = Cpt(FuprGalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
@@ -157,7 +165,7 @@ class FuprGalilMotor(Device, PositionerBase):
             raise BECConfigError(
                 "device_mapping has been specified but the device_manager cannot be accessed."
             )
-        self.rt = self.device_mapping.get("rt")
+        self.rt = self.device_mapping.get("rt", "rtx")
 
         super().__init__(
             prefix,
@@ -246,18 +254,10 @@ class FuprGalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")
@@ -316,31 +316,3 @@ class FuprGalilMotor(Device, PositionerBase):
     def stop(self, *, success=False):
         self.controller.stop_all_axes()
         return super().stop(success=success)
-
-
-# if __name__ == "__main__":
-#     mock = False
-#     if not mock:
-#         leyey = GalilMotor("H", name="leyey", host="mpc2680.psi.ch", port=8081, sign=-1)
-#         leyey.stage()
-#         status = leyey.move(0, wait=True)
-#         status = leyey.move(10, wait=True)
-#         leyey.read()
-
-#         leyey.get()
-#         leyey.describe()
-
-#         leyey.unstage()
-#     else:
-#         from ophyd_devices.utils.socket import SocketMock
-
-#         leyex = GalilMotor(
-#             "G", name="leyex", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
-#         )
-#         leyey = GalilMotor(
-#             "H", name="leyey", host="mpc2680.psi.ch", port=8081, socket_cls=SocketMock
-#         )
-#         leyex.stage()
-#         # leyey.stage()
-
-#         leyex.controller.galil_show_all()

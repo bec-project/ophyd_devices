@@ -57,10 +57,6 @@ class Controller(OphydObject):
         labels=None,
         kind=None,
     ):
-        self.sock = None
-        self._socket_cls = socket_cls
-        self._socket_host = socket_host
-        self._socket_port = socket_port
         if not self._initialized:
             super().__init__(
                 name=name, attr_name=attr_name, parent=parent, labels=labels, kind=kind
@@ -69,6 +65,10 @@ class Controller(OphydObject):
             self._axis = []
             self._initialize()
             self._initialized = True
+            self.sock = None
+            self._socket_cls = socket_cls
+            self._socket_host = socket_host
+            self._socket_port = socket_port
 
     def _initialize(self):
         self._connected = False
@@ -133,7 +133,7 @@ class Controller(OphydObject):
 
     def off(self) -> None:
         """Close the socket connection to the controller"""
-        if self.connected or self.sock is not None:
+        if self.connected and self.sock is not None:
             self.sock.close()
             self.connected = False
             self.sock = None

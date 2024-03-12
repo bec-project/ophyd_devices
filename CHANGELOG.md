@@ -2,6 +2,137 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.1 (2024-03-10)
+
+### Fix
+
+* Fixed dynamic pseudo ([`33e4458`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/33e4458c59cce44e93d9f3bae44ce41028688471))
+
+## v0.26.0 (2024-03-08)
+
+### Feature
+
+* Added computed signal ([`d9f09b0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d9f09b0d866f97a859c9b437474928e7a9e8c1b6))
+
+### Documentation
+
+* Improved doc strings for computed signal ([`c68c3c1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c68c3c1b54ecff2c51417168ee3e91b4056831fc))
+
+## v0.25.3 (2024-03-08)
+
+### Fix
+
+* Fix type conversion for SimCamera uniform noise ([`238ecb5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/238ecb5ff84b55f028b75df32fccdc3685609d69))
+
+## v0.25.2 (2024-03-08)
+
+### Fix
+
+* **smaract:** Added user access for axis_is_referenced and all_axes_referenced ([`4fbba73`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4fbba7393adbb01ebf80667b205a1dbaab9bb15c))
+* **smaract:** Fixed axes_referenced ([`a9f58d2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9f58d2b5686370a07766ed72903f82f5e2d9cb1))
+
+## v0.25.1 (2024-03-05)
+
+### Fix
+
+* Device_status should use set ([`6d179ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6d179ea8a8e41374cfe2b92939e0b71b7962f7cb))
+* Device_read should use set_and_publish ([`afd7912`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/afd7912329b14bc916e14fd565ebcf7506ecb045))
+
+## v0.25.0 (2024-03-04)
+
+### Feature
+
+* Add proxy for h5 image replay for SimCamera ([`5496b59`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5496b59ae2254495845a0fae2754cdd935b4fb7b))
+
+### Fix
+
+* Add dependency for env ([`eb4e10e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/eb4e10e86bba9b55623d089572f104d21d96601e))
+* Fix bug in computation of negative data within SimMonitor ([`f4141f0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f4141f0dbf8d98f1d1591c66ccd147099019afc7))
+
+## v0.24.2 (2024-03-01)
+
+### Fix
+
+* Sim_monitor negative readback fixed ([`91e587b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/91e587b09271a436e7405c44dda60ea4b536865b))
+
+## v0.24.1 (2024-02-26)
+
+### Fix
+
+* SimCamera return uint16, SimMonitor uint32 ([`dc9634b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/dc9634b73988b5c3cd430008eac5c94319b33ae1))
+
+## v0.24.0 (2024-02-23)
+
+### Feature
+
+* Add lmfit for SimMonitor, refactored sim_data with baseclass, introduce slitproxy ([`800c22e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/800c22e9592e288f8fe8dea2fb572b81742c6841))
+
+### Fix
+
+* Extend bec_device with root, parent, kind ([`db00803`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/db00803f539791ceefd5f4f0424b00c0e2ae91e6))
+
+### Documentation
+
+* Added doc strings ([`2da6379`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2da6379e8eb346d856a68a8e5bc678dfff5b1600))
+
+## v0.23.1 (2024-02-21)
+
+### Fix
+
+* Replaced outdated enable_set by read_only ([`f91d0c4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f91d0c482d194e5f69c7206d0f6ad0971f84b0e1))
+
+## v0.23.0 (2024-02-21)
+
+### Feature
+
+* **static_device_test:** Added check against BECDeviceBase protocol ([`82cfefb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/82cfefb3b969f0fdebc357f8bd5b404ec503d7ce))
+
+### Fix
+
+* Separate BECDevice and BECDeviceBase ([`2f2cef1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f2cef10f7fb77e502cbf274a6b350f2feb0ad22))
+
+## v0.22.0 (2024-02-17)
+
+### Feature
+
+* Add simulation framework for pinhole scan ([`491e105`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/491e105af0871449cd0f48b08c126023aa28445b))
+* Extend sim_data to allow execution from function of secondary devices extracted from lookup ([`851a088`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/851a088b81cfd7e9d323955f923174a394155bfd))
+
+## v0.21.1 (2024-02-17)
+
+### Fix
+
+* **deprecation:** Remove all remaining .dumps(), .loads() and producer->connector ([`4159f3e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4159f3e3ec20727b395808118f3c0c166d9d1c0c))
+
+## v0.21.0 (2024-02-16)
+
+### Feature
+
+* **galil:** Added lights on/off ([`366f592`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/366f592e08a4cb50ddae7b3f8ba3aa214574f61f))
+* Flomni stages ([`5e9d3ae`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5e9d3aed17ce02142f12ba69ea562d6c30b41ae3))
+* Flomni stages ([`b808659`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b808659d4d8b1af262d6f62174b027b0736a005a))
+
+### Fix
+
+* Fixed import after rebase conflict ([`747aa36`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/747aa36837fa823cd2f05e294e2ee9ee83074f43))
+* Online changes during flomni comm ([`4760456`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4760456e6318b66fa26f35205f669dbbf7d0e777))
+
+## v0.20.1 (2024-02-13)
+
+### Fix
+
+* Use getpass.getuser instead of os.getlogin to retrieve user name ([`bd42d9d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd42d9d56093316f4a9f90a3329b6b5a6d1c851e))
+
+## v0.20.0 (2024-02-13)
+
+### Feature
+
+* Add BECDeviceBase to ophyd_devices.utils ([`8ee5022`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ee502242457f3ac63c122f81e7600e300fdf73a))
+
+### Fix
+
+* Separated core simulation classes from additional devices ([`2225daf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2225dafb7438f576d7033e220910b4cf8769fd33))
+
 ## v0.19.3 (2024-02-10)
 
 ### Fix

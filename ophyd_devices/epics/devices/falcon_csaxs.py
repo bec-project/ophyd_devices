@@ -244,20 +244,20 @@ class FalconSetup(CustomDetectorMixin):
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
         """
-        pipe = self.parent.producer.pipeline()
+        pipe = self.parent.connector.pipeline()
         if successful is None:
             msg = messages.FileMessage(file_path=self.parent.filepath, done=done)
         else:
             msg = messages.FileMessage(
                 file_path=self.parent.filepath, done=done, successful=successful
             )
-        self.parent.producer.set_and_publish(
+        self.parent.connector.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
-            msg.dumps(),
+            msg,
             pipe=pipe,
         )
-        self.parent.producer.set_and_publish(
-            MessageEndpoints.file_event(self.parent.name), msg.dumps(), pipe=pipe
+        self.parent.connector.set_and_publish(
+            MessageEndpoints.file_event(self.parent.name), msg, pipe=pipe
         )
         pipe.execute()
 

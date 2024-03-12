@@ -6,7 +6,7 @@ from bec_lib.device import DeviceStatus
 from bec_lib.file_utils import FileWriterMixin
 from ophyd import Device
 from ophyd.device import Staged
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 
@@ -228,7 +228,7 @@ class PSIDetectorBase(Device):
             self.device_manager = bec_utils.DMMock()
             base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
             self.service_cfg = {"base_path": os.path.expanduser(base_path)}
-        self.producer = self.device_manager.producer
+        self.connector = self.device_manager.connector
         self._update_scaninfo()
         self._update_filewriter()
         self._init()

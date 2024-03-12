@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = "0.19.3"
+__version__ = "0.26.1"
 
 if __name__ == "__main__":
     setup(
@@ -14,6 +14,8 @@ if __name__ == "__main__":
             "std_daq_client",
             "pyepics",
             "pytest",
+            "h5py",
+            "hdf5plugin",
         ],
         extras_require={"dev": ["pytest", "pytest-random-order", "black", "coverage"]},
         package_data={"ophyd_devices.smaract": ["smaract_sensors.json"]},

@@ -136,8 +136,8 @@ class MCSSetup(CustomDetectorMixin):
         msg = messages.DeviceMessage(
             signals=dict(self.mca_data),
             metadata=self.parent.scaninfo.scan_msg.metadata,
-        ).dumps()
-        self.parent.producer.xadd(
+        )
+        self.parent.connector.xadd(
             topic=MessageEndpoints.device_async_readback(
                 scanID=self.parent.scaninfo.scanID, device=self.parent.name
             ),

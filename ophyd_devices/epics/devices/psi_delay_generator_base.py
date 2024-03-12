@@ -11,7 +11,7 @@ from ophyd.pseudopos import (
 )
 from ophyd.device import Staged
 
-from ophyd_devices.epics.devices.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils import bec_utils
 
 from bec_lib import bec_logger
@@ -391,7 +391,7 @@ class PSIDelayGeneratorBase(Device):
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-        self.producer = self.device_manager.producer
+        self.connector = self.device_manager.connector
         self._update_scaninfo()
         self._init()
 

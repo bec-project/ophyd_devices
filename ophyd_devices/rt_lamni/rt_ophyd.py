@@ -1,6 +1,7 @@
 import functools
 import threading
 import time
+from typing import List
 
 import numpy as np
 from bec_lib import MessageEndpoints, bec_logger, messages
@@ -15,11 +16,11 @@ from ophyd_devices.utils.socket import SocketIO, SocketSignal, raise_if_disconne
 logger = bec_logger.logger
 
 
-class RtLamniCommunicationError(Exception):
+class RtCommunicationError(Exception):
     pass
 
 
-class RtLamniError(Exception):
+class RtError(Exception):
     pass
 
 
@@ -34,14 +35,15 @@ def retry_once(fcn):
     def wrapper(self, *args, **kwargs):
         try:
             val = fcn(self, *args, **kwargs)
-        except (RtLamniCommunicationError, RtLamniError):
+        except (RtCommunicationError, RtError):
             val = fcn(self, *args, **kwargs)
         return val
 
     return wrapper
 
 
-class RtLamniController(Controller):
+class RtController(Controller):
+    _axes_per_controller = 3
     USER_ACCESS = [
         "socket_put_and_receive",
         "set_rotation_angle",
@@ -57,64 +59,32 @@ class RtLamniController(Controller):
         "_position_sampling_single_reset_and_start_sampling",
     ]
 
-    def __init__(
-        self,
-        *,
-        name="RtLamniController",
-        kind=None,
-        parent=None,
-        socket=None,
-        attr_name="",
-        labels=None,
-    ):
-        if not hasattr(self, "_initialized") or not self._initialized:
-            self._rtlamni_axis_per_controller = 3
-            self._axis = [None for axis_num in range(self._rtlamni_axis_per_controller)]
-            self._min_scan_buffer_reached = False
-            super().__init__(
-                name=name,
-                socket=socket,
-                attr_name=attr_name,
-                parent=parent,
-                labels=labels,
-                kind=kind,
-            )
-        self.readout_metadata = {}
-
     def on(self, controller_num=0) -> None:
         """Open a new socket connection to the controller"""
-        if not self.connected:
-            try:
-                self.sock.open()
-                # discuss - after disconnect takes a while for the server to be ready again
-                max_retries = 10
-                tries = 0
-                while not self.connected:
-                    try:
-                        welcome_message = self.sock.receive()
-                        self.connected = True
-                    except ConnectionResetError as conn_reset:
-                        if tries > max_retries:
-                            raise conn_reset
-                        tries += 1
-                        time.sleep(2)
-            except ConnectionRefusedError as conn_error:
-                logger.error("Failed to open a connection to RTLamNI.")
-                raise RtLamniCommunicationError from conn_error
+        # if not self.connected:
+        #     try:
+        #         self.sock.open()
+        #         # discuss - after disconnect takes a while for the server to be ready again
+        #         max_retries = 10
+        #         tries = 0
+        #         while not self.connected:
+        #             try:
+        #                 welcome_message = self.sock.receive()
+        #                 self.connected = True
+        #             except ConnectionResetError as conn_reset:
+        #                 if tries > max_retries:
+        #                     raise conn_reset
+        #                 tries += 1
+        #                 time.sleep(2)
+        #     except ConnectionRefusedError as conn_error:
+        #         logger.error("Failed to open a connection to RTLamNI.")
+        #         raise RtCommunicationError from conn_error
 
-        else:
-            logger.info("The connection has already been established.")
-            # warnings.warn(f"The connection has already been established.", stacklevel=2)
-
-        self._update_flyer_device_info()
-
-    def off(self) -> None:
-        """Close the socket connection to the controller"""
-        if self.connected:
-            self.sock.close()
-            self.connected = False
-        else:
-            logger.info("The connection is already closed.")
+        # else:
+        #     logger.info("The connection has already been established.")
+        #     # warnings.warn(f"The connection has already been established.", stacklevel=2)
+        super().on()
+        # self._update_flyer_device_info()
 
     def set_axis(self, axis: Device, axis_nr: int) -> None:
         """Assign an axis to a device instance.
@@ -269,7 +239,7 @@ class RtLamniController(Controller):
     def get_scan_status(self):
         return_table = (self.socket_put_and_receive(f"sr")).split(",")
         if len(return_table) != 3:
-            raise RtLamniCommunicationError(
+            raise RtCommunicationError(
                 f"Expected to receive 3 return values. Instead received {return_table}"
             )
         mode = int(return_table[0])
@@ -289,7 +259,7 @@ class RtLamniController(Controller):
             logger.error(
                 "Cannot start scan because feedback loop is not running or there is an interferometer error."
             )
-            raise RtLamniError(
+            raise RtError(
                 "Cannot start scan because feedback loop is not running or there is an interferometer error."
             )
             # here exception
@@ -297,7 +267,7 @@ class RtLamniController(Controller):
 
         if number_of_positions_planned == 0:
             logger.error("Cannot start scan because no target positions are planned.")
-            raise RtLamniError("Cannot start scan because no target positions are planned.")
+            raise RtError("Cannot start scan because no target positions are planned.")
             # hier exception
         # start a point-by-point scan (for cont scan in flomni it would be "sa")
         self.socket_put_and_receive("sd")
@@ -310,7 +280,7 @@ class RtLamniController(Controller):
         flyer_info = self._get_flyer_device_info()
         self.get_device_manager().connector.set(
             MessageEndpoints.device_info("rt_scan"),
-            messages.DeviceInfoMessage(device="rt_scan", info=flyer_info),
+            messages.DeviceInfoMessage(device="rt_scan", info=flyer_info).dumps(),
         )
 
     def _get_flyer_device_info(self) -> dict:
@@ -389,7 +359,7 @@ class RtLamniController(Controller):
             MessageEndpoints.device_status("rt_scan"),
             messages.DeviceStatusMessage(
                 device="rt_scan", status=1, metadata=self.readout_metadata
-            ),
+            ).dumps(),
         )
         # while scan is running
         while mode > 0:
@@ -424,7 +394,7 @@ class RtLamniController(Controller):
             MessageEndpoints.device_status("rt_scan"),
             messages.DeviceStatusMessage(
                 device="rt_scan", status=0, metadata=self.readout_metadata
-            ),
+            ).dumps(),
         )
 
         logger.info(
@@ -436,7 +406,7 @@ class RtLamniController(Controller):
             MessageEndpoints.device_read("rt_lamni"),
             messages.DeviceMessage(
                 signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
-            ),
+            ).dumps(),
         )
 
     def feedback_status_angle_lamni(self) -> bool:
@@ -477,7 +447,7 @@ class RtLamniController(Controller):
             logger.error(
                 "Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller."
             )
-            raise RtLamniError(
+            raise RtError(
                 "Cannot enable feedback. The small rotation air is on and/or orchestra disabled by the motor controller."
             )
 
@@ -516,7 +486,7 @@ class RtLamniController(Controller):
             logger.error(
                 "Cannot start scan because feedback loop is not running or there is an interferometer error."
             )
-            raise RtLamniError(
+            raise RtError(
                 "Cannot start scan because feedback loop is not running or there is an interferometer error."
             )
 
@@ -534,7 +504,7 @@ class RtLamniController(Controller):
         self.get_device_manager().devices[device_name].read_only = not enabled
 
 
-class RtLamniSignalBase(SocketSignal):
+class RtSignalBase(SocketSignal):
     def __init__(self, signal_name, **kwargs):
         self.signal_name = signal_name
         super().__init__(**kwargs)
@@ -542,7 +512,7 @@ class RtLamniSignalBase(SocketSignal):
         self.sock = self.parent.controller.sock
 
 
-class RtLamniSignalRO(RtLamniSignalBase):
+class RtSignalRO(RtSignalBase):
     def __init__(self, signal_name, **kwargs):
         super().__init__(signal_name, **kwargs)
         self._metadata["write_access"] = False
@@ -551,7 +521,7 @@ class RtLamniSignalRO(RtLamniSignalBase):
         raise ReadOnlyError("Read-only signals cannot be set")
 
 
-class RtLamniReadbackSignal(RtLamniSignalRO):
+class RtReadbackSignal(RtSignalRO):
     @retry_once
     @threadlocked
     def _socket_get(self) -> float:
@@ -567,7 +537,7 @@ class RtLamniReadbackSignal(RtLamniSignalRO):
         elif self.parent.axis_Id_numeric == 1:
             readback_index = 1
         else:
-            raise RtLamniError("Currently, only two axes are supported.")
+            raise RtError("Currently, only two axes are supported.")
 
         current_pos = float(return_table[readback_index])
 
@@ -575,7 +545,7 @@ class RtLamniReadbackSignal(RtLamniSignalRO):
         return current_pos
 
 
-class RtLamniSetpointSignal(RtLamniSignalBase):
+class RtSetpointSignal(RtSignalBase):
     setpoint = 0
 
     def _socket_get(self) -> float:
@@ -597,14 +567,14 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
             val (float): Target value / setpoint value
 
         Raises:
-            RtLamniError: Raised if interferometer feedback is disabled.
+            RtError: Raised if interferometer feedback is disabled.
 
         """
         interferometer_feedback_not_running = int(
             (self.controller.socket_put_and_receive("J2")).split(",")[0]
         )
         if interferometer_feedback_not_running != 0:
-            raise RtLamniError(
+            raise RtError(
                 "The interferometer feedback is not running. Either it is turned off or and interferometer error occured."
             )
         self.set_with_feedback_disabled(val)
@@ -615,7 +585,7 @@ class RtLamniSetpointSignal(RtLamniSignalBase):
         self.controller.socket_put(f"pa{self.parent.axis_Id_numeric},{target_val:.4f}")
 
 
-class RtLamniMotorIsMoving(RtLamniSignalRO):
+class RtMotorIsMoving(RtSignalRO):
     def _socket_get(self):
         return self.controller.is_axis_moving(self.parent.axis_Id_numeric)
 
@@ -626,7 +596,7 @@ class RtLamniMotorIsMoving(RtLamniSignalRO):
         return val
 
 
-class RtLamniFeedbackRunning(RtLamniSignalRO):
+class RtFeedbackRunning(RtSignalRO):
     @threadlocked
     def _socket_get(self):
         if int((self.controller.socket_put_and_receive("J2")).split(",")[0]) == 0:
@@ -635,12 +605,12 @@ class RtLamniFeedbackRunning(RtLamniSignalRO):
             return 0
 
 
-class RtLamniMotor(Device, PositionerBase):
+class RtMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(RtLamniReadbackSignal, signal_name="readback", kind="hinted")
-    user_setpoint = Cpt(RtLamniSetpointSignal, signal_name="setpoint")
+    readback = Cpt(RtReadbackSignal, signal_name="readback", kind="hinted")
+    user_setpoint = Cpt(RtSetpointSignal, signal_name="setpoint")
 
-    motor_is_moving = Cpt(RtLamniMotorIsMoving, signal_name="motor_is_moving", kind="normal")
+    motor_is_moving = Cpt(RtMotorIsMoving, signal_name="motor_is_moving", kind="normal")
     high_limit_travel = Cpt(Signal, value=0, kind="omitted")
     low_limit_travel = Cpt(Signal, value=0, kind="omitted")
 
@@ -668,7 +638,7 @@ class RtLamniMotor(Device, PositionerBase):
     ):
         self.axis_Id = axis_Id
         self.sign = sign
-        self.controller = RtLamniController(socket=socket_cls(host=host, port=port))
+        self.controller = RtController(socket=socket_cls(host=host, port=port))
         self.controller.set_axis(axis=self, axis_nr=self.axis_Id_numeric)
         self.device_manager = device_manager
         self.tolerance = kwargs.pop("tolerance", 0.5)
@@ -813,10 +783,10 @@ class RtLamniMotor(Device, PositionerBase):
 
     # how is this used later?
 
-    def stage(self) -> list[object]:
+    def stage(self) -> List[object]:
         return super().stage()
 
-    def unstage(self) -> list[object]:
+    def unstage(self) -> List[object]:
         return super().unstage()
 
     def stop(self, *, success=False):

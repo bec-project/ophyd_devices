@@ -2,11 +2,9 @@ import time
 
 from bec_lib import bec_logger
 from bec_lib.devicemanager import DeviceContainer
-
-from ophyd import Signal, Kind
+from ophyd import Device, Kind, Signal
 
 from ophyd_devices.utils.socket import data_shape, data_type
-
 
 logger = bec_logger.logger
 DEFAULT_EPICSSIGNAL_VALUE = object()
@@ -18,7 +16,7 @@ class DeviceMock:
         self.name = name
         self.read_buffer = value
         self._config = {"deviceConfig": {"limits": [-50, 50]}, "userParameter": None}
-        self._enabled_set = True
+        self._read_only = False
         self._enabled = True
 
     def read(self):
@@ -28,12 +26,12 @@ class DeviceMock:
         return self.read_buffer
 
     @property
-    def enabled_set(self) -> bool:
-        return self._enabled_set
+    def read_only(self) -> bool:
+        return self._read_only
 
-    @enabled_set.setter
-    def enabled_set(self, val: bool):
-        self._enabled_set = val
+    @read_only.setter
+    def read_only(self, val: bool):
+        self._read_only = val
 
     @property
     def enabled(self) -> bool:
@@ -52,7 +50,7 @@ class DeviceMock:
         return self
 
 
-class ProducerMock:
+class ConnectorMock:
     def __init__(self, store_data=True) -> None:
         self.message_sent = []
         self._get_buffer = {}
@@ -122,17 +120,17 @@ class ProducerMock:
 
 class PipelineMock:
     _pipe_buffer = []
-    _producer = None
+    _connector = None
 
-    def __init__(self, producer) -> None:
-        self._producer = producer
+    def __init__(self, connector) -> None:
+        self._connector = connector
 
     def execute(self):
-        if not self._producer.store_data:
+        if not self._connector.store_data:
             self._pipe_buffer = []
             return []
         res = [
-            getattr(self._producer, method)(*args, **kwargs)
+            getattr(self._connector, method)(*args, **kwargs)
             for method, args, kwargs in self._pipe_buffer
         ]
         self._pipe_buffer = []
@@ -142,45 +140,16 @@ class PipelineMock:
 class DMMock:
     """Mock for DeviceManager
 
-    The mocked DeviceManager creates a device containert and a producer.
+    The mocked DeviceManager creates a device containert and a connector.
 
     """
 
     def __init__(self):
         self.devices = DeviceContainer()
-        self.producer = ProducerMock()
+        self.connector = ConnectorMock()
 
     def add_device(self, name: str, value: float = 0.0):
         self.devices[name] = DeviceMock(name, value)
-
-
-# class MockProducer:
-#     def set_and_publish(self, endpoint: str, msgdump: str):
-#         logger.info(f"BECMessage to {endpoint} with msg dump {msgdump}")
-
-
-# class MockDeviceManager:
-#     def __init__(self) -> None:
-#         self.devices = devices()
-
-
-# class OphydObject:
-#     def __init__(self) -> None:
-#         self.name = "mock_mokev"
-#         self.obj = mokev()
-
-
-# class devices:
-#     def __init__(self):
-#         self.mokev = OphydObject()
-
-
-# class mokev:
-#     def __init__(self):
-#         self.name = "mock_mokev"
-
-#     def read(self):
-#         return {self.name: {"value": 16.0, "timestamp": time.time()}}
 
 
 class ConfigSignal(Signal):
@@ -220,14 +189,7 @@ class ConfigSignal(Signal):
         self._readback = getattr(self.parent, self.storage_name)[self.name]
         return self._readback
 
-    def put(
-        self,
-        value,
-        connection_timeout=1,
-        callback=None,
-        timeout=1,
-        **kwargs,
-    ):
+    def put(self, value, connection_timeout=1, callback=None, timeout=1, **kwargs):
         """Using channel access, set the write PV to `value`.
 
         Keyword arguments are passed on to callbacks
@@ -253,10 +215,7 @@ class ConfigSignal(Signal):
         getattr(self.parent, self.storage_name)[self.name] = value
         super().put(value, timestamp=timestamp, force=True)
         self._run_subs(
-            sub_type=self.SUB_VALUE,
-            old_value=old_value,
-            value=value,
-            timestamp=timestamp,
+            sub_type=self.SUB_VALUE, old_value=old_value, value=value, timestamp=timestamp
         )
 
     def describe(self):
@@ -285,3 +244,28 @@ class ConfigSignal(Signal):
                 "shape": data_shape(val),
             }
         }
+
+
+class DeviceClassConnectionError(Device):
+    """
+    Device that always raises a connection error when trying to connect.
+    It is used to test the wait_for_connection method in the DeviceServer.
+    """
+
+    @property
+    def connected(self):
+        return False
+
+    def wait_for_connection(self, all_signals=False, timeout=2):
+        raise RuntimeError("Connection error")
+
+
+class DeviceClassInitError(Device):
+    """
+    Device that always raises an error when trying to construct the object.
+    It is used to test the error handling in the DeviceServer.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        raise RuntimeError("Init error")
