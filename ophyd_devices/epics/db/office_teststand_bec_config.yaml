@@ -15,7 +15,6 @@ es1_aa1:
   enabled: true
   readoutPriority: monitored
 
-
 es1_aa1Tasks:
   description: 'AA1 task management interface'
   deviceClass: epics:devices:aa1Tasks 
@@ -55,18 +54,3 @@ es1_ddaq:
   onFailure: buffer
   enabled: true
   readoutPriority: monitored
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
