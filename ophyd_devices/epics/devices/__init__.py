@@ -30,3 +30,4 @@ from .specMotors import (
 )
 from .SpmBase import SpmBase
 from .aerotech.AerotechAutomation1 import aa1Controller, aa1Tasks, aa1GlobalVariables, aa1GlobalVariableBindings, aa1AxisPsoDistance, aa1AxisDriveDataCollection, EpicsMotorX
+
