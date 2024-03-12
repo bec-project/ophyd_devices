@@ -2,6 +2,27 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.0 (2024-03-12)
+
+### Feature
+
+* Moving the Automation1 device to BEC repo ([`853d621`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/853d621042e400c83940fdde50f1db66941f540b))
+* Moving the Automation1 device to BEC repo ([`26ee4e2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/26ee4e2d9bd9cb37eebefe9102ca78aa0fd55b33))
+* Refactor simulation, introduce SimCamera, SimMonitor in addition to existing classes ([`f311ce5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f311ce5d1c082c107f782916c2fb724a34a92099))
+* Introduce new general class to simulate data for devices ([`8cc955b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8cc955b202bd7b45acba06322779079e7a8423a3))
+* Move signals to own file and refactor access pattern to sim_state data. ([`6f3c238`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6f3c2383b5d572cf1f6d51acecb63c786ac16196))
+* Added basic function tests ([`b54b5d4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b54b5d4b00150ef581247da495804cc5e801e24e))
+* Added tests for connecting devices ([`8c6d0f5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8c6d0f50cdb61843532c7a2f2a03a421acdb126a))
+* Added static_device_test ([`bb02a61`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bb02a619e56749c03d3efadb0364e845fc4a7724))
+
+### Fix
+
+* Add imports for core config updates ([`fdb2da5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fdb2da5839e72359b53c3837292eeced957e43de))
+* Fixed bec_scaninfo_mixin ([`ec3ea35`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ec3ea35744e300fa363be3724f5e6c7b81abe7f1))
+* Remove set and from sim_signals ([`bd128ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd128ea8a459d08f6018c0d8459a534d6a828073))
+* Temporal fix for imports ([`6cac04a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6cac04aa5227340f4e5758e4bfcc1798acbc1ed7))
+* Changed default for connecting to a device ([`802eb29`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/802eb295562ecc39f833d4baba8820a892c674a2))
+
 ## v0.26.1 (2024-03-10)
 
 ### Fix
