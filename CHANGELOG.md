@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.1 (2024-03-13)
+
+### Fix
+
+* Bug fix ([`6c776bb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6c776bb4ae72e7f0a4b858a27a34f25baed726d2))
+
 ## v0.27.0 (2024-03-12)
 
 ### Feature
