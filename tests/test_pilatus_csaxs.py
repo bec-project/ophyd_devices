@@ -1,14 +1,13 @@
 # pylint: skip-file
 import os
-import pytest
 import threading
 from unittest import mock
 
 import ophyd
+import pytest
+from bec_lib import MessageEndpoints, messages
 
-from bec_lib import messages, MessageEndpoints
 from ophyd_devices.epics.devices.pilatus_csaxs import PilatuscSAXS
-
 from tests.utils import DMMock, MockPV
 
 
@@ -45,18 +44,9 @@ def mock_det():
                     yield det
 
 
-@pytest.mark.parametrize(
-    "trigger_source, detector_state",
-    [
-        (1, 0),
-    ],
-)
+@pytest.mark.parametrize("trigger_source, detector_state", [(1, 0)])
 # TODO rewrite this one, write test for init_detector, init_filewriter is tested
-def test_init_detector(
-    mock_det,
-    trigger_source,
-    detector_state,
-):
+def test_init_detector(mock_det, trigger_source, detector_state):
     """Test the _init function:
 
     This includes testing the functions:
@@ -82,7 +72,7 @@ def test_init_detector(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 12.4,
             },
             False,
@@ -94,7 +84,7 @@ def test_init_detector(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 12.4,
             },
             True,
@@ -102,12 +92,7 @@ def test_init_detector(
         ),
     ],
 )
-def test_stage(
-    mock_det,
-    scaninfo,
-    stopped,
-    expected_exception,
-):
+def test_stage(mock_det, scaninfo, stopped, expected_exception):
     with mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
@@ -145,13 +130,7 @@ def test_pre_scan(mock_det):
 
 
 @pytest.mark.parametrize(
-    "readout_time, expected_value",
-    [
-        (1e-3, 3e-3),
-        (3e-3, 3e-3),
-        (5e-3, 5e-3),
-        (None, 3e-3),
-    ],
+    "readout_time, expected_value", [(1e-3, 3e-3), (3e-3, 3e-3), (5e-3, 5e-3), (None, 3e-3)]
 )
 def test_update_readout_time(mock_det, readout_time, expected_value):
     if readout_time is None:
@@ -172,7 +151,7 @@ def test_update_readout_time(mock_det, readout_time, expected_value):
                 "filepath_raw": "test5_raw.h5",
                 "successful": True,
                 "done": False,
-                "scanID": "123",
+                "scan_id": "123",
             }
         ),
         (
@@ -181,7 +160,7 @@ def test_update_readout_time(mock_det, readout_time, expected_value):
                 "filepath_raw": "test5_raw.h5",
                 "successful": False,
                 "done": True,
-                "scanID": "123",
+                "scan_id": "123",
             }
         ),
         (
@@ -190,13 +169,13 @@ def test_update_readout_time(mock_det, readout_time, expected_value):
                 "filepath_raw": "test5_raw.h5",
                 "successful": None,
                 "done": True,
-                "scanID": "123",
+                "scan_id": "123",
             }
         ),
     ],
 )
 def test_publish_file_location(mock_det, scaninfo):
-    mock_det.scaninfo.scanID = scaninfo["scanID"]
+    mock_det.scaninfo.scan_id = scaninfo["scan_id"]
     mock_det.filepath = scaninfo["filepath"]
     mock_det.filepath_raw = scaninfo["filepath_raw"]
     mock_det.custom_prepare.publish_file_location(
@@ -217,7 +196,7 @@ def test_publish_file_location(mock_det, scaninfo):
         )
     expected_calls = [
         mock.call(
-            MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
+            MessageEndpoints.public_file(scaninfo["scan_id"], mock_det.name),
             msg,
             pipe=mock_det.connector.pipeline.return_value,
         ),
@@ -306,14 +285,7 @@ def test_stop_detector_backend(mock_det, requests_state, expected_exception, url
                         "user": "e12345",
                     },
                 ],
-                [
-                    "zmqWriter",
-                    "e12345",
-                    {
-                        "frmCnt": 500,
-                        "timeout": 2000,
-                    },
-                ],
+                ["zmqWriter", "e12345", {"frmCnt": 500, "timeout": 2000}],
             ],
             [
                 "http://x12sa-pd-2:8080/stream/pilatus_2",
@@ -357,14 +329,7 @@ def test_stop_detector_backend(mock_det, requests_state, expected_exception, url
                         "user": "e12345",
                     },
                 ],
-                [
-                    "zmqWriter",
-                    "e12345",
-                    {
-                        "frmCnt": 500,
-                        "timeout": 2000,
-                    },
-                ],
+                ["zmqWriter", "e12345", {"frmCnt": 500, "timeout": 2000}],
             ],
             [
                 "http://x12sa-pd-2:8080/stream/pilatus_2",
@@ -435,24 +400,8 @@ def test_prep_file_writer(mock_det, scaninfo, data_msgs, urls, requests_state, e
                 assert call == mock_call
 
 
-@pytest.mark.parametrize(
-    "stopped, expected_exception",
-    [
-        (
-            False,
-            False,
-        ),
-        (
-            True,
-            True,
-        ),
-    ],
-)
-def test_unstage(
-    mock_det,
-    stopped,
-    expected_exception,
-):
+@pytest.mark.parametrize("stopped, expected_exception", [(False, False), (True, True)])
+def test_unstage(mock_det, stopped, expected_exception):
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
@@ -485,21 +434,9 @@ def test_stop(mock_det):
 @pytest.mark.parametrize(
     "stopped, mcs_stage_state, expected_exception",
     [
-        (
-            False,
-            ophyd.Staged.no,
-            False,
-        ),
-        (
-            True,
-            ophyd.Staged.no,
-            True,
-        ),
-        (
-            False,
-            ophyd.Staged.yes,
-            True,
-        ),
+        (False, ophyd.Staged.no, False),
+        (True, ophyd.Staged.no, True),
+        (False, ophyd.Staged.yes, True),
     ],
 )
 def test_finished(mock_det, stopped, mcs_stage_state, expected_exception):

@@ -1,6 +1,7 @@
 # pylint: skip-file
-import pytest
 from unittest import mock
+
+import pytest
 
 from ophyd_devices.epics.devices.delay_generator_csaxs import DDGSetup
 from ophyd_devices.epics.devices.psi_delay_generator_base import TriggerSource
@@ -26,7 +27,7 @@ def mock_DDGSetup():
 @pytest.fixture(
     params=[
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 1,
@@ -34,7 +35,7 @@ def mock_DDGSetup():
             "readout_time": 0.1,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 5,
@@ -42,7 +43,7 @@ def mock_DDGSetup():
             "readout_time": 0,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 1,
@@ -50,7 +51,7 @@ def mock_DDGSetup():
             "readout_time": 0.2,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 5,
@@ -135,8 +136,8 @@ def channel_pairs(request):
     return request.param
 
 
-def test_check_scanID(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_scan):
-    """Test the check_scanID method."""
+def test_check_scan_id(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_scan):
+    """Test the check_scan_id method."""
     # Set first attributes of parent class
     for k, v in scaninfo.items():
         setattr(mock_DDGSetup.parent.scaninfo, k, v)
@@ -145,12 +146,12 @@ def test_check_scanID(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_s
     for k, v in ddg_config_scan.items():
         getattr(mock_DDGSetup.parent, k).get.return_value = v
     # Call the function you want to test
-    mock_DDGSetup.check_scanID()
+    mock_DDGSetup.check_scan_id()
     mock_DDGSetup.parent.scaninfo.load_scan_metadata.assert_called_once()
 
 
 def test_on_pre_scan(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_scan):
-    """Test the check_scanID method."""
+    """Test the check_scan_id method."""
     # Set first attributes of parent class
     for k, v in scaninfo.items():
         setattr(mock_DDGSetup.parent.scaninfo, k, v)
@@ -185,11 +186,7 @@ def test_on_trigger(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_sca
 
 
 def test_initialize_default_parameter(
-    mock_DDGSetup,
-    scaninfo,
-    ddg_config_defaults,
-    ddg_config_scan,
-    channel_pairs,
+    mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_scan, channel_pairs
 ):
     """Test the initialize_default_parameter method."""
     # Set first attributes of parent class
@@ -229,13 +226,7 @@ def test_initialize_default_parameter(
     mock_DDGSetup.parent.set_channels.assert_has_calls(calls)
 
 
-def test_prepare_ddg(
-    mock_DDGSetup,
-    scaninfo,
-    ddg_config_defaults,
-    ddg_config_scan,
-    channel_pairs,
-):
+def test_prepare_ddg(mock_DDGSetup, scaninfo, ddg_config_defaults, ddg_config_scan, channel_pairs):
     """Test the prepare_ddg method."""
     # Set first attributes of parent class
     for k, v in scaninfo.items():

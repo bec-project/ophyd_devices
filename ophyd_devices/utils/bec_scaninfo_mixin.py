@@ -1,6 +1,6 @@
 import getpass
 
-from bec_lib import DeviceManagerBase, messages, MessageEndpoints, bec_logger
+from bec_lib import DeviceManagerBase, MessageEndpoints, bec_logger, messages
 
 logger = bec_logger.logger
 
@@ -67,7 +67,7 @@ class BecScaninfoMixin:
         self.device_manager = device_manager
         self.sim_mode = sim_mode
         self.scan_msg = None
-        self.scanID = None
+        self.scan_id = None
         if bec_info_msg is None:
             infomsgmock = BECInfoMsgMock()
             self.bec_info_msg = infomsgmock.get_bec_info_msg()
@@ -94,11 +94,7 @@ class BecScaninfoMixin:
                 return None
             return msg
 
-        return messages.ScanStatusMessage(
-            scanID="1",
-            status={},
-            info=self.bec_info_msg,
-        )
+        return messages.ScanStatusMessage(scan_id="1", status={}, info=self.bec_info_msg)
 
     def get_username(self) -> str:
         """Get username"""
@@ -119,11 +115,11 @@ class BecScaninfoMixin:
         logger.info(f"{self.scan_msg}")
         try:
             self.metadata = {
-                "scanID": scan_msg.content["scanID"],
+                "scan_id": scan_msg.content["scan_id"],
                 "RID": scan_msg.content["info"]["RID"],
                 "queueID": scan_msg.content["info"]["queueID"],
             }
-            self.scanID = scan_msg.content["scanID"]
+            self.scan_id = scan_msg.content["scan_id"]
             self.scan_number = scan_msg.content["info"]["scan_number"]
             self.exp_time = scan_msg.content["info"]["exp_time"]
             self.frames_per_trigger = scan_msg.content["info"]["frames_per_trigger"]

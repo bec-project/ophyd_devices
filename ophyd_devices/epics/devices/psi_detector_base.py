@@ -5,8 +5,9 @@ from bec_lib.device import DeviceStatus
 from bec_lib.file_utils import FileWriterMixin
 from ophyd import Device
 from ophyd.device import Staged
-from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
+
 from ophyd_devices.utils import bec_utils
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
 
 class DetectorInitError(Exception):
@@ -99,9 +100,9 @@ class CustomDetectorMixin:
             DetectorTimeoutError: if detector cannot be stopped
         """
 
-    def check_scanID(self) -> None:
+    def check_scan_id(self) -> None:
         """
-        Check if BEC is running on a new scanID
+        Check if BEC is running on a new scan_id
         """
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
@@ -299,14 +300,14 @@ class PSIDetectorBase(Device):
         if data acquisition on device finished (an was successful)
 
         Internal Calls:
-        - custom_prepare.check_scanID          : check if scanID changed or detector stopped
+        - custom_prepare.check_scan_id          : check if scan_id changed or detector stopped
         - custom_prepare.finished              : check if device finished acquisition (succesfully)
         - custom_prepare.publish_file_location : publish file location to bec
 
         Returns:
             list(object): list of objects that were unstaged
         """
-        self.custom_prepare.check_scanID()
+        self.custom_prepare.check_scan_id()
         if self.stopped is True:
             return super().unstage()
         self.custom_prepare.finished()

@@ -1,13 +1,12 @@
 # pylint: skip-file
-import pytest
 import threading
 from unittest import mock
 
 import ophyd
+import pytest
+from bec_lib import MessageEndpoints, messages
 
-from bec_lib import messages, MessageEndpoints
 from ophyd_devices.epics.devices.eiger9m_csaxs import Eiger9McSAXS
-
 from tests.utils import DMMock, MockPV
 
 
@@ -72,26 +71,9 @@ def test_init():
 
 
 @pytest.mark.parametrize(
-    "trigger_source, detector_state, expected_exception",
-    [
-        (
-            2,
-            1,
-            True,
-        ),
-        (
-            2,
-            0,
-            False,
-        ),
-    ],
+    "trigger_source, detector_state, expected_exception", [(2, 1, True), (2, 0, False)]
 )
-def test_initialize_detector(
-    mock_det,
-    trigger_source,
-    detector_state,
-    expected_exception,
-):
+def test_initialize_detector(mock_det, trigger_source, detector_state, expected_exception):
     """Test the _init function:
 
     This includes testing the functions:
@@ -125,13 +107,7 @@ def test_trigger(mock_det):
 
 
 @pytest.mark.parametrize(
-    "readout_time, expected_value",
-    [
-        (1e-3, 3e-3),
-        (3e-3, 3e-3),
-        (5e-3, 5e-3),
-        (None, 3e-3),
-    ],
+    "readout_time, expected_value", [(1e-3, 3e-3), (3e-3, 3e-3), (5e-3, 5e-3), (None, 3e-3)]
 )
 def test_update_readout_time(mock_det, readout_time, expected_value):
     if readout_time is None:
@@ -146,34 +122,10 @@ def test_update_readout_time(mock_det, readout_time, expected_value):
 @pytest.mark.parametrize(
     "eacc, exp_url, daq_status, daq_cfg, expected_exception",
     [
-        (
-            "e12345",
-            "http://xbl-daq-29:5000",
-            {"state": "READY"},
-            {"writer_user_id": 12543},
-            False,
-        ),
-        (
-            "e12345",
-            "http://xbl-daq-29:5000",
-            {"state": "READY"},
-            {"writer_user_id": 15421},
-            False,
-        ),
-        (
-            "e12345",
-            "http://xbl-daq-29:5000",
-            {"state": "BUSY"},
-            {"writer_user_id": 15421},
-            True,
-        ),
-        (
-            "e12345",
-            "http://xbl-daq-29:5000",
-            {"state": "READY"},
-            {"writer_ud": 12345},
-            True,
-        ),
+        ("e12345", "http://xbl-daq-29:5000", {"state": "READY"}, {"writer_user_id": 12543}, False),
+        ("e12345", "http://xbl-daq-29:5000", {"state": "READY"}, {"writer_user_id": 15421}, False),
+        ("e12345", "http://xbl-daq-29:5000", {"state": "BUSY"}, {"writer_user_id": 15421}, True),
+        ("e12345", "http://xbl-daq-29:5000", {"state": "READY"}, {"writer_ud": 12345}, True),
     ],
 )
 def test_initialize_detector_backend(
@@ -215,7 +167,7 @@ def test_initialize_detector_backend(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 12.4,
             },
             {"state": "READY"},
@@ -230,7 +182,7 @@ def test_initialize_detector_backend(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 12.4,
             },
             {"state": "BUSY"},
@@ -245,7 +197,7 @@ def test_initialize_detector_backend(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 18.4,
             },
             {"state": "READY"},
@@ -257,13 +209,7 @@ def test_initialize_detector_backend(
     ],
 )
 def test_stage(
-    mock_det,
-    scaninfo,
-    daq_status,
-    daq_cfg,
-    detector_state,
-    stopped,
-    expected_exception,
+    mock_det, scaninfo, daq_status, daq_cfg, detector_state, stopped, expected_exception
 ):
     with mock.patch.object(
         mock_det.custom_prepare, "std_client"
@@ -309,7 +255,7 @@ def test_stage(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
             },
             {"state": "BUSY", "acquisition": {"state": "WAITING_IMAGES"}},
             False,
@@ -320,7 +266,7 @@ def test_stage(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
             },
             {"state": "BUSY", "acquisition": {"state": "WAITING_IMAGES"}},
             False,
@@ -331,7 +277,7 @@ def test_stage(
                 "num_points": 500,
                 "frames_per_trigger": 1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
             },
             {"state": "BUSY", "acquisition": {"state": "ERROR"}},
             True,
@@ -373,24 +319,8 @@ def test_prepare_detector_backend(mock_det, scaninfo, daq_status, expected_excep
         mock_std_daq.start_writer_async.assert_called_with(daq_writer_call)
 
 
-@pytest.mark.parametrize(
-    "stopped, expected_exception",
-    [
-        (
-            False,
-            False,
-        ),
-        (
-            True,
-            True,
-        ),
-    ],
-)
-def test_unstage(
-    mock_det,
-    stopped,
-    expected_exception,
-):
+@pytest.mark.parametrize("stopped, expected_exception", [(False, False), (True, True)])
+def test_unstage(mock_det, stopped, expected_exception):
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
@@ -416,13 +346,13 @@ def test_stop_detector_backend(mock_det):
 @pytest.mark.parametrize(
     "scaninfo",
     [
-        ({"filepath": "test.h5", "successful": True, "done": False, "scanID": "123"}),
-        ({"filepath": "test.h5", "successful": False, "done": True, "scanID": "123"}),
-        ({"filepath": "test.h5", "successful": None, "done": True, "scanID": "123"}),
+        ({"filepath": "test.h5", "successful": True, "done": False, "scan_id": "123"}),
+        ({"filepath": "test.h5", "successful": False, "done": True, "scan_id": "123"}),
+        ({"filepath": "test.h5", "successful": None, "done": True, "scan_id": "123"}),
     ],
 )
 def test_publish_file_location(mock_det, scaninfo):
-    mock_det.scaninfo.scanID = scaninfo["scanID"]
+    mock_det.scaninfo.scan_id = scaninfo["scan_id"]
     mock_det.filepath = scaninfo["filepath"]
     mock_det.custom_prepare.publish_file_location(
         done=scaninfo["done"], successful=scaninfo["successful"]
@@ -435,7 +365,7 @@ def test_publish_file_location(mock_det, scaninfo):
         )
     expected_calls = [
         mock.call(
-            MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
+            MessageEndpoints.public_file(scaninfo["scan_id"], mock_det.name),
             msg,
             pipe=mock_det.connector.pipeline.return_value,
         ),
@@ -465,40 +395,28 @@ def test_stop(mock_det):
     [
         (
             False,
-            {
-                "num_points": 500,
-                "frames_per_trigger": 4,
-            },
+            {"num_points": 500, "frames_per_trigger": 4},
             0,
             {"acquisition": {"state": "FINISHED", "stats": {"n_write_completed": 2000}}},
             False,
         ),
         (
             False,
-            {
-                "num_points": 500,
-                "frames_per_trigger": 4,
-            },
+            {"num_points": 500, "frames_per_trigger": 4},
             0,
             {"acquisition": {"state": "FINISHED", "stats": {"n_write_completed": 1999}}},
             True,
         ),
         (
             False,
-            {
-                "num_points": 500,
-                "frames_per_trigger": 1,
-            },
+            {"num_points": 500, "frames_per_trigger": 1},
             1,
             {"acquisition": {"state": "READY", "stats": {"n_write_completed": 500}}},
             True,
         ),
         (
             False,
-            {
-                "num_points": 500,
-                "frames_per_trigger": 1,
-            },
+            {"num_points": 500, "frames_per_trigger": 1},
             0,
             {"acquisition": {"state": "FINISHED", "stats": {"n_write_completed": 500}}},
             False,

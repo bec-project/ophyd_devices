@@ -1,18 +1,14 @@
 import enum
 import os
 
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Component as Cpt
-from ophyd.mca import EpicsMCARecord
-from ophyd import Device
-
-
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
+from ophyd import Component as Cpt
+from ophyd import Device, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
+from ophyd.mca import EpicsMCARecord
 
-
-from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
-
+from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 
 logger = bec_logger.logger
 
@@ -145,10 +141,7 @@ class FalconSetup(CustomDetectorMixin):
         self.parent.erase_all.put(1)
 
         signal_conditions = [
-            (
-                lambda: self.parent.state.read()[self.parent.state.name]["value"],
-                DetectorState.DONE,
-            ),
+            (lambda: self.parent.state.read()[self.parent.state.name]["value"], DetectorState.DONE)
         ]
 
         if not self.wait_for_signals(
@@ -225,11 +218,11 @@ class FalconSetup(CustomDetectorMixin):
                 f"Failed to arm the acquisition. Detector state {signal_conditions[0][0]}"
             )
 
-    def check_scanID(self) -> None:
-        """Checks if scanID has changed and stops the scan if it has"""
-        old_scanID = self.parent.scaninfo.scanID
+    def check_scan_id(self) -> None:
+        """Checks if scan_id has changed and stops the scan if it has"""
+        old_scan_id = self.parent.scaninfo.scan_id
         self.parent.scaninfo.load_scan_metadata()
-        if self.parent.scaninfo.scanID != old_scanID:
+        if self.parent.scaninfo.scan_id != old_scan_id:
             self.parent.stopped = True
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
@@ -252,7 +245,7 @@ class FalconSetup(CustomDetectorMixin):
                 file_path=self.parent.filepath, done=done, successful=successful
             )
         self.parent.connector.set_and_publish(
-            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
+            MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
             msg,
             pipe=pipe,
         )
@@ -267,14 +260,8 @@ class FalconSetup(CustomDetectorMixin):
             self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
         )
         signal_conditions = [
-            (
-                self.parent.dxp.current_pixel.get,
-                total_frames,
-            ),
-            (
-                self.parent.hdf5.array_counter.get,
-                total_frames,
-            ),
+            (self.parent.dxp.current_pixel.get, total_frames),
+            (self.parent.hdf5.array_counter.get, total_frames),
         ]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
@@ -308,9 +295,7 @@ class FalconcSAXS(PSIDetectorBase):
     """
 
     # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = [
-        "describe",
-    ]
+    USER_ACCESS = ["describe"]
 
     # specify Setup class
     custom_prepare_cls = FalconSetup

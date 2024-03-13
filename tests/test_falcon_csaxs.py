@@ -1,14 +1,14 @@
 # pylint: skip-file
-import pytest
-from unittest import mock
-import threading
 import os
+import threading
+from unittest import mock
+
 import ophyd
+import pytest
+from bec_lib import MessageEndpoints, messages
 
 from ophyd_devices.epics.devices.falcon_csaxs import FalconcSAXS, FalconTimeoutError
-
 from tests.utils import DMMock, MockPV
-from bec_lib import messages, MessageEndpoints
 
 
 def patch_dual_pvs(device):
@@ -47,10 +47,7 @@ def mock_det():
 @pytest.mark.parametrize(
     "trigger_source, mapping_source, ignore_gate, pixels_per_buffer, detector_state,"
     " expected_exception",
-    [
-        (1, 1, 0, 20, 0, False),
-        (1, 1, 0, 20, 1, True),
-    ],
+    [(1, 1, 0, 20, 0, False), (1, 1, 0, 20, 1, True)],
 )
 # TODO rewrite this one, write test for init_detector, init_filewriter is tested
 def test_init_detector(
@@ -94,13 +91,7 @@ def test_init_detector(
 
 
 @pytest.mark.parametrize(
-    "readout_time, expected_value",
-    [
-        (1e-3, 3e-3),
-        (3e-3, 3e-3),
-        (5e-3, 5e-3),
-        (None, 3e-3),
-    ],
+    "readout_time, expected_value", [(1e-3, 3e-3), (3e-3, 3e-3), (5e-3, 5e-3), (None, 3e-3)]
 )
 def test_update_readout_time(mock_det, readout_time, expected_value):
     if readout_time is None:
@@ -131,10 +122,10 @@ def test_initialize_default_parameter(mock_det):
                 "frames_per_trigger": 1,
                 "exp_time": 0.1,
                 "filepath": "test.h5",
-                "scanID": "123",
+                "scan_id": "123",
                 "mokev": 12.4,
             }
-        ),
+        )
     ],
 )
 def test_stage(mock_det, scaninfo):
@@ -203,13 +194,13 @@ def test_prepare_data_backend(mock_det, scaninfo):
 @pytest.mark.parametrize(
     "scaninfo",
     [
-        ({"filepath": "test.h5", "successful": True, "done": False, "scanID": "123"}),
-        ({"filepath": "test.h5", "successful": False, "done": True, "scanID": "123"}),
-        ({"filepath": "test.h5", "successful": None, "done": True, "scanID": "123"}),
+        ({"filepath": "test.h5", "successful": True, "done": False, "scan_id": "123"}),
+        ({"filepath": "test.h5", "successful": False, "done": True, "scan_id": "123"}),
+        ({"filepath": "test.h5", "successful": None, "done": True, "scan_id": "123"}),
     ],
 )
 def test_publish_file_location(mock_det, scaninfo):
-    mock_det.scaninfo.scanID = scaninfo["scanID"]
+    mock_det.scaninfo.scan_id = scaninfo["scan_id"]
     mock_det.filepath = scaninfo["filepath"]
     mock_det.custom_prepare.publish_file_location(
         done=scaninfo["done"], successful=scaninfo["successful"]
@@ -222,7 +213,7 @@ def test_publish_file_location(mock_det, scaninfo):
         )
     expected_calls = [
         mock.call(
-            MessageEndpoints.public_file(scaninfo["scanID"], mock_det.name),
+            MessageEndpoints.public_file(scaninfo["scan_id"], mock_det.name),
             msg,
             pipe=mock_det.connector.pipeline.return_value,
         ),
@@ -235,13 +226,7 @@ def test_publish_file_location(mock_det, scaninfo):
     assert mock_det.connector.set_and_publish.call_args_list == expected_calls
 
 
-@pytest.mark.parametrize(
-    "detector_state, expected_exception",
-    [
-        (1, False),
-        (0, True),
-    ],
-)
+@pytest.mark.parametrize("detector_state, expected_exception", [(1, False), (0, True)])
 def test_arm_acquisition(mock_det, detector_state, expected_exception):
     with mock.patch.object(mock_det, "stop") as mock_stop:
         mock_det.state._read_pv.mock_data = detector_state
@@ -261,24 +246,8 @@ def test_trigger(mock_det):
         mock_on_trigger.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "stopped, expected_abort",
-    [
-        (
-            False,
-            False,
-        ),
-        (
-            True,
-            True,
-        ),
-    ],
-)
-def test_unstage(
-    mock_det,
-    stopped,
-    expected_abort,
-):
+@pytest.mark.parametrize("stopped, expected_abort", [(False, False), (True, True)])
+def test_unstage(mock_det, stopped, expected_abort):
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:

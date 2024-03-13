@@ -2,16 +2,14 @@ import enum
 import json
 import os
 import time
-import requests
+
 import numpy as np
-
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import Device, Staged
+import requests
+from bec_lib import MessageEndpoints, bec_logger, messages
 from ophyd import ADComponent as ADCpt
+from ophyd import Device, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Staged
 
-from bec_lib import messages, MessageEndpoints, bec_logger
-
-from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
+from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 
 logger = bec_logger.logger
 
@@ -346,7 +344,7 @@ class PilatusSetup(CustomDetectorMixin):
                 metadata={"input_path": self.parent.filepath_raw},
             )
         self.parent.connector.set_and_publish(
-            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
+            MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
             msg,
             pipe=pipe,
         )
@@ -360,10 +358,7 @@ class PilatusSetup(CustomDetectorMixin):
         # pylint: disable=protected-access
         # TODO: at the moment this relies on device.mcs.obj._staged attribute
         signal_conditions = [
-            (
-                lambda: self.parent.device_manager.devices.mcs.obj._staged,
-                Staged.no,
-            ),
+            (lambda: self.parent.device_manager.devices.mcs.obj._staged, Staged.no)
         ]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
@@ -383,11 +378,11 @@ class PilatusSetup(CustomDetectorMixin):
         """Stop detector"""
         self.parent.cam.acquire.put(0)
 
-    def check_scanID(self) -> None:
-        """Checks if scanID has changed and stops the scan if it has"""
-        old_scanID = self.parent.scaninfo.scanID
+    def check_scan_id(self) -> None:
+        """Checks if scan_id has changed and stops the scan if it has"""
+        old_scan_id = self.parent.scaninfo.scan_id
         self.parent.scaninfo.load_scan_metadata()
-        if self.parent.scaninfo.scanID != old_scanID:
+        if self.parent.scaninfo.scan_id != old_scan_id:
             self.parent.stopped = True
 
 
@@ -405,9 +400,7 @@ class PilatuscSAXS(PSIDetectorBase):
     """
 
     # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = [
-        "describe",
-    ]
+    USER_ACCESS = ["describe"]
 
     # specify Setup class
     custom_prepare_cls = PilatusSetup

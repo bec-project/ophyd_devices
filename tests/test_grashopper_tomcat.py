@@ -1,20 +1,21 @@
 # pylint: skip-file
-import pytest
 from unittest import mock
 
+import pytest
+
 from ophyd_devices.epics.devices.grashopper_tomcat import (
-    GrashopperTOMCATSetup,
-    AutoMode,
-    ImageMode,
-    DetectorState,
-    ImageBinning,
-    VideoMode,
-    PixelFormat,
     COLORMODE,
-    TriggerSource,
-    MemoryPolling,
+    AutoMode,
+    DetectorState,
     GrashopperError,
     GrashopperTimeoutError,
+    GrashopperTOMCATSetup,
+    ImageBinning,
+    ImageMode,
+    MemoryPolling,
+    PixelFormat,
+    TriggerSource,
+    VideoMode,
 )
 
 
@@ -38,7 +39,7 @@ def mock_GrashopperSetup():
 @pytest.fixture(
     params=[
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 1,
@@ -46,7 +47,7 @@ def mock_GrashopperSetup():
             "readout_time": 0.1,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "step",
             "num_points": 500,
             "frames_per_trigger": 5,
@@ -54,7 +55,7 @@ def mock_GrashopperSetup():
             "readout_time": 0,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 1,
@@ -62,7 +63,7 @@ def mock_GrashopperSetup():
             "readout_time": 0.2,
         },
         {
-            "scanID": "1234",
+            "scan_id": "1234",
             "scan_type": "fly",
             "num_points": 500,
             "frames_per_trigger": 5,

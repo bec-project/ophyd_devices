@@ -1,14 +1,12 @@
+from bec_lib import bec_logger
 from ophyd import Component
 
-from ophyd_devices.utils import bec_utils
 from ophyd_devices.epics.devices.psi_delay_generator_base import (
-    PSIDelayGeneratorBase,
     DDGCustomMixin,
+    PSIDelayGeneratorBase,
     TriggerSource,
 )
-
-from bec_lib import bec_logger
-
+from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
 
@@ -34,14 +32,10 @@ class DDGSetup(DDGCustomMixin):
         self.parent.set_channels("offset", self.parent.offset.get())
         # Setup reference
         self.parent.set_channels(
-            "reference",
-            0,
-            [f"channel{pair}.ch1" for pair in self.parent.all_delay_pairs],
+            "reference", 0, [f"channel{pair}.ch1" for pair in self.parent.all_delay_pairs]
         )
         self.parent.set_channels(
-            "reference",
-            0,
-            [f"channel{pair}.ch2" for pair in self.parent.all_delay_pairs],
+            "reference", 0, [f"channel{pair}.ch2" for pair in self.parent.all_delay_pairs]
         )
         self.parent.set_trigger(getattr(TriggerSource, self.parent.set_trigger_source.get()))
         # Set threshold level for ext. pulses
@@ -157,15 +151,15 @@ class DDGSetup(DDGCustomMixin):
         if self.parent.source.read()[self.parent.source.name]["value"] == TriggerSource.SINGLE_SHOT:
             self.parent.trigger_shot.put(1)
 
-    def check_scanID(self) -> None:
+    def check_scan_id(self) -> None:
         """
-        Method to check if scanID has changed.
+        Method to check if scan_id has changed.
 
         If yes, then it changes parent.stopped to True, which will stop further actions.
         """
-        old_scanID = self.parent.scaninfo.scanID
+        old_scan_id = self.parent.scaninfo.scan_id
         self.parent.scaninfo.load_scan_metadata()
-        if self.parent.scaninfo.scanID != old_scanID:
+        if self.parent.scaninfo.scan_id != old_scan_id:
             self.parent.stopped = True
 
     def finished(self) -> None:
@@ -211,17 +205,11 @@ class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
     custom_prepare_cls = DDGSetup
 
     delay_burst = Component(
-        bec_utils.ConfigSignal,
-        name="delay_burst",
-        kind="config",
-        config_storage_name="ddg_config",
+        bec_utils.ConfigSignal, name="delay_burst", kind="config", config_storage_name="ddg_config"
     )
 
     delta_width = Component(
-        bec_utils.ConfigSignal,
-        name="delta_width",
-        kind="config",
-        config_storage_name="ddg_config",
+        bec_utils.ConfigSignal, name="delta_width", kind="config", config_storage_name="ddg_config"
     )
 
     additional_triggers = Component(
@@ -232,10 +220,7 @@ class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
     )
 
     polarity = Component(
-        bec_utils.ConfigSignal,
-        name="polarity",
-        kind="config",
-        config_storage_name="ddg_config",
+        bec_utils.ConfigSignal, name="polarity", kind="config", config_storage_name="ddg_config"
     )
 
     fixed_ttl_width = Component(
@@ -246,17 +231,11 @@ class DelayGeneratorcSAXS(PSIDelayGeneratorBase):
     )
 
     amplitude = Component(
-        bec_utils.ConfigSignal,
-        name="amplitude",
-        kind="config",
-        config_storage_name="ddg_config",
+        bec_utils.ConfigSignal, name="amplitude", kind="config", config_storage_name="ddg_config"
     )
 
     offset = Component(
-        bec_utils.ConfigSignal,
-        name="offset",
-        kind="config",
-        config_storage_name="ddg_config",
+        bec_utils.ConfigSignal, name="offset", kind="config", config_storage_name="ddg_config"
     )
 
     thres_trig_level = Component(

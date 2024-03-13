@@ -1,21 +1,28 @@
-import time
 import enum
+import time
 from typing import Any
-from ophyd import Device, Component, EpicsSignal, EpicsSignalRO, Kind
-from ophyd import PVPositioner, Signal, DeviceStatus
-from ophyd.pseudopos import (
-    pseudo_position_argument,
-    real_position_argument,
-    PseudoSingle,
-    PseudoPositioner,
-)
-from ophyd.device import Staged
-
-from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
-from ophyd_devices.utils import bec_utils
 
 from bec_lib import bec_logger
+from ophyd import (
+    Component,
+    Device,
+    DeviceStatus,
+    EpicsSignal,
+    EpicsSignalRO,
+    Kind,
+    PVPositioner,
+    Signal,
+)
+from ophyd.device import Staged
+from ophyd.pseudopos import (
+    PseudoPositioner,
+    PseudoSingle,
+    pseudo_position_argument,
+    real_position_argument,
+)
 
+from ophyd_devices.utils import bec_utils
+from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
 logger = bec_logger.logger
 
@@ -71,18 +78,10 @@ class DelayStatic(Device):
         kind=Kind.config,
     )
     amplitude = Component(
-        EpicsSignal,
-        "OutputAmpAI",
-        write_pv="OutputAmpAO",
-        name="amplitude",
-        kind=Kind.config,
+        EpicsSignal, "OutputAmpAI", write_pv="OutputAmpAO", name="amplitude", kind=Kind.config
     )
     offset = Component(
-        EpicsSignal,
-        "OutputOffsetAI",
-        write_pv="OutputOffsetAO",
-        name="offset",
-        kind=Kind.config,
+        EpicsSignal, "OutputOffsetAI", write_pv="OutputOffsetAO", name="offset", kind=Kind.config
     )
 
 
@@ -178,8 +177,8 @@ class DDGCustomMixin:
         Example could be to open the shutter by triggering a pulse via pre_scan.
         """
 
-    def check_scanID(self) -> None:
-        """Method to check if there is a new scanID, called by stage."""
+    def check_scan_id(self) -> None:
+        """Method to check if there is a new scan_id, called by stage."""
 
     def is_ddg_okay(self, raise_on_error=False) -> None:
         """
@@ -246,13 +245,7 @@ class PSIDelayGeneratorBase(Device):
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
 
-    USER_ACCESS = [
-        "set_channels",
-        "_set_trigger",
-        "burst_enable",
-        "burst_disable",
-        "reload_config",
-    ]
+    USER_ACCESS = ["set_channels", "_set_trigger", "burst_enable", "burst_disable", "reload_config"]
 
     # Assign PVs from DDG645
     trigger_burst_readout = Component(
@@ -307,39 +300,19 @@ class PSIDelayGeneratorBase(Device):
     )
     trigger_shot = Component(EpicsSignal, "TriggerDelayBO", name="trigger_shot", kind="config")
     burstMode = Component(
-        EpicsSignal,
-        "BurstModeBI",
-        write_pv="BurstModeBO",
-        name="burstmode",
-        kind=Kind.config,
+        EpicsSignal, "BurstModeBI", write_pv="BurstModeBO", name="burstmode", kind=Kind.config
     )
     burstConfig = Component(
-        EpicsSignal,
-        "BurstConfigBI",
-        write_pv="BurstConfigBO",
-        name="burstconfig",
-        kind=Kind.config,
+        EpicsSignal, "BurstConfigBI", write_pv="BurstConfigBO", name="burstconfig", kind=Kind.config
     )
     burstCount = Component(
-        EpicsSignal,
-        "BurstCountLI",
-        write_pv="BurstCountLO",
-        name="burstcount",
-        kind=Kind.config,
+        EpicsSignal, "BurstCountLI", write_pv="BurstCountLO", name="burstcount", kind=Kind.config
     )
     burstDelay = Component(
-        EpicsSignal,
-        "BurstDelayAI",
-        write_pv="BurstDelayAO",
-        name="burstdelay",
-        kind=Kind.config,
+        EpicsSignal, "BurstDelayAI", write_pv="BurstDelayAO", name="burstdelay", kind=Kind.config
     )
     burstPeriod = Component(
-        EpicsSignal,
-        "BurstPeriodAI",
-        write_pv="BurstPeriodAO",
-        name="burstperiod",
-        kind=Kind.config,
+        EpicsSignal, "BurstPeriodAI", write_pv="BurstPeriodAO", name="burstperiod", kind=Kind.config
     )
 
     def __init__(
@@ -375,13 +348,7 @@ class PSIDelayGeneratorBase(Device):
         self.name = name
         self.scaninfo = None
         self.timeout = 5
-        self.all_channels = [
-            "channelT0",
-            "channelAB",
-            "channelCD",
-            "channelEF",
-            "channelGH",
-        ]
+        self.all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
         self.all_delay_pairs = ["AB", "CD", "EF", "GH"]
         self.wait_for_connection(all_signals=True)
 
@@ -446,10 +413,7 @@ class PSIDelayGeneratorBase(Device):
         assert count > 0, "Number of bursts must be positive"
         assert delay >= 0, "Burst delay must be larger than 0"
         assert period > 0, "Burst period must be positive"
-        assert config in [
-            "all",
-            "first",
-        ], "Supported burst configs are 'all' and 'first'"
+        assert config in ["all", "first"], "Supported burst configs are 'all' and 'first'"
 
         self.burstMode.put(1)
         self.burstCount.put(count)
@@ -517,14 +481,14 @@ class PSIDelayGeneratorBase(Device):
         Otherwise, checks if the DDG finished acquisition
 
         Internal Calls:
-        - custom_prepare.check_scanID          : check if scanID changed or detector stopped
+        - custom_prepare.check_scan_id          : check if scan_id changed or detector stopped
         - custom_prepare.finished              : check if device finished acquisition (succesfully)
         - is_ddg_okay                          : check if DDG is okay
 
         Returns:
             list(object): list of objects that were unstaged
         """
-        self.custom_prepare.check_scanID()
+        self.custom_prepare.check_scan_id()
         if self.stopped is True:
             return super().unstage()
         self.custom_prepare.finished()

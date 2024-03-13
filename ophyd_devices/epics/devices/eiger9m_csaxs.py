@@ -1,23 +1,18 @@
 import enum
+import os
 import threading
 import time
-import numpy as np
-import os
-
 from typing import Any
 
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import Device
+import numpy as np
+from bec_lib import messages, threadlocked
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from ophyd import ADComponent as ADCpt
-
+from ophyd import Device, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from std_daq_client import StdDaqClient
 
-from bec_lib import threadlocked
-from bec_lib.logger import bec_logger
-from bec_lib import messages
-from bec_lib.endpoints import MessageEndpoints
-
-from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
+from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 
 logger = bec_logger.logger
 
@@ -78,16 +73,9 @@ class Eiger9MSetup(CustomDetectorMixin):
         eacc = self.parent.scaninfo.username
         self.update_std_cfg("writer_user_id", int(eacc.strip(" e")))
 
-        signal_conditions = [
-            (
-                lambda: self.std_client.get_status()["state"],
-                "READY",
-            ),
-        ]
+        signal_conditions = [(lambda: self.std_client.get_status()["state"], "READY")]
         if not self.wait_for_signals(
-            signal_conditions=signal_conditions,
-            timeout=self.parent.timeout,
-            all_signals=True,
+            signal_conditions=signal_conditions, timeout=self.parent.timeout, all_signals=True
         ):
             raise EigerTimeoutError(
                 f"Std client not in READY state, returns: {self.std_client.get_status()}"
@@ -282,11 +270,11 @@ class Eiger9MSetup(CustomDetectorMixin):
                 f"Failed to arm the acquisition. Detector state {signal_conditions[0][0]}"
             )
 
-    def check_scanID(self) -> None:
-        """Checks if scanID has changed and stops the scan if it has"""
-        old_scanID = self.parent.scaninfo.scanID
+    def check_scan_id(self) -> None:
+        """Checks if scan_id has changed and stops the scan if it has"""
+        old_scan_id = self.parent.scaninfo.scan_id
         self.parent.scaninfo.load_scan_metadata()
-        if self.parent.scaninfo.scanID != old_scanID:
+        if self.parent.scaninfo.scan_id != old_scan_id:
             self.parent.stopped = True
 
     def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
@@ -309,7 +297,7 @@ class Eiger9MSetup(CustomDetectorMixin):
                 file_path=self.parent.filepath, done=done, successful=successful
             )
         self.parent.connector.set_and_publish(
-            MessageEndpoints.public_file(self.parent.scaninfo.scanID, self.parent.name),
+            MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
             msg,
             pipe=pipe,
         )
@@ -404,9 +392,7 @@ class Eiger9McSAXS(PSIDetectorBase):
     """
 
     # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = [
-        "describe",
-    ]
+    USER_ACCESS = ["describe"]
 
     # specify Setup class
     custom_prepare_cls = Eiger9MSetup

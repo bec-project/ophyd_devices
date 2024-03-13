@@ -1,14 +1,14 @@
 import enum
 import threading
 from collections import defaultdict
+
 import numpy as np
+from bec_lib import MessageEndpoints, bec_logger, messages, threadlocked
+from ophyd import Component as Cpt
+from ophyd import Device, EpicsSignal, EpicsSignalRO
 
-from ophyd import EpicsSignal, EpicsSignalRO, Device, Component as Cpt
+from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 from ophyd_devices.utils import bec_utils
-from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
-
-from bec_lib import messages, MessageEndpoints, bec_logger, threadlocked
-
 
 logger = bec_logger.logger
 
@@ -127,19 +127,13 @@ class MCSSetup(CustomDetectorMixin):
         if self.parent.scaninfo.scan_msg is None:
             return
         metadata = self.parent.scaninfo.scan_msg.metadata
-        metadata.update(
-            {
-                "async_update": "append",
-                "num_lines": self.parent.num_lines.get(),
-            }
-        )
+        metadata.update({"async_update": "append", "num_lines": self.parent.num_lines.get()})
         msg = messages.DeviceMessage(
-            signals=dict(self.mca_data),
-            metadata=self.parent.scaninfo.scan_msg.metadata,
+            signals=dict(self.mca_data), metadata=self.parent.scaninfo.scan_msg.metadata
         )
         self.parent.connector.xadd(
             topic=MessageEndpoints.device_async_readback(
-                scanID=self.parent.scaninfo.scanID, device=self.parent.name
+                scan_id=self.parent.scaninfo.scan_id, device=self.parent.name
             ),
             msg={"data": msg},
             expire=self._stream_ttl,
@@ -181,14 +175,8 @@ class MCSSetup(CustomDetectorMixin):
     def finished(self) -> None:
         """Check if acquisition is finished, if not successful, rais MCSTimeoutError"""
         signal_conditions = [
-            (
-                lambda: self.acquisition_done,
-                True,
-            ),
-            (
-                self.parent.acquiring.get,
-                0,  # Considering making a enum.Int class for this state
-            ),
+            (lambda: self.acquisition_done, True),
+            (self.parent.acquiring.get, 0),  # Considering making a enum.Int class for this state
         ]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
@@ -272,10 +260,7 @@ class MCScSAXS(PSIDetectorBase):
 
     # Custom signal readout from device config
     num_lines = Cpt(
-        bec_utils.ConfigSignal,
-        name="num_lines",
-        kind="config",
-        config_storage_name="mcs_config",
+        bec_utils.ConfigSignal, name="num_lines", kind="config", config_storage_name="mcs_config"
     )
 
     def __init__(
@@ -292,9 +277,7 @@ class MCScSAXS(PSIDetectorBase):
         mcs_config=None,
         **kwargs,
     ):
-        self.mcs_config = {
-            f"{name}_num_lines": 1,
-        }
+        self.mcs_config = {f"{name}_num_lines": 1}
         if mcs_config is not None:
             # pylint: disable=expression-not-assigned
             [self.mcs_config.update({f"{name}_{key}": value}) for key, value in mcs_config.items()]

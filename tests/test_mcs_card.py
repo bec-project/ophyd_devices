@@ -1,8 +1,10 @@
 # pylint: skip-file
-import pytest
-from unittest import mock
 import threading
+from unittest import mock
+
 import ophyd
+import pytest
+from bec_lib import MessageEndpoints, messages
 
 from ophyd_devices.epics.devices.mcs_csaxs import (
     MCScSAXS,
@@ -11,9 +13,7 @@ from ophyd_devices.epics.devices.mcs_csaxs import (
     ReadoutMode,
     TriggerSource,
 )
-
 from tests.utils import DMMock, MockPV
-from bec_lib import messages, MessageEndpoints
 
 
 def patch_dual_pvs(device):
@@ -89,15 +89,11 @@ def test_init():
                 "count_on_start": 0,
                 "stop_all": 1,
             },
-        ),
+        )
     ],
 )
 def test_initialize_detector(
-    mock_det,
-    trigger_source,
-    channel_advance,
-    channel_source1,
-    pv_channels,
+    mock_det, trigger_source, channel_advance, channel_source1, pv_channels
 ):
     """Test the _init function:
 
@@ -145,10 +141,7 @@ def test_progress_update(mock_det, value, num_lines, num_points, done):
 
 @pytest.mark.parametrize(
     "values, expected_nothing",
-    [
-        ([[100, 120, 140], [200, 220, 240], [300, 320, 340]], False),
-        ([100, 200, 300], True),
-    ],
+    [([[100, 120, 140], [200, 220, 240], [300, 320, 340]], False), ([100, 200, 300], True)],
 )
 def test_on_mca_data(mock_det, values, expected_nothing):
     """Test the on_mca_data function:
@@ -171,15 +164,15 @@ def test_on_mca_data(mock_det, values, expected_nothing):
     "metadata, mca_data",
     [
         (
-            {"scanID": 123},
+            {"scan_id": 123},
             {"mca1": [100, 120, 140], "mca3": [200, 220, 240], "mca4": [300, 320, 340]},
-        ),
+        )
     ],
 )
 def test_send_data_to_bec(mock_det, metadata, mca_data):
     mock_det.scaninfo.scan_msg = mock.MagicMock()
     mock_det.scaninfo.scan_msg.metadata = metadata
-    mock_det.scaninfo.scanID = metadata["scanID"]
+    mock_det.scaninfo.scan_id = metadata["scan_id"]
     mock_det.custom_prepare.mca_data = mca_data
     mock_det.custom_prepare._send_data_to_bec()
     device_metadata = mock_det.scaninfo.scan_msg.metadata
@@ -187,7 +180,7 @@ def test_send_data_to_bec(mock_det, metadata, mca_data):
     data = messages.DeviceMessage(signals=dict(mca_data), metadata=device_metadata)
     calls = mock.call(
         topic=MessageEndpoints.device_async_readback(
-            scanID=metadata["scanID"], device=mock_det.name
+            scan_id=metadata["scan_id"], device=mock_det.name
         ),
         msg={"data": data},
         expire=1800,
@@ -200,54 +193,32 @@ def test_send_data_to_bec(mock_det, metadata, mca_data):
     "scaninfo, triggersource, stopped, expected_exception",
     [
         (
-            {
-                "num_points": 500,
-                "frames_per_trigger": 1,
-                "scan_type": "step",
-            },
+            {"num_points": 500, "frames_per_trigger": 1, "scan_type": "step"},
             TriggerSource.MODE3,
             False,
             False,
         ),
         (
-            {
-                "num_points": 500,
-                "frames_per_trigger": 1,
-                "scan_type": "fly",
-            },
+            {"num_points": 500, "frames_per_trigger": 1, "scan_type": "fly"},
             TriggerSource.MODE3,
             False,
             False,
         ),
         (
-            {
-                "num_points": 5001,
-                "frames_per_trigger": 2,
-                "scan_type": "step",
-            },
+            {"num_points": 5001, "frames_per_trigger": 2, "scan_type": "step"},
             TriggerSource.MODE3,
             False,
             True,
         ),
         (
-            {
-                "num_points": 500,
-                "frames_per_trigger": 2,
-                "scan_type": "random",
-            },
+            {"num_points": 500, "frames_per_trigger": 2, "scan_type": "random"},
             TriggerSource.MODE3,
             False,
             True,
         ),
     ],
 )
-def test_stage(
-    mock_det,
-    scaninfo,
-    triggersource,
-    stopped,
-    expected_exception,
-):
+def test_stage(mock_det, scaninfo, triggersource, stopped, expected_exception):
     mock_det.scaninfo.num_points = scaninfo["num_points"]
     mock_det.scaninfo.frames_per_trigger = scaninfo["frames_per_trigger"]
     mock_det.scaninfo.scan_type = scaninfo["scan_type"]
@@ -290,24 +261,8 @@ def test_prepare_detector_backend(mock_det):
     assert mock_det.read_mode.get() == ReadoutMode.EVENT
 
 
-@pytest.mark.parametrize(
-    "stopped, expected_exception",
-    [
-        (
-            False,
-            False,
-        ),
-        (
-            True,
-            True,
-        ),
-    ],
-)
-def test_unstage(
-    mock_det,
-    stopped,
-    expected_exception,
-):
+@pytest.mark.parametrize("stopped, expected_exception", [(False, False), (True, True)])
+def test_unstage(mock_det, stopped, expected_exception):
     with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
         mock_det.custom_prepare, "publish_file_location"
     ) as mock_publish_file_location:
@@ -342,30 +297,10 @@ def test_stop(mock_det):
 @pytest.mark.parametrize(
     "stopped, acquisition_done, acquiring_state, expected_exception",
     [
-        (
-            False,
-            True,
-            0,
-            False,
-        ),
-        (
-            False,
-            False,
-            0,
-            True,
-        ),
-        (
-            False,
-            True,
-            1,
-            True,
-        ),
-        (
-            True,
-            True,
-            0,
-            True,
-        ),
+        (False, True, 0, False),
+        (False, False, 0, True),
+        (False, True, 1, True),
+        (True, True, 0, True),
     ],
 )
 def test_finished(mock_det, stopped, acquisition_done, acquiring_state, expected_exception):

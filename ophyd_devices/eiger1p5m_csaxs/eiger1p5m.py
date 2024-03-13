@@ -92,7 +92,7 @@ class Eiger1p5MDetector(Device):
     def stage(self) -> list[object]:
         scan_msg = self._get_current_scan_msg()
         self.metadata = {
-            "scanID": scan_msg.content["scanID"],
+            "scan_id": scan_msg.content["scan_id"],
             "RID": scan_msg.content["info"]["RID"],
             "queueID": scan_msg.content["info"]["queueID"],
         }
