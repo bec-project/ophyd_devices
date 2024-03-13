@@ -158,6 +158,7 @@ class RtFlomniController(RtController):
         print("rt feedback is now enabled.")
 
     def move_samx_to_scan_region(self, fovx: float, cenx: float):
+        time.sleep(0.05)
         if self.rt_pid_voltage is None:
             rtx = self.get_device_manager().devices.rtx
             self.rt_pid_voltage = rtx.user_parameter.get("rt_pid_voltage")
@@ -232,7 +233,7 @@ class RtFlomniController(RtController):
 
     def show_cyclic_error_compensation(self):
         cec0 = int(float(self.socket_put_and_receive("w0").strip()))
-        cec1 = int(float(self.socket_put_and_receive("w0").strip()))
+        cec1 = int(float(self.socket_put_and_receive("w1").strip()))
 
         if cec0 == 32:
             logger.info("Cyclic Error Compensation: y-axis is initialized")
