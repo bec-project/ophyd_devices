@@ -14,7 +14,7 @@ class BECInfoMsgMock:
     def __init__(
         self,
         mockrid: str = "mockrid1111",
-        mockqueueid: str = "mockqueueID111",
+        mockqueueid: str = "mockqueue_id111",
         scan_number: int = 1,
         exp_time: float = 15e-3,
         num_points: int = 500,
@@ -37,7 +37,7 @@ class BECInfoMsgMock:
         """Get BECInfoMsg object"""
         info_msg = {
             "RID": self.mockrid,
-            "queueID": self.mockqueueid,
+            "queue_id": self.mockqueueid,
             "scan_number": self.scan_number,
             "exp_time": self.exp_time,
             "num_points": self.num_points,
@@ -117,7 +117,7 @@ class BecScaninfoMixin:
             self.metadata = {
                 "scan_id": scan_msg.content["scan_id"],
                 "RID": scan_msg.content["info"]["RID"],
-                "queueID": scan_msg.content["info"]["queueID"],
+                "queue_id": scan_msg.content["info"]["queue_id"],
             }
             self.scan_id = scan_msg.content["scan_id"]
             self.scan_number = scan_msg.content["info"]["scan_number"]

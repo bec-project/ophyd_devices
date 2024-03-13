@@ -94,7 +94,7 @@ class Eiger1p5MDetector(Device):
         self.metadata = {
             "scan_id": scan_msg.content["scan_id"],
             "RID": scan_msg.content["info"]["RID"],
-            "queueID": scan_msg.content["info"]["queueID"],
+            "queue_id": scan_msg.content["info"]["queue_id"],
         }
         scan_number = scan_msg.content["info"]["scan_number"]
         exp_time = scan_msg.content["info"]["exp_time"]
