@@ -2,6 +2,9 @@
 This module provides a class for creating a pseudo signal that is computed from other signals.
 """
 
+import numpy
+import scipy
+
 from functools import reduce
 from typing import Callable
 
@@ -70,7 +73,18 @@ class ComputedSignal(SignalRO):
     @property
     def compute_method(self) -> Callable | None:
         """
-        Set the compute method for the pseudo signal
+        Property that returns the compute method for the pseudo signal.
+        Example:
+            >>> signal.compute_method = "def test(a, b): return a.get() + b.get()"
+
+        """
+        return self._compute_method_str
+
+    @compute_method.setter
+    def compute_method(self, method: str):
+        """
+        Set the compute method for the pseudo signal. We  import numpy and scipy as packages
+        that are also available for user to use in their compute method.
 
         Args:
             compute_method (str): The compute method to be used. This should be a string
@@ -81,10 +95,6 @@ class ComputedSignal(SignalRO):
             >>> signal.compute_method = "def test(a, b): return a.get() + b.get()"
 
         """
-        return self._compute_method_str
-
-    @compute_method.setter
-    def compute_method(self, method: str):
         logger.info(f"Updating compute method for {self.name}.")
         method = method.strip()
         if not method.startswith("def"):

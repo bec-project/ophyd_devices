@@ -11,6 +11,9 @@
 # file writer data
 **.h5
 
+# ignore recover_config files
+recovery_config*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
