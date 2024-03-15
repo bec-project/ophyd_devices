@@ -154,14 +154,10 @@ def test_prepare_detector(mock_GrashopperSetup, scaninfo):
 def test_prepare_detector_backend(mock_GrashopperSetup):
     """Test the prepare_detector_backend method."""
     # Call the function you want to test
-    with mock.patch.object(mock_GrashopperSetup, "run_monitor") as mock_run_monitor:
-        mock_GrashopperSetup.prepare_detector_backend()
-
-        # Assert the correct methods are called with the expected arguments
-        mock_GrashopperSetup.parent.image.set_array_counter.put.assert_called_once_with(0)
-        assert mock_GrashopperSetup.monitor_thread is None
-        assert not mock_GrashopperSetup.stop_monitor
-        mock_run_monitor.assert_called_once()
+    mock_GrashopperSetup.prepare_detector_backend()
+    mock_GrashopperSetup.parent.image.set_array_counter.put.assert_called_once_with(0)
+    assert mock_GrashopperSetup.monitor_thread is None
+    assert not mock_GrashopperSetup.stop_monitor
 
 
 @pytest.mark.parametrize("detector_state", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -187,11 +183,13 @@ def test_on_trigger(mock_GrashopperSetup, trigger_source):
     """Test the on_trigger method."""
     # Call the function you want to test
     mock_GrashopperSetup.parent.cam.trigger_source.get.return_value = trigger_source
-    mock_GrashopperSetup.on_trigger()
+    with mock.patch.object(mock_GrashopperSetup, "send_data") as mock_send_data:
+        mock_GrashopperSetup.on_trigger()
 
     # Assert the correct methods are called with the expected arguments
     if trigger_source == TriggerSource.SOFTWARE:
-        mock_GrashopperSetup.parent.cam.software_trigger.put.assert_called_once_with(1)
+        mock_GrashopperSetup.parent.cam.software_trigger_device.put.assert_called_once_with(1)
+        assert mock_send_data.call_count == 1
 
 
 def test_set_acquisition_params(mock_GrashopperSetup, scaninfo):
