@@ -3,7 +3,7 @@ This module provides a class for creating a pseudo signal that is computed from 
 """
 
 import numpy as np
-import scipy
+import scipy as sp
 
 from functools import reduce
 from typing import Callable
