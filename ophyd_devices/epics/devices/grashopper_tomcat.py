@@ -6,8 +6,8 @@ import time as ttime
 # import numpy as np
 from ophyd.ophydobj import Kind
 
-os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "No"
-os.environ["EPICS_CA_ADDR_LIST"] = "129.129.208.143"
+# os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "No"
+# os.environ["EPICS_CA_ADDR_LIST"] = "129.129.208.143"
 
 # from typing import Any
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
@@ -219,7 +219,7 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
         self.parent.image.set_array_counter.put(0)
         self.monitor_thread = None
         self.stop_monitor = False
-        self.run_monitor()
+        # self.run_monitor()
 
     def arm_acquisition(self) -> None:
         """Arm grashopper detector for acquisition"""
@@ -243,7 +243,9 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
     def on_trigger(self) -> None:
         """Trigger the detector"""
         if self.parent.cam.trigger_source.get() == TriggerSource.SOFTWARE:
-            self.parent.cam.software_trigger.put(1)
+            self.parent.cam.software_trigger_device.put(1)
+            ttime.sleep(0.1)
+            self.send_data()
 
     def run_monitor(self) -> None:
         """
@@ -356,7 +358,7 @@ class SLSDetectorCam(Device):
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource", kind=Kind.config)
     trigger_delay = ADCpt(EpicsSignalWithRBV, "TriggerDelay", kind=Kind.omitted)
     exposure_mode = ADCpt(EpicsSignalWithRBV, "ExposureMode", kind=Kind.omitted)
-    software_trigger = ADCpt(EpicsSignal, "SoftwareTrigger", kind=Kind.config)
+    software_trigger_device = ADCpt(EpicsSignal, "SoftwareTrigger", kind=Kind.config)
 
     # buffer
     memory_polling = ADCpt(EpicsSignal, "PoolUsedMem.SCAN", kind=Kind.omitted)

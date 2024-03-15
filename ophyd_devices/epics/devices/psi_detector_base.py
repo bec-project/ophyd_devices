@@ -1,7 +1,6 @@
 import os
 import time
 
-from bec_lib.bec_service import SERVICE_CONFIG
 from bec_lib.device import DeviceStatus
 from bec_lib.file_utils import FileWriterMixin
 from ophyd import Device
@@ -246,6 +245,8 @@ class PSIDetectorBase(Device):
 
     def _update_service_config(self) -> None:
         """Update service config from BEC service config"""
+        from bec_lib.bec_service import SERVICE_CONFIG
+
         self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
     def _init(self) -> None:

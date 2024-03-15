@@ -5,6 +5,7 @@ from ophyd.sim import SynAxis, SynPeriodicSignal, SynSignal
 
 from .delay_generator_csaxs import DelayGeneratorcSAXS
 from .eiger9m_csaxs import Eiger9McSAXS
+from .grashopper_tomcat import GrashopperTOMCAT
 
 # cSAXS
 from .epics_motor_ex import EpicsMotorEx
