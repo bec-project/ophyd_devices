@@ -2,7 +2,7 @@
 This module provides a class for creating a pseudo signal that is computed from other signals.
 """
 
-import numpy
+import numpy as np
 import scipy
 
 from functools import reduce
@@ -83,7 +83,7 @@ class ComputedSignal(SignalRO):
     @compute_method.setter
     def compute_method(self, method: str):
         """
-        Set the compute method for the pseudo signal. We  import numpy and scipy as packages
+        Set the compute method for the pseudo signal. We  import numpy (as np) and scipy as packages
         that are also available for user to use in their compute method.
 
         Args:
