@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.2 (2024-03-15)
+
+### Fix
+
+* Bug fixes from online test at microxas ([`c2201e5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c2201e5e332c9bab64f6fcdfe034cb8d37da5857))
+* Add numpy and scipy to dynamic_pseudo ([`b66b224`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b66b224caeab9e3cf75de61fcfdccd0712fb9027))
+
 ## v0.27.1 (2024-03-13)
 
 ### Fix
