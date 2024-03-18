@@ -1,3 +1,7 @@
+from .ophyd_patch import monkey_patch_ophyd
+
+monkey_patch_ophyd()
+
 from .eiger1p5m_csaxs.eiger1p5m import Eiger1p5MDetector
 from .epics import *
 from .galil.fgalil_ophyd import FlomniGalilMotor
