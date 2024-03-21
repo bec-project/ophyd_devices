@@ -561,6 +561,20 @@ class SynDynamicComponents(Device):
     messages = Dcpt({f"message{i}": (SynSignal, None, {"name": f"msg{i}"}) for i in range(1, 6)})
 
 
+class SimPositionerWithCommFailure(SimPositioner):
+    fails = Cpt(SetableSignal, value=0)
+
+    def move(self, value: float, **kwargs) -> DeviceStatus:
+        if self.fails.get() == 1:
+            raise RuntimeError("Communication failure")
+        if self.fails.get() == 2:
+            while not self._stopped:
+                ttime.sleep(1)
+            status = DeviceStatus(self)
+            status.set_exception(RuntimeError("Communication failure"))
+        return super().move(value, **kwargs)
+
+
 if __name__ == "__main__":
     cam = SimCamera(name="cam")
     cam.image.read()
