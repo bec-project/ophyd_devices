@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.3 (2024-03-21)
+
+### Fix
+
+* Remove missplaced readme from aerotech ([`ad96b72`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ad96b729b47318007d403f7024524379f5a32a84))
+
 ## v0.27.2 (2024-03-15)
 
 ### Fix
