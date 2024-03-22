@@ -122,7 +122,7 @@ class SynFlyerLamNI(Device, PositionerBase):
                                 "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
                             }
                         },
-                        metadata={"pointID": ii, **metadata},
+                        metadata={"point_id": ii, **metadata},
                     )
                 )
                 ttime.sleep(exp_time)
@@ -136,14 +136,14 @@ class SynFlyerLamNI(Device, PositionerBase):
                     device.device_manager.connector.set(
                         MessageEndpoints.device_status(device.name),
                         messages.DeviceStatusMessage(
-                            device=device.name, status=1, metadata={"pointID": ii, **metadata}
+                            device=device.name, status=1, metadata={"point_id": ii, **metadata}
                         ),
                     )
             device.device_manager.connector.send(MessageEndpoints.device_read(device.name), bundle)
             device.device_manager.connector.set(
                 MessageEndpoints.device_status(device.name),
                 messages.DeviceStatusMessage(
-                    device=device.name, status=0, metadata={"pointID": num_pos, **metadata}
+                    device=device.name, status=0, metadata={"point_id": num_pos, **metadata}
                 ),
             )
             print("done")

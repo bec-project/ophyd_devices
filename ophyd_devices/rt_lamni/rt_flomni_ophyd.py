@@ -467,7 +467,7 @@ class RtFlomniController(RtController):
 
                     signals = self._get_signals_from_table(return_table)
 
-                    self.publish_device_data(signals=signals, pointID=int(return_table[0]))
+                    self.publish_device_data(signals=signals, point_id=int(return_table[0]))
 
         time.sleep(0.05)
 
@@ -479,7 +479,7 @@ class RtFlomniController(RtController):
             read_counter = read_counter + 1
 
             signals = self._get_signals_from_table(return_table)
-            self.publish_device_data(signals=signals, pointID=int(return_table[0]))
+            self.publish_device_data(signals=signals, point_id=int(return_table[0]))
 
         self.get_device_manager().connector.set(
             MessageEndpoints.device_status("rt_scan"),
@@ -494,11 +494,11 @@ class RtFlomniController(RtController):
             f" {self.average_stdeviations_y_st_fzp/number_of_samples_to_read}."
         )
 
-    def publish_device_data(self, signals, pointID):
+    def publish_device_data(self, signals, point_id):
         self.get_device_manager().connector.set_and_publish(
             MessageEndpoints.device_read("rt_flomni"),
             messages.DeviceMessage(
-                signals=signals, metadata={"pointID": pointID, **self.readout_metadata}
+                signals=signals, metadata={"point_id": point_id, **self.readout_metadata}
             ).dumps(),
         )
 
