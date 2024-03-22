@@ -67,6 +67,7 @@ class EpicsMotorX(EpicsMotor):
         self.subscribe(self._progress_update, run=False)
 
     def configure(self, d: dict):
+        print(d)
         if "target" in d:
             self._targetPosition = d["target"]
             del d["target"]
@@ -79,31 +80,42 @@ class EpicsMotorX(EpicsMotor):
         self._startPosition = float(self.position)
         return self.move(self._targetPosition, wait=False)
 
-    def move(self, position, wait=True, **kwargs):
+    def dmove(self, position, wait=True, **kwargs):
         self._startPosition = float(self.position)
+        self._targetPosition = None
         return super().move(position, wait, **kwargs)
 
     def _progress_update(self, value, **kwargs) -> None:
         """Progress update on the scan"""
-        if (self._startPosition is None) or (self._targetPosition is None) or (not self.moving):
-            self._run_subs(
-                sub_type=self.SUB_PROGRESS,
-                value=1,
-                max_value=1,
-                done=1,
-            )
-            return
+        # if (self._startPosition is None) or (self._targetPosition is None) or (not self.moving) and np.isclose(value, self._targetPosition, 1e-3):
+        #     self._run_subs(
+        #         sub_type=self.SUB_PROGRESS,
+        #         value=1,
+        #         max_value=1,
+        #         done=1,
+        #     )
+        #     return
 
-        progress = np.abs(
-            (value - self._startPosition) / (self._targetPosition - self._startPosition)
-        )
+        # progress = np.abs(
+        #     (value - self._startPosition) / (self._targetPosition - self._startPosition)
+        # )
+        # print(progress)
+        print(value)
+        # print(self._targetPosition)
         max_value = 100
+        if self._targetPosition is None:
+            return
+        # if not self.moving:
+        #     return
+        done = int(np.isclose(value, self._targetPosition, 1e-3)) and not self.moving
         self._run_subs(
             sub_type=self.SUB_PROGRESS,
-            value=int(100 * progress),
-            max_value=max_value,
-            done=int(np.isclose(max_value, progress, 1e-3)),
+            value=value, #int(100 * progress),
+            max_value=self._targetPosition,
+            done=int(np.isclose(value, self._targetPosition, 1e-3)) and not self.moving,
         )
+        if done:
+            self._targetPosition = None
 
 
 class EpicsPassiveRO(EpicsSignalRO):
@@ -191,10 +203,10 @@ class aa1Tasks(Device):
     """
 
     SUB_PROGRESS = "progress"
-    _failure = Component(EpicsSignalRO, "FAILURE", auto_monitor=True, kind=Kind.hinted)
-    errStatus = Component(EpicsSignalRO, "ERRW", auto_monitor=True, kind=Kind.hinted)
-    warnStatus = Component(EpicsSignalRO, "WARNW", auto_monitor=True, kind=Kind.hinted)
-    taskStates = Component(EpicsSignalRO, "STATES-RBV", auto_monitor=True, kind=Kind.hinted)
+    _failure = Component(EpicsSignalRO, "FAILURE", auto_monitor=True, kind=Kind.normal)
+    errStatus = Component(EpicsSignalRO, "ERRW", auto_monitor=True, kind=Kind.normal)
+    warnStatus = Component(EpicsSignalRO, "WARNW", auto_monitor=True, kind=Kind.normal)
+    taskStates = Component(EpicsSignalRO, "STATES-RBV", auto_monitor=True, kind=Kind.normal)
     taskIndex = Component(EpicsSignal, "TASKIDX", kind=Kind.config, put_complete=True)
     switch = Component(EpicsSignal, "SWITCH", kind=Kind.config, put_complete=True)
     _execute = Component(EpicsSignal, "EXECUTE", string=True, kind=Kind.config, put_complete=True)
@@ -428,9 +440,9 @@ class aa1TaskState(Device):
     """
 
     index = Component(EpicsSignalRO, "INDEX", kind=Kind.config)
-    status = Component(EpicsSignalRO, "STATUS", auto_monitor=True, kind=Kind.hinted)
-    errorCode = Component(EpicsSignalRO, "ERROR", auto_monitor=True, kind=Kind.hinted)
-    warnCode = Component(EpicsSignalRO, "WARNING", auto_monitor=True, kind=Kind.hinted)
+    status = Component(EpicsSignalRO, "STATUS", auto_monitor=True, kind=Kind.normal)
+    errorCode = Component(EpicsSignalRO, "ERROR", auto_monitor=True, kind=Kind.normal)
+    warnCode = Component(EpicsSignalRO, "WARNING", auto_monitor=True, kind=Kind.normal)
 
     def complete(self) -> StatusBase:
         """Bluesky flyer interface"""
@@ -487,15 +499,15 @@ class aa1DataAcquisition(Device):
     """
 
     # Status monitoring
-    status = Component(EpicsSignalRO, "RUNNING", auto_monitor=True, kind=Kind.hinted)
+    status = Component(EpicsSignalRO, "RUNNING", auto_monitor=True, kind=Kind.normal)
     points_max = Component(EpicsSignal, "MAXPOINTS", kind=Kind.config, put_complete=True)
     signal_num = Component(EpicsSignalRO, "NITEMS", kind=Kind.config)
 
-    points_total = Component(EpicsSignalRO, "NTOTAL", auto_monitor=True, kind=Kind.hinted)
-    points_collected = Component(EpicsSignalRO, "NCOLLECTED", auto_monitor=True, kind=Kind.hinted)
-    points_retrieved = Component(EpicsSignalRO, "NRETRIEVED", auto_monitor=True, kind=Kind.hinted)
-    overflow = Component(EpicsSignalRO, "OVERFLOW", auto_monitor=True, kind=Kind.hinted)
-    runmode = Component(EpicsSignalRO, "MODE_RBV", auto_monitor=True, kind=Kind.hinted)
+    points_total = Component(EpicsSignalRO, "NTOTAL", auto_monitor=True, kind=Kind.normal)
+    points_collected = Component(EpicsSignalRO, "NCOLLECTED", auto_monitor=True, kind=Kind.normal)
+    points_retrieved = Component(EpicsSignalRO, "NRETRIEVED", auto_monitor=True, kind=Kind.normal)
+    overflow = Component(EpicsSignalRO, "OVERFLOW", auto_monitor=True, kind=Kind.normal)
+    runmode = Component(EpicsSignalRO, "MODE_RBV", auto_monitor=True, kind=Kind.normal)
     # DAQ setup
     numpoints = Component(EpicsSignal, "NPOINTS", kind=Kind.config, put_complete=True)
     frequency = Component(EpicsSignal, "FREQUENCY", kind=Kind.config, put_complete=True)
@@ -571,10 +583,10 @@ class aa1DataAcquisition(Device):
         return data
 
     # DAQ data readback
-    data_rb = Component(EpicsPassiveRO, "DATA", kind=Kind.hinted)
-    data_rows = Component(EpicsSignalRO, "DATA_ROWS", auto_monitor=True, kind=Kind.hinted)
-    data_cols = Component(EpicsSignalRO, "DATA_COLS", auto_monitor=True, kind=Kind.hinted)
-    data_stat = Component(EpicsSignalRO, "DATA_AVG", auto_monitor=True, kind=Kind.hinted)
+    data_rb = Component(EpicsPassiveRO, "DATA", kind=Kind.normal)
+    data_rows = Component(EpicsSignalRO, "DATA_ROWS", auto_monitor=True, kind=Kind.normal)
+    data_cols = Component(EpicsSignalRO, "DATA_COLS", auto_monitor=True, kind=Kind.normal)
+    data_stat = Component(EpicsSignalRO, "DATA_AVG", auto_monitor=True, kind=Kind.normal)
 
     def dataReadBack(self) -> np.ndarray:
         """Retrieves collected data from the controller"""
@@ -725,10 +737,10 @@ class aa1GlobalVariableBindings(Device):
     and are thus a convenient way to interface scripts with the outside word.
     """
 
-    int0 = Component(EpicsSignalRO, "INT0_RBV", auto_monitor=True, name="int0", kind=Kind.hinted)
-    int1 = Component(EpicsSignalRO, "INT1_RBV", auto_monitor=True, name="int1", kind=Kind.hinted)
-    int2 = Component(EpicsSignalRO, "INT2_RBV", auto_monitor=True, name="int2", kind=Kind.hinted)
-    int3 = Component(EpicsSignalRO, "INT3_RBV", auto_monitor=True, name="int3", kind=Kind.hinted)
+    int0 = Component(EpicsSignalRO, "INT0_RBV", auto_monitor=True, name="int0", kind=Kind.normal)
+    int1 = Component(EpicsSignalRO, "INT1_RBV", auto_monitor=True, name="int1", kind=Kind.normal)
+    int2 = Component(EpicsSignalRO, "INT2_RBV", auto_monitor=True, name="int2", kind=Kind.normal)
+    int3 = Component(EpicsSignalRO, "INT3_RBV", auto_monitor=True, name="int3", kind=Kind.normal)
     int8 = Component(
         EpicsSignal,
         "INT8_RBV",
@@ -854,16 +866,16 @@ class aa1AxisIo(Device):
     """
 
     polllvl = Component(EpicsSignal, "POLLLVL", put_complete=True, kind=Kind.config)
-    ai0 = Component(EpicsSignalRO, "AI0-RBV", auto_monitor=True, kind=Kind.hinted)
-    ai1 = Component(EpicsSignalRO, "AI1-RBV", auto_monitor=True, kind=Kind.hinted)
-    ai2 = Component(EpicsSignalRO, "AI2-RBV", auto_monitor=True, kind=Kind.hinted)
-    ai3 = Component(EpicsSignalRO, "AI3-RBV", auto_monitor=True, kind=Kind.hinted)
-    ao0 = Component(EpicsSignalRO, "AO0-RBV", auto_monitor=True, kind=Kind.hinted)
-    ao1 = Component(EpicsSignalRO, "AO1-RBV", auto_monitor=True, kind=Kind.hinted)
-    ao2 = Component(EpicsSignalRO, "AO2-RBV", auto_monitor=True, kind=Kind.hinted)
-    ao3 = Component(EpicsSignalRO, "AO3-RBV", auto_monitor=True, kind=Kind.hinted)
-    di0 = Component(EpicsSignalRO, "DI0-RBV", auto_monitor=True, kind=Kind.hinted)
-    do0 = Component(EpicsSignalRO, "DO0-RBV", auto_monitor=True, kind=Kind.hinted)
+    ai0 = Component(EpicsSignalRO, "AI0-RBV", auto_monitor=True, kind=Kind.normal)
+    ai1 = Component(EpicsSignalRO, "AI1-RBV", auto_monitor=True, kind=Kind.normal)
+    ai2 = Component(EpicsSignalRO, "AI2-RBV", auto_monitor=True, kind=Kind.normal)
+    ai3 = Component(EpicsSignalRO, "AI3-RBV", auto_monitor=True, kind=Kind.normal)
+    ao0 = Component(EpicsSignalRO, "AO0-RBV", auto_monitor=True, kind=Kind.normal)
+    ao1 = Component(EpicsSignalRO, "AO1-RBV", auto_monitor=True, kind=Kind.normal)
+    ao2 = Component(EpicsSignalRO, "AO2-RBV", auto_monitor=True, kind=Kind.normal)
+    ao3 = Component(EpicsSignalRO, "AO3-RBV", auto_monitor=True, kind=Kind.normal)
+    di0 = Component(EpicsSignalRO, "DI0-RBV", auto_monitor=True, kind=Kind.normal)
+    do0 = Component(EpicsSignalRO, "DO0-RBV", auto_monitor=True, kind=Kind.normal)
 
     ai_addr = Component(EpicsSignal, "AI-ADDR", put_complete=True, kind=Kind.config)
     ai = Component(EpicsSignalRO, "AI-RBV", auto_monitor=True, kind=Kind.hinted)
@@ -909,7 +921,7 @@ class aa1AxisPsoBase(Device):
     # ########################################################################
     # General module status
     status = Component(EpicsSignalRO, "STATUS", auto_monitor=True, kind=Kind.hinted)
-    output = Component(EpicsSignalRO, "OUTPUT-RBV", auto_monitor=True, kind=Kind.hinted)
+    output = Component(EpicsSignalRO, "OUTPUT-RBV", auto_monitor=True, kind=Kind.normal)
     _eventSingle = Component(EpicsSignal, "EVENT:SINGLE", put_complete=True, kind=Kind.omitted)
     _reset = Component(EpicsSignal, "RESET", put_complete=True, kind=Kind.omitted)
     posInput = Component(EpicsSignal, "DIST:INPUT", put_complete=True, kind=Kind.omitted)
@@ -918,14 +930,14 @@ class aa1AxisPsoBase(Device):
     # PSO Distance event module
     dstEventsEna = Component(EpicsSignal, "DIST:EVENTS", put_complete=True, kind=Kind.omitted)
     dstCounterEna = Component(EpicsSignal, "DIST:COUNTER", put_complete=True, kind=Kind.omitted)
-    dstCounterVal = Component(EpicsSignalRO, "DIST:CTR0_RBV", auto_monitor=True, kind=Kind.hinted)
-    dstArrayIdx = Component(EpicsSignalRO, "DIST:IDX_RBV", auto_monitor=True, kind=Kind.hinted)
+    dstCounterVal = Component(EpicsSignalRO, "DIST:CTR0_RBV", auto_monitor=True, kind=Kind.normal)
+    dstArrayIdx = Component(EpicsSignalRO, "DIST:IDX_RBV", auto_monitor=True, kind=Kind.normal)
     dstArrayDepleted = Component(
-        EpicsSignalRO, "DIST:ARRAY-DEPLETED-RBV", auto_monitor=True, kind=Kind.hinted
+        EpicsSignalRO, "DIST:ARRAY-DEPLETED-RBV", auto_monitor=True, kind=Kind.normal
     )
 
     dstDirection = Component(EpicsSignal, "DIST:EVENTDIR", put_complete=True, kind=Kind.omitted)
-    dstDistance = Component(EpicsSignal, "DIST:DISTANCE", put_complete=True, kind=Kind.hinted)
+    dstDistance = Component(EpicsSignal, "DIST:DISTANCE", put_complete=True, kind=Kind.normal)
     dstDistanceArr = Component(EpicsSignal, "DIST:DISTANCES", put_complete=True, kind=Kind.omitted)
     dstArrayRearm = Component(EpicsSignal, "DIST:REARM-ARRAY", put_complete=True, kind=Kind.omitted)
 
@@ -1355,7 +1367,7 @@ class aa1AxisDriveDataCollection(Device):
 
     # ########################################################################
     # General module status
-    state = Component(EpicsSignalRO, "STATE", auto_monitor=True, kind=Kind.hinted)
+    state = Component(EpicsSignalRO, "STATE", auto_monitor=True, kind=Kind.normal)
     nsamples_rbv = Component(EpicsSignalRO, "SAMPLES_RBV", auto_monitor=True, kind=Kind.hinted)
     _switch = Component(EpicsSignal, "ACQUIRE", put_complete=True, kind=Kind.omitted)
     _input0 = Component(EpicsSignal, "INPUT0", put_complete=True, kind=Kind.config)
@@ -1368,8 +1380,8 @@ class aa1AxisDriveDataCollection(Device):
     _readback1 = Component(EpicsSignal, "AREAD1", kind=Kind.omitted)
     _readstatus1 = Component(EpicsSignalRO, "AREAD1_RBV", auto_monitor=True, kind=Kind.omitted)
 
-    _buffer0 = Component(EpicsSignalRO, "BUFFER0", auto_monitor=True, kind=Kind.hinted)
-    _buffer1 = Component(EpicsSignalRO, "BUFFER1", auto_monitor=True, kind=Kind.hinted)
+    _buffer0 = Component(EpicsSignalRO, "BUFFER0", auto_monitor=True, kind=Kind.normal)
+    _buffer1 = Component(EpicsSignalRO, "BUFFER1", auto_monitor=True, kind=Kind.normal)
 
     SUB_PROGRESS = "progress"
 
