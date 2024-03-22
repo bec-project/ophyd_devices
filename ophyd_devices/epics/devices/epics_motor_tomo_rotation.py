@@ -19,7 +19,7 @@ class EpicsMotorRotationError(Exception):
 
 class RotationDeviceMixin:
 
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         """Mixin class to add rotation specific methods and properties.
         This class should not be used directly, but inherited by the children classes and implement the methods if needed.
         Args:
@@ -32,7 +32,9 @@ class RotationDeviceMixin:
             apply_mod360: Apply modulos 360 to the current position
             get_valid_rotation_modes: Get valid rotation modes for the implemented motor
         """
-        super().__init__(*args, parent=parent, **kwargs)
+        super().__init__(parent=parent, **kwargs)
+        self.parent = parent
+        # pylint: disable=protected-access
         self.parent._has_mod360 = False
         self.parent._has_freerun = False
         self._valid_rotation_modes = []
@@ -54,13 +56,14 @@ class RotationDeviceMixin:
 
 class EpicsMotorRotationMixin(RotationDeviceMixin):
 
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         """Mixin class implementing rotation specific functionality and parameter for EpicsMotorRecord.
 
         Args:
             parent: parent class should inherit from TomoRotationBase
         """
-        super().__init__(*args, parent=parent, **kwargs)
+        super().__init__(parent=parent, **kwargs)
+        # pylint: disable=protected-access
         self.parent._has_mod360 = True
         self.parent._has_freerun = True
         self._valid_rotation_modes = ["target", "radiography"]
@@ -99,7 +102,7 @@ class RotationBase:
         for k, v in tomo_rotation_config.items():
             self.tomo_config[k] = v
 
-        self.custom_prepare = self.custom_prepare_cls(parent=self)
+        self.custom_prepare = self.custom_prepare_cls(parent=self, **kwargs)
         super().__init__(name=name, **kwargs)
 
     @property
