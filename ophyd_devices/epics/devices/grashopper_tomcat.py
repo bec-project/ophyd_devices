@@ -189,16 +189,24 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
         Args:
             framerate (float): Desired framerate in Hz smallest is 87Hz
         """
+        logger.debug("staging grasshopper -setting exposure")
         framerate = 1 / exposure_time
         if framerate > self.low_frame_rate:
+            logger.debug("staging grasshopper - raise error")
+            # raise GrashopperError(
+            #     "wrong exp time!!"
+            # )
             raise GrashopperError(
                 f"Trying to set exposure time to {exposure_time}s, this is below the lowest"
                 f" possible exposure of {1/self.low_frame_rate}s"
             )
+
+        logger.debug("staging grasshopper - should have raised low exposure if true")
         self.parent.cam.frame_rate.put(framerate)
 
     def prepare_detector(self) -> None:
         """Prepare detector for acquisition."""
+        logger.debug("staging grasshopper - prep detector")
         self.parent.cam.image_mode.put(ImageMode.MULTIPLE)
         self.parent.cam.acquire_time_auto.put(AutoMode.CONTINUOUS)
         self.set_exposure_time(self.parent.scaninfo.exp_time)
@@ -216,6 +224,7 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
 
     def prepare_detector_backend(self) -> None:
         """Prepare detector backend for acquisition."""
+        logger.debug("staging grasshopper - backend")
         self.parent.image.set_array_counter.put(0)
         self.monitor_thread = None
         self.stop_monitor = False
@@ -269,7 +278,8 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
         try:
             img = self.parent.image.array_data.get().reshape(self.image_shape)
             # pylint: disable=protected-access
-            self.parent._run_subs(sub_type=self.parent.SUB_VALUE, value=img)
+            print(f'Trying to send data with {self.parent.SUB_MONITOR}')
+            self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=img)
         except Exception as e:
             logger.debug(f"{e} for image with shape {self.parent.image.array_data.get().shape}")
 
@@ -411,7 +421,7 @@ class GrashopperTOMCAT(PSIDetectorBase):
 
     SUB_MONITOR = "monitor"
     SUB_VALUE = "value"
-    _default_sub = SUB_VALUE
+    _default_sub = SUB_MONITOR#SUB_VALUE
 
     # specify Setup class
     custom_prepare_cls = GrashopperTOMCATSetup
@@ -422,7 +432,10 @@ class GrashopperTOMCAT(PSIDetectorBase):
     image = ADCpt(SLSImagePlugin, "image1:")
 
     def stage(self) -> list[object]:
+        logger.debug("staging grasshopper")
         rtr = super().stage()
+        logger.debug("staging grasshopper parent done")
+        
         self.custom_prepare.arm_acquisition()
         return rtr
 
