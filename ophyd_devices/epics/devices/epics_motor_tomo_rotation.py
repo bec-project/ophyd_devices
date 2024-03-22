@@ -76,10 +76,6 @@ class EpicsMotorRotationMixin(RotationDeviceMixin):
                 error_msg = f"Failed to set net position {new_val} from {cur_val} on device {self.parent.name} with error {exc}"
                 raise EpicsMotorRotationError(error_msg) from exc
 
-    def get_valid_rotation_modes(self) -> None:
-        """Get valid rotation modes for Epics motor"""
-        return self._valid_rotation_modes
-
 
 class RotationBase:
 
@@ -94,7 +90,7 @@ class RotationBase:
 
     custom_prepare_cls = RotationDeviceMixin
 
-    def __init__(self, *args, name: str, tomo_rotation_config: dict = None, **kwargs):
+    def __init__(self, name: str, tomo_rotation_config: dict = None, **kwargs):
         self.name = name
         self.tomo_config = {"allow_mod360": False}
         self._has_mod360 = None
@@ -104,6 +100,7 @@ class RotationBase:
             self.tomo_config[k] = v
 
         self.custom_prepare = self.custom_prepare_cls(parent=self)
+        super().__init__(name=name, **kwargs)
 
     @property
     def has_mod360(self) -> bool:
@@ -133,14 +130,5 @@ class RotationBase:
         return self.custom_prepare.get_valid_rotation_modes()
 
 
-class EpicsMotorTomoRotation(EpicsMotor, RotationBase):
-
+class EpicsMotorTomoRotation(RotationBase, EpicsMotor):
     custom_prepare_cls = EpicsMotorRotationMixin
-
-    def __init__(self, name: str, prefix: str, *args, tomo_rotation_config: dict = None, **kwargs):
-
-        super().__init__(
-            name=name, prefix=prefix, tomo_rotation_config=tomo_rotation_config, *args, **kwargs
-        )
-
-        self.custom_prepare = self.custom_prepare_cls(*args, parent=self, **kwargs)
