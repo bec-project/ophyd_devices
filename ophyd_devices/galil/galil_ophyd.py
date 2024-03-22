@@ -312,7 +312,7 @@ class GalilSetpointSignal(GalilSignalBase):
         Returns:
             float: setpoint / target value
         """
-        return self.setpoint
+        return self.setpoint * self.parent.sign
 
     @retry_once
     @threadlocked

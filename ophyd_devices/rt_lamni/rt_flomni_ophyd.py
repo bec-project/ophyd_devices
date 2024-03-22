@@ -35,6 +35,8 @@ class RtFlomniController(RtController):
         "feedback_enable_with_reset",
         "feedback_is_running",
         "add_pos_to_scan",
+        "get_pid_x",
+        "move_samx_to_scan_region",
         "clear_trajectory_generator",
         "show_cyclic_error_compensation",
         "laser_tracker_on",
@@ -74,7 +76,7 @@ class RtFlomniController(RtController):
             parent._min_scan_buffer_reached = False
             start_time = time.time()
             for pos_index, pos in enumerate(positions):
-                parent.socket_put_and_receive(f"s{pos[0]},{pos[1]},{pos[2]}")
+                parent.socket_put_and_receive(f"s{pos[0]:.05f},{pos[1]:.05f},{pos[2]:.05f}")
                 if pos_index > 100:
                     parent._min_scan_buffer_reached = True
             parent._min_scan_buffer_reached = True
@@ -155,7 +157,6 @@ class RtFlomniController(RtController):
         self.set_device_enabled("fsamy", False)
         self.set_device_enabled("foptx", False)
         self.set_device_enabled("fopty", False)
-        print("rt feedback is now enabled.")
 
     def move_samx_to_scan_region(self, fovx: float, cenx: float):
         time.sleep(0.05)

@@ -257,7 +257,7 @@ class RtLamniController(Controller):
         def send_positions(parent, positions):
             parent._min_scan_buffer_reached = False
             for pos_index, pos in enumerate(positions):
-                parent.socket_put_and_receive(f"s{pos[0]},{pos[1]},0")
+                parent.socket_put_and_receive(f"s{pos[0]:.05f},{pos[1]:05f},0")
                 if pos_index > 100:
                     parent._min_scan_buffer_reached = True
             parent._min_scan_buffer_reached = True
