@@ -1,47 +1,87 @@
-""" Class for EpicsMotorRecord stages for tomography purposes"""
+""" Class for EpicsMotorRecord rotation stages for omography applications."""
 
 from ophyd import EpicsMotor
 from ophyd import Component
 from ophyd_devices.utils import bec_utils
-from abc import ABC, abstractmethod
 
-class TomoRotation(ABC):
 
-    def __init__(*args, parent=None, **kwargs):
-        self.parent._has_mod360 = False
-        self.parent._has_freerun = False
+class RotationBaseError(Exception):
+    """Error specific for TomoRotationBase"""
 
-    def apply_mod360(self)->None:
-        """to be overriden by children"""
-        pass
-    
 
-class EpicsMotorTomoRotationError(Exception):
-    """Error specific for EpicsMotorTomoRotation"""
+class ReadOnlyError(RotationBaseError):
+    """ReadOnly Error specific to  TomoRotationBase"""
 
-class TomoRotationEpics(TomoRotation):
 
-    def __init__(*args, parent=None, **kwargs):
+class EpicsMotorRotationError(Exception):
+    """Error specific for TomoRotationBase"""
+
+
+class RotationDeviceMixin:
+
+    def __init__(self, *args, parent=None, **kwargs):
+        """Mixin class to add rotation specific methods and properties.
+        This class should not be used directly, but inherited by the children classes and implement the methods if needed.
+        Args:
+
+            parent: parent class needs to inherit from TomoRotationBase
+
+        Methods:
+        These methods need to be overridden by the children classes
+
+            apply_mod360: Apply modulos 360 to the current position
+            get_valid_rotation_modes: Get valid rotation modes for the implemented motor
+        """
         super().__init__(*args, parent=parent, **kwargs)
         self.parent._has_mod360 = False
         self.parent._has_freerun = False
+        self._valid_rotation_modes = []
+
+    def apply_mod360(self) -> None:
+        """Method to apply the modulus 360 operation on the specific device.
+
+        Children classes should override this method
+        """
+
+    def get_valid_rotation_modes(self) -> list[str]:
+        """Get valid rotation modes for the implemented motor
+
+        Chilren classes should ensure that all valid rotation modes are written
+        in the _valid_rotation_modes list as strings
+        """
+        return self._valid_rotation_modes
 
 
-    def apply_mod360(self)->None:
-        """tbd"""
-        if self.has_mod360 and self.allow_mod360.get():
-            cur_val = self.user_readback.get()
-            new_val = cur_val %360
+class EpicsMotorRotationMixin(RotationDeviceMixin):
+
+    def __init__(self, *args, parent=None, **kwargs):
+        """Mixin class implementing rotation specific functionality and parameter for EpicsMotorRecord.
+
+        Args:
+            parent: parent class should inherit from TomoRotationBase
+        """
+        super().__init__(*args, parent=parent, **kwargs)
+        self.parent._has_mod360 = True
+        self.parent._has_freerun = True
+        self._valid_rotation_modes = ["target", "radiography"]
+
+    def apply_mod360(self) -> None:
+        """Apply modulos 360 to the current position using the set_current_position method of ophyd EpicsMotor."""
+        if self.parent.has_mod360 and self.parent.allow_mod360.get():
+            cur_val = self.parent.user_readback.get()
+            new_val = cur_val % 360
             try:
-                self.set_current_position(new_val)
+                self.parent.set_current_position(new_val)
             except Exception as exc:
-                raise(exc)
+                error_msg = f"Failed to set net position {new_val} from {cur_val} on device {self.parent.name} with error {exc}"
+                raise EpicsMotorRotationError(error_msg) from exc
 
-    # def get_valid_rotation_modes(self) -> None:
-        
+    def get_valid_rotation_modes(self) -> None:
+        """Get valid rotation modes for Epics motor"""
+        return self._valid_rotation_modes
 
 
-class EpicsMotorTomoRotation(EpicsMotor):
+class RotationBase:
 
     allow_mod360 = Component(
         bec_utils.ConfigSignal,
@@ -50,22 +90,21 @@ class EpicsMotorTomoRotation(EpicsMotor):
         config_storage_name="tomo_config",
     )
 
-    USER_ACCESS = ["apply_mod360"]
+    USER_ACCESS = ["apply_mod360", "get_valid_rotation_modes"]
 
-    custom_prepare_cls = TomoRotationEpics
+    custom_prepare_cls = RotationDeviceMixin
 
-    def __init__(self, name:str, prefix:str, *args, tomo_rotation_config:dict=None, **kwargs):
-
-        super().__init__(name=name, prefix=prefix, *args, **kwargs)
-        self.tomo_config={'allow_mod360' : False}
+    def __init__(self, *args, name: str, tomo_rotation_config: dict = None, **kwargs):
+        self.name = name
+        self.tomo_config = {"allow_mod360": False}
         self._has_mod360 = None
         self._has_freerun = None
 
-        #To be discussed what is the appropriate way
-        [self.tomo_config.update({key : value}) for key,value in tomo_rotation_config.items() if tomo_rotation_config ]
+        for k, v in tomo_rotation_config.items():
+            self.tomo_config[k] = v
 
         self.custom_prepare = self.custom_prepare_cls(parent=self)
-        
+
     @property
     def has_mod360(self) -> bool:
         """tbd"""
@@ -73,40 +112,35 @@ class EpicsMotorTomoRotation(EpicsMotor):
 
     @has_mod360.setter
     def has_mod360(self):
-        raise(f'ReadOnly Property of {self.name}')
+        raise ReadOnlyError(f"ReadOnly Property of {self.name}")
 
     @property
     def has_freerun(self) -> bool:
+        """Property to check if the motor has freerun option"""
         return self._has_freerun
 
     @has_freerun.setter
     def has_freerun(self):
-        raise(f'ReadOnly Property of {self.name}')
-
-    @abstractmethod
-    def apply_mod360(self):
-        """to be implemented"""
+        """Property setter for has_freerun"""
+        raise ReadOnlyError(f"ReadOnly Property of {self.name}")
 
     def apply_mod360(self):
+        """Apply modulos 360 to the current position"""
         self.custom_prepare.apply_mod360()
 
-    # def get_valid_rotation_modes(self):
-    #     return self.custom_prepare.get_valid_rotation_modes(self)
+    def get_valid_rotation_modes(self):
+        """Get valid rotation modes for the implemented motor"""
+        return self.custom_prepare.get_valid_rotation_modes()
 
 
+class EpicsMotorTomoRotation(EpicsMotor, RotationBase):
 
-        
+    custom_prepare_cls = EpicsMotorRotationMixin
 
+    def __init__(self, name: str, prefix: str, *args, tomo_rotation_config: dict = None, **kwargs):
 
+        super().__init__(
+            name=name, prefix=prefix, tomo_rotation_config=tomo_rotation_config, *args, **kwargs
+        )
 
-
-
-
-    
-
-    
-
-
-
-
-
+        self.custom_prepare = self.custom_prepare_cls(*args, parent=self, **kwargs)
