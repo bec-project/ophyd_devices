@@ -1,9 +1,15 @@
+""" This module contains tests for the simulation devices in ophyd_devices """
+
+# pylint: disable: all
+import os
 from unittest import mock
 import pytest
 import numpy as np
+import h5py
 
 from ophyd_devices.utils.bec_device_base import BECDeviceBase, BECDevice
 from ophyd_devices.sim.sim import SimMonitor, SimCamera, SimPositioner
+from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
 
 from tests.utils import DMMock
 from ophyd import Device, Signal
@@ -31,6 +37,25 @@ def positioner(name="positioner"):
     dm = DMMock()
     pos = SimPositioner(name=name, device_manager=dm)
     yield pos
+
+
+@pytest.fixture(scope="function")
+def h5proxy_fixture(name="h5proxy"):
+    """Fixture for SimCamera."""
+    dm = DMMock()
+    proxy = H5ImageReplayProxy(name=name, device_manager=dm)
+    camera = SimCamera(name="eiger", device_manager=dm)
+    yield proxy, camera
+
+
+@pytest.fixture(scope="function")
+def slitproxy_fixture(name="slit_proxy"):
+    """Fixture for SimCamera."""
+    dm = DMMock()
+    proxy = SlitProxy(name=name, device_manager=dm)
+    camera = SimCamera(name="eiger", device_manager=dm)
+    samx = SimPositioner(name="samx", device_manager=dm)
+    yield proxy, camera, samx
 
 
 def test_monitor__init__(monitor):
@@ -130,3 +155,82 @@ def test_BECDeviceBase():
     assert isinstance(signal, BECDevice)
     device = Device(name="device")
     assert isinstance(device, BECDevice)
+
+
+def test_h5proxy(h5proxy_fixture):
+    """Test h5 camera proxy read from h5 file"""
+    h5proxy, camera = h5proxy_fixture
+    mock_proxy = mock.MagicMock()
+    camera.device_manager.devices.update({h5proxy.name: mock_proxy})
+    mock_proxy.enabled = True
+    mock_proxy.obj = h5proxy
+    fname = os.path.expanduser("tests/test_data/h5_test_file.h5")
+    h5entry = "entry/data/data"
+    with h5py.File(fname, "r") as f:
+        data = f[h5entry][...]
+    # pylint: disable=protected-access
+    h5proxy._update_device_config(
+        {camera.name: {"signal_name": "image", "file_source": fname, "h5_entry": h5entry}}
+    )
+    camera._registered_proxies.update({h5proxy.name: camera.image.name})
+    camera.sim.sim_params = {"noise": "none", "noise_multiplier": 0}
+    camera.scaninfo.sim_mode = True
+    camera.stage()
+    img = camera.image.get()
+    assert (img == data[0, ...]).all()
+    camera.unstage()
+
+
+def test_slitproxy(slitproxy_fixture):
+    """Test slit proxy to compute readback from readback of positioner samx"""
+    proxy, camera, samx = slitproxy_fixture
+    px_size = 0.5
+    slitwidth = 2
+    proxy._update_device_config(
+        {
+            camera.name: {
+                "signal_name": "image",
+                "center_offset": [0, 0],
+                "covariance": [[1000, 500], [200, 1000]],
+                "pixel_size": px_size,
+                "ref_motors": [samx.name],
+                "slit_width": [slitwidth],
+                "motor_dir": [0],
+            }
+        }
+    )
+    camera._registered_proxies.update({proxy.name: camera.image.name})
+    mock_proxy = mock.MagicMock()
+    mock_samx = mock.MagicMock()
+    mock_camera = mock.MagicMock()
+    camera.device_manager.devices.update(
+        {proxy.name: mock_proxy, samx.name: mock_samx, camera.name: mock_camera}
+    )
+
+    mock_proxy.enabled = True
+    mock_samx.enabled = True
+    mock_camera.enabled = True
+    mock_camera.obj = camera
+    mock_samx.obj = samx
+    mock_proxy.obj = proxy
+    camera.sim.sim_params = {"noise": "none", "noise_multiplier": 0, "hot_pixel_values": [0, 0, 0]}
+    samx.delay = 0
+    samx_pos = 0
+    samx.move(samx_pos)
+    proxy._gaussian_blur_sigma = 0
+    img = camera.image.get()
+    edges = (
+        int(img.shape[0] // 2 - samx_pos / px_size - slitwidth / (2 * px_size)),
+        int(img.shape[0] // 2 + samx_pos / px_size + slitwidth / (2 * px_size)),
+    )
+    assert (img[:, : edges[0]] == 0).all()
+    assert (img[:, edges[1] :] == 0).all()
+    samx_pos = 13.3
+    samx.move(samx_pos)
+    img = camera.image.get()
+    edges = (
+        int(img.shape[0] // 2 + samx_pos / px_size - slitwidth / (2 * px_size)),
+        int(img.shape[0] // 2 + samx_pos / px_size + slitwidth / (2 * px_size)),
+    )
+    assert (img[:, : edges[0]] == 0).all()
+    assert (img[:, edges[1] :] == 0).all()
