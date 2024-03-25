@@ -107,6 +107,8 @@ tests-3.11:
   image: $CI_DOCKER_REGISTRY/python:3.11
   needs: ["pytest"]
   script:
+    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+    - pip install -e ./bec/bec_lib[dev]
     - pytest -v --random-order ./tests
   allow_failure: true
 
