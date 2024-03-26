@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.4 (2024-03-26)
+
+### Fix
+
+* Fix CI pipeline for py 3.10 and 3.11 ([`391c889`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/391c889ff17d9b97388d01731ed88251b41d6ecd))
+
 ## v0.27.3 (2024-03-21)
 
 ### Fix
