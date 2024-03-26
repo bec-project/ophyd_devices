@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.28.0 (2024-03-26)
+
+### Feature
+
+* **ophyd:** Temporary until new Ophyd release, prevent Status objects threads ([`df8ce79`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/df8ce79ca0606ad415f45cfd5d80b057aec107d9))
+
 ## v0.27.4 (2024-03-26)
 
 ### Fix
