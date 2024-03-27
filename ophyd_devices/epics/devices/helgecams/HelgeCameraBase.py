@@ -6,7 +6,7 @@ Created on Wed Dec  6 11:33:54 2023
 """
 
 from ophyd import Device, Component, EpicsMotor, EpicsSignal, EpicsSignalRO, Kind
-from ophyd.status import Status, SubscriptionStatus, StatusBase
+from ophyd.status import Status, SubscriptionStatus, StatusBase, DeviceStatus
 from time import sleep
 import warnings
 import numpy as np
@@ -39,13 +39,13 @@ class HelgeCameraCore(Device):
     # ########################################################################
     # Polled state maschine with separate transition states
     camStatusCode = Component(EpicsSignalRO, "STATUSCODE", auto_monitor=True, kind=Kind.config)
-    camSetParam = Component(EpicsSignalRO, "SET_PARAM", auto_monitor=True, kind=Kind.config)
+    camSetParam = Component(EpicsSignal, "SET_PARAM", auto_monitor=True, kind=Kind.config)
     camSetParamBusy = Component(EpicsSignalRO, "BUSY_SET_PARAM", auto_monitor=True, kind=Kind.config)
     camCamera = Component(EpicsSignalRO, "CAMERA", auto_monitor=True, kind=Kind.config)
     camCameraBusy = Component(EpicsSignalRO, "BUSY_CAMERA", auto_monitor=True, kind=Kind.config)
     camInit= Component(EpicsSignalRO, "INIT", auto_monitor=True, kind=Kind.config)
     camInitBusy = Component(EpicsSignalRO, "BUSY_INIT", auto_monitor=True, kind=Kind.config)
-    camRemoved = Component(EpicsSignalRO, "REMOVAL", auto_monitor=True, kind=Kind.config)
+    #camRemoval = Component(EpicsSignalRO, "REMOVAL", auto_monitor=True, kind=Kind.config)
 
     camStateString = Component(EpicsSignalRO, "SS_CAMERA", string=True, auto_monitor=True, kind=Kind.config)
 
@@ -61,8 +61,8 @@ class HelgeCameraCore(Device):
             return "RUNNING"
         if self.camRemoval.value==0 and self.camInit.value==0:        
             return "OFFLINE"
-        if self.camRemoval.value:
-            return "REMOVED"
+        #if self.camRemoval.value:
+        #    return "REMOVED"
         return "UNKNOWN"
 
     @state.setter
@@ -76,20 +76,26 @@ class HelgeCameraCore(Device):
     def stage(self) -> None:
         """ Start acquisition"""
         
-        # State transitions are only allowed when the IOC is not busy
-        if self.state not in ("OFFLINE", "BUSY", "REMOVED", "RUNNING"):
+        # Acquisition is only allowed when the IOC is not busy
+        if self.state in ("OFFLINE", "BUSY", "REMOVED", "RUNNING"):
             raise RuntimeError(f"Camera in in state: {self.state}")
 
-        # Start the acquisition
+        # Start the acquisition (this sets parameers and starts acquisition)
         self.camStatusCmd.set("Running").wait()
-        
+
+        # Subscribe and wait for update
+        def isRunning(*args, old_value, value, timestamp, **kwargs):
+            return bool(self.state=="RUNNING")
+        status = SubscriptionStatus(self.camStatusCode, isRunning, settle_time=0.2)
+        status.wait()
+        # Call parent        
         super().stage()
 
     def kickoff(self, settle_time=0.2) -> DeviceStatus:
         """ Start acquisition"""
     
-        # State transitions are only allowed when the IOC is not busy
-        if self.state not in ("OFFLINE", "BUSY", "REMOVED", "RUNNING"):
+        # Acquisition is only allowed when the IOC is not busy
+        if self.state in ("OFFLINE", "BUSY", "REMOVED", "RUNNING"):
             raise RuntimeError(f"Camera in in state: {self.state}")
             
         # Start the acquisition
@@ -106,11 +112,11 @@ class HelgeCameraCore(Device):
     def stop(self):
         """ Stop the running acquisition """
         self.camStatusCmd.set("Idle").wait()
+        super().unstage()
 
     def unstage(self):
         """ Stop the running acquisition and unstage the device"""
         self.camStatusCmd.set("Idle").wait()
-
         super().unstage()
 
 
@@ -203,9 +209,10 @@ class HelgeCameraBase(HelgeCameraCore):
         old = self.read_configuration()
         super().configure(d)
     
-        exposure_time = d['exptime']
-        if exposure_time is not None:
-            self.acqExpTime.set(exposure_time).wait()
+        if "exptime" in d:
+            exposure_time = d['exptime']
+            if exposure_time is not None:
+                self.acqExpTime.set(exposure_time).wait()
 
         if "roi" in d:
             roi = d["roi"]
@@ -247,7 +254,7 @@ class HelgeCameraBase(HelgeCameraCore):
 
     @property
     def shape(self):
-        return (self.pxNumX.value, self.pxNumY.value)
+        return (int(self.pxNumX.value), int(self.pxNumY.value))
     
     @shape.setter
     def shape(self):
@@ -255,7 +262,7 @@ class HelgeCameraBase(HelgeCameraCore):
 
     @property
     def bin(self):
-        return (self.pxBinX.value, self.pxBinY.value)
+        return (int(self.pxBinX.value), int(self.pxBinY.value))
     
     @bin.setter
     def bin(self):
@@ -263,33 +270,11 @@ class HelgeCameraBase(HelgeCameraCore):
 
     @property
     def roi(self):
-        return ((self.pxRoiX_lo.value, self.pxRoiX_hi.value), (self.pxRoiY_lo.value, self.pxRoiY_hi.value))
+        return ((int(self.pxRoiX_lo.value), int(self.pxRoiX_hi.value)), (int(self.pxRoiY_lo.value), int(self.pxRoiY_hi.value)))
 
     @roi.setter
     def roi(self):
         raise ReadOnlyError("Bin is a ReadOnly property")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
