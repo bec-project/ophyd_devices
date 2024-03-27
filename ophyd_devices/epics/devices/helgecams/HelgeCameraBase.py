@@ -49,7 +49,6 @@ class HelgeCameraCore(Device):
 
     camStateString = Component(EpicsSignalRO, "SS_CAMERA", string=True, auto_monitor=True, kind=Kind.config)
 
-
     @property
     def state(self) -> str:
         """ Single word camera state"""
@@ -59,7 +58,8 @@ class HelgeCameraCore(Device):
             return "IDLE"  
         if self.camStatusCode.value==6 and self.camInit.value==1:
             return "RUNNING"
-        if self.camRemoval.value==0 and self.camInit.value==0:        
+        #if self.camRemoval.value==0 and self.camInit.value==0:
+        if self.camInit.value==0:
             return "OFFLINE"
         #if self.camRemoval.value:
         #    return "REMOVED"
@@ -167,12 +167,12 @@ class HelgeCameraBase(HelgeCameraCore):
     # ########################################################################
     # Image size settings
     # Priority is: binning -> roi -> final size
-    pxBinX = Component(EpicsSignalRO, "BINX", auto_monitor=True, kind=Kind.config)
-    pxBinY = Component(EpicsSignalRO, "BINY", auto_monitor=True, kind=Kind.config)
-    pxRoiX_lo = Component(EpicsSignalRO, "REGIONX_START", auto_monitor=True, kind=Kind.config)
-    pxRoiX_hi = Component(EpicsSignalRO, "REGIONX_END", auto_monitor=True, kind=Kind.config)
-    pxRoiY_lo = Component(EpicsSignalRO, "REGIONY_START", auto_monitor=True, kind=Kind.config)
-    pxRoiY_hi = Component(EpicsSignalRO, "REGIONY_END", auto_monitor=True, kind=Kind.config)
+    pxBinX = Component(EpicsSignal, "BINX", put_complete=True, auto_monitor=True, kind=Kind.config)
+    pxBinY = Component(EpicsSignal, "BINY", put_complete=True, auto_monitor=True, kind=Kind.config)
+    pxRoiX_lo = Component(EpicsSignal, "REGIONX_START", put_complete=True, auto_monitor=True, kind=Kind.config)
+    pxRoiX_hi = Component(EpicsSignal, "REGIONX_END", put_complete=True, auto_monitor=True, kind=Kind.config)
+    pxRoiY_lo = Component(EpicsSignal, "REGIONY_START", put_complete=True, auto_monitor=True, kind=Kind.config)
+    pxRoiY_hi = Component(EpicsSignal, "REGIONY_END", put_complete=True, auto_monitor=True, kind=Kind.config)
     pxNumX = Component(EpicsSignalRO, "WIDTH", auto_monitor=True, kind=Kind.config)
     pxNumY = Component(EpicsSignalRO, "HEIGHT", auto_monitor=True, kind=Kind.config)
 
@@ -219,7 +219,8 @@ class HelgeCameraBase(HelgeCameraCore):
             if not isinstance(roi, (list, tuple)):
                 raise ValueError(f"Unknown ROI data type {type(roi)}")
             if not len(roi[0])==2 and len(roi[1])==2:
-                raise ValueError(f"Unknown ROI shape: {roi}")           
+                raise ValueError(f"Unknown ROI shape: {roi}")
+            # Values are rounded to multiples of 16
             self.pxRoiX_lo.set(roi[0][0]).wait()
             self.pxRoiX_hi.set(roi[0][1]).wait()
             self.pxRoiY_lo.set(roi[1][0]).wait()
