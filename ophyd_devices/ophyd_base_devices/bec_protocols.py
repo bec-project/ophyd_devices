@@ -354,6 +354,19 @@ class BECPositionerProtocol(Protocol):
             DeviceStatus: DeviceStatus object
         """
 
+    def set(self, position: float) -> DeviceStatus:
+        """Set method for positioners.
+
+        In principle, a set command is the same as move. This comes from ophyd upstream.
+        We will have to review whether BEC requires both.
+
+        Args:
+            position: position to move to
+
+        Returns:
+            DeviceStatus: DeviceStatus object
+        """
+
 
 @runtime_checkable
 class BECFlyerProtocol(BECScanProtocol, Protocol):
