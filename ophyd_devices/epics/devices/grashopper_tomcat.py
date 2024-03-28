@@ -19,8 +19,6 @@ from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, P
 # os.environ["EPICS_CA_ADDR_LIST"] = "129.129.208.143"
 
 
-
-
 logger = bec_logger.logger
 
 
@@ -158,10 +156,7 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
     def __init__(self, *_args, parent: Device = None, **_kwargs) -> None:
         super().__init__(*_args, parent=parent, **_kwargs)
 
-        self.image_shape = (
-            self.parent.cam.image_size_y.get(),
-            self.parent.cam.image_size_x.get(),
-        )
+        self.image_shape = (self.parent.cam.image_size_y.get(), self.parent.cam.image_size_x.get())
         self.monitor_thread = None
         self.stop_monitor = False
         self.update_frequency = 1
@@ -227,12 +222,7 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
     def arm_acquisition(self) -> None:
         """Arm grashopper detector for acquisition"""
         self.parent.cam.acquire.put(1)
-        signal_conditions = [
-            (
-                self.parent.cam.detector_state.get,
-                DetectorState.WAITING,
-            )
-        ]
+        signal_conditions = [(self.parent.cam.detector_state.get, DetectorState.WAITING)]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
             timeout=self.parent.timeout,
@@ -279,12 +269,7 @@ class GrashopperTOMCATSetup(CustomDetectorMixin):
     def stop_detector(self) -> None:
         """Stop detector."""
         self.parent.cam.acquire.put(0)
-        signal_conditions = [
-            (
-                self.parent.cam.detector_state.get,
-                DetectorState.IDLE,
-            ),
-        ]
+        signal_conditions = [(self.parent.cam.detector_state.get, DetectorState.IDLE)]
         if not self.wait_for_signals(
             signal_conditions=signal_conditions,
             timeout=self.parent.timeout - self.parent.timeout // 2,
@@ -408,9 +393,7 @@ class GrashopperTOMCAT(PSIDetectorBase):
     """
 
     # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = [
-        "describe",
-    ]
+    USER_ACCESS = ["describe"]
 
     SUB_MONITOR = "monitor"
     SUB_VALUE = "value"
