@@ -1,6 +1,6 @@
 import pytest
 
-from ophyd_devices.npoint import NPointController, NPointAxis
+from ophyd_devices.npoint import NPointAxis, NPointController
 
 
 class SocketMock:

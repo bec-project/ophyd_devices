@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from abc import ABC, abstractmethod
-
-from prettytable import PrettyTable
-
 import enum
 import inspect
 import time as ttime
-import numpy as np
-from lmfit import models, Model
+from abc import ABC, abstractmethod
+from collections import defaultdict
 
+import numpy as np
 from bec_lib import bec_logger
+from lmfit import Model, models
+from prettytable import PrettyTable
 
 logger = bec_logger.logger
 

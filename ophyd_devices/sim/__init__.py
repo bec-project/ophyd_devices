@@ -1,12 +1,7 @@
-from .sim import (
-    SimPositioner,
-    SimMonitor,
-    SimCamera,
-    SimFlyer,
-    SimFlyer as SynFlyer,
-)
-from .sim_xtreme import SynXtremeOtf
-
-from .sim_signals import SetableSignal, ReadOnlySignal
-
+from .sim import SimCamera
+from .sim import SimFlyer
+from .sim import SimFlyer as SynFlyer
+from .sim import SimMonitor, SimPositioner
 from .sim_frameworks import SlitProxy
+from .sim_signals import ReadOnlySignal, SetableSignal
+from .sim_xtreme import SynXtremeOtf

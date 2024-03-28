@@ -1,13 +1,12 @@
-import numpy as np
-from scipy.ndimage import gaussian_filter
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 import h5py
 import hdf5plugin
+import numpy as np
+from ophyd import Kind, Staged
+from scipy.ndimage import gaussian_filter
 
-from ophyd import Staged, Kind
-
-from collections import defaultdict
 from ophyd_devices.sim.sim_data import NoiseType
 from ophyd_devices.sim.sim_signals import CustomSetableSignal
 from ophyd_devices.utils.bec_device_base import BECDeviceBase

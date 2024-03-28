@@ -1,8 +1,8 @@
 import time
-import numpy as np
 
+import numpy as np
 from bec_lib import bec_logger
-from ophyd import Signal, Kind
+from ophyd import Kind, Signal
 from ophyd.utils import ReadOnlyError
 
 from ophyd_devices.utils.bec_device_base import BECDeviceBase

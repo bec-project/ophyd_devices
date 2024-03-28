@@ -1,4 +1,4 @@
-from ophyd import PVPositioner, Component, EpicsSignal, EpicsSignalRO, Kind
+from ophyd import Component, EpicsSignal, EpicsSignalRO, Kind, PVPositioner
 
 
 class InsertionDevice(PVPositioner):

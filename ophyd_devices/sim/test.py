@@ -1,5 +1,6 @@
-import lmfit
 import inspect
+
+import lmfit
 
 
 class LmfitModelMixin:

@@ -7,20 +7,21 @@ Created on Wed Oct 13 18:06:15 2021
 IMPORTANT: Virtual monochromator axes should be implemented already in EPICS!!!
 """
 
-import numpy as np
 import time
-from math import isclose, tan, atan, sqrt, sin, asin
+from math import asin, atan, isclose, sin, sqrt, tan
+
+import numpy as np
 from ophyd import (
+    Component,
+    Device,
+    EpicsMotor,
     EpicsSignal,
     EpicsSignalRO,
-    EpicsMotor,
+    Kind,
     PseudoPositioner,
     PseudoSingle,
     PVPositioner,
-    Device,
     Signal,
-    Component,
-    Kind,
 )
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 

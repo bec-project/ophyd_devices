@@ -1,10 +1,10 @@
 import inspect
 import threading
 import types
+from unittest.mock import Mock, patch
 
 from ophyd import status as ophyd_status_module
 from ophyd.status import StatusBase
-from unittest.mock import patch, Mock
 
 dummy_thread = Mock(spec=threading.Thread)
 

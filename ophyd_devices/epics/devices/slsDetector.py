@@ -1,6 +1,5 @@
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import CamBase, DetectorBase
 from ophyd import ADComponent as ADCpt
+from ophyd import CamBase, DetectorBase, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from ophyd.areadetector.plugins import FileBase
 
 

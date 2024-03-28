@@ -63,12 +63,7 @@ class EpicsMotorX(EpicsMotor):
     def _progress_update(self, value, **kwargs) -> None:
         """Progress update on the scan"""
         if (self._startPosition is None) or (self._targetPosition is None) or (not self.moving):
-            self._run_subs(
-                sub_type=self.SUB_PROGRESS,
-                value=1,
-                max_value=1,
-                done=1,
-            )
+            self._run_subs(sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1)
             return
 
         progress = np.abs(
@@ -214,12 +209,7 @@ class aa1Tasks(Device):
     def _progress_update(self, value, **kwargs) -> None:
         """Progress update on the scan"""
         value = self.progress()
-        self._run_subs(
-            sub_type=self.SUB_PROGRESS,
-            value=value,
-            max_value=1,
-            done=1,
-        )
+        self._run_subs(sub_type=self.SUB_PROGRESS, value=value, max_value=1, done=1)
 
     def _progress(self) -> None:
         """Progress update on the scan"""
@@ -1007,12 +997,7 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
         """Progress update on the scan"""
         if self.dstArrayDepleted.value:
             print("PSO array depleted")
-            self._run_subs(
-                sub_type=self.SUB_PROGRESS,
-                value=1,
-                max_value=1,
-                done=1,
-            )
+            self._run_subs(sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1)
             return
 
         progress = 1
@@ -1375,12 +1360,7 @@ class aa1AxisDriveDataCollection(Device):
     def _progress_update(self, value, **kwargs) -> None:
         """Progress update on the scan"""
         if self.state.value not in (2, "Acquiring"):
-            self._run_subs(
-                sub_type=self.SUB_PROGRESS,
-                value=1,
-                max_value=1,
-                done=1,
-            )
+            self._run_subs(sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1)
             return
 
         progress = 1

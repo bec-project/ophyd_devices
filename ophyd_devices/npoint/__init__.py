@@ -1,1 +1,1 @@
-from .npoint import NPointController, NPointAxis
+from .npoint import NPointAxis, NPointController

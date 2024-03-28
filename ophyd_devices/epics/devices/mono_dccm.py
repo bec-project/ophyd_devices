@@ -7,20 +7,21 @@ Created on Wed Oct 13 18:06:15 2021
 IMPORTANT: Virtual monochromator axes should be implemented already in EPICS!!!
 """
 
-import numpy as np
 from math import isclose
+
+import numpy as np
 from ophyd import (
+    Component,
+    Device,
+    EpicsMotor,
     EpicsSignal,
     EpicsSignalRO,
-    EpicsMotor,
+    Kind,
     PseudoPositioner,
     PseudoSingle,
-    Device,
-    Component,
-    Kind,
 )
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
-from ophyd.sim import SynAxis, Syn2DGauss
+from ophyd.sim import Syn2DGauss, SynAxis
 
 LN_CORR = 2e-4
 

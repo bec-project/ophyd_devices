@@ -3,20 +3,23 @@ import os
 import threading
 import time as ttime
 
+from bec_lib.logger import bec_logger
+
+# from typing import Any
+from ophyd import ADComponent as ADCpt
+from ophyd import Component as Cpt
+from ophyd import Device, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
+
 # import numpy as np
 from ophyd.ophydobj import Kind
+
+from ophyd_devices.epics.devices.psi_detector_base import CustomDetectorMixin, PSIDetectorBase
 
 # os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "No"
 # os.environ["EPICS_CA_ADDR_LIST"] = "129.129.208.143"
 
-# from typing import Any
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-from ophyd import Device
-from ophyd import Component as Cpt, ADComponent as ADCpt
 
-from bec_lib.logger import bec_logger
 
-from ophyd_devices.epics.devices.psi_detector_base import PSIDetectorBase, CustomDetectorMixin
 
 logger = bec_logger.logger
 

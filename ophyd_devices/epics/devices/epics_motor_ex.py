@@ -1,4 +1,5 @@
-from ophyd import Component as Cpt, EpicsSignal, EpicsMotor
+from ophyd import Component as Cpt
+from ophyd import EpicsMotor, EpicsSignal
 
 
 class EpicsMotorEx(EpicsMotor):

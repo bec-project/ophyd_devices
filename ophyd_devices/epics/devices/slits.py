@@ -1,4 +1,4 @@
-from ophyd import Device, Component, EpicsMotor, PseudoPositioner, PseudoSingle
+from ophyd import Component, Device, EpicsMotor, PseudoPositioner, PseudoSingle
 from ophyd.pseudopos import pseudo_position_argument, real_position_argument
 
 

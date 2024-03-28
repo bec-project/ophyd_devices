@@ -1,11 +1,11 @@
-import pytest
 import threading
 import time
-
 from unittest.mock import Mock
 
-import ophyd_devices  # ensure we are patched
+import pytest
 from ophyd.status import StatusBase, StatusTimeoutError
+
+import ophyd_devices  # ensure we are patched
 
 
 def test_ophyd_status_patch():

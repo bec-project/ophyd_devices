@@ -3,6 +3,7 @@ import json
 from ophyd import Component as Cpt
 from ophyd import Device, PositionerBase, Signal
 from ophyd.ophydobj import OphydObject
+
 from ophyd_devices.utils.socket import SocketMock
 
 

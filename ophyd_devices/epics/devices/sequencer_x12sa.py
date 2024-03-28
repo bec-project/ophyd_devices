@@ -1,4 +1,5 @@
-from ophyd import Component as Cpt, EpicsSignal, EpicsSignalRO, Device
+from ophyd import Component as Cpt
+from ophyd import Device, EpicsSignal, EpicsSignalRO
 
 
 class SequencerX12SA(Device):

@@ -6,10 +6,10 @@ Created on Wed Oct 13 17:06:51 2021
 """
 
 import os
-import yaml
-from ophyd.ophydobj import OphydObject
 
+import yaml
 from devices import *
+from ophyd.ophydobj import OphydObject
 
 # ####################################################
 # Test connection to beamline devices
