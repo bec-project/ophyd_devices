@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.29.0 (2024-03-28)
+
+### Feature
+
+* Add protocols and rotation base device ([`ddd0b79`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ddd0b790f8ef3e53966c660c431d2f7a9ceda97c))
+
 ## v0.28.0 (2024-03-26)
 
 ### Feature
