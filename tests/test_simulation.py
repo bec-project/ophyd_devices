@@ -3,16 +3,29 @@
 # pylint: disable: all
 import os
 from unittest import mock
-import pytest
+
 import numpy as np
-import h5py
-
-from ophyd_devices.utils.bec_device_base import BECDeviceBase, BECDevice
-from ophyd_devices.sim.sim import SimMonitor, SimCamera, SimPositioner
-from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
-
-from tests.utils import DMMock
+import pytest
 from ophyd import Device, Signal
+
+from ophyd_devices.ophyd_base_devices.bec_protocols import (
+    BECDeviceProtocol,
+    BECFlyerProtocol,
+    BECPositionerProtocol,
+    BECScanProtocol,
+    BECSignalProtocol,
+)
+from ophyd_devices.sim.sim import SimCamera, SimFlyer, SimMonitor, SimPositioner
+from ophyd_devices.sim.sim_signals import ReadOnlySignal
+from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
+from tests.utils import DMMock
+
+
+@pytest.fixture(scope="function")
+def signal(name="signal"):
+    """Fixture for Signal."""
+    sig = ReadOnlySignal(name=name, value=0)
+    yield sig
 
 
 @pytest.fixture(scope="function")
@@ -58,10 +71,48 @@ def slitproxy_fixture(name="slit_proxy"):
     yield proxy, camera, samx
 
 
+@pytest.fixture(scope="function")
+def flyer(name="flyer"):
+    """Fixture for SimFlyer."""
+    dm = DMMock()
+    fly = SimFlyer(name=name, device_manager=dm)
+    yield fly
+
+
+def test_signal__init__(signal):
+    """Test the BECProtocol class"""
+    assert isinstance(signal, BECDeviceProtocol)
+    assert isinstance(signal, BECSignalProtocol)
+
+
 def test_monitor__init__(monitor):
     """Test the __init__ method of SimMonitor."""
     assert isinstance(monitor, SimMonitor)
-    assert isinstance(monitor, BECDevice)
+    assert isinstance(monitor, BECDeviceProtocol)
+    assert isinstance(monitor, BECScanProtocol)
+
+
+def test_camera__init__(camera):
+    """Test the __init__ method of SimMonitor."""
+    assert isinstance(camera, SimCamera)
+    assert isinstance(camera, BECDeviceProtocol)
+    assert isinstance(camera, BECScanProtocol)
+
+
+def test_positioner__init__(positioner):
+    """Test the __init__ method of SimPositioner."""
+    assert isinstance(positioner, SimPositioner)
+    assert isinstance(positioner, BECDeviceProtocol)
+    assert isinstance(positioner, BECScanProtocol)
+    assert isinstance(positioner, BECPositionerProtocol)
+
+
+def test_flyer__init__(flyer):
+    """Test the __init__ method of SimFlyer."""
+    assert isinstance(flyer, SimFlyer)
+    assert isinstance(flyer, BECDeviceProtocol)
+    assert isinstance(flyer, BECScanProtocol)
+    assert isinstance(flyer, BECFlyerProtocol)
 
 
 @pytest.mark.parametrize("center", [-10, 0, 10])
@@ -87,12 +138,6 @@ def test_monitor_readback(monitor, center):
         )
 
 
-def test_camera__init__(camera):
-    """Test the __init__ method of SimMonitor."""
-    assert isinstance(camera, SimCamera)
-    assert isinstance(camera, BECDevice)
-
-
 @pytest.mark.parametrize("amplitude, noise_multiplier", [(0, 1), (100, 10), (1000, 50)])
 def test_camera_readback(camera, amplitude, noise_multiplier):
     """Test the readback method of SimMonitor."""
@@ -110,12 +155,6 @@ def test_camera_readback(camera, amplitude, noise_multiplier):
         assert camera.image.get().shape == camera.SHAPE
         assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
         assert (camera.image.get() <= (amplitude + noise_multiplier + 1)).all()
-
-
-def test_positioner__init__(positioner):
-    """Test the __init__ method of SimPositioner."""
-    assert isinstance(positioner, SimPositioner)
-    assert isinstance(positioner, BECDevice)
 
 
 def test_positioner_move(positioner):
