@@ -13,10 +13,7 @@ import numpy as np
 from bec_lib import threadlocked
 from ophyd import DeviceStatus
 
-from ophyd_devices.ophyd_base_devices.bec_protocols import (
-    BECFlyerProtocol,
-    BECScanProtocol,
-)
+from ophyd_devices.ophyd_base_devices.bec_protocols import BECFlyerProtocol, BECScanProtocol
 from ophyd_devices.ophyd_base_devices.ophyd_rotation_base import EpicsRotationBase
 
 
@@ -171,12 +168,7 @@ class TomcatAerotechRotation(EpicsRotationBase, BECFlyerProtocol, BECScanProtoco
             value (float): The value of the motor position.
         """
         if (self._start_position is None) or (self._target_position is None) or (not self.moving):
-            self._run_subs(
-                sub_type=self.SUB_PROGRESS,
-                value=1,
-                max_value=1,
-                done=1,
-            )
+            self._run_subs(sub_type=self.SUB_PROGRESS, value=1, max_value=1, done=1)
             return
 
         progress = np.abs(
