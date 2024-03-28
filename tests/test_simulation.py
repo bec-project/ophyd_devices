@@ -4,6 +4,7 @@
 import os
 from unittest import mock
 
+import h5py
 import numpy as np
 import pytest
 from ophyd import Device, Signal
@@ -16,6 +17,7 @@ from ophyd_devices.ophyd_base_devices.bec_protocols import (
     BECSignalProtocol,
 )
 from ophyd_devices.sim.sim import SimCamera, SimFlyer, SimMonitor, SimPositioner
+from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
 from tests.utils import DMMock
