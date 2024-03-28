@@ -1,40 +1,17 @@
-from ophyd import Device, Component, EpicsMotor, EpicsSignal, EpicsSignalRO, Kind, DerivedSignal
-from ophyd.status import Status, SubscriptionStatus, StatusBase, DeviceStatus
-from ophyd.flyers import FlyerInterface
-from time import sleep
-import warnings
-import numpy as np
 import time
-
-try:
-    from .AerotechAutomation1Enums import *
-    from .AerotechAutomation1Enums import (
-        DataCollectionMode,
-        DataCollectionFrequency,
-        AxisDataSignal,
-        PsoWindowInput,
-        DriveDataCaptureInput,
-        DriveDataCaptureTrigger,
-        TaskDataSignal,
-        SystemDataSignal,
-        TomcatSequencerState,
-    )
-except:
-    from AerotechAutomation1Enums import *
-    from AerotechAutomation1Enums import (
-        DataCollectionMode,
-        DataCollectionFrequency,
-        AxisDataSignal,
-        PsoWindowInput,
-        DriveDataCaptureInput,
-        DriveDataCaptureTrigger,
-        TaskDataSignal,
-        SystemDataSignal,
-        TomcatSequencerState,
-    )
-
-from typing import Union
 from collections import OrderedDict
+from time import sleep
+
+import numpy as np
+from ophyd import Component, Device, EpicsMotor, EpicsSignal, EpicsSignalRO, Kind
+from ophyd.status import DeviceStatus, Status, StatusBase, SubscriptionStatus
+
+from ophyd_devices.epics.devices.aerotech.AerotechAutomation1Enums import (
+    DataCollectionFrequency,
+    DataCollectionMode,
+    DriveDataCaptureInput,
+    DriveDataCaptureTrigger,
+)
 
 
 class EpicsMotorX(EpicsMotor):
@@ -1148,32 +1125,32 @@ class aa1AxisPsoDistance(aa1AxisPsoBase):
         print("PSO kicked off")
         return status
 
-    def complete(self) -> DeviceStatus:
-        """Bluesky flyer interface"""
-        # Array mode waits until the buffer is empty
-        if hasattr(self, "_distanceValue") and isinstance(
-            self._distanceValue, (np.ndarray, list, tuple)
-        ):
-            # Define wait until the busy flag goes down (excluding initial update)
-            timestamp_ = 0
+    # def complete(self) -> DeviceStatus:
+    #     """Bluesky flyer interface"""
+    #     # Array mode waits until the buffer is empty
+    #     if hasattr(self, "_distanceValue") and isinstance(
+    #         self._distanceValue, (np.ndarray, list, tuple)
+    #     ):
+    #         # Define wait until the busy flag goes down (excluding initial update)
+    #         timestamp_ = 0
 
-            def notRunning(*args, old_value, value, timestamp, **kwargs):
-                nonlocal timestamp_
-                result = False if (timestamp_ == 0) else bool(int(value) & 0x1000)
-                print(f"Old {old_value}\tNew: {value}\tResult: {result}")
-                timestamp_ = timestamp
-                return result
+    #         def notRunning(*args, old_value, value, timestamp, **kwargs):
+    #             nonlocal timestamp_
+    #             result = False if (timestamp_ == 0) else bool(int(value) & 0x1000)
+    #             print(f"Old {old_value}\tNew: {value}\tResult: {result}")
+    #             timestamp_ = timestamp
+    #             return result
 
-            # Subscribe and wait for update
-            # status = SubscriptionStatus(self.status, notRunning, settle_time=0.5)
-            # Data capture can be stopped any time
-            status = DeviceStatus(self)
-            status.set_finished()
-        else:
-            # In distance trigger mode there's no specific goal
-            status = DeviceStatus(self)
-            status.set_finished()
-        return status
+    #         # Subscribe and wait for update
+    #         # status = SubscriptionStatus(self.status, notRunning, settle_time=0.5)
+    #         # Data capture can be stopped any time
+    #         status = DeviceStatus(self)
+    #         status.set_finished()
+    #     else:
+    #         # In distance trigger mode there's no specific goal
+    #         status = DeviceStatus(self)
+    #         status.set_finished()
+    #     return status
 
     def describe_collect(self) -> OrderedDict:
         ret = OrderedDict()
@@ -1434,10 +1411,8 @@ class aa1AxisDriveDataCollection(Device):
 
     # Bluesky step scanning interface
     def stage(self, settle_time=0.1):
-        super().stage()
         self._switch.set("Start", settle_time=0.5).wait()
-        status = Status(timeout=0.1, settle_time=settle_time).set_finished()
-        return status
+        return super().stage()
 
     def unstage(self, settle_time=0.1):
         self._switch.set("Stop", settle_time=settle_time).wait()
