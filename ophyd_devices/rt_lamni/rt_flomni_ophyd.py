@@ -43,6 +43,7 @@ class RtFlomniController(RtController):
         "laser_tracker_off",
         "laser_tracker_show_all",
         "show_signal_strength_interferometer",
+        "read_ssi_interferometer",
     ]
 
     def __init__(
@@ -361,7 +362,7 @@ class RtFlomniController(RtController):
         t = PrettyTable()
         t.title = f"Interferometer signal strength"
         t.field_names = ["Axis", "Value"]
-        for i in range(3):
+        for i in range(4):
             t.add_row([i, self.read_ssi_interferometer(i)])
         print(t)
 
