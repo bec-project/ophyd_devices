@@ -2,7 +2,7 @@ import os
 import time
 
 from bec_lib.device import DeviceStatus
-from bec_lib.file_utils import FileWriterMixin
+from bec_lib.file_utils import FileWriter
 from ophyd import Device
 from ophyd.device import Staged
 
@@ -235,7 +235,7 @@ class PSIDetectorBase(Device):
 
     def _update_filewriter(self) -> None:
         """Update filewriter with service config"""
-        self.filewriter = FileWriterMixin(self.service_cfg)
+        self.filewriter = FileWriter(service_config=self.service_cfg, connector=self.connector)
 
     def _update_scaninfo(self) -> None:
         """Update scaninfo from BecScaninfoMixing

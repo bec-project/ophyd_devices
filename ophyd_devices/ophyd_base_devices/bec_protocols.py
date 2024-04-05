@@ -18,7 +18,7 @@ Flyers in addition, also implement the BECFlyerProtocol. Similarly, positioners 
 
 from typing import Protocol, runtime_checkable
 
-from bec_lib.file_utils import FileWriterMixin
+from bec_lib.file_utils import FileWriter
 from ophyd import Component, DeviceStatus, Kind, Staged
 
 from ophyd_devices.utils import bec_scaninfo_mixin
@@ -47,11 +47,11 @@ class BECDeviceProtocol(Protocol):
         """kind setter"""
 
     @property
-    def parent(self):
+    def parent(self) -> object:
         """Property to find the parent device"""
 
     @property
-    def root(self):
+    def root(self) -> object:
         """Property to fint the root device"""
 
     @property
@@ -169,7 +169,7 @@ class BECSignalProtocol(Protocol):
             bool: True if write access is allowed, False otherwise
         """
 
-    def check_value(self, value: float):
+    def check_value(self, value: float) -> None:
         """Check whether value is within limits
 
         Args:
@@ -230,7 +230,7 @@ class BECScanProtocol(BECDeviceProtocol, Protocol):
         We can further publish the file location for DAQ systems
         to BEC and inform BEC's file writer where data will be written to.
 
-        Stagin is not idempoent. If called twice without an unstage it should raise.
+        Stagin is not idempotent. If called twice without an unstage it should raise.
         For ophyd devices, one may used self._staged = True to check if the device is staged.
 
         Returns:
@@ -246,7 +246,7 @@ class BECScanProtocol(BECDeviceProtocol, Protocol):
         inform BEC that the file has been succesfully written, or raise upon receiving
         feedback that the scan did not finish successful.
 
-        Unstaging is not idempotent. If called twice without a stage it should raise.
+        Unstaging is not idempotent. If called twice it should simply resolve.
         It is recommended to return super().unstage() in the child class, if
         the child class also inherits from ophyd repository.
         """
@@ -285,7 +285,7 @@ class BECMixinProtocol(Protocol):
     The stop method should set this flag to True, and i.e. stage to set it to False. 
     """
 
-    filewriter: FileWriterMixin
+    filewriter: FileWriter
     """
     The file writer mixin main purpose is to unify and centralize the creation of 
     file paths within BEC. Therefore, we recommend devices to use the same mixin for creation of paths.
@@ -332,7 +332,7 @@ class BECPositionerProtocol(Protocol):
             float: Upper limit
         """
 
-    def check_value(self, value: float):
+    def check_value(self, value: float) -> None:
         """Check whether value is within limits
 
         Args:

@@ -188,9 +188,7 @@ class PilatusSetup(CustomDetectorMixin):
 
         self.stop_detector_backend()
 
-        self.parent.filepath = self.parent.filewriter.compile_full_filename(
-            self.parent.scaninfo.scan_number, "pilatus_2.h5", 1000, 5, True
-        )
+        self.parent.filepath = self.parent.filewriter.compile_full_filename("pilatus_2.h5")
         self.parent.cam.file_path.put("/dev/shm/zmq/")
         self.parent.cam.file_name.put(
             f"{self.parent.scaninfo.username}_2_{self.parent.scaninfo.scan_number:05d}"

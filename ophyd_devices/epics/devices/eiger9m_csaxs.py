@@ -205,7 +205,7 @@ class Eiger9MSetup(CustomDetectorMixin):
     def prepare_data_backend(self) -> None:
         """Prepare the data backend for the scan"""
         self.parent.filepath = self.parent.filewriter.compile_full_filename(
-            self.parent.scaninfo.scan_number, f"{self.parent.name}.h5", 1000, 5, True
+            f"{self.parent.name}.h5"
         )
         self.filepath_exists(self.parent.filepath)
         self.stop_detector_backend()

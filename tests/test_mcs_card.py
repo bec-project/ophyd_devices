@@ -34,7 +34,7 @@ def mock_det():
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
         with mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
+            "ophyd_devices.epics.devices.psi_detector_base.FileWriter"
         ) as filemixin, mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
         ) as mock_service_config:
@@ -54,9 +54,7 @@ def test_init():
     sim_mode = False
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
-        with mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.FileWriterMixin"
-        ), mock.patch(
+        with mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"), mock.patch(
             "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
         ):
             with mock.patch.object(ophyd, "cl") as mock_cl:

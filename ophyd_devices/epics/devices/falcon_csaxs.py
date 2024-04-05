@@ -184,7 +184,7 @@ class FalconSetup(CustomDetectorMixin):
     def prepare_data_backend(self) -> None:
         """Prepare data backend for acquisition"""
         self.parent.filepath = self.parent.filewriter.compile_full_filename(
-            self.parent.scaninfo.scan_number, f"{self.parent.name}.h5", 1000, 5, True
+            f"{self.parent.name}.h5"
         )
         file_path, file_name = os.path.split(self.parent.filepath)
         self.parent.hdf5.file_path.put(file_path)
