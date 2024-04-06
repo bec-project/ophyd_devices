@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.29.1 (2024-04-06)
+
+### Fix
+
+* **utils:** Fixed scan status message in sim mode ([`c87f6ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c87f6ef63f669d6d1288e3521b80b3e0065bf2f4))
+
 ## v0.29.0 (2024-03-28)
 
 ### Feature
