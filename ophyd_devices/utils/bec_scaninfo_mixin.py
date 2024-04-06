@@ -94,7 +94,7 @@ class BecScaninfoMixin:
                 return None
             return msg
 
-        return messages.ScanStatusMessage(scan_id="1", status={}, info=self.bec_info_msg)
+        return messages.ScanStatusMessage(scan_id="1", status="open", info=self.bec_info_msg)
 
     def get_username(self) -> str:
         """Get username"""
