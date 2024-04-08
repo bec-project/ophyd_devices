@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.29.2 (2024-04-08)
+
+### Fix
+
+* Adapt to FileWriter refactoring ([`e9c626a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9c626a7c8e5ec1b40d70ad412eff85d7796cba9))
+
 ## v0.29.1 (2024-04-06)
 
 ### Fix
