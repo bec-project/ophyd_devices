@@ -522,6 +522,7 @@ class SimFlyer(Device, PositionerBase, FlyerInterface):
                 elapsed_time += exp_time
                 if elapsed_time > buffer_time:
                     elapsed_time = 0
+                    logger.info(f"Sending data point {ii} for {device.name}.")
                     device.device_manager.connector.set_and_publish(
                         MessageEndpoints.device_read(device.name), bundle
                     )
