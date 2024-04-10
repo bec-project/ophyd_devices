@@ -50,10 +50,7 @@ class SynSetpoint(Signal):
         old_val = self._readback
         self._readback = self._dtype(value)
         self._run_subs(
-            sub_type="value",
-            old_value=old_val,
-            value=self._readback,
-            timestamp=time.time(),
+            sub_type="value", old_value=old_val, value=self._readback, timestamp=time.time()
         )
 
     def get(self):

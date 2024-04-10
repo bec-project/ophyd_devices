@@ -468,11 +468,7 @@ class GalilMotorIsMoving(GalilSignalRO):
     def get(self):
         val = super().get()
         if val is not None:
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                value=val,
-                timestamp=time.time(),
-            )
+            self._run_subs(sub_type=self.SUB_VALUE, value=val, timestamp=time.time())
         return val
 
 
@@ -490,11 +486,7 @@ class SGalilMotor(Device, PositionerBase):
     """
 
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        GalilReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(GalilReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(GalilSetpointSignal, signal_name="setpoint")
     motor_is_moving = Cpt(GalilMotorIsMoving, signal_name="motor_is_moving", kind="normal")
     all_axes_referenced = Cpt(GalilAxesReferenced, signal_name="all_axes_referenced", kind="config")
@@ -624,18 +616,10 @@ class SGalilMotor(Device, PositionerBase):
             while self.motor_is_moving.get():
                 logger.info("motor is moving")
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(1.5)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
 
             if not success:
                 print(" stop")
@@ -712,11 +696,7 @@ class SGalilMotor(Device, PositionerBase):
         )
         return status
 
-    def configure(
-        self,
-        parameter: dict,
-        **kwargs,
-    ) -> None:
+    def configure(self, parameter: dict, **kwargs) -> None:
         self._kickoff_params = parameter
 
 

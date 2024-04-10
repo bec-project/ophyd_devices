@@ -28,8 +28,11 @@ def mock_det():
     sim_mode = False
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
-        with mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"), mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+        with (
+            mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"),
+            mock.patch(
+                "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+            ),
         ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
@@ -99,11 +102,14 @@ def test_stage(mock_det, scaninfo, stopped, expected_exception):
         mock_det.filewriter.compile_full_filename.return_value = scaninfo["filepath"]
         mock_det.device_manager.add_device("mokev", value=12.4)
         mock_det.stopped = stopped
-        with mock.patch.object(
-            mock_det.custom_prepare, "prepare_detector_backend"
-        ) as mock_data_backend, mock.patch.object(
-            mock_det.custom_prepare, "update_readout_time"
-        ) as mock_update_readout_time:
+        with (
+            mock.patch.object(
+                mock_det.custom_prepare, "prepare_detector_backend"
+            ) as mock_data_backend,
+            mock.patch.object(
+                mock_det.custom_prepare, "update_readout_time"
+            ) as mock_update_readout_time,
+        ):
             mock_det.filepath = scaninfo["filepath"]
             if expected_exception:
                 with pytest.raises(Exception):
@@ -225,11 +231,12 @@ def test_publish_file_location(mock_det, scaninfo):
     ],
 )
 def test_stop_detector_backend(mock_det, requests_state, expected_exception, url_delete, url_put):
-    with mock.patch.object(
-        mock_det.custom_prepare, "send_requests_delete"
-    ) as mock_send_requests_delete, mock.patch.object(
-        mock_det.custom_prepare, "send_requests_put"
-    ) as mock_send_requests_put:
+    with (
+        mock.patch.object(
+            mock_det.custom_prepare, "send_requests_delete"
+        ) as mock_send_requests_delete,
+        mock.patch.object(mock_det.custom_prepare, "send_requests_put") as mock_send_requests_put,
+    ):
         instance_delete = mock_send_requests_delete.return_value
         instance_delete.ok = requests_state
         instance_put = mock_send_requests_put.return_value
@@ -340,17 +347,13 @@ def test_stop_detector_backend(mock_det, requests_state, expected_exception, url
     ],
 )
 def test_prep_file_writer(mock_det, scaninfo, data_msgs, urls, requests_state, expected_exception):
-    with mock.patch.object(
-        mock_det.custom_prepare, "close_file_writer"
-    ) as mock_close_file_writer, mock.patch.object(
-        mock_det.custom_prepare, "stop_file_writer"
-    ) as mock_stop_file_writer, mock.patch.object(
-        mock_det, "filewriter"
-    ) as mock_filewriter, mock.patch.object(
-        mock_det.custom_prepare, "create_directory"
-    ) as mock_create_directory, mock.patch.object(
-        mock_det.custom_prepare, "send_requests_put"
-    ) as mock_send_requests_put:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "close_file_writer") as mock_close_file_writer,
+        mock.patch.object(mock_det.custom_prepare, "stop_file_writer") as mock_stop_file_writer,
+        mock.patch.object(mock_det, "filewriter") as mock_filewriter,
+        mock.patch.object(mock_det.custom_prepare, "create_directory") as mock_create_directory,
+        mock.patch.object(mock_det.custom_prepare, "send_requests_put") as mock_send_requests_put,
+    ):
         mock_det.scaninfo.scan_number = scaninfo["scan_number"]
         mock_det.scaninfo.num_points = scaninfo["num_points"]
         mock_det.scaninfo.frames_per_trigger = scaninfo["frames_per_trigger"]
@@ -400,9 +403,12 @@ def test_prep_file_writer(mock_det, scaninfo, data_msgs, urls, requests_state, e
 
 @pytest.mark.parametrize("stopped, expected_exception", [(False, False), (True, True)])
 def test_unstage(mock_det, stopped, expected_exception):
-    with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
-        mock_det.custom_prepare, "publish_file_location"
-    ) as mock_publish_file_location:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished,
+        mock.patch.object(
+            mock_det.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+    ):
         mock_det.stopped = stopped
         if expected_exception:
             mock_det.unstage()
@@ -415,13 +421,11 @@ def test_unstage(mock_det, stopped, expected_exception):
 
 
 def test_stop(mock_det):
-    with mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det, mock.patch.object(
-        mock_det.custom_prepare, "stop_file_writer"
-    ) as mock_stop_file_writer, mock.patch.object(
-        mock_det.custom_prepare, "close_file_writer"
-    ) as mock_close_file_writer:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+        mock.patch.object(mock_det.custom_prepare, "stop_file_writer") as mock_stop_file_writer,
+        mock.patch.object(mock_det.custom_prepare, "close_file_writer") as mock_close_file_writer,
+    ):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_file_writer.assert_called_once()
@@ -438,13 +442,12 @@ def test_stop(mock_det):
     ],
 )
 def test_finished(mock_det, stopped, mcs_stage_state, expected_exception):
-    with mock.patch.object(mock_det, "device_manager") as mock_dm, mock.patch.object(
-        mock_det.custom_prepare, "stop_file_writer"
-    ) as mock_stop_file_friter, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det, mock.patch.object(
-        mock_det.custom_prepare, "close_file_writer"
-    ) as mock_close_file_writer:
+    with (
+        mock.patch.object(mock_det, "device_manager") as mock_dm,
+        mock.patch.object(mock_det.custom_prepare, "stop_file_writer") as mock_stop_file_friter,
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+        mock.patch.object(mock_det.custom_prepare, "close_file_writer") as mock_close_file_writer,
+    ):
         mock_dm.devices.mcs.obj._staged = mcs_stage_state
         mock_det.stopped = stopped
         if expected_exception:

@@ -134,11 +134,12 @@ def test_prepare_detector(mock_GrashopperSetup, scaninfo):
         setattr(mock_GrashopperSetup.parent.scaninfo, k, v)
 
     # Call the function you want to test
-    with mock.patch.object(
-        mock_GrashopperSetup, "set_acquisition_params"
-    ) as mock_set_acquisition_params, mock.patch.object(
-        mock_GrashopperSetup, "set_exposure_time"
-    ) as mock_set_exposure_time:
+    with (
+        mock.patch.object(
+            mock_GrashopperSetup, "set_acquisition_params"
+        ) as mock_set_acquisition_params,
+        mock.patch.object(mock_GrashopperSetup, "set_exposure_time") as mock_set_exposure_time,
+    ):
         mock_GrashopperSetup.prepare_detector()
 
         # Assert the correct methods are called with the expected arguments

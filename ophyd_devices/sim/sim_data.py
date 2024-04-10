@@ -52,14 +52,9 @@ DEFAULT_PARAMS_LMFIT = {
     "sigma": 1,
 }
 
-DEFAULT_PARAMS_NOISE = {
-    "noise": NoiseType.UNIFORM,
-    "noise_multiplier": 10,
-}
+DEFAULT_PARAMS_NOISE = {"noise": NoiseType.UNIFORM, "noise_multiplier": 10}
 
-DEFAULT_PARAMS_MOTOR = {
-    "ref_motor": "samx",
-}
+DEFAULT_PARAMS_MOTOR = {"ref_motor": "samx"}
 
 DEFAULT_PARAMS_CAMERA_GAUSSIAN = {
     "amplitude": 100,
@@ -67,17 +62,11 @@ DEFAULT_PARAMS_CAMERA_GAUSSIAN = {
     "covariance": np.array([[400, 100], [100, 400]]),
 }
 
-DEFAULT_PARAMS_CAMERA_CONSTANT = {
-    "amplitude": 100,
-}
+DEFAULT_PARAMS_CAMERA_CONSTANT = {"amplitude": 100}
 
 DEFAULT_PARAMS_HOT_PIXEL = {
     "hot_pixel_coords": np.array([[24, 24], [50, 20], [4, 40]]),
-    "hot_pixel_types": [
-        HotPixelType.FLUCTUATING,
-        HotPixelType.CONSTANT,
-        HotPixelType.FLUCTUATING,
-    ],
+    "hot_pixel_types": [HotPixelType.FLUCTUATING, HotPixelType.CONSTANT, HotPixelType.FLUCTUATING],
     "hot_pixel_values": np.array([1e4, 1e6, 1e4]),
 }
 
@@ -98,12 +87,7 @@ class SimulatedDataBase(ABC):
     - update_sim_state:             update the simulated state of the device
     """
 
-    USER_ACCESS = [
-        "sim_params",
-        "sim_select_model",
-        "sim_get_models",
-        "sim_show_all",
-    ]
+    USER_ACCESS = ["sim_params", "sim_select_model", "sim_get_models", "sim_show_all"]
 
     def __init__(self, *args, parent=None, device_manager=None, **kwargs) -> None:
         """
@@ -254,12 +238,7 @@ class SimulatedDataBase(ABC):
         table.title = "Available methods within the simulation module"
         table.field_names = ["Method", "Docstring"]
 
-        table.add_row(
-            [
-                self.sim_get_models.__name__,
-                f"{self.sim_get_models.__doc__}",
-            ]
-        )
+        table.add_row([self.sim_get_models.__name__, f"{self.sim_get_models.__doc__}"])
         table.add_row([self.sim_select_model.__name__, self.sim_select_model.__doc__])
         table.add_row(["sim_params", self.__class__.sim_params.__doc__])
         table.max_table_width = width
@@ -621,11 +600,7 @@ class SimulatedDataCamera(SimulatedDataBase):
             ) from exc
 
     def _compute_multivariate_gaussian(
-        self,
-        pos: np.ndarray | list,
-        cen_off: np.ndarray | list,
-        cov: np.ndarray | list,
-        amp: float,
+        self, pos: np.ndarray | list, cen_off: np.ndarray | list, cov: np.ndarray | list, amp: float
     ) -> np.ndarray:
         """Computes and returns the multivariate Gaussian distribution.
 

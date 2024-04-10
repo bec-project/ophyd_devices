@@ -27,8 +27,11 @@ def mock_det():
     sim_mode = False
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
-        with mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"), mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+        with (
+            mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"),
+            mock.patch(
+                "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+            ),
         ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
@@ -48,18 +51,25 @@ def test_init():
     sim_mode = False
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
-        with mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"), mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+        with (
+            mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter"),
+            mock.patch(
+                "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+            ),
         ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
-                with mock.patch(
-                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_default_parameter"
-                ) as mock_default, mock.patch(
-                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector"
-                ) as mock_init_det, mock.patch(
-                    "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector_backend"
-                ) as mock_init_backend:
+                with (
+                    mock.patch(
+                        "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_default_parameter"
+                    ) as mock_default,
+                    mock.patch(
+                        "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector"
+                    ) as mock_init_det,
+                    mock.patch(
+                        "ophyd_devices.epics.devices.eiger9m_csaxs.Eiger9MSetup.initialize_detector_backend"
+                    ) as mock_init_backend,
+                ):
                     Eiger9McSAXS(name=name, prefix=prefix, device_manager=dm, sim_mode=sim_mode)
                     mock_default.assert_called_once()
                     mock_init_det.assert_called_once()
@@ -207,11 +217,12 @@ def test_initialize_detector_backend(
 def test_stage(
     mock_det, scaninfo, daq_status, daq_cfg, detector_state, stopped, expected_exception
 ):
-    with mock.patch.object(
-        mock_det.custom_prepare, "std_client"
-    ) as mock_std_daq, mock.patch.object(
-        mock_det.custom_prepare, "publish_file_location"
-    ) as mock_publish_file_location:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "std_client") as mock_std_daq,
+        mock.patch.object(
+            mock_det.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+    ):
         mock_std_daq.stop_writer.return_value = None
         mock_std_daq.get_status.return_value = daq_status
         mock_std_daq.get_config.return_value = daq_cfg
@@ -281,14 +292,11 @@ def test_stage(
     ],
 )
 def test_prepare_detector_backend(mock_det, scaninfo, daq_status, expected_exception):
-    with mock.patch.object(
-        mock_det.custom_prepare, "std_client"
-    ) as mock_std_daq, mock.patch.object(
-        mock_det.custom_prepare, "filepath_exists"
-    ) as mock_file_path_exists, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector_backend"
-    ) as mock_stop_backend, mock.patch.object(
-        mock_det, "scaninfo"
+    with (
+        mock.patch.object(mock_det.custom_prepare, "std_client") as mock_std_daq,
+        mock.patch.object(mock_det.custom_prepare, "filepath_exists") as mock_file_path_exists,
+        mock.patch.object(mock_det.custom_prepare, "stop_detector_backend") as mock_stop_backend,
+        mock.patch.object(mock_det, "scaninfo"),
     ):
         mock_std_daq.start_writer_async.return_value = None
         mock_std_daq.get_status.return_value = daq_status
@@ -317,9 +325,12 @@ def test_prepare_detector_backend(mock_det, scaninfo, daq_status, expected_excep
 
 @pytest.mark.parametrize("stopped, expected_exception", [(False, False), (True, True)])
 def test_unstage(mock_det, stopped, expected_exception):
-    with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
-        mock_det.custom_prepare, "publish_file_location"
-    ) as mock_publish_file_location:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished,
+        mock.patch.object(
+            mock_det.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+    ):
         mock_det.stopped = stopped
         if expected_exception:
             mock_det.unstage()
@@ -375,11 +386,12 @@ def test_publish_file_location(mock_det, scaninfo):
 
 
 def test_stop(mock_det):
-    with mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector_backend"
-    ) as mock_stop_detector_backend:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+        mock.patch.object(
+            mock_det.custom_prepare, "stop_detector_backend"
+        ) as mock_stop_detector_backend,
+    ):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_detector_backend.assert_called_once()
@@ -420,13 +432,11 @@ def test_stop(mock_det):
     ],
 )
 def test_finished(mock_det, stopped, cam_state, daq_status, scaninfo, expected_exception):
-    with mock.patch.object(
-        mock_det.custom_prepare, "std_client"
-    ) as mock_std_daq, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector_backend"
-    ) as mock_stop_backend, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "std_client") as mock_std_daq,
+        mock.patch.object(mock_det.custom_prepare, "stop_detector_backend") as mock_stop_backend,
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+    ):
         mock_std_daq.get_status.return_value = daq_status
         mock_det.cam.acquire._read_pv.mock_state = cam_state
         mock_det.scaninfo.num_points = scaninfo["num_points"]

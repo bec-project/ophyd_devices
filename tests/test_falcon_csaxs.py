@@ -28,11 +28,12 @@ def mock_det():
     sim_mode = False
     dm = DMMock()
     with mock.patch.object(dm, "connector"):
-        with mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.FileWriter"
-        ) as filemixin, mock.patch(
-            "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
-        ) as mock_service_config:
+        with (
+            mock.patch("ophyd_devices.epics.devices.psi_detector_base.FileWriter") as filemixin,
+            mock.patch(
+                "ophyd_devices.epics.devices.psi_detector_base.PSIDetectorBase._update_service_config"
+            ) as mock_service_config,
+        ):
             with mock.patch.object(ophyd, "cl") as mock_cl:
                 mock_cl.get_pv = MockPV
                 mock_cl.thread_class = threading.Thread
@@ -133,13 +134,16 @@ def test_stage(mock_det, scaninfo):
 
     This includes testing _prep_det
     """
-    with mock.patch.object(mock_det, "set_trigger") as mock_set_trigger, mock.patch.object(
-        mock_det.custom_prepare, "prepare_detector_backend"
-    ) as mock_prep_data_backend, mock.patch.object(
-        mock_det.custom_prepare, "publish_file_location"
-    ) as mock_publish_file_location, mock.patch.object(
-        mock_det.custom_prepare, "arm_acquisition"
-    ) as mock_arm_acquisition:
+    with (
+        mock.patch.object(mock_det, "set_trigger") as mock_set_trigger,
+        mock.patch.object(
+            mock_det.custom_prepare, "prepare_detector_backend"
+        ) as mock_prep_data_backend,
+        mock.patch.object(
+            mock_det.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+        mock.patch.object(mock_det.custom_prepare, "arm_acquisition") as mock_arm_acquisition,
+    ):
         mock_det.scaninfo.exp_time = scaninfo["exp_time"]
         mock_det.scaninfo.num_points = scaninfo["num_points"]
         mock_det.scaninfo.frames_per_trigger = scaninfo["frames_per_trigger"]
@@ -248,9 +252,12 @@ def test_trigger(mock_det):
 
 @pytest.mark.parametrize("stopped, expected_abort", [(False, False), (True, True)])
 def test_unstage(mock_det, stopped, expected_abort):
-    with mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished, mock.patch.object(
-        mock_det.custom_prepare, "publish_file_location"
-    ) as mock_publish_file_location:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "finished") as mock_finished,
+        mock.patch.object(
+            mock_det.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+    ):
         mock_det.stopped = stopped
         if expected_abort:
             mock_det.unstage()
@@ -264,11 +271,12 @@ def test_unstage(mock_det, stopped, expected_abort):
 
 
 def test_stop(mock_det):
-    with mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector_backend"
-    ) as mock_stop_detector_backend:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+        mock.patch.object(
+            mock_det.custom_prepare, "stop_detector_backend"
+        ) as mock_stop_detector_backend,
+    ):
         mock_det.stop()
         mock_stop_det.assert_called_once()
         mock_stop_detector_backend.assert_called_once()
@@ -283,11 +291,12 @@ def test_stop(mock_det):
     ],
 )
 def test_finished(mock_det, stopped, scaninfo):
-    with mock.patch.object(
-        mock_det.custom_prepare, "stop_detector"
-    ) as mock_stop_det, mock.patch.object(
-        mock_det.custom_prepare, "stop_detector_backend"
-    ) as mock_stop_file_writer:
+    with (
+        mock.patch.object(mock_det.custom_prepare, "stop_detector") as mock_stop_det,
+        mock.patch.object(
+            mock_det.custom_prepare, "stop_detector_backend"
+        ) as mock_stop_file_writer,
+    ):
         mock_det.stopped = stopped
         mock_det.dxp.current_pixel._read_pv.mock_data = int(
             scaninfo["num_points"] * scaninfo["frames_per_trigger"]

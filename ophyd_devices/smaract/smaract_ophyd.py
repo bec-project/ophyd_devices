@@ -90,11 +90,7 @@ class SmaractAxisLimits(SmaractSignalBase):
 
 class SmaractMotor(Device, PositionerBase):
     USER_ACCESS = ["controller"]
-    readback = Cpt(
-        SmaractReadbackSignal,
-        signal_name="readback",
-        kind="hinted",
-    )
+    readback = Cpt(SmaractReadbackSignal, signal_name="readback", kind="hinted")
     user_setpoint = Cpt(SmaractSetpointSignal, signal_name="setpoint")
 
     # motor_resolution = Cpt(
@@ -217,18 +213,10 @@ class SmaractMotor(Device, PositionerBase):
         def move_and_finish():
             while self.motor_is_moving.get():
                 val = self.readback.read()
-                self._run_subs(
-                    sub_type=self.SUB_READBACK,
-                    value=val,
-                    timestamp=time.time(),
-                )
+                self._run_subs(sub_type=self.SUB_READBACK, value=val, timestamp=time.time())
                 time.sleep(0.1)
             val = self.readback.read()
-            success = np.isclose(
-                val[self.name]["value"],
-                position,
-                atol=self.tolerance,
-            )
+            success = np.isclose(val[self.name]["value"], position, atol=self.tolerance)
             self._done_moving(success=success)
 
         threading.Thread(target=move_and_finish, daemon=True).start()
@@ -312,20 +300,10 @@ if __name__ == "__main__":
         from ophyd_devices.utils.socket import SocketMock
 
         lsmarA = SmaractMotor(
-            "A",
-            name="lsmarA",
-            host="mpc2680.psi.ch",
-            port=8085,
-            sign=1,
-            socket_cls=SocketMock,
+            "A", name="lsmarA", host="mpc2680.psi.ch", port=8085, sign=1, socket_cls=SocketMock
         )
         lsmarB = SmaractMotor(
-            "B",
-            name="lsmarB",
-            host="mpc2680.psi.ch",
-            port=8085,
-            sign=1,
-            socket_cls=SocketMock,
+            "B", name="lsmarB", host="mpc2680.psi.ch", port=8085, sign=1, socket_cls=SocketMock
         )
         lsmarA.stage()
         lsmarB.stage()

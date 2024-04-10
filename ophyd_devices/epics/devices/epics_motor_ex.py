@@ -22,7 +22,7 @@ class EpicsMotorEx(EpicsMotor):
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
-        **kwargs
+        **kwargs,
     ):
         # get configuration attributes from kwargs and then remove them
         attrs = {}
@@ -39,7 +39,7 @@ class EpicsMotorEx(EpicsMotor):
             read_attrs=read_attrs,
             configuration_attrs=configuration_attrs,
             parent=parent,
-            **kwargs
+            **kwargs,
         )
 
         # set configuration attributes

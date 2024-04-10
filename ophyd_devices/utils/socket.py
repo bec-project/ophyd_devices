@@ -140,10 +140,7 @@ class SocketSignal(abc.ABC, Signal):
         timestamp = time.time()
         super().put(value, timestamp=timestamp, force=True)
         self._run_subs(
-            sub_type=self.SUB_SETPOINT,
-            old_value=old_value,
-            value=value,
-            timestamp=timestamp,
+            sub_type=self.SUB_SETPOINT, old_value=old_value, value=value, timestamp=timestamp
         )
 
     def describe(self):

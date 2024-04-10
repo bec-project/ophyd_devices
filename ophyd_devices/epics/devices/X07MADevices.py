@@ -58,7 +58,7 @@ class X07MAUndulator(PVPositioner):
         configuration_attrs=None,
         parent=None,
         egu="",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             prefix,
@@ -68,7 +68,7 @@ class X07MAUndulator(PVPositioner):
             configuration_attrs=configuration_attrs,
             parent=parent,
             egu=egu,
-            **kwargs
+            **kwargs,
         )
         self.readback.name = self.name
 
@@ -96,7 +96,7 @@ class PGMMonochromator(PVPositioner):
         configuration_attrs=None,
         parent=None,
         egu="",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             prefix,
@@ -106,7 +106,7 @@ class PGMMonochromator(PVPositioner):
             configuration_attrs=configuration_attrs,
             parent=parent,
             egu=egu,
-            **kwargs
+            **kwargs,
         )
         self.readback.name = self.name
 
@@ -237,7 +237,7 @@ class X07MAExitSlit(PVPositioner):
         configuration_attrs=None,
         parent=None,
         egu="",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             prefix,
@@ -247,7 +247,7 @@ class X07MAExitSlit(PVPositioner):
             configuration_attrs=configuration_attrs,
             parent=parent,
             egu=egu,
-            **kwargs
+            **kwargs,
         )
         self.readback.name = self.name
 
@@ -294,9 +294,7 @@ class X07MAMagnetAxis(PVPositioner):
 class NormSignal(Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._metadata.update(
-            write_access=False,
-        )
+        self._metadata.update(write_access=False)
 
     def wait_for_connection(self, timeout=0):
         super().wait_for_connection(timeout)
@@ -389,7 +387,7 @@ class X07MATemperatureController(Device):
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             prefix,
@@ -398,7 +396,7 @@ class X07MATemperatureController(Device):
             read_attrs=read_attrs,
             configuration_attrs=configuration_attrs,
             parent=parent,
-            **kwargs
+            **kwargs,
         )
         self.readback.name = self.name
 

@@ -19,13 +19,7 @@ class DeviceProxy(BECDeviceBase, ABC):
     The minimum requirement for a device proxy is to implement the _compute method.
     """
 
-    def __init__(
-        self,
-        name,
-        *args,
-        device_manager=None,
-        **kwargs,
-    ):
+    def __init__(self, name, *args, device_manager=None, **kwargs):
         self.name = name
         self.device_manager = device_manager
         self.config = None
@@ -111,13 +105,7 @@ class SlitProxy(DeviceProxy):
 
     USER_ACCESS = ["enabled", "lookup", "help"]
 
-    def __init__(
-        self,
-        name,
-        *args,
-        device_manager=None,
-        **kwargs,
-    ):
+    def __init__(self, name, *args, device_manager=None, **kwargs):
         self._gaussian_blur_sigma = 5
         super().__init__(name, *args, device_manager=device_manager, **kwargs)
 
@@ -225,13 +213,7 @@ class H5ImageReplayProxy(DeviceProxy):
 
     USER_ACCESS = ["file_source", "h5_entry"]
 
-    def __init__(
-        self,
-        name,
-        *args,
-        device_manager=None,
-        **kwargs,
-    ):
+    def __init__(self, name, *args, device_manager=None, **kwargs):
         self.h5_file = None
         self.h5_dataset = None
         self._number_of_images = None

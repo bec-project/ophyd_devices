@@ -44,10 +44,7 @@ class SetableSignal(Signal):
         **kwargs,
     ):
         super().__init__(*args, name=name, value=value, kind=kind, **kwargs)
-        self._metadata.update(
-            connected=True,
-            write_access=False,
-        )
+        self._metadata.update(connected=True, write_access=False)
         self._value = value
         self.precision = precision
         self.sim = getattr(self.parent, "sim", None)
@@ -138,10 +135,7 @@ class ReadOnlySignal(Signal):
         **kwargs,
     ):
         super().__init__(*args, name=name, parent=parent, value=value, kind=kind, **kwargs)
-        self._metadata.update(
-            connected=True,
-            write_access=False,
-        )
+        self._metadata.update(connected=True, write_access=False)
         self._value = value
         self.precision = precision
         self.compute_readback = compute_readback
@@ -293,11 +287,7 @@ class CustomSetableSignal(BECDeviceBase):
         Core function for signal.
         """
         res = {
-            self.name: {
-                "source": str(self.__class__),
-                "dtype": self._dtype,
-                "shape": self._shape,
-            }
+            self.name: {"source": str(self.__class__), "dtype": self._dtype, "shape": self._shape}
         }
         if self.precision is not None:
             res[self.name]["precision"] = self.precision
@@ -314,12 +304,7 @@ class CustomSetableSignal(BECDeviceBase):
 
     def read(self):
         """Read method"""
-        return {
-            self.name: {
-                "value": self.get(),
-                "timestamp": self.timestamp,
-            }
-        }
+        return {self.name: {"value": self.get(), "timestamp": self.timestamp}}
 
     def read_configuration(self):
         """Read method"""

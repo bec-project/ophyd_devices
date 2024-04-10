@@ -263,11 +263,7 @@ class Bpm4i(Device):
     ch2 = Component(EpicsSignalRO, "S3", auto_monitor=True, kind=Kind.omitted, name="ch2")
     ch3 = Component(EpicsSignalRO, "S4", auto_monitor=True, kind=Kind.omitted, name="ch3")
     ch4 = Component(EpicsSignalRO, "S5", auto_monitor=True, kind=Kind.omitted, name="ch4")
-    sum = Component(
-        CurrentSum,
-        kind=Kind.hinted,
-        name="sum",
-    )
+    sum = Component(CurrentSum, kind=Kind.hinted, name="sum")
 
     def __init__(
         self,

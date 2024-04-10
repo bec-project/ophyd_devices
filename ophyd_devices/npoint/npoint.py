@@ -73,10 +73,7 @@ class NPointController:
     _channel_base = ["11", "83"]
 
     def __init__(
-        self,
-        comm_socket: SocketIO,
-        server_ip: str = "129.129.99.87",
-        server_port: int = 23,
+        self, comm_socket: SocketIO, server_ip: str = "129.129.99.87", server_port: int = 23
     ) -> None:
         self._lock = threading.RLock()
         super().__init__()
@@ -107,12 +104,7 @@ class NPointController:
         t.field_names = ["Channel", "Range", "Position", "Target"]
         for ii in range(self.NUM_CHANNELS):
             t.add_row(
-                [
-                    ii,
-                    self._get_range(ii),
-                    self._get_current_pos(ii),
-                    self._get_target_pos(ii),
-                ]
+                [ii, self._get_range(ii), self._get_current_pos(ii), self._get_target_pos(ii)]
             )
         print(t)
 
