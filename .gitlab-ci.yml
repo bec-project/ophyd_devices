@@ -151,7 +151,7 @@ semver:
     - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
     - >
       semantic-release publish -v DEBUG
-      -D version_variable=./setup.py:__version__
+      -D version_toml=./pyproject.toml:project.version
       -D hvcs=gitlab
 
   allow_failure: false
