@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "ophyd",
+    "ophyd~=1.9",
     "typeguard",
     "prettytable",
     "bec_lib",
@@ -38,3 +38,7 @@ Homepage = "https://gitlab.psi.ch/bec/ophyd_devices"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
+
+[tool.black]
+line-length = 100
+skip-magic-trailing-comma = true
