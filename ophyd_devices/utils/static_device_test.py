@@ -15,7 +15,7 @@ except ImportError:
     plugin_devices = None
 
 try:
-    from device_server.devices.devicemanager import DeviceManagerDS as device_manager
+    from bec_server.device_server.devices.devicemanager import DeviceManagerDS as device_manager
 except ImportError:
     device_manager = None
 
