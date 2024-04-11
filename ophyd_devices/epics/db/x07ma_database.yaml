@@ -254,18 +254,20 @@ tcontrol:
   softwareTrigger: false
 
 sls_info:
-  readoutPriority: ignored
+  readoutPriority: on_request
   description: 'sls info'
   deviceClass: SLSInfo
+  deviceConfig: {}
   onFailure: buffer
   enabled: true
   readOnly: false
   softwareTrigger: false
 
 sls_operator:
-  readoutPriority: ignored
+  readoutPriority: on_request
   description: 'sls operator messages'
   deviceClass: SLSOperatorMessages
+  deviceConfig: {}
   onFailure: buffer
   enabled: true
   readOnly: false
