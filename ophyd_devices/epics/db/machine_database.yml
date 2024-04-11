@@ -1,21 +1,37 @@
 ring:
-  desc: 'SLS storage ring status'
-  acquisition: {schedule: sync}
-  config: {name: ring, prefix: ''}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SlsStatus
+  readoutPriority: baseline
+  description: 'SLS storage ring status'
+  deviceClass: SlsStatus
+  deviceConfig:
+    prefix: ''
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: true
+  softwareTrigger: false
 frontendstatus:
-  desc: 'Minimal beamline frontend status'
-  acquisition: {schedule: sync}
-  config: {name: frontendstatus, prefix: X06DA}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: FrontEndStatus
+  readoutPriority: baseline
+  description: 'Minimal beamline frontend status'
+  deviceClass: FrontEndStatus
+  deviceConfig:
+    prefix: X06DA
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: true
+  softwareTrigger: false
 opticshutchstatus:
-  desc: 'Minimal beamline optics hutch status'
-  acquisition: {schedule: sync}
-  config: {name: opticshutchstatus, prefix: X06DA}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: OpticsHutchStatus
+  readoutPriority: baseline
+  description: 'Minimal beamline optics hutch status'
+  deviceClass: OpticsHutchStatus
+  deviceConfig:
+    prefix: X06DA
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: true
+  softwareTrigger: false
+

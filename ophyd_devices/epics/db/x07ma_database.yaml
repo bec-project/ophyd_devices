@@ -1,215 +1,272 @@
 slsinfo:
+  readoutPriority: baseline
   description: 'SLS beam info'
   deviceClass: SLSInfo
-  deviceConfig: {name: slsinfo}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig: {}
   onFailure: buffer
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 undulator:
+  readoutPriority: baseline
   description: 'Undulator'
   deviceClass: X07MAUndulator
-  deviceConfig: {name: undulator, prefix: 'X07MA-ID:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ID:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 aperture:
+  readoutPriority: baseline
   description: 'Frontend aperture'
   deviceClass: EpicsSignal
-  deviceConfig: {name: aperture, read_pv: 'X07MA-FE-DSAPER'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-FE-DSAPER'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 mono:
+  readoutPriority: baseline
   description: 'PGM Monochromator'
   deviceClass: PGMMonochromator
-  deviceConfig: {name: mono, prefix: 'X07MA-'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 otf:
+  readoutPriority: baseline
   description: 'PGM on-the-fly scan'
   deviceClass: PGMOtFScan
-  deviceConfig: {name: otf}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig: {}
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 valve:
+  readoutPriority: baseline
   description: 'Endstation valve'
   deviceClass: VacuumValve
-  deviceConfig: {name: valve, prefix: 'X07MA-OP-VG13:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-OP-VG13:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 exit_slit:
+  readoutPriority: baseline
   description: 'Exit slit'
   deviceClass: X07MAExitSlit
-  deviceConfig: {name: exit_slit, prefix: 'X07MA-OP-SL1SV1:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-OP-SL1SV1:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 goldmesh1:
+  readoutPriority: baseline
   description: 'Gold mesh 1'
   deviceClass: EpicsMotor
-  deviceConfig: {name: goldmesh1, prefix: 'X07MA-OP-IO1:TR1'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-OP-IO1:TR1'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 goldmesh2:
+  readoutPriority: baseline
   description: 'Gold mesh 2'
   deviceClass: EpicsMotor
-  deviceConfig: {name: goldmesh2, prefix: 'X07MA-OP-IO2:TR1'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-OP-IO2:TR1'
   onFailure: retry
-  status: {enabled: true}
-
-# field:
-#   description: 'Magnetic field'
-#   deviceClass: X07MAMagnet
-#   deviceConfig: {name: field, prefix: 'X07MA-PC-MAG:'}
-#   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-#   onFailure: retry
-#   status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 field_x:
+  readoutPriority: baseline
   description: 'Magnetic field x'
   deviceClass: X07MAMagnetAxis
-  deviceConfig: {name: field_x, axis_id: X, ps_prefix: "X07MA-PC-PS2:", prefix: 'X07MA-PC-MAG:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    axis_id: X
+    ps_prefix: "X07MA-PC-PS2:"
+    prefix: 'X07MA-PC-MAG:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 field_z:
+  readoutPriority: baseline
   description: 'Magnetic field z'
   deviceClass: X07MAMagnetAxis
-  deviceConfig: {name: field_z, axis_id: Z, ps_prefix: "X07MA-PC-PS1:", prefix: 'X07MA-PC-MAG:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    axis_id: Z
+    ps_prefix: "X07MA-PC-PS1:"
+    prefix: 'X07MA-PC-MAG:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 signals:
+  readoutPriority: baseline
   description: 'ADC signals'
   deviceClass: X07MAAnalogSignals
-  deviceConfig: {name: signals, prefix: 'X07MA-ES1-AI:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ES1-AI:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 sample_hor:
+  readoutPriority: baseline
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_hor, prefix: 'X07MA-ES1-MAG:TRZS'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ES1-MAG:TRZS'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 sample_vert:
+  readoutPriority: baseline
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_vert, prefix: 'X07MA-ES1-MAG:TRY1'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ES1-MAG:TRY1'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 sample_rot:
+  readoutPriority: baseline
   description: 'Horizontal sample position'
   deviceClass: EpicsMotor
-  deviceConfig: {name: sample_rot, prefix: 'X07MA-ES1-MAG:ROY1'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ES1-MAG:ROY1'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 harmonic:
+  readoutPriority: baseline
   description: 'ID harmonic'
   deviceClass: EpicsSignal
-  deviceConfig: {name: harmonic, read_pv: 'X07MA-ID:HARMONIC'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-ID:HARMONIC'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 energy:
+  readoutPriority: baseline
   description: 'Energy in eV'
   deviceClass: EpicsSignal
-  deviceConfig: {name: energy, read_pv: 'X07MA-PHS-E:GO.A'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-PHS-E:GO.A'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 energy_mode:
+  readoutPriority: baseline
   description: 'Energy mode. Either PGM = 0 or PGM+ID = 1'
   deviceClass: EpicsSignal
-  deviceConfig: {name: energy_mode, read_pv: 'X07MA-PHS-E:OPT'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-PHS-E:OPT'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 keithley_1:
+  readoutPriority: baseline
   description: 'Keithley 1 / 428 tey'
   deviceClass: EpicsSignal
-  deviceConfig: {name: keithley_1, read_pv: 'X07MA-PC-K428:1:setGain'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-PC-K428:1:setGain'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 keithley_2:
+  readoutPriority: baseline
   description: 'Keithley 2 / 428 i0'
   deviceClass: EpicsSignal
-  deviceConfig: {name: keithley_2, read_pv: 'X07MA-PC-K428:2:setGain'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-PC-K428:2:setGain'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 keithley_3:
+  readoutPriority: baseline
   description: 'Keithley 3 / 428 diode'
   deviceClass: EpicsSignal
-  deviceConfig: {name: keithley_3, read_pv: 'X07MA-PC-K428:3:setGain'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    read_pv: 'X07MA-PC-K428:3:setGain'
   onFailure: retry
-  status: {enabled: true}
-
-# manipulator:
-#   description: 'Sample Manipulator'
-#   deviceClass: X07MASampleManipulator
-#   deviceConfig: {name: manipulator, prefix: 'X07MA-ES1-MAG:'}
-#   acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
-#   onFailure: retry
-#   status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 temperature:
+  readoutPriority: baseline
   description: 'Temperature controller'
   deviceClass: X07MATemperatureController
-  deviceConfig: {name: temperature, prefix: 'X07MA-PC-TC:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-PC-TC:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 tcontrol:
+  readoutPriority: baseline
   description: 'Automatic temperature control'
   deviceClass: X07MAAutoTemperatureControl
-  deviceConfig: {name: 'tcontrol', prefix: 'X07MA-ES1-TEMP:'}
-  acquisitionConfig: {acquisitionGroup: monitor, readoutPriority: baseline, schedule: sync}
+  deviceConfig:
+    prefix: 'X07MA-ES1-TEMP:'
   onFailure: retry
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 sls_info:
+  readoutPriority: ignored
   description: 'sls info'
   deviceClass: SLSInfo
-  deviceConfig: {name: 'sls_info'}
-  acquisitionConfig: {acquisitionGroup: status, readoutPriority: ignored, schedule: sync}
   onFailure: buffer
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
 
 sls_operator:
+  readoutPriority: ignored
   description: 'sls operator messages'
   deviceClass: SLSOperatorMessages
-  deviceConfig: {name: 'sls_operator'}
-  acquisitionConfig: {acquisitionGroup: status, readoutPriority: ignored, schedule: sync}
   onFailure: buffer
-  status: {enabled: true}
+  enabled: true
+  readOnly: false
+  softwareTrigger: false

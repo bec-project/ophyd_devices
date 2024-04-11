@@ -1,35 +1,65 @@
 motor1:
-  desc: 'Simulated axis 1'
-  acquisition: {schedule: sync}
-  config: {name: motor1}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SynAxis
+  readoutPriority: baseline
+  description: 'Simulated axis 1'
+  deviceClass: SynAxis
+  deviceConfig:
+    name: motor1
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
 motor2:
-  desc: 'Simulated axis 2'
-  acquisition: {schedule: sync}
-  config: {name: motor2}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SynAxis
+  readoutPriority: baseline
+  description: 'Simulated axis 2'
+  deviceClass: SynAxis
+  deviceConfig:
+    name: motor2
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
 det1:
-  desc: 'Simulated signal 1'
-  acquisition: {schedule: sync}
-  config: {name: det1}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SynSignal
+  readoutPriority: baseline
+  description: 'Simulated signal 1'
+  deviceClass: SynSignal
+  deviceConfig:
+    name: det1
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
 det2:
-  desc: 'Simulated signal 2'
-  acquisition: {schedule: sync}
-  config: {name: det2}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SynSignal
+  readoutPriority: baseline
+  description: 'Simulated signal 2'
+  deviceClass: SynSignal
+  deviceConfig:
+    name: det2
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
 per1:
-  desc: 'Simulated periodic signal 1'
-  acquisition: {schedule: sync}
-  config: {name: per1}
-  deviceGroup: epicsDevice
-  status: {enabled: true}
-  type: SynPeriodicSignal
+  readoutPriority: baseline
+  description: 'Simulated periodic signal 1'
+  deviceClass: SynPeriodicSignal
+  deviceConfig:
+    name: per1
+  deviceTags:
+    - epicsDevice
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
