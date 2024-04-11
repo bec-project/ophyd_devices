@@ -22,7 +22,7 @@ include:
 #commands to run in the Docker container before starting each job.
 before_script:
   - pip install -e .[dev]
-  - pip install bec-device-server
+  - pip install bec-server
 
 # different stages in the pipeline
 stages:
