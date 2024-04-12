@@ -43,6 +43,18 @@ include = ["*"]
 line-length = 100
 skip-magic-trailing-comma = true
 
+[tool.pylint.basic]
+# Good variable names regexes, separated by a comma. If names match any regex,
+# they will always be accepted
+good-names-rgxs = [
+    ".*scanID.*",
+    ".*RID.*",
+    ".*pointID.*",
+    ".*ID.*",
+    ".*_2D.*",
+    ".*_1D.*",
+]
+
 [tool.semantic_release]
 build_command = "python -m build"
 version_toml = ["pyproject.toml:project.version"]
