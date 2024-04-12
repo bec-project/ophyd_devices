@@ -5,6 +5,7 @@ import inspect
 import time as ttime
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from copy import deepcopy
 
 import numpy as np
 from bec_lib import bec_logger
@@ -310,8 +311,8 @@ class SimulatedDataMonitor(SimulatedDataBase):
         self._init_default()
 
     def _get_additional_params(self) -> None:
-        params = DEFAULT_PARAMS_NOISE.copy()
-        params.update(DEFAULT_PARAMS_MOTOR.copy())
+        params = deepcopy(DEFAULT_PARAMS_NOISE)
+        params.update(deepcopy(DEFAULT_PARAMS_MOTOR))
         return params
 
     def _init_default(self) -> None:
@@ -439,6 +440,65 @@ class SimulatedDataMonitor(SimulatedDataBase):
         return v
 
 
+class SimulatedDataWaveform(SimulatedDataMonitor):
+    """Simulated data class for a waveform.
+
+    The class inherits from SimulatedDataMonitor,
+    and overwrites the relevant methods to compute
+    a simulated waveform for each point.
+    """
+
+    def _get_additional_params(self) -> None:
+        params = deepcopy(DEFAULT_PARAMS_NOISE)
+        return params
+
+    def compute_sim_state(self, signal_name: str, compute_readback: bool) -> None:
+        """Update the simulated state of the device.
+
+        It will update the value in self.sim_state with the value computed by
+        the chosen simulation type.
+
+        Args:
+            signal_name (str): Name of the signal to update.
+        """
+        if compute_readback:
+            method = self._compute
+            value = self.execute_simulation_method(method=method, signal_name=signal_name)
+            value = self.bit_depth(value)
+            self.update_sim_state(signal_name, value)
+
+    def _compute(self, *args, **kwargs) -> np.ndarray:
+        """
+        Compute the return value for active model.
+
+        Returns:
+            np.array: Values computed for the activate model.
+        """
+        size = self.parent.waveform_shape.get()
+        size = size[0] if isinstance(size, tuple) else size
+        method = self._model
+        value = method.eval(params=self._model_params, x=np.array(range(size)))
+        value *= self.sim_params["amplitude"] / np.max(value)
+        return self._add_noise(value, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+
+    def _add_noise(self, v: np.ndarray, noise: NoiseType, noise_multiplier: float) -> np.ndarray:
+        """Add noise to the simulated data.
+
+        Args:
+            v (np.ndarray): Simulated data.
+            noise (NoiseType): Type of noise to add.
+        """
+        if noise == NoiseType.POISSON:
+            v = np.random.poisson(np.round(v), v.shape)
+            return v
+        if noise == NoiseType.UNIFORM:
+            v += np.random.uniform(-noise_multiplier, noise_multiplier, v.shape)
+            v[v <= 0] = 0
+            return v
+        if noise == NoiseType.NONE:
+            return v
+
+
 class SimulatedDataCamera(SimulatedDataBase):
     """Simulated class to compute data for a 2D camera."""
 
@@ -468,24 +528,24 @@ class SimulatedDataCamera(SimulatedDataBase):
         return model_lookup
 
     def _get_additional_params(self) -> None:
-        params = DEFAULT_PARAMS_NOISE.copy()
-        params.update(DEFAULT_PARAMS_HOT_PIXEL.copy())
+        params = deepcopy(DEFAULT_PARAMS_NOISE)
+        params.update(deepcopy(DEFAULT_PARAMS_HOT_PIXEL))
         return params
 
     def _init_default_camera_params(self) -> None:
         """Initiate additional params for the simulated camera."""
         self._all_default_model_params.update(
             {
-                self._model_lookup[
-                    SimulationType2D.CONSTANT.value
-                ]: DEFAULT_PARAMS_CAMERA_CONSTANT.copy()
+                self._model_lookup[SimulationType2D.CONSTANT.value]: deepcopy(
+                    DEFAULT_PARAMS_CAMERA_CONSTANT
+                )
             }
         )
         self._all_default_model_params.update(
             {
-                self._model_lookup[
-                    SimulationType2D.GAUSSIAN.value
-                ]: DEFAULT_PARAMS_CAMERA_GAUSSIAN.copy()
+                self._model_lookup[SimulationType2D.GAUSSIAN.value]: deepcopy(
+                    DEFAULT_PARAMS_CAMERA_GAUSSIAN
+                )
             }
         )
 

@@ -18,7 +18,7 @@ from .sim.sim import SimMonitor as SynAxisMonitor
 from .sim.sim import SimMonitor as SynGaussBEC
 from .sim.sim import SimPositioner
 from .sim.sim import SimPositioner as SynAxisOPAAS
-from .sim.sim import SynDeviceOPAAS
+from .sim.sim import SimWaveform, SynDeviceOPAAS
 from .sim.sim_frameworks import DeviceProxy, H5ImageReplayProxy, SlitProxy
 from .sim.sim_signals import ReadOnlySignal
 from .sim.sim_signals import ReadOnlySignal as SynSignalRO
