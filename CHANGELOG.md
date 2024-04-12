@@ -2,6 +2,17 @@
 
 
 
+## v0.30.3 (2024-04-12)
+
+### Build
+
+* build: fixed build ([`88ff3bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/88ff3bc0cf3c21d87ba50c24e7d9e2352df751c9))
+
+### Fix
+
+* fix: fixed pyproject.toml ([`2793ca3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2793ca3eb0c278f6159b0c6d7fcb121b5c969e12))
+
+
 ## v0.30.2 (2024-04-12)
 
 ### Fix
@@ -155,8 +166,6 @@ Monkey-patching of Ophyd library ([`df8ce79`](https://gitlab.psi.ch/bec/ophyd_de
 
 * fix: bug fixes from online test at microxas ([`c2201e5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c2201e5e332c9bab64f6fcdfe034cb8d37da5857))
 
-* fix: add numpy and scipy to dynamic_pseudo ([`b66b224`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b66b224caeab9e3cf75de61fcfdccd0712fb9027))
-
 ### Refactor
 
 * refactor: numpy as np ([`d9ad1e8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d9ad1e87f7e6e2a5da6c3ea9b59952ca319c50ae))
@@ -168,10 +177,3 @@ Monkey-patching of Ophyd library ([`df8ce79`](https://gitlab.psi.ch/bec/ophyd_de
 ### Unknown
 
 * wip: fixed import for scipy too ([`46bbdfa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/46bbdfaebb14e86f866ebd5dc89e3b715249b5b3))
-
-
-## v0.27.1 (2024-03-13)
-
-### Fix
-
-* fix: bug fix ([`6c776bb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6c776bb4ae72e7f0a4b858a27a34f25baed726d2))
