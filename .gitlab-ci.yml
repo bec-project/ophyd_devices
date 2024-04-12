@@ -35,7 +35,7 @@ formatter:
   stage: Formatter
   script:
     - pip install black isort
-    - isort --check --diff --line-length=100 --profile=black --multi-line=3 --trailing-comma ./
+    - isort --check --diff ./
     - black --check --diff --color ./
 
 pylint:
