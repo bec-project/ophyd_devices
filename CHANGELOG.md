@@ -2,6 +2,13 @@
 
 
 
+## v0.30.2 (2024-04-12)
+
+### Fix
+
+* fix: fixed release update ([`3267514`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3267514c2055f406277b16f13a13744846e3ba77))
+
+
 ## v0.30.1 (2024-04-12)
 
 ### Build
@@ -168,10 +175,3 @@ Monkey-patching of Ophyd library ([`df8ce79`](https://gitlab.psi.ch/bec/ophyd_de
 ### Fix
 
 * fix: bug fix ([`6c776bb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6c776bb4ae72e7f0a4b858a27a34f25baed726d2))
-
-
-## v0.27.0 (2024-03-12)
-
-### Refactor
-
-* refactor: fixed formatter for aerotech ([`573da8a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/573da8a20b9be502b274b4c79e581b9e35a1e25d))
