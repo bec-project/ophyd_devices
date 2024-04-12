@@ -144,15 +144,13 @@ semver:
     - git fetch --tags
     - git tag
 
-    # build
-    - pip install python-semantic-release==7.* wheel
+    # build and publish package
+    - pip install python-semantic-release==9.* wheel build twine
     - export GL_TOKEN=$CI_UPDATES
-    - export REPOSITORY_USERNAME=__token__
-    - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
-    - >
-      semantic-release publish -v DEBUG
-      -D version_toml=./pyproject.toml:project.version
-      -D hvcs=gitlab
+    - semantic-release -vv version
+    - python -m build
+    - twine upload dist/* -u __token__ -p $CI_PYPI_TOKEN
+    - semantic-release publish
 
   allow_failure: false
   rules:
