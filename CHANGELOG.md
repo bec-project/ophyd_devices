@@ -2,6 +2,19 @@
 
 
 
+## v0.30.4 (2024-04-12)
+
+### Ci
+
+* ci: fixed upload of release ([`3c37da8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3c37da8f515b2effea0950e3236bb9843b7b7b95))
+
+### Fix
+
+* fix: fixed release upload ([`361dc3a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/361dc3a182231b458e1893da2e6382b1b17e9d5a))
+
+* fix: upgraded pyproject.toml ([`9d67ace`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9d67ace30d606caa2aaa919fe8225208c4632c7e))
+
+
 ## v0.30.3 (2024-04-12)
 
 ### Build
@@ -161,19 +174,3 @@ Monkey-patching of Ophyd library ([`df8ce79`](https://gitlab.psi.ch/bec/ophyd_de
 
 
 ## v0.27.2 (2024-03-15)
-
-### Fix
-
-* fix: bug fixes from online test at microxas ([`c2201e5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c2201e5e332c9bab64f6fcdfe034cb8d37da5857))
-
-### Refactor
-
-* refactor: numpy as np ([`d9ad1e8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d9ad1e87f7e6e2a5da6c3ea9b59952ca319c50ae))
-
-### Test
-
-* test: fix tests ([`2f2e519`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f2e51977265006f7fbb9a97648824dfb6f8b5b3))
-
-### Unknown
-
-* wip: fixed import for scipy too ([`46bbdfa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/46bbdfaebb14e86f866ebd5dc89e3b715249b5b3))
