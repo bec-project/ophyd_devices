@@ -45,9 +45,7 @@ skip-magic-trailing-comma = true
 
 [tool.semantic_release]
 build_command = "python -m build"
-version_toml = [
-    "pyproject.toml:project.version",
-]
+version_toml = ["pyproject.toml:project.version"]
 
 [tool.semantic_release.commit_author]
 env = "GIT_COMMIT_AUTHOR"
@@ -69,6 +67,11 @@ allowed_tags = [
 minor_tags = ["feat"]
 patch_tags = ["fix", "perf"]
 default_bump_level = 0
+
+[tool.semantic_release.remote]
+name = "origin"
+type = "gitlab"
+ignore_token_for_push = false
 
 [tool.semantic_release.remote.token]
 env = "GL_TOKEN"
