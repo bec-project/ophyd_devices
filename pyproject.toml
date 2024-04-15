@@ -14,20 +14,26 @@ classifiers = [
 ]
 dependencies = [
     "ophyd~=1.9",
-    "typeguard",
-    "prettytable",
-    "bec_lib",
-    "numpy",
-    "pyyaml",
-    "std_daq_client",
-    "pyepics",
-    "pytest",
-    "h5py",
-    "hdf5plugin",
+    "typeguard~=4.0",
+    "prettytable~=3.9",
+    "bec_lib~=2.0",
+    "numpy~=1.24",
+    "pyyaml~=6.0",
+    "std_daq_client~=1.3",
+    "pyepics~=3.5",
+    "pytest~=8.0",
+    "h5py~=3.10",
+    "hdf5plugin~=4.3",
 ]
 
 [project.optional-dependencies]
-dev = ["black", "isort", "coverage", "pylint", "pytest", "pytest-random-order"]
+dev = [
+    "black~=24.0",
+    "isort~=5.0",
+    "coverage~=7.4",
+    "pylint~=3.0",
+    "pytest-random-order~=1.0",
+]
 
 [project.scripts]
 ophyd_test = "ophyd_devices:launch"
@@ -35,6 +41,8 @@ ophyd_test = "ophyd_devices:launch"
 [project.urls]
 "Bug Tracker" = "https://gitlab.psi.ch/bec/ophyd_devices/issues"
 Homepage = "https://gitlab.psi.ch/bec/ophyd_devices"
+documentation = "https://bec.readthedocs.org"
+changelog = "https://gitlab.psi.ch/bec/ophyd_devices/blob/master/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
