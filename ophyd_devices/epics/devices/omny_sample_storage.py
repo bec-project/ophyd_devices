@@ -34,62 +34,63 @@ class OMNYSampleStorage(Device):
     _default_sub = SUB_VALUE
 
     sample_shuttle_A_placed = {
-        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_A:{i}", {}) for i in range(1,7)
+        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_A:{i}", {}) for i in range(1, 7)
     }
     sample_shuttle_A_placed = Dcpt(sample_shuttle_A_placed)
 
     sample_shuttle_B_placed = {
-        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_B:{i}", {}) for i in range(1,7)
+        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_B:{i}", {}) for i in range(1, 7)
     }
     sample_shuttle_B_placed = Dcpt(sample_shuttle_B_placed)
 
     sample_shuttle_C_placed = {
-        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_C:{i}", {}) for i in range(1,7)
+        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_C:{i}", {}) for i in range(1, 7)
     }
     sample_shuttle_C_placed = Dcpt(sample_shuttle_C_placed)
 
     sample_shuttle_C_placed = {
-        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_C:{i}", {}) for i in range(1,7)
+        f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_C:{i}", {}) for i in range(1, 7)
     }
     sample_shuttle_C_placed = Dcpt(sample_shuttle_C_placed)
 
     parking_placed = {
-        f"parking{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_parking:{i}", {}) for i in range(1,7)
+        f"parking{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_parking:{i}", {}) for i in range(1, 7)
     }
     parking_placed = Dcpt(parking_placed)
 
     sample_placed = {
-        f"parking{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_omny:{i}", {}) for i in [10,11,12,13,14,32,33,34,100,101]
+        f"parking{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_omny:{i}", {})
+        for i in [10, 11, 12, 13, 14, 32, 33, 34, 100, 101]
     }
     sample_placed = Dcpt(sample_placed)
 
     sample_shuttle_A_names = {
         f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_A:{i}.DESC", {"string": True})
-        for i in range(1,7)
+        for i in range(1, 7)
     }
     sample_shuttle_A_names = Dcpt(sample_shuttle_A_names)
 
     sample_shuttle_B_names = {
         f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_B:{i}.DESC", {"string": True})
-        for i in range(1,7)
+        for i in range(1, 7)
     }
     sample_shuttle_B_names = Dcpt(sample_shuttle_B_names)
 
     sample_shuttle_C_names = {
         f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_shuttle_C:{i}.DESC", {"string": True})
-        for i in range(1,7)
+        for i in range(1, 7)
     }
     sample_shuttle_C_names = Dcpt(sample_shuttle_C_names)
 
     parking_names = {
         f"parking{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_parking:{i}.DESC", {"string": True})
-        for i in range(1,7)
+        for i in range(1, 7)
     }
     parking_names = Dcpt(parking_names)
 
     sample_names = {
         f"sample{i}": (EpicsSignal, f"XOMNY-SAMPLE_DB_omny:{i}.DESC", {"string": True})
-        for i in [10,11,12,13,14,32,33,34,100,101]
+        for i in [10, 11, 12, 13, 14, 32, 33, 34, 100, 101]
     }
     sample_names = Dcpt(sample_names)
 
@@ -125,14 +126,14 @@ class OMNYSampleStorage(Device):
     def set_sample_slot(self, container: str, slot_nr: int, name: str) -> bool:
         if slot_nr > 20:
             raise OMNYSampleStorageError(f"Invalid slot number {slot_nr}.")
-        
-        if container == 'A':
+
+        if container == "A":
             getattr(self.sample_shuttle_A_placed, f"sample{slot_nr}").set(1)
             getattr(self.sample_shuttle_A_names, f"sample{slot_nr}").set(name)
-        elif container == 'B':
+        elif container == "B":
             getattr(self.sample_shuttle_B_placed, f"sample{slot_nr}").set(1)
             getattr(self.sample_shuttle_B_names, f"sample{slot_nr}").set(name)
-        elif container == 'C':
+        elif container == "C":
             getattr(self.sample_shuttle_C_placed, f"sample{slot_nr}").set(1)
             getattr(self.sample_shuttle_C_names, f"sample{slot_nr}").set(name)
 
@@ -140,13 +141,13 @@ class OMNYSampleStorage(Device):
         if slot_nr > 20:
             raise OMNYSampleStorageError(f"Invalid slot number {slot_nr}.")
 
-        if shuttle == 'A':
+        if shuttle == "A":
             getattr(self.sample_shuttle_A_placed, f"sample{slot_nr}").set(0)
             getattr(self.sample_shuttle_A_names, f"sample{slot_nr}").set("-")
-        if shuttle == 'B':
+        if shuttle == "B":
             getattr(self.sample_shuttle_B_placed, f"sample{slot_nr}").set(0)
             getattr(self.sample_shuttle_B_names, f"sample{slot_nr}").set("-")
-        if shuttle == 'C':
+        if shuttle == "C":
             getattr(self.sample_shuttle_C_placed, f"sample{slot_nr}").set(0)
             getattr(self.sample_shuttle_C_names, f"sample{slot_nr}").set("-")
 
@@ -155,12 +156,12 @@ class OMNYSampleStorage(Device):
             raise OMNYSampleStorageError(f"Invalid slot number {slot_nr}.")
         getattr(self.parking_placed, f"parking{slot_nr}").set(1)
         getattr(self.parking_names, f"parking{slot_nr}").set(container)
-    
+
     def unset_shuttle_slot(self, slot_nr: int) -> bool:
         if slot_nr > 6:
             raise OMNYSampleStorageError(f"Invalid slot number {slot_nr}.")
         getattr(self.parking_placed, f"parking{slot_nr}").set(0)
-        getattr(self.parking_names, f"parking{slot_nr}").set('none')
+        getattr(self.parking_names, f"parking{slot_nr}").set("none")
 
     def set_sample_in_gripper(self, name: str) -> bool:
         self.sample_in_gripper.set(1)
@@ -179,13 +180,13 @@ class OMNYSampleStorage(Device):
         self.sample_in_samplestage_name.set("-")
 
     def is_sample_slot_used(self, container, slot_nr: int) -> bool:
-        if container == 'A':
+        if container == "A":
             val = getattr(self.sample_shuttle_A_placed, f"sample{slot_nr}").get()
-        if container == 'B':
+        if container == "B":
             val = getattr(self.sample_shuttle_B_placed, f"sample{slot_nr}").get()
-        if container == 'C':
+        if container == "C":
             val = getattr(self.sample_shuttle_C_placed, f"sample{slot_nr}").get()
-        elif container == 'O':
+        elif container == "O":
             val = getattr(self.sample_placed, f"sample{slot_nr}").get()
         return bool(val)
 
@@ -200,15 +201,15 @@ class OMNYSampleStorage(Device):
     def is_sample_in_samplestage(self) -> bool:
         val = self.sample_in_samplestage.get()
         return bool(val)
-    
+
     def get_sample_name(self, container, slot_nr) -> str:
-        if container == 'A':
+        if container == "A":
             val = getattr(self.sample_shuttle_A_names, f"sample{slot_nr}").get()
-        elif container == 'B':
+        elif container == "B":
             val = getattr(self.sample_shuttle_B_names, f"sample{slot_nr}").get()
-        elif container == 'C':
+        elif container == "C":
             val = getattr(self.sample_shuttle_C_names, f"sample{slot_nr}").get()
-        elif container == 'O':
+        elif container == "O":
             val = getattr(self.sample_names, f"sample{slot_nr}").get()
         else:
             val = "unknown container"
@@ -228,21 +229,21 @@ class OMNYSampleStorage(Device):
 
     def show_all(self):
         t = PrettyTable()
-        for ch in ['A','B','C']:
+        for ch in ["A", "B", "C"]:
             t.clear()
-            t.title = "Shuttle "+ch
+            t.title = "Shuttle " + ch
             field_names = [""]
-            for ax in [1,3,5]:
+            for ax in [1, 3, 5]:
                 row = []
-                row.extend([self.get_sample_name(ch,ax)])
+                row.extend([self.get_sample_name(ch, ax)])
                 row.extend(str(ax))
-                row.extend(str(ax+1))
-                row.extend([self.get_sample_name(ch,ax+1)])
+                row.extend(str(ax + 1))
+                row.extend([self.get_sample_name(ch, ax + 1)])
                 t.add_row(row)
             t.header = False
             t.vrules = FRAME
             print(t)
-        
+
         if self.is_sample_in_samplestage():
             print(f"\n\n  Sample stage:   {self.get_sample_name_in_samplestage()}")
         else:
@@ -255,13 +256,12 @@ class OMNYSampleStorage(Device):
 
         t.clear()
         t.title = "Fixed positions in OMNY"
-        for i in [10,11,12,13,14,32,33,34,100,101]:
+        for i in [10, 11, 12, 13, 14, 32, 33, 34, 100, 101]:
             row = []
             row.extend([f"Position {i:3d}"])
-            if self.is_sample_slot_used('O',i):
-                row.extend(self.get_sample_name('O',i))
+            if self.is_sample_slot_used("O", i):
+                row.extend(self.get_sample_name("O", i))
             else:
                 row.extend(["free"])
             t.add_row(row)
         print(t)
-
