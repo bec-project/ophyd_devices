@@ -5,6 +5,7 @@ from ophyd.sim import SynAxis, SynPeriodicSignal, SynSignal
 
 from .devices.delay_generator_csaxs import DelayGeneratorcSAXS
 from .devices.flomni_sample_storage import FlomniSampleStorage
+from .devices.omny_sample_storage import OMNYSampleStorage
 from .devices.InsertionDevice import InsertionDevice
 from .devices.slits import SlitH, SlitV
 from .devices.specMotors import (

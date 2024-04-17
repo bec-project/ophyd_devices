@@ -19,6 +19,7 @@ from .eiger9m_csaxs import Eiger9McSAXS
 from .epics_motor_ex import EpicsMotorEx
 from .falcon_csaxs import FalconcSAXS
 from .flomni_sample_storage import FlomniSampleStorage
+from .omny_sample_storage import OMNYSampleStorage
 from .grashopper_tomcat import GrashopperTOMCAT
 from .InsertionDevice import InsertionDevice
 from .mcs_csaxs import MCScSAXS

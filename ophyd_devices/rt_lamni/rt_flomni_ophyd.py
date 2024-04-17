@@ -290,9 +290,12 @@ class RtFlomniController(RtController):
         print("Laser tracker running!")
 
     def laser_tracker_off(self):
-        self.socket_put("T0")
-        logger.info("Disabled the laser tracker")
-        print("Disabled the laser tracker")
+        if self.feedback_is_running():
+            print("Interferometer feedback is running. Cannot disable the tracker. First disable the feedback using rt_feedback_disable()")
+        else:
+            self.socket_put("T0")
+            logger.info("Disabled the laser tracker")
+            print("Disabled the laser tracker")
 
     def laser_tracker_show_all(self):
         self.laser_update_tracker_info()
