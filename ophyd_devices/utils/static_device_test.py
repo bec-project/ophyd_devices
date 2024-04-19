@@ -11,11 +11,6 @@ from bec_lib.scibec_validator import SciBecValidator
 from ophyd_devices.utils.bec_device_base import BECDevice
 
 try:
-    from bec_plugins import devices as plugin_devices
-except ImportError:
-    plugin_devices = None
-
-try:
     from bec_server.device_server.devices.devicemanager import DeviceManagerDS as device_manager
 except ImportError:
     device_manager = None
