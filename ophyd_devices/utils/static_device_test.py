@@ -1,5 +1,6 @@
 import argparse
 import copy
+import os
 import traceback
 from io import TextIOWrapper
 
@@ -20,6 +21,10 @@ except ImportError:
     device_manager = None
 
 
+class StaticDeviceAnalysisError(Exception):
+    """Error class for static device analysis"""
+
+
 class StaticDeviceTest:
     """Class to perform tests on an ophyd device config file."""
 
@@ -29,6 +34,7 @@ class StaticDeviceTest:
             config(str): path to the config file
             output_file(TextIOWrapper): file to write the output to
         """
+        self.config_file = config
         self.config = self.read_config(config)
         self.file = output_file
 
@@ -257,6 +263,9 @@ class StaticDeviceTest:
             for device in failed_devices:
                 print(f"    {device}")
                 self.file.write(f"    {device}\n")
+            raise StaticDeviceAnalysisError(
+                f"The following devices failed the test in {self.config_file}: {failed_devices}. Check the report for more details."
+            )
 
     def print_and_write(self, text: str) -> None:
         """
@@ -278,7 +287,9 @@ def launch() -> None:
 
     parser.add_argument("--config", help="path to the config file", required=True, type=str)
     optional = parser.add_argument_group("optional arguments")
-    optional.add_argument("--output", default="./report.txt", help="path to the output file")
+    optional.add_argument(
+        "--output", default="./device_test_reports", help="path to the output directory"
+    )
     optional.add_argument("--connect", action="store_true", help="connect to the devices")
     parser.add_help = True
 
@@ -286,13 +297,34 @@ def launch() -> None:
 
     if device_manager is None:
         raise ImportError(
-            "device_server is not installed. Please install it first with pip install"
-            " bec-device-server."
+            "bec-server is not installed. Please install it first with pip install bec-server."
         )
 
-    with open("./report.txt", "w", encoding="utf-8") as file:
-        device_config_test = StaticDeviceTest(clargs.config, output_file=file)
-        device_config_test.run(clargs.connect)
+    if not os.path.exists(clargs.config):
+        raise FileNotFoundError(f"Config file {clargs.config} not found.")
+
+    if os.path.isdir(clargs.config):
+        files = os.listdir(clargs.config)
+        files = [
+            os.path.join(clargs.config, file)
+            for file in files
+            if file.endswith(".yaml") or file.endswith(".yml")
+        ]
+    else:
+        files = [clargs.config]
+
+    print(f"Running tests on the following files: {files}")
+
+    if not os.path.exists(clargs.output):
+        os.makedirs(clargs.output)
+
+    for file in files:
+        report_name = os.path.basename(file).split(".")[0]
+        with open(
+            os.path.join(clargs.output, f"report_{report_name}.txt"), "w", encoding="utf-8"
+        ) as report_file:
+            device_config_test = StaticDeviceTest(file, output_file=report_file)
+            device_config_test.run(clargs.connect)
 
 
 if __name__ == "__main__":  # pragma: no cover
