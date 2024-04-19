@@ -121,10 +121,9 @@ config_test:
 
 tests-3.11:
   stage: AdditionalTests
+  needs: ["formatter", "pylint"]
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.11
   script:
-    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
-    - pip install -e ./bec/bec_lib[dev]
     - pytest -v --random-order ./tests
   allow_failure: true
 
