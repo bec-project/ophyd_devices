@@ -42,7 +42,7 @@ ophyd_test = "ophyd_devices:launch"
 "Bug Tracker" = "https://gitlab.psi.ch/bec/ophyd_devices/issues"
 Homepage = "https://gitlab.psi.ch/bec/ophyd_devices"
 documentation = "https://bec.readthedocs.org"
-changelog = "https://gitlab.psi.ch/bec/ophyd_devices/blob/master/CHANGELOG.md"
+changelog = "https://gitlab.psi.ch/bec/ophyd_devices/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]

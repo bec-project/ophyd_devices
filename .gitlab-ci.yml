@@ -127,7 +127,7 @@ trigger_bec:
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
 
 semver:
   stage: Deploy
@@ -153,4 +153,4 @@ semver:
 
   allow_failure: false
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "master"'
+    - if: '$CI_COMMIT_REF_NAME == "main"'
