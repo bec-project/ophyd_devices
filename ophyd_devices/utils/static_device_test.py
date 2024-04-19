@@ -299,12 +299,11 @@ def launch() -> None:
         raise FileNotFoundError(f"Config file {clargs.config} not found.")
 
     if os.path.isdir(clargs.config):
-        files = os.listdir(clargs.config)
-        files = [
-            os.path.join(clargs.config, file)
-            for file in files
-            if file.endswith(".yaml") or file.endswith(".yml")
-        ]
+        files = []
+        for root, _, filenames in os.walk(clargs.config):
+            for filename in filenames:
+                if filename.endswith(".yaml") or filename.endswith(".yml"):
+                    files.append(os.path.join(root, filename))
     else:
         files = [clargs.config]
 
