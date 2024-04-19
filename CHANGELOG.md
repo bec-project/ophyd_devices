@@ -2,6 +2,17 @@
 
 
 
+## v0.32.0 (2024-04-19)
+
+### Ci
+
+* ci: do not wait for additional tests to start ([`b88545f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b88545f6864a7d11ca39435906bcbd2cd0bb12b0))
+
+### Feature
+
+* feat: added support for nestes device configs ([`288f394`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/288f39483e83575d0bf3ec7a8e0d872b41b5b183))
+
+
 ## v0.31.0 (2024-04-19)
 
 ### Build
@@ -142,10 +153,6 @@
 
 ## v0.29.1 (2024-04-06)
 
-### Ci
-
-* ci: added isort to pre-commit and ci ([`36d5cef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/36d5cef4ef14e5566649834b3afdd1efdbfdfc2d))
-
 ### Fix
 
 * fix(utils): fixed scan status message in sim mode ([`c87f6ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c87f6ef63f669d6d1288e3521b80b3e0065bf2f4))
@@ -156,11 +163,6 @@
 
 * refactor: fixed formatter ([`1e03114`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1e031140ed0ae4347a8d16a6a5e8647b48573d96))
 
-* refactor: applied isort to repo ([`284c6c4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/284c6c47a1db25d7ed840404730b1e97da960c14))
-
 ### Unknown
 
 * added fourth channel to signal strength readout ([`321bf0c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/321bf0c403a77efcbf970ea377b53a59377e38d0))
-
-
-## v0.29.0 (2024-03-28)
