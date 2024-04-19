@@ -2,6 +2,13 @@
 
 
 
+## v0.33.0 (2024-04-19)
+
+### Feature
+
+* feat: move csaxs devices to plugin structure, fix imports and tests ([`74f6fa7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/74f6fa7ffdf339399504e15f27564e3f0e43db56))
+
+
 ## v0.32.0 (2024-04-19)
 
 ### Ci
@@ -156,12 +163,6 @@
 ### Fix
 
 * fix(utils): fixed scan status message in sim mode ([`c87f6ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c87f6ef63f669d6d1288e3521b80b3e0065bf2f4))
-
-### Refactor
-
-* refactor: applied isort to tomcat rotation motors ([`fd1f8c0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fd1f8c0ff58c630051cb67d404c6dd07f3403c5b))
-
-* refactor: fixed formatter ([`1e03114`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1e031140ed0ae4347a8d16a6a5e8647b48573d96))
 
 ### Unknown
 
