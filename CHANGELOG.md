@@ -2,6 +2,29 @@
 
 
 
+## v0.31.0 (2024-04-19)
+
+### Build
+
+* build: fixed dependencies to compatible releases ([`26c04b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/26c04b5d03683b0159d5af127f19cda664bfb292))
+
+### Ci
+
+* ci: cleanup; added static device test job ([`ed66eac`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ed66eacc5310e878deb35be69f335f1b8eb10950))
+
+* ci: added pipeline as trigger source ([`e59def1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e59def138fb465abf7a33d13e47e78ac382feebf))
+
+* ci: changed master to main ([`701be52`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/701be5262ad402ff6e6a665db4bd1d5b30b3abac))
+
+* ci: pull images via gitlab dependency proxy ([`8d68e7d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8d68e7df70e54984e460f50cee5356a7ada4e761))
+
+* ci: remove AdditionalTests dependency on pytest job ([`4ee86ab`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ee86aba371698820ea16ff94ae6946cd0041fe4))
+
+### Feature
+
+* feat: added support for directories as input for the static device test ([`9748ca6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9748ca666c3c8668e8ced80e7d24eeaf7f19c28e))
+
+
 ## v0.30.5 (2024-04-12)
 
 ### Ci
@@ -141,26 +164,3 @@
 
 
 ## v0.29.0 (2024-03-28)
-
-### Feature
-
-* feat: add protocols and rotation base device ([`ddd0b79`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ddd0b790f8ef3e53966c660c431d2f7a9ceda97c))
-
-### Refactor
-
-* refactor: add set for positioner protocol ([`d844168`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d844168c1f7f31543ff747bb6f2ef3a2f7f1077e))
-
-* refactor: move protocol and base classes to different directory ([`8b77df8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8b77df833f4d389293d14f8e3e54de7b38c9f291))
-
-* refactor: cleanup aerotech, fix packaging for release ([`ce43924`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ce43924ca1601c409a17855957af6847b75ff261))
-
-### Test
-
-* test: fix tests after merge conflict ([`5f5ec72`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5f5ec72d02c2cb217ab540e82014d90fe5ef8216))
-
-* test: add test for simulated devices and BECprotocols ([`b34817a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b34817acf8ef6e60ef493bc2bb830a3a254e7ced))
-
-* test: add tests for proxies ([`2c43559`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2c43559aa8e60950ff95e72772820d784aacaa62))
-
-
-## v0.28.0 (2024-03-26)
