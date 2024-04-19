@@ -1,9 +1,9 @@
 from unittest import mock
 
 import pytest
+from bec_server.device_server.tests.utils import DMMock
 
 from ophyd_devices.utils.dynamic_pseudo import ComputedSignal
-from tests.utils import DMMock
 
 
 @pytest.fixture

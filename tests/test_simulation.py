@@ -7,6 +7,7 @@ from unittest import mock
 import h5py
 import numpy as np
 import pytest
+from bec_server.device_server.tests.utils import DMMock
 from ophyd import Device, Signal
 
 from ophyd_devices.ophyd_base_devices.bec_protocols import (
@@ -20,7 +21,6 @@ from ophyd_devices.sim.sim import SimCamera, SimFlyer, SimMonitor, SimPositioner
 from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
-from tests.utils import DMMock
 
 
 @pytest.fixture(scope="function")
@@ -120,15 +120,18 @@ def test_flyer__init__(flyer):
 @pytest.mark.parametrize("center", [-10, 0, 10])
 def test_monitor_readback(monitor, center):
     """Test the readback method of SimMonitor."""
+    motor_pos = 0
+    monitor.sim.device_manager.add_device("samx", value=motor_pos)
     for model_name in monitor.sim.sim_get_models():
         monitor.sim.sim_select_model(model_name)
         monitor.sim.sim_params["noise_multipler"] = 10
+        monitor.sim.sim_params["ref_motor"] = "samx"
         if "c" in monitor.sim.sim_params:
             monitor.sim.sim_params["c"] = center
         elif "center" in monitor.sim.sim_params:
             monitor.sim.sim_params["center"] = center
         assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
-        expected_value = monitor.sim._model.eval(monitor.sim._model_params, x=0)
+        expected_value = monitor.sim._model.eval(monitor.sim._model_params, x=motor_pos)
         print(expected_value, monitor.read()[monitor.name]["value"])
         tolerance = (
             monitor.sim.sim_params["noise_multipler"] + 1

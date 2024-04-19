@@ -1,3 +1,5 @@
+""" TODO This class was never properly tested, it is solely a first draft and should be tested and extended before use! """
+
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignal, EpicsSignalRO
 
