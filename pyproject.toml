@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "ophyd ~= 1.9, <= 1.9.5",
+    "ophyd ~= 1.9",
     "typeguard ~= 4.0",
     "prettytable ~= 3.9",
     "bec_lib ~= 2.0",
