@@ -2,6 +2,13 @@
 
 
 
+## v0.33.1 (2024-04-20)
+
+### Fix
+
+* fix: fix pyproject.toml ([`6081eb4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6081eb4ba54b2a6a2072f638af06c6f1cf264b69))
+
+
 ## v0.33.0 (2024-04-19)
 
 ### Feature
@@ -159,11 +166,3 @@
 
 
 ## v0.29.1 (2024-04-06)
-
-### Fix
-
-* fix(utils): fixed scan status message in sim mode ([`c87f6ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c87f6ef63f669d6d1288e3521b80b3e0065bf2f4))
-
-### Unknown
-
-* added fourth channel to signal strength readout ([`321bf0c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/321bf0c403a77efcbf970ea377b53a59377e38d0))
