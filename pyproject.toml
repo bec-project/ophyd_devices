@@ -28,6 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "bec-server~=2.7",
     "black~=24.0",
     "isort~=5.0",
     "coverage~=7.4",
