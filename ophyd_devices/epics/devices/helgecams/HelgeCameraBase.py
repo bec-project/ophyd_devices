@@ -35,6 +35,9 @@ class HelgeCameraMixin(CustomDetectorMixin):
         if exposure_time is not None:
             self.parent.acqExpTime.set(exposure_time).wait()
 
+    def prepare_detector_backend(self) -> None:
+        pass
+
     def prepare_detector(self) -> None:
         """Prepare detector for acquisition.
         
@@ -42,13 +45,13 @@ class HelgeCameraMixin(CustomDetectorMixin):
         BUSY and SET both low -> BUSY high, SET low -> BUSY low, SET high -> BUSY low, SET low
         """
 
-        self.camSetParam.set(1).wait()
+        self.parent.camSetParam.set(1).wait()
         def risingEdge(*args, old_value, value, timestamp, **kwargs):
             return bool(not old_value and value)
         def fallingEdge(*args, old_value, value, timestamp, **kwargs):
             return bool(old_value and not value)
         # Subscribe and wait for update
-        status = SubscriptionStatus(self.camSetParam, fallingEdge, settle_time=0.5)
+        status = SubscriptionStatus(self.parent.camSetParam, fallingEdge, settle_time=0.5)
         status.wait()
 
 
@@ -64,7 +67,7 @@ class HelgeCameraMixin(CustomDetectorMixin):
 
         # Subscribe and wait for update
         def isRunning(*args, old_value, value, timestamp, **kwargs):
-            return bool(self.state=="RUNNING")
+            return bool(self.parent.state=="RUNNING")
         status = SubscriptionStatus(self.parent.camStatusCode, isRunning, settle_time=0.2)
         status.wait()
 
@@ -108,15 +111,22 @@ class HelgeCameraMixin(CustomDetectorMixin):
 
 
 
-class HelgeCameraCore(Device):
+class HelgeCameraCore(PSIDetectorBase):
     """Ophyd baseclass for Helge camera IOCs
     
     This class provides wrappers for Helge's camera IOCs around SwissFEL and 
-    for high performance SLS 2.0 cameras. 
+    for high performance SLS 2.0 cameras. The IOC's operation is a bit arcane
+    and there are different versions and cameras all around. So this device 
+    only covers the absolute basics.
 
-    The IOC's operation is a bit arcane.
+    Probably the most important part is the configuration state machine. As
+    the SET_PARAMS takes care of buffer allocations it might take some time,
+    as well as afull re-configuration is required every time we change the 
+    binning, roi, etc... This is automatically performed upon starting an 
+    exposure (if it heven't been done before).      
 
-    
+    The status flag state machine during re-configuration is:
+    BUSY low, SET low -> BUSY high, SET low -> BUSY low, SET high -> BUSY low, SET low
 
     """   
     # Specify Mixin class
@@ -128,7 +138,6 @@ class HelgeCameraCore(Device):
     # General hardware info
     camType = Component(EpicsSignalRO, "QUERY",  kind=Kind.omitted)
     camBoard = Component(EpicsSignalRO, "BOARD", kind=Kind.config)
-    #camSerial = Component(EpicsSignalRO, "SERIALNR", kind=Kind.config)
     camError = Component(EpicsSignalRO, "ERRCODE", auto_monitor=True, kind=Kind.config)
     camWarning = Component(EpicsSignalRO, "WARNCODE", auto_monitor=True, kind=Kind.config)    
     
@@ -137,7 +146,11 @@ class HelgeCameraCore(Device):
     camStatusCmd = Component(EpicsSignal, "CAMERASTATUS", put_complete=True, kind=Kind.config)
 
     # ########################################################################
-    # Polled state maschine with separate transition states
+    # Acquisition configuration
+    acqExpTime = Component(EpicsSignalRO, "EXPOSURE", auto_monitor=True, kind=Kind.config)
+
+    # ########################################################################
+    # Configuration state maschine with separate transition states
     camStatusCode = Component(EpicsSignalRO, "STATUSCODE", auto_monitor=True, kind=Kind.config)
     camSetParam = Component(EpicsSignal, "SET_PARAM", auto_monitor=True, kind=Kind.config)
     camSetParamBusy = Component(EpicsSignalRO, "BUSY_SET_PARAM", auto_monitor=True, kind=Kind.config)
@@ -145,11 +158,15 @@ class HelgeCameraCore(Device):
     camCameraBusy = Component(EpicsSignalRO, "BUSY_CAMERA", auto_monitor=True, kind=Kind.config)
     camInit= Component(EpicsSignalRO, "INIT", auto_monitor=True, kind=Kind.config)
     camInitBusy = Component(EpicsSignalRO, "BUSY_INIT", auto_monitor=True, kind=Kind.config)
-    #camRemoval = Component(EpicsSignalRO, "REMOVAL", auto_monitor=True, kind=Kind.config)
 
-    camStateString = Component(EpicsSignalRO, "SS_CAMERA", string=True, auto_monitor=True, kind=Kind.config)
-
+    # ########################################################################
+    # Throtled image preview
     image = Component(EpicsSignalRO, "FPICTURE", kind=Kind.omitted)
+
+    # ########################################################################
+    # Misc PVs
+    #camRemoval = Component(EpicsSignalRO, "REMOVAL", auto_monitor=True, kind=Kind.config)
+    camStateString = Component(EpicsSignalRO, "SS_CAMERA", string=True, auto_monitor=True, kind=Kind.config)
 
     @property
     def state(self) -> str:
@@ -201,28 +218,6 @@ class HelgeCameraCore(Device):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class HelgeCameraBase(HelgeCameraCore):
     """Ophyd baseclass for Helge camera IOCs
     
@@ -240,9 +235,6 @@ class HelgeCameraBase(HelgeCameraCore):
     BUSY_CAMERA
     CAMERASTATUSCODE
     CAMERASTATUS
-
-    
-
     """   
     
 
@@ -258,7 +250,6 @@ class HelgeCameraBase(HelgeCameraCore):
     # ########################################################################
     # Acquisition configuration    
     acqMode = Component(EpicsSignalRO, "ACQMODE", auto_monitor=True, kind=Kind.config)
-    acqExpTime = Component(EpicsSignalRO, "EXPOSURE", auto_monitor=True, kind=Kind.config)
     acqDelay = Component(EpicsSignalRO, "DELAY", auto_monitor=True, kind=Kind.config)
     acqTriggerEna = Component(EpicsSignalRO, "TRIGGER", auto_monitor=True, kind=Kind.config)
     #acqTriggerSource = Component(EpicsSignalRO, "TRIGGERSOURCE", auto_monitor=True, kind=Kind.config)
@@ -282,8 +273,6 @@ class HelgeCameraBase(HelgeCameraCore):
     bufferRecMode = Component(EpicsSignalRO, "RECMODE", auto_monitor=True, kind=Kind.config)
     bufferStoreMode = Component(EpicsSignalRO, "STOREMODE", auto_monitor=True, kind=Kind.config)
     fileRecMode = Component(EpicsSignalRO, "RECMODE", auto_monitor=True, kind=Kind.config)
-    
-    image = Component(EpicsSignalRO, "FPICTURE", kind=Kind.omitted)
     
     # ########################################################################
     # File interface
@@ -351,8 +340,6 @@ class HelgeCameraBase(HelgeCameraCore):
         new = self.read_configuration()
         return (old, new)
                 
-
-
     @property
     def shape(self):
         return (int(self.pxNumX.value), int(self.pxNumY.value))
@@ -375,7 +362,7 @@ class HelgeCameraBase(HelgeCameraCore):
 
     @roi.setter
     def roi(self):
-        raise ReadOnlyError("Bin is a ReadOnly property")
+        raise ReadOnlyError("Roi is a ReadOnly property")
 
 
 
