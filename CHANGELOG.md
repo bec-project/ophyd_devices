@@ -2,6 +2,13 @@
 
 
 
+## v0.33.2 (2024-04-22)
+
+### Fix
+
+* fix(pyproject.toml): add bec-server to dev dependencies; closes #62 ([`9353b46`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9353b46be804de967810f0d9370d230dfae5c92b))
+
+
 ## v0.33.1 (2024-04-20)
 
 ### Fix
@@ -159,10 +166,3 @@
 ### Fix
 
 * fix: Adapt to FileWriter refactoring ([`e9c626a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9c626a7c8e5ec1b40d70ad412eff85d7796cba9))
-
-### Unknown
-
-* Update .gitlab-ci.yml file ([`32b6d47`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/32b6d476ca4b0deb0eec75519618c005212cc2dd))
-
-
-## v0.29.1 (2024-04-06)
