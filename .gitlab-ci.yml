@@ -18,7 +18,8 @@ workflow:
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
-
+  - project: "bec/awi_utils"
+    file: "awi_utils/test_pkg_versions/.gitlab-ci-job-check-pkg.yml"
 
 #commands to run in the Docker container before starting each job.
 before_script:
@@ -37,7 +38,7 @@ stages:
 formatter:
   stage: Formatter
   before_script:
-    - ''
+    - ""
   script:
     - pip install black isort
     - pip install -e .[dev]
@@ -69,10 +70,10 @@ pylint-check:
   script:
     # Identify changed Python files
     - if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then
-        TARGET_BRANCH_COMMIT_SHA=$(git rev-parse $CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
-        CHANGED_FILES=$(git diff --name-only $SOURCE_BRANCH_COMMIT_SHA $TARGET_BRANCH_COMMIT_SHA | grep '\.py$' || true);
+      TARGET_BRANCH_COMMIT_SHA=$(git rev-parse $CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
+      CHANGED_FILES=$(git diff --name-only $SOURCE_BRANCH_COMMIT_SHA $TARGET_BRANCH_COMMIT_SHA | grep '\.py$' || true);
       else
-        CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep '\.py$' || true);
+      CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep '\.py$' || true);
       fi
     - if [ -z "$CHANGED_FILES" ]; then echo "No Python files changed."; exit 0; fi
 
@@ -91,7 +92,7 @@ pylint-check:
 
 secret_detection:
   before_script:
-    - ''
+    - ""
 
 pytest:
   stage: test
@@ -109,7 +110,7 @@ pytest:
         path: coverage.xml
 
 config_test:
-  stage: test 
+  stage: test
   script:
     - ophyd_test --config ./ophyd_devices/epics/db/ --output ./config_tests
   artifacts:
