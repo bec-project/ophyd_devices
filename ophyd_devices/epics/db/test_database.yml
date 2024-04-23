@@ -1,7 +1,7 @@
 motor1:
   readoutPriority: baseline
   description: 'Simulated axis 1'
-  deviceClass: SynAxis
+  deviceClass: ophyd.sim.SynAxis
   deviceConfig:
     name: motor1
   deviceTags:
@@ -14,7 +14,7 @@ motor1:
 motor2:
   readoutPriority: baseline
   description: 'Simulated axis 2'
-  deviceClass: SynAxis
+  deviceClass: ophyd.sim.SynAxis
   deviceConfig:
     name: motor2
   deviceTags:
@@ -27,7 +27,7 @@ motor2:
 det1:
   readoutPriority: baseline
   description: 'Simulated signal 1'
-  deviceClass: SynSignal
+  deviceClass: ophyd.sim.SynSignal
   deviceConfig:
     name: det1
   deviceTags:
@@ -40,7 +40,7 @@ det1:
 det2:
   readoutPriority: baseline
   description: 'Simulated signal 2'
-  deviceClass: SynSignal
+  deviceClass: ophyd.sim.SynSignal
   deviceConfig:
     name: det2
   deviceTags:
@@ -53,7 +53,7 @@ det2:
 per1:
   readoutPriority: baseline
   description: 'Simulated periodic signal 1'
-  deviceClass: SynPeriodicSignal
+  deviceClass: ophyd.sim.SynPeriodicSignal
   deviceConfig:
     name: per1
   deviceTags:

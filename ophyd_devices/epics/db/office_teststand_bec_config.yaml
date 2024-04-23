@@ -1,7 +1,7 @@
 es1_roty:
   description: 'Test rotation stage'
 #  deviceClass: EpicsMotor 
-  deviceClass: epics:devices:EpicsMotorX 
+  deviceClass: ophyd_devices.epics.devices.EpicsMotorX 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:ROTY'}
   onFailure: buffer
   enabled: true
@@ -9,7 +9,7 @@ es1_roty:
 
 es1_aa1:
   description: 'Rotation stage controller status'
-  deviceClass: epics:devices:aa1Controller 
+  deviceClass: ophyd_devices.epics.devices.aa1Controller 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:CTRL:'}
   onFailure: buffer
   enabled: true
@@ -17,7 +17,7 @@ es1_aa1:
 
 es1_aa1Tasks:
   description: 'AA1 task management interface'
-  deviceClass: epics:devices:aa1Tasks 
+  deviceClass: ophyd_devices.epics.devices.aa1Tasks 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:TASK:'}
   onFailure: buffer
   enabled: true
@@ -25,7 +25,7 @@ es1_aa1Tasks:
 
 es1_aa1GlobalVar:
   description: 'AA1 global variables interface'
-  deviceClass: epics:devices:aa1GlobalVariables 
+  deviceClass: ophyd_devices.epics.devices.aa1GlobalVariables 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:VAR:'}
   onFailure: buffer
   enabled: true
@@ -33,7 +33,7 @@ es1_aa1GlobalVar:
 
 es1_aa1GlobalMon:
   description: 'AA1 polled global variable interface'
-  deviceClass: epics:devices:aa1GlobalVariableBindings 
+  deviceClass: ophyd_devices.epics.devices.aa1GlobalVariableBindings 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:VAR:'}
   onFailure: buffer
   enabled: true
@@ -41,7 +41,7 @@ es1_aa1GlobalMon:
 
 es1_psod:
   description: 'AA1 PSO output interface'
-  deviceClass: epics:devices:aa1AxisPsoDistance 
+  deviceClass: ophyd_devices.epics.devices.aa1AxisPsoDistance 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:ROTY:PSO:'}
   onFailure: buffer
   enabled: true
@@ -49,7 +49,7 @@ es1_psod:
 
 es1_ddaq:
   description: 'AA1 drive data collection interface'
-  deviceClass: epics:devices:aa1AxisDriveDataCollection 
+  deviceClass: ophyd_devices.epics.devices.aa1AxisDriveDataCollection 
   deviceConfig: {prefix: 'X02DA-ES1-SMP1:ROTY:DDC:'}
   onFailure: buffer
   enabled: true

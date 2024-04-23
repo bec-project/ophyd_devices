@@ -1,7 +1,7 @@
 slsinfo:
   readoutPriority: baseline
   description: 'SLS beam info'
-  deviceClass: SLSInfo
+  deviceClass: ophyd_devices.SLSInfo
   deviceConfig: {}
   onFailure: buffer
   enabled: true
@@ -11,7 +11,7 @@ slsinfo:
 undulator:
   readoutPriority: baseline
   description: 'Undulator'
-  deviceClass: X07MAUndulator
+  deviceClass: ophyd_devices.X07MAUndulator
   deviceConfig:
     prefix: 'X07MA-ID:'
   onFailure: retry
@@ -22,7 +22,7 @@ undulator:
 aperture:
   readoutPriority: baseline
   description: 'Frontend aperture'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-FE-DSAPER'
   onFailure: retry
@@ -33,7 +33,7 @@ aperture:
 mono:
   readoutPriority: baseline
   description: 'PGM Monochromator'
-  deviceClass: PGMMonochromator
+  deviceClass: ophyd_devices.PGMMonochromator
   deviceConfig:
     prefix: 'X07MA-'
   onFailure: retry
@@ -44,7 +44,7 @@ mono:
 otf:
   readoutPriority: baseline
   description: 'PGM on-the-fly scan'
-  deviceClass: PGMOtFScan
+  deviceClass: ophyd_devices.PGMOtFScan
   deviceConfig: {}
   onFailure: retry
   enabled: true
@@ -54,7 +54,7 @@ otf:
 valve:
   readoutPriority: baseline
   description: 'Endstation valve'
-  deviceClass: VacuumValve
+  deviceClass: ophyd_devices.VacuumValve
   deviceConfig:
     prefix: 'X07MA-OP-VG13:'
   onFailure: retry
@@ -65,7 +65,7 @@ valve:
 exit_slit:
   readoutPriority: baseline
   description: 'Exit slit'
-  deviceClass: X07MAExitSlit
+  deviceClass: ophyd_devices.X07MAExitSlit
   deviceConfig:
     prefix: 'X07MA-OP-SL1SV1:'
   onFailure: retry
@@ -76,7 +76,7 @@ exit_slit:
 goldmesh1:
   readoutPriority: baseline
   description: 'Gold mesh 1'
-  deviceClass: EpicsMotor
+  deviceClass: ophyd.EpicsMotor
   deviceConfig:
     prefix: 'X07MA-OP-IO1:TR1'
   onFailure: retry
@@ -87,7 +87,7 @@ goldmesh1:
 goldmesh2:
   readoutPriority: baseline
   description: 'Gold mesh 2'
-  deviceClass: EpicsMotor
+  deviceClass: ophyd.EpicsMotor
   deviceConfig:
     prefix: 'X07MA-OP-IO2:TR1'
   onFailure: retry
@@ -98,7 +98,7 @@ goldmesh2:
 field_x:
   readoutPriority: baseline
   description: 'Magnetic field x'
-  deviceClass: X07MAMagnetAxis
+  deviceClass: ophyd_devices.X07MAMagnetAxis
   deviceConfig:
     axis_id: X
     ps_prefix: "X07MA-PC-PS2:"
@@ -111,7 +111,7 @@ field_x:
 field_z:
   readoutPriority: baseline
   description: 'Magnetic field z'
-  deviceClass: X07MAMagnetAxis
+  deviceClass: ophyd_devices.X07MAMagnetAxis
   deviceConfig:
     axis_id: Z
     ps_prefix: "X07MA-PC-PS1:"
@@ -124,7 +124,7 @@ field_z:
 signals:
   readoutPriority: baseline
   description: 'ADC signals'
-  deviceClass: X07MAAnalogSignals
+  deviceClass: ophyd_devices.X07MAAnalogSignals
   deviceConfig:
     prefix: 'X07MA-ES1-AI:'
   onFailure: retry
@@ -135,7 +135,7 @@ signals:
 sample_hor:
   readoutPriority: baseline
   description: 'Horizontal sample position'
-  deviceClass: EpicsMotor
+  deviceClass: ophyd.EpicsMotor
   deviceConfig:
     prefix: 'X07MA-ES1-MAG:TRZS'
   onFailure: retry
@@ -146,7 +146,7 @@ sample_hor:
 sample_vert:
   readoutPriority: baseline
   description: 'Horizontal sample position'
-  deviceClass: EpicsMotor
+  deviceClass: ophyd.EpicsMotor
   deviceConfig:
     prefix: 'X07MA-ES1-MAG:TRY1'
   onFailure: retry
@@ -157,7 +157,7 @@ sample_vert:
 sample_rot:
   readoutPriority: baseline
   description: 'Horizontal sample position'
-  deviceClass: EpicsMotor
+  deviceClass: ophyd.EpicsMotor
   deviceConfig:
     prefix: 'X07MA-ES1-MAG:ROY1'
   onFailure: retry
@@ -168,7 +168,7 @@ sample_rot:
 harmonic:
   readoutPriority: baseline
   description: 'ID harmonic'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-ID:HARMONIC'
   onFailure: retry
@@ -179,7 +179,7 @@ harmonic:
 energy:
   readoutPriority: baseline
   description: 'Energy in eV'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-PHS-E:GO.A'
   onFailure: retry
@@ -190,7 +190,7 @@ energy:
 energy_mode:
   readoutPriority: baseline
   description: 'Energy mode. Either PGM = 0 or PGM+ID = 1'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-PHS-E:OPT'
   onFailure: retry
@@ -201,7 +201,7 @@ energy_mode:
 keithley_1:
   readoutPriority: baseline
   description: 'Keithley 1 / 428 tey'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-PC-K428:1:setGain'
   onFailure: retry
@@ -212,7 +212,7 @@ keithley_1:
 keithley_2:
   readoutPriority: baseline
   description: 'Keithley 2 / 428 i0'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-PC-K428:2:setGain'
   onFailure: retry
@@ -223,7 +223,7 @@ keithley_2:
 keithley_3:
   readoutPriority: baseline
   description: 'Keithley 3 / 428 diode'
-  deviceClass: EpicsSignal
+  deviceClass: ophyd.EpicsSignal
   deviceConfig:
     read_pv: 'X07MA-PC-K428:3:setGain'
   onFailure: retry
@@ -234,7 +234,7 @@ keithley_3:
 temperature:
   readoutPriority: baseline
   description: 'Temperature controller'
-  deviceClass: X07MATemperatureController
+  deviceClass: ophyd_devices.X07MATemperatureController
   deviceConfig:
     prefix: 'X07MA-PC-TC:'
   onFailure: retry
@@ -245,7 +245,7 @@ temperature:
 tcontrol:
   readoutPriority: baseline
   description: 'Automatic temperature control'
-  deviceClass: X07MAAutoTemperatureControl
+  deviceClass: ophyd_devices.X07MAAutoTemperatureControl
   deviceConfig:
     prefix: 'X07MA-ES1-TEMP:'
   onFailure: retry
@@ -256,7 +256,7 @@ tcontrol:
 sls_info:
   readoutPriority: on_request
   description: 'sls info'
-  deviceClass: SLSInfo
+  deviceClass: ophyd_devices.SLSInfo
   deviceConfig: {}
   onFailure: buffer
   enabled: true
@@ -266,7 +266,7 @@ sls_info:
 sls_operator:
   readoutPriority: on_request
   description: 'sls operator messages'
-  deviceClass: SLSOperatorMessages
+  deviceClass: ophyd_devices.SLSOperatorMessages
   deviceConfig: {}
   onFailure: buffer
   enabled: true
