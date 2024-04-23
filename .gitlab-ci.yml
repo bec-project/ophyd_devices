@@ -117,7 +117,6 @@ config_test:
       - ./config_tests
     when: on_failure
     expire_in: "30 days"
-  allow_failure: true
 
 tests-3.11:
   stage: AdditionalTests
