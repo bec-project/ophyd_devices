@@ -2,6 +2,17 @@
 
 
 
+## v0.33.3 (2024-04-24)
+
+### Ci
+
+* ci: removed allow_failure from config check ([`d34b396`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d34b39669c4faf2d1c5518a632239303a48c2fd6))
+
+### Fix
+
+* fix: updated device configs to new import schema ([`5725fc3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5725fc36c7aff052fc704782a99bd04cfb13c112))
+
+
 ## v0.33.2 (2024-04-22)
 
 ### Fix
@@ -150,8 +161,6 @@
 
 * refactor(sim): added logger statement to flyer ([`6c45dd6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6c45dd6a8b8c76776351289c98990dbc05222f5f))
 
-* refactor: renamed pointID to point_id ([`b746278`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b74627820a5594dc896b059399703baa4917097a))
-
 ### Style
 
 * style(black): skip magic trailing comma ([`b1f3531`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1f353139b1ecdcfc266219a7a1a4bf525684bea))
@@ -159,10 +168,3 @@
 ### Unknown
 
 * flomni/check_tracker_signal ([`9c09274`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9c092740b9b38eac7f1046ae07e0667f91983c87))
-
-
-## v0.29.2 (2024-04-08)
-
-### Fix
-
-* fix: Adapt to FileWriter refactoring ([`e9c626a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9c626a7c8e5ec1b40d70ad412eff85d7796cba9))
