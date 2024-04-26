@@ -5,7 +5,7 @@ import traceback
 from io import TextIOWrapper
 
 import ophyd
-import yaml
+from bec_lib.bec_yaml_loader import yaml_load
 from bec_lib.scibec_validator import SciBecValidator
 
 from ophyd_devices.utils.bec_device_base import BECDevice
@@ -44,10 +44,7 @@ class StaticDeviceTest:
         Returns:
             dict: config content
         """
-        content = None
-        with open(config, "r", encoding="utf-8") as file:
-            file_content = file.read()
-            content = yaml.safe_load(file_content)
+        content = yaml_load(config)
         return content
 
     def _check_all_signals_of_device(self, name: str, device: ophyd.Device) -> None:
