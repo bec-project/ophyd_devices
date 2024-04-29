@@ -2,6 +2,19 @@
 
 
 
+## v0.33.4 (2024-04-29)
+
+### Ci
+
+* ci: removed redundant build step ([`a919632`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9196328e7d7efe4b6718b22d72c6df9bf59411c))
+
+* ci(gitlab-ci): trigger gitlab job template from awi_utils ([`4ffeba4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ffeba4c3b890b2fcd8c694347a254b3bc1e3c96))
+
+### Fix
+
+* fix: static device test should use yaml_load ([`c77f924`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c77f924bb3665ab0896bc56076d05331e8b01f55))
+
+
 ## v0.33.3 (2024-04-24)
 
 ### Ci
@@ -157,14 +170,6 @@
 
 * feat: add SimWaveform for 1D waveform simulations ([`bf73bf4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bf73bf41c4f209ed251bf21d4b0014d031226a4f))
 
-### Refactor
-
-* refactor(sim): added logger statement to flyer ([`6c45dd6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6c45dd6a8b8c76776351289c98990dbc05222f5f))
-
 ### Style
 
 * style(black): skip magic trailing comma ([`b1f3531`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1f353139b1ecdcfc266219a7a1a4bf525684bea))
-
-### Unknown
-
-* flomni/check_tracker_signal ([`9c09274`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9c092740b9b38eac7f1046ae07e0667f91983c87))
