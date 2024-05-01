@@ -117,10 +117,8 @@ class SynFlyerLamNI(Device, PositionerBase):
                 bundle.append(
                     messages.DeviceMessage(
                         signals={
-                            "syn_flyer_lamni": {
-                                "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
-                                "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
-                            }
+                            "flyer_samx": {"value": positions[ii, 0], "timestamp": 0},
+                            "flyer_samy": {"value": positions[ii, 1], "timestamp": 0},
                         },
                         metadata={"point_id": ii, **metadata},
                     )
