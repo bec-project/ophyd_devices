@@ -2,6 +2,13 @@
 
 
 
+## v0.33.5 (2024-05-01)
+
+### Fix
+
+* fix: fixed device data signature ([`e8290db`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8290dbf4466f1415fb9c963ae203a4e6da7cc42))
+
+
 ## v0.33.4 (2024-04-29)
 
 ### Ci
@@ -156,20 +163,6 @@
 
 ## v0.30.0 (2024-04-12)
 
-### Build
-
-* build: added black to pyproject ([`eb21600`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/eb2160000a19f89c000caf25a69a79e8249e5bf2))
-
-* build: moved to pyproject.toml ([`6ba2428`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6ba2428dd8e297c3c2098f9a795bb76595a4f5e7))
-
-### Ci
-
-* ci: updated default BEC branch ([`f287efc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f287efc831069d7c09de876ed1bf4dff4bd5908e))
-
 ### Feature
 
 * feat: add SimWaveform for 1D waveform simulations ([`bf73bf4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bf73bf41c4f209ed251bf21d4b0014d031226a4f))
-
-### Style
-
-* style(black): skip magic trailing comma ([`b1f3531`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1f353139b1ecdcfc266219a7a1a4bf525684bea))
