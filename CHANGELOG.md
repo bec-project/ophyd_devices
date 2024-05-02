@@ -2,7 +2,7 @@
 
 
 
-## v0.33.5 (2024-05-01)
+## v0.33.5 (2024-05-02)
 
 ### Fix
 
@@ -162,7 +162,3 @@
 
 
 ## v0.30.0 (2024-04-12)
-
-### Feature
-
-* feat: add SimWaveform for 1D waveform simulations ([`bf73bf4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bf73bf41c4f209ed251bf21d4b0014d031226a4f))
