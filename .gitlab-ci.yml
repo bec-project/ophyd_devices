@@ -184,4 +184,4 @@ semver:
 
   allow_failure: false
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"''
+    - if: '$CI_COMMIT_REF_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
