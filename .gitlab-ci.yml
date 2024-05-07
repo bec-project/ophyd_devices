@@ -48,6 +48,8 @@ formatter:
     - pip install -e .[dev]
     - isort --check --diff ./
     - black --check --diff --color ./
+  rules:
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
 
 pylint:
   stage: Formatter
@@ -62,6 +64,8 @@ pylint:
     paths:
       - ./pylint/
     expire_in: 1 week
+  rules:
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
 
 pylint-check:
   stage: Formatter
@@ -93,10 +97,14 @@ pylint-check:
     paths:
       - ./pylint/
     expire_in: 1 week
+  rules:
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
 
 secret_detection:
   before_script:
     - ""
+  rules:
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
 
 pytest:
   stage: test
@@ -145,6 +153,7 @@ trigger_bec:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
 
 semver:
   stage: Deploy
@@ -173,3 +182,4 @@ semver:
   allow_failure: false
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
+    - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
