@@ -8,7 +8,11 @@ from ophyd.ophydobj import OphydObject
 logger = bec_logger.logger
 
 
-class ControllerCommunicationError(Exception):
+class ControllerError(Exception):
+    """Base class for controller exceptions."""
+
+
+class ControllerCommunicationError(ControllerError):
     """Exception raised when a communication error occurs with the controller."""
 
 
@@ -124,7 +128,7 @@ class Controller(OphydObject):
         for axis in self._axis:
             if hasattr(axis, "device_manager") and axis.device_manager:
                 return axis.device_manager
-        raise BECConfigError("Could not access the device_manager")
+        raise ControllerError("Could not access the device_manager")
 
     def get_axis_by_name(self, name):
         for axis in self._axis:
