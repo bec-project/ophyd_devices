@@ -24,6 +24,9 @@ include:
 
 #commands to run in the Docker container before starting each job.
 before_script:
+  - if [[ "$CI_PROJECT_PATH" != "bec/ophyd_devices" ]]; then 
+    test -d ophyd_devices || git clone https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
+    fi
   - pip install -e .[dev]
   - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
   - pip install -e ./bec/bec_lib[dev]
