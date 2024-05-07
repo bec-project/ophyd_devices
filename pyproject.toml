@@ -14,9 +14,9 @@ classifiers = [
 ]
 dependencies = [
     "ophyd ~= 1.9",
-    "typeguard ~= 4.0",
+    "typeguard ~= 4.1, >=4.1.4",
     "prettytable ~= 3.9",
-    "bec_lib ~= 2.0",
+    "bec_lib ~= 2.8",
     "numpy ~= 1.24",
     "pyyaml ~= 6.0",
     "std_daq_client ~= 1.3",
@@ -30,10 +30,10 @@ dependencies = [
 dev = [
     "bec-server~=2.7",
     "black~=24.0",
-    "isort~=5.0",
-    "coverage~=7.4",
+    "isort~=5.13, >=5.13.2",
+    "coverage~=7.0",
     "pylint~=3.0",
-    "pytest-random-order~=1.0",
+    "pytest-random-order~=1.1",
 ]
 
 [project.scripts]

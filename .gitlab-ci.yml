@@ -28,8 +28,13 @@ workflow:
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
-  # - project: "bec/awi_utils"
-  #   file: "awi_utils/test_pkg_versions/.gitlab-ci-job-check-pkg.yml"
+  - project: "bec/awi_utils"
+    file: "/templates/check-packages-job.yml"
+    inputs:
+      stage: test
+      path: "."
+      pytest_args: "-v --random-order tests/"
+      exclude_packages: ""
 
 #commands to run in the Docker container before starting each job.
 before_script:
