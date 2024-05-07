@@ -21,6 +21,9 @@ workflow:
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH
+  auto_cancel:
+    on_new_commit: interruptible
+
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
@@ -55,6 +58,7 @@ formatter:
     - black --check --diff --color ./
   rules:
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
+  interruptible: true
 
 pylint:
   stage: Formatter
@@ -71,6 +75,7 @@ pylint:
     expire_in: 1 week
   rules:
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
+  interruptible: true
 
 pylint-check:
   stage: Formatter
@@ -104,12 +109,14 @@ pylint-check:
     expire_in: 1 week
   rules:
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
+  interruptible: true
 
 secret_detection:
   before_script:
     - ""
   rules:
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
+  interruptible: true
 
 pytest:
   stage: test
@@ -125,6 +132,7 @@ pytest:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+  interruptible: true
 
 config_test:
   stage: test
@@ -135,6 +143,7 @@ config_test:
       - ./config_tests
     when: on_failure
     expire_in: "30 days"
+  interruptible: true
 
 tests-3.11:
   stage: AdditionalTests
@@ -147,6 +156,7 @@ tests-3.11:
   script:
     - pytest -v --random-order ./tests
   allow_failure: true
+  interruptible: true
 
 tests-3.12:
   extends: "tests-3.11"
@@ -162,6 +172,7 @@ trigger_bec:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+  interruptible: true
 
 trigger:
   parallel:
@@ -189,6 +200,7 @@ trigger:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+  interruptible: true
 
 semver:
   stage: Deploy
@@ -217,3 +229,4 @@ semver:
   allow_failure: false
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+  interruptible: true
