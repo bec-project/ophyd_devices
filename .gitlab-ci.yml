@@ -133,7 +133,11 @@ config_test:
 
 tests-3.11:
   stage: AdditionalTests
-  needs: ["formatter", "pylint"]
+  needs: 
+    - job: "formatter"
+      optional: true
+    - job: "pylint"
+      optional: true
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.11
   script:
     - pytest -v --random-order ./tests
