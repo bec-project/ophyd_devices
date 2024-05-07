@@ -5,6 +5,7 @@ image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 
 variables:
   BEC_CORE_BRANCH: "main"
+  CHILD_PIPELINE_BRANCH: "main"
 
 workflow:
   rules:
@@ -25,7 +26,7 @@ include:
 #commands to run in the Docker container before starting each job.
 before_script:
   - if [[ "$CI_PROJECT_PATH" != "bec/ophyd_devices" ]]; then 
-    test -d ophyd_devices || git clone https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
+    test -d ophyd_devices || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
     fi
   - pip install -e .[dev]
   - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
