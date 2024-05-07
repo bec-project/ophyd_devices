@@ -6,6 +6,10 @@ image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 variables:
   BEC_CORE_BRANCH: "main"
   CHILD_PIPELINE_BRANCH: "main"
+  CSAXS_BEC_BRANCH: "main"
+  PXIII_BEC_BRANCH: "main"
+  DEBYE_BEC_BRANCH: "main"
+  TOMCAT_BEC_BRANCH: "main"
 
 workflow:
   rules:
@@ -158,6 +162,33 @@ trigger_bec:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+
+trigger:
+  parallel:
+    matrix:
+      - CHILD_PROJECT: csaxs_bec
+        CHILD_PIPELINE_BRANCH: $CSAXS_BEC_BRANCH        
+      - CHILD_PROJECT: pxiii_bec
+        CHILD_PIPELINE_BRANCH: $PXIII_BEC_BRANCH
+      - CHILD_PROJECT: debye_bec
+        CHILD_PIPELINE_BRANCH: $DEBYE_BEC_BRANCH
+      - CHILD_PROJECT: tomcat_bec
+        CHILD_PIPELINE_BRANCH: $TOMCAT_BEC_BRANCH        
+
+  needs: []
+  trigger:
+    strategy: depend
+    include:
+      - project: bec/$CHILD_PROJECT
+        ref: $CHILD_PIPELINE_BRANCH
+        file: /.gitlab-ci.yml
+  variables:
+    BEC_CORE_BRANCH: $CI_COMMIT_REF_NAME
+    CHILD_PROJECTS: ""
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
 
 semver:
   stage: Deploy
