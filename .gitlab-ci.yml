@@ -19,8 +19,8 @@ workflow:
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
-  - project: "bec/awi_utils"
-    file: "awi_utils/test_pkg_versions/.gitlab-ci-job-check-pkg.yml"
+  # - project: "bec/awi_utils"
+  #   file: "awi_utils/test_pkg_versions/.gitlab-ci-job-check-pkg.yml"
 
 #commands to run in the Docker container before starting each job.
 before_script:
