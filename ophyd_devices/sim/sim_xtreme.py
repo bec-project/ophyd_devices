@@ -2,7 +2,8 @@ import threading
 import time
 
 import numpy as np
-from bec_lib import MessageEndpoints, messages
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, Signal
 from ophyd.flyers import FlyerInterface

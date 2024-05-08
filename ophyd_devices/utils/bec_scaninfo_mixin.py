@@ -1,6 +1,8 @@
 import getpass
 
-from bec_lib import DeviceManagerBase, MessageEndpoints, bec_logger, messages
+from bec_lib import bec_logger, messages
+from bec_lib.devicemanager import DeviceManagerBase
+from bec_lib.endpoints import MessageEndpoints
 
 logger = bec_logger.logger
 
