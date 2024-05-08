@@ -5,7 +5,7 @@ from ophyd import Component as Cpt
 from ophyd import EpicsMotor
 from typeguard import typechecked
 
-from ophyd_devices.ophyd_base_devices.bec_protocols import BECRotationProtocol
+from ophyd_devices.interfaces.protocols.bec_protocols import BECRotationProtocol
 from ophyd_devices.utils.bec_utils import ConfigSignal
 
 logger = bec_logger.logger

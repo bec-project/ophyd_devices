@@ -138,7 +138,7 @@ pytest:
 config_test:
   stage: test
   script:
-    - ophyd_test --config ./ophyd_devices/epics/db/ --output ./config_tests
+    - ophyd_test --config ./ophyd_devices/configs/ --output ./config_tests
   artifacts:
     paths:
       - ./config_tests

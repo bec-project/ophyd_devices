@@ -10,7 +10,7 @@ import pytest
 from bec_server.device_server.tests.utils import DMMock
 from ophyd import Device, Signal
 
-from ophyd_devices.ophyd_base_devices.bec_protocols import (
+from ophyd_devices.interfaces.protocols.bec_protocols import (
     BECDeviceProtocol,
     BECFlyerProtocol,
     BECPositionerProtocol,

@@ -1,0 +1,19 @@
+sls_info:
+  readoutPriority: on_request
+  description: 'sls info'
+  deviceClass: ophyd_devices.SLSInfo
+  deviceConfig: {}
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
+sls_operator:
+  readoutPriority: on_request
+  description: 'sls operator messages'
+  deviceClass: ophyd_devices.SLSOperatorMessages
+  deviceConfig: {}
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false

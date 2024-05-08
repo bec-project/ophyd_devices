@@ -1,0 +1,91 @@
+eiger:
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.SimCamera
+  deviceConfig:
+    device_access: true
+  deviceTags:
+    - detector
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
+dyn_signals:
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.sim.sim.SynDynamicComponents
+  deviceConfig:
+  enabled: true
+  readOnly: false
+
+pseudo_signal1:
+  deviceClass: ophyd_devices.ComputedSignal
+  deviceConfig:
+    compute_method: "def compute_signals(signal1, signal2):\n    return signal1.get()*signal2.get()\n"
+    input_signals: 
+      - "bpm4i_readback"
+      - "bpm5i_readback"
+  enabled: true
+  readOnly: false
+  readoutPriority: baseline
+
+hexapod:
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.SynDeviceOPAAS
+  deviceConfig:
+  deviceTags:
+    - user motors
+  enabled: true
+  readOnly: false
+
+eyefoc:
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.SimPositioner
+  deviceConfig:
+    delay: 1    
+    limits:
+      - -50
+      - 50
+    tolerance: 0.01
+    update_frequency: 400
+  deviceTags:
+    - user motors
+  enabled: true
+  readOnly: false
+
+flyer_sim:
+  readoutPriority: on_request
+  deviceClass: ophyd_devices.SynFlyer
+  deviceConfig:
+    delay: 1    
+    device_access: true
+    update_frequency: 400
+  deviceTags:
+    - flyer
+  enabled: true
+  readOnly: false
+
+bpm4i:
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.SimMonitor
+  deviceConfig:
+  deviceTags:
+    - beamline
+  enabled: true
+  readOnly: false
+
+bpm5i:
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.SimMonitor
+  deviceConfig:
+  deviceTags:
+    - beamline
+  enabled: true
+  readOnly: false
+
+ring_current_sim:
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.ReadOnlySignal
+  deviceConfig:
+  deviceTags:
+    - beamline
+  enabled: true
+  readOnly: false
