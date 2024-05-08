@@ -95,7 +95,7 @@ class Controller(OphydObject):
     @threadlocked
     def socket_put(self, val: str):
         """
-        Send a command to the controller.
+        Send a command to the controller through the socket.
 
         Args:
             val (str): Command to send
@@ -104,6 +104,9 @@ class Controller(OphydObject):
 
     @threadlocked
     def socket_get(self):
+        """
+        Receive a response from the controller through the socket.
+        """
         return self.sock.receive().decode()
 
     @retry_once
@@ -125,12 +128,24 @@ class Controller(OphydObject):
         return var
 
     def get_device_manager(self):
+        """
+        Helper function to get the device manager.
+        """
         for axis in self._axis:
             if hasattr(axis, "device_manager") and axis.device_manager:
                 return axis.device_manager
         raise ControllerError("Could not access the device_manager")
 
-    def get_axis_by_name(self, name):
+    def get_axis_by_name(self, name: str) -> Device:
+        """
+        Get an axis by name.
+
+        Args:
+            name (str): Name of the axis
+
+        Returns:
+            Device: Device instance
+        """
         for axis in self._axis:
             if axis:
                 if axis.name == name:
@@ -138,7 +153,14 @@ class Controller(OphydObject):
         raise RuntimeError(f"Could not find an axis with name {name}")
 
     def set_device_enabled(self, device_name: str, enabled: bool) -> None:
-        """enable / disable a device"""
+        """
+        Enable or disable a device for write access.
+        If the device is not configured, a warning is logged.
+
+        Args:
+            device_name (str): Name of the device
+            enabled (bool): Enable or disable the device
+        """
         if device_name not in self.get_device_manager().devices:
             logger.warning(
                 f"Device {device_name} is not configured and cannot be enabled/disabled."
