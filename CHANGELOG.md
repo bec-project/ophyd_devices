@@ -2,6 +2,21 @@
 
 
 
+## v1.0.0 (2024-05-08)
+
+### Breaking
+
+* refactor!: moved to new ophyd_devices repo structure
+
+BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared devices will be hosted in ophyd_devices. Everything else will be in the beamline-specific repositories ([`3415ae2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3415ae2007cc447835906271de23e5f7a41ba373))
+
+### Ci
+
+* ci: fix dep and add CI JOB for package dep checks ([`d89f8b8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d89f8b87568d30d467279d96b0100cd318e2b5a2))
+
+* ci: added trigger for xtreme-bec ([`be689ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/be689baa29d54632bbac9b523f0fe3a66e061f84))
+
+
 ## v0.33.6 (2024-05-08)
 
 ### Ci
@@ -133,8 +148,6 @@
 
 * ci: fixed bec install ([`a954640`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9546402f5b2f1a43e1c4e17f977c544c326e5dc))
 
-* ci: fixed twine upload if version did not change ([`d7646e8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7646e835ff5d2c8ea749f3b4e24121d992c1454))
-
 ### Fix
 
 * fix: fixed bec_server import ([`434fa36`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/434fa36ca43f8dacd9c4f8fdd7556d77bd0a4b03))
@@ -146,11 +159,3 @@
 * refactor(device_config): fixed device schema ([`0f3665c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0f3665c32fec2f0f95cc57af81d448eca6978919))
 
 * refactor(device_config): upgraded device configs; closes #56 ([`65c72c9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/65c72c924847644f80fac768ed35e995a6999404))
-
-### Style
-
-* style: moved isort config to pyproject.toml ([`98d61b1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/98d61b13e42ec294c2be059029e33021ba6ef3a0))
-
-* style: moved black config to pyproject.toml ([`769a45d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/769a45d7ff97f5d3bc5de5aa63bd2230654ea9d4))
-
-* style: moved pylint to pyproject.toml ([`fcfe024`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fcfe0242326c61be9251bd98cf9cf29de499facd))
