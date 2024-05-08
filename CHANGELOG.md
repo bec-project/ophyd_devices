@@ -2,6 +2,45 @@
 
 
 
+## v0.33.6 (2024-05-08)
+
+### Ci
+
+* ci: made pipeline interruptible ([`44de499`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/44de499d40db01e2d9ad0ae50235240e2103bf02))
+
+* ci: added downstream pipelines ([`b8134ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b8134edbff58e1f92c45c3ab9b41f88e1ad3069b))
+
+* ci: added support for different branches in child pipelines ([`c74cbe3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c74cbe358cf24943e1badc32ef53ced1f8d149f1))
+
+* ci: fixed typo ([`81f1fee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/81f1feea853882e8d557063612cc0acc601bbe2a))
+
+* ci: fixed rules for downstream pipelines ([`f5e69f9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f5e69f9b9528871d9a011b2257b87c1faf89e6b0))
+
+* ci: limit stages to run in child pipelines ([`815921a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/815921a6c9cd97e5df94a584c5d4c2c22a4d408a))
+
+* ci: removed awi-utils for now ([`27d4b6a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/27d4b6ae83ec3d0f4d7a85c3cd4f6f70ecd528eb))
+
+* ci: added parent-child pipelines ([`e27d2db`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e27d2db4ac21830c95f2db2ccba58c650c25cad5))
+
+### Documentation
+
+* docs: improved doc strings for controllerr ([`339f050`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/339f050a8662de86ed2528ad4ffed18482dd546b))
+
+### Fix
+
+* fix: fixed controller error classes ([`c3fa7ad`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3fa7ad30d1b9a151bce599b34b4a3f82e4e6ce8))
+
+### Refactor
+
+* refactor: added common controller methods ([`00b3ae8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/00b3ae82580df6bbe8a01a52d37c43199cf761bd))
+
+### Unknown
+
+* Update file .gitlab-ci.yml ([`2f8772b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f8772b618836fc4029691ad03f7dafee17f1ca5))
+
+* Update file .gitlab-ci.yml ([`bd01f60`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd01f6050a6c4957e4943577dff1ff53a5179f8b))
+
+
 ## v0.33.5 (2024-05-02)
 
 ### Fix
@@ -96,8 +135,6 @@
 
 * ci: fixed twine upload if version did not change ([`d7646e8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7646e835ff5d2c8ea749f3b4e24121d992c1454))
 
-* ci: fixed changelog file ([`deded6f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/deded6ffaca10369fb1e6cf2629f67ded3ab44b5))
-
 ### Fix
 
 * fix: fixed bec_server import ([`434fa36`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/434fa36ca43f8dacd9c4f8fdd7556d77bd0a4b03))
@@ -117,48 +154,3 @@
 * style: moved black config to pyproject.toml ([`769a45d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/769a45d7ff97f5d3bc5de5aa63bd2230654ea9d4))
 
 * style: moved pylint to pyproject.toml ([`fcfe024`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fcfe0242326c61be9251bd98cf9cf29de499facd))
-
-
-## v0.30.4 (2024-04-12)
-
-### Ci
-
-* ci: fixed upload of release ([`3c37da8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3c37da8f515b2effea0950e3236bb9843b7b7b95))
-
-### Fix
-
-* fix: fixed release upload ([`361dc3a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/361dc3a182231b458e1893da2e6382b1b17e9d5a))
-
-* fix: upgraded pyproject.toml ([`9d67ace`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9d67ace30d606caa2aaa919fe8225208c4632c7e))
-
-
-## v0.30.3 (2024-04-12)
-
-### Build
-
-* build: fixed build ([`88ff3bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/88ff3bc0cf3c21d87ba50c24e7d9e2352df751c9))
-
-### Fix
-
-* fix: fixed pyproject.toml ([`2793ca3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2793ca3eb0c278f6159b0c6d7fcb121b5c969e12))
-
-
-## v0.30.2 (2024-04-12)
-
-### Fix
-
-* fix: fixed release update ([`3267514`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3267514c2055f406277b16f13a13744846e3ba77))
-
-
-## v0.30.1 (2024-04-12)
-
-### Build
-
-* build: upgraded to sem release 9 ([`0864c0c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0864c0c04972a2b12be5ad9d3a53fb1a18a8907d))
-
-### Fix
-
-* fix: fixed release upload ([`abc6aad`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/abc6aad167226fd01e02d51ae4739d4c4688e153))
-
-
-## v0.30.0 (2024-04-12)
