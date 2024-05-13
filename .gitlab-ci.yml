@@ -3,6 +3,8 @@
 # https://hub.docker.com/r/library/python/tags/
 image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 
+include: ci/vars.yml
+
 variables:
   BEC_CORE_BRANCH: "main"
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
