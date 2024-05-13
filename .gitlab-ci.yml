@@ -39,7 +39,6 @@ include:
 
 #commands to run in the Docker container before starting each job.
 before_script:
-  - echo $my_branch.BEC_CORE_BRANCH
   - if [[ "$CI_PROJECT_PATH" != "bec/ophyd_devices" ]]; then
     echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"; 
     test -d ophyd_devices || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
@@ -51,10 +50,21 @@ before_script:
 
 # different stages in the pipeline
 stages:
+  - pre
   - Formatter
   - test # must be called test for security/secret-detection to work
   - AdditionalTests
   - Deploy
+
+load_vars:
+  stage: pre
+  script:
+    script:
+      - echo "Loading variables from vars.yml..."
+      - cat >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
 
 formatter:
   stage: Formatter
