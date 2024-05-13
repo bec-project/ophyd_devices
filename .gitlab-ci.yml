@@ -205,6 +205,7 @@ trigger:
   variables:
     BEC_CORE_BRANCH: ${BEC_CORE_BRANCH}
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
+    BEC_WIDGETS_BRANCH: ${BEC_WIDGETS_BRANCH}
     CHILD_PROJECTS: ""
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
