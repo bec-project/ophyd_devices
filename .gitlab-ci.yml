@@ -60,7 +60,9 @@ load_vars:
   before_script:
     - ""
   script:
-    - echo "Loading variables from vars.yml..."
+    - curl 'https://gitlab.psi.ch/bec/awi_utils/-/raw/main/awi_utils/gitlab_ci_tools/convert_to_env.py' -o convert_to_env.py
+    - pip install pyyaml
+    - python ./convert_to_env.py ./ci/vars.yml
     - cat ./ci/my_branch.env >> build.env
   artifacts:
     reports:
