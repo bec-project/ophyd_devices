@@ -27,6 +27,7 @@ workflow:
 
 
 include:
+  - local: ci/vars.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: "bec/awi_utils"
     file: "/templates/check-packages-job.yml"
@@ -35,11 +36,6 @@ include:
       path: "."
       pytest_args: "-v --random-order tests/"
       exclude_packages: ""
-
-{{- if exists "ci/vars.yml" }}
-include:
-  - local: ci/vars.yml
-{{- endif }}
 
 #commands to run in the Docker container before starting each job.
 before_script:
