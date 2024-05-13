@@ -27,7 +27,6 @@ workflow:
 
 
 include:
-  - local: ci/vars.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: "bec/awi_utils"
     file: "/templates/check-packages-job.yml"
@@ -61,7 +60,7 @@ load_vars:
   script:
     script:
       - echo "Loading variables from vars.yml..."
-      - cat >> build.env
+      - cat /ci/vars.env >> build.env
   artifacts:
     reports:
       dotenv: build.env
