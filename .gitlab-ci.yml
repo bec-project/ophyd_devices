@@ -3,8 +3,6 @@
 # https://hub.docker.com/r/library/python/tags/
 image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 
-include: ci/vars.yml
-
 variables:
   BEC_CORE_BRANCH: "main"
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
@@ -29,6 +27,7 @@ workflow:
 
 
 include:
+  - local: ci/vars.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: "bec/awi_utils"
     file: "/templates/check-packages-job.yml"
@@ -40,6 +39,7 @@ include:
 
 #commands to run in the Docker container before starting each job.
 before_script:
+  - echo $my_branch.BEC_CORE_BRANCH
   - if [[ "$CI_PROJECT_PATH" != "bec/ophyd_devices" ]]; then
     echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"; 
     test -d ophyd_devices || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
