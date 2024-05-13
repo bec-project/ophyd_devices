@@ -49,14 +49,16 @@ before_script:
 
 # different stages in the pipeline
 stages:
-  - pre
+  - .pre
   - Formatter
   - test # must be called test for security/secret-detection to work
   - AdditionalTests
   - Deploy
 
 load_vars:
-  stage: pre
+  stage: .pre
+  before_script:
+    - ""
   script:
     - echo "Loading variables from vars.yml..."
     - cat /ci/my_branch.env >> build.env
