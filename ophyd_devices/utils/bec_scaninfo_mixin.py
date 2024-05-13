@@ -4,6 +4,8 @@ from bec_lib import bec_logger, messages
 from bec_lib.devicemanager import DeviceManagerBase
 from bec_lib.endpoints import MessageEndpoints
 
+from ophyd_devices.utils.bec_utils import DMMock
+
 logger = bec_logger.logger
 
 
@@ -63,11 +65,9 @@ class BecScaninfoMixin:
         BecScaninfoMixin: BecScaninfoMixin object
     """
 
-    def __init__(
-        self, device_manager: DeviceManagerBase = None, sim_mode: bool = False, bec_info_msg=None
-    ) -> None:
+    def __init__(self, device_manager: DeviceManagerBase = None, bec_info_msg=None) -> None:
+        self.sim_mode = bool(isinstance(device_manager, DMMock))
         self.device_manager = device_manager
-        self.sim_mode = sim_mode
         self.scan_msg = None
         self.scan_id = None
         if bec_info_msg is None:

@@ -1,3 +1,9 @@
+"""This module contains the base class for SLS detectors. We follow the approach to integrate
+PSI detectors into the BEC system based on this base class. The base class is used to implement
+certain methods that are expected by BEC, such as stage, unstage, trigger, stop, etc...
+We use composition with a custom prepare class to implement BL specific logic for the detector.
+The beamlines need to inherit from the CustomDetectorMixing for their mixin classes."""
+
 import os
 import time
 
@@ -32,48 +38,39 @@ class CustomDetectorMixin:
     def __init__(self, *_args, parent: Device = None, **_kwargs) -> None:
         self.parent = parent
 
-    def initialize_default_parameter(self) -> None:
+    def on_init(self) -> None:
         """
-        Init parameters for the detector
-
-        Raises (optional):
-            DetectorTimeoutError: if detector cannot be initialized
+        Init sequence for the detector
         """
 
-    def initialize_detector(self) -> None:
+    def on_stage(self) -> None:
         """
-        Init parameters for the detector
+        Specify actions to be executed during stage in preparation for a scan.
+        self.parent.scaninfo already has all current parameters for the upcoming scan.
 
-        Raises (optional):
-            DetectorTimeoutError: if detector cannot be initialized
-        """
+        In case the backend service is writing data on disk, this step should include publishing
+        a file_event and file_message to BEC to inform the system where the data is written to.
 
-    def initialize_detector_backend(self) -> None:
-        """
-        Init parameters for teh detector backend (filewriter)
-
-        Raises (optional):
-            DetectorTimeoutError: if filewriter cannot be initialized
+        IMPORTANT:
+        It must be safe to assume that the device is ready for the scan
+        to start immediately once this function is finished.
         """
 
-    def prepare_detector(self) -> None:
+    def on_unstage(self) -> None:
         """
-        Prepare detector for the scan
+        Specify actions to be executed during unstage.
+
+        This step should include checking if the acqusition was successful,
+        and publishing the file location and file event message,
+        with flagged done to BEC.
         """
 
-    def prepare_detector_backend(self) -> None:
+    def on_stop(self) -> None:
         """
-        Prepare detector backend for the scan
-        """
+        Specify actions to be executed during stop.
+        This must also set self.parent.stopped to True.
 
-    def stop_detector(self) -> None:
-        """
-        Stop the detector
-        """
-
-    def stop_detector_backend(self) -> None:
-        """
-        Stop the detector backend
+        This step should include stopping the detector and backend service.
         """
 
     def on_trigger(self) -> None:
@@ -81,57 +78,36 @@ class CustomDetectorMixin:
         Specify actions to be executed upon receiving trigger signal
         """
 
-    def pre_scan(self) -> None:
+    def on_pre_scan(self) -> None:
         """
-        Specify actions to be executed right before a scan
+        Specify actions to be executed right before a scan starts.
 
-        BEC calls pre_scan just before execution of the scan core.
-        It is convenient to execute time critical features of the detector,
-        e.g. arming it, but it is recommended to keep this function as short/fast as possible.
-        """
-
-    def finished(self) -> None:
-        """
-        Specify actions to be executed during unstage
-
-        This may include checks if acquisition was succesful
-
-        Raises (optional):
-            DetectorTimeoutError: if detector cannot be stopped
-        """
-
-    def check_scan_id(self) -> None:
-        """
-        Check if BEC is running on a new scan_id
-        """
-
-    def publish_file_location(self, done: bool = False, successful: bool = None) -> None:
-        """
-        Publish the designated filepath from data backend to REDIS.
-
-        Typically, the following two message types are published:
-
-        - file_event: event for the filewriter
-        - public_file: event for any secondary service (e.g. radial integ code)
+        Only use if needed, and it is recommended to keep this function as short/fast as possible.
         """
 
     def wait_for_signals(
         self,
-        signal_conditions: list,
+        signal_conditions: list[tuple],
         timeout: float,
         check_stopped: bool = False,
         interval: float = 0.05,
         all_signals: bool = False,
     ) -> bool:
-        """Wait for signals to reach a certain condition
+        """
+        Convenience wrapper to allow waiting for signals to reach a certain condition.
+        For EPICs PVs, an example usage is pasted at the bottom.
 
         Args:
-            signal_conditions (tuple): tuple of (get_current_state, condition) functions
+            signal_conditions (list[tuple]): tuple of executable calls for conditions (get_current_state, condition) to check
             timeout (float): timeout in seconds
             interval (float): interval in seconds
             all_signals (bool): True if all signals should be True, False if any signal should be True
+
         Returns:
             bool: True if all signals are in the desired state, False if timeout is reached
+
+            >>> Example usage for EPICS PVs:
+            >>> self.wait_for_signals(signal_conditions=[(self.acquiring.get, False)], timeout=5, interval=0.05, check_stopped=True, all_signals=True)
         """
         timer = 0
         while True:
@@ -155,7 +131,6 @@ class PSIDetectorBase(Device):
 
     Class attributes:
         custom_prepare_cls (object): class for custom prepare logic (BL specific)
-        Min_readout (float): minimum readout time for detector
 
     Args:
         prefix (str): EPICS PV prefix for component (optional)
@@ -165,69 +140,33 @@ class PSIDetectorBase(Device):
                     normal -> readout for read
                     config -> config parameter for 'ophydobj.read_configuration()'
                     hinted -> which attribute is readout for read
-        read_attrs (list): sequence of attribute names to read
-        configuration_attrs (list): sequence of attribute names via config_parameters
         parent (object): instance of the parent device
         device_manager (object): bec device manager
-        sim_mode (bool): simulation mode, if True, no device manager is required
         **kwargs: keyword arguments
-
-        attributes: lazy_wait_for_connection : bool
     """
 
     custom_prepare_cls = CustomDetectorMixin
 
-    MIN_READOUT = 1e-3
-
-    # Specify which functions are revealed to the user in BEC client
-    USER_ACCESS = ["describe"]
-
-    def __init__(
-        self,
-        prefix="",
-        *,
-        name,
-        kind=None,
-        read_attrs=None,
-        configuration_attrs=None,
-        parent=None,
-        device_manager=None,
-        sim_mode=False,
-        **kwargs,
-    ):
-        super().__init__(
-            prefix=prefix,
-            name=name,
-            kind=kind,
-            read_attrs=read_attrs,
-            configuration_attrs=configuration_attrs,
-            parent=parent,
-            **kwargs,
-        )
-        if device_manager is None and not sim_mode:
-            raise DetectorInitError(
-                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add"
-                " DeviceManager to initialization or init with sim_mode=True"
-            )
-        # Init variables
-        self.sim_mode = sim_mode
+    def __init__(self, prefix="", *, name, kind=None, parent=None, device_manager=None, **kwargs):
+        super().__init__(prefix=prefix, name=name, kind=kind, parent=parent, **kwargs)
         self.stopped = False
         self.name = name
         self.service_cfg = None
         self.scaninfo = None
         self.filewriter = None
-        self.timeout = 5
-        self.wait_for_connection(all_signals=True)
 
-        # Init custom prepare class with BL specific logic
+        if not issubclass(self.custom_prepare_cls, CustomDetectorMixin):
+            raise DetectorInitError("Custom prepare class must be subclass of CustomDetectorMixin")
         self.custom_prepare = self.custom_prepare_cls(parent=self, **kwargs)
-        if not sim_mode:
+
+        if device_manager:
             self._update_service_config()
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-            base_path = kwargs["basepath"] if "basepath" in kwargs else "~/Data10/"
-            self.service_cfg = {"base_path": os.path.expanduser(base_path)}
+            base_path = kwargs["basepath"] if "basepath" in kwargs else "."
+            self.service_cfg = {"base_path": os.path.abspath(base_path)}
+
         self.connector = self.device_manager.connector
         self._update_scaninfo()
         self._update_filewriter()
@@ -241,50 +180,53 @@ class PSIDetectorBase(Device):
         """Update scaninfo from BecScaninfoMixing
         This depends on device manager and operation/sim_mode
         """
-        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo = BecScaninfoMixin(self.device_manager)
         self.scaninfo.load_scan_metadata()
 
     def _update_service_config(self) -> None:
         """Update service config from BEC service config"""
+        # pylint: disable=import-outside-toplevel
         from bec_lib.bec_service import SERVICE_CONFIG
 
         self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
 
+    def check_scan_id(self) -> None:
+        """Checks if scan_id has changed and set stopped flagged to True if it has."""
+        old_scan_id = self.scaninfo.scan_id
+        self.scaninfo.load_scan_metadata()
+        if self.scaninfo.scan_id != old_scan_id:
+            self.stopped = True
+
     def _init(self) -> None:
         """Initialize detector, filewriter and set default parameters"""
-        self.custom_prepare.initialize_default_parameter()
-        self.custom_prepare.initialize_detector()
-        self.custom_prepare.initialize_detector_backend()
+        self.custom_prepare.on_init()
 
     def stage(self) -> list[object]:
         """
-         Stage device in preparation for a scan
-
-        Internal Calls:
-        - _prep_backend           : prepare detector filewriter for measurement
-        - _prep_detector              : prepare detector for measurement
+        Stage device in preparation for a scan.
+        First we check if the device is already staged. Stage is idempotent,
+        if staged twice it should raise (we let ophyd.Device handle the raise here).
+        We reset the stopped flag and get the scaninfo from BEC, before calling custom_prepare.on_stage.
 
         Returns:
             list(object): list of objects that were staged
 
         """
-        # Method idempotent, should rais ;obj;'RedudantStaging' if staged twice
         if self._staged != Staged.no:
             return super().stage()
-
-        # Reset flag for detector stopped
         self.stopped = False
-        # Load metadata of the scan
         self.scaninfo.load_scan_metadata()
-        # Prepare detector and file writer
-        self.custom_prepare.prepare_detector_backend()
-        self.custom_prepare.prepare_detector()
-        state = False
-        self.custom_prepare.publish_file_location(done=state)
-        # At the moment needed bc signal might not be reliable, BEC too fast.
-        # Consider removing this overhead in future!
-        time.sleep(0.05)
+        self.custom_prepare.on_stage()
         return super().stage()
+
+    def pre_scan(self) -> None:
+        """Pre-scan logic.
+
+        This function will be called from BEC directly before the scan core starts, and should only implement
+        time-critical actions. Therefore, it should also be kept as short/fast as possible.
+        I.e. Arming a detector in case there is a risk of timing out.
+        """
+        self.custom_prepare.on_pre_scan()
 
     def trigger(self) -> DeviceStatus:
         """Trigger the detector, called from BEC."""
@@ -293,26 +235,20 @@ class PSIDetectorBase(Device):
 
     def unstage(self) -> list[object]:
         """
-        Unstage device in preparation for a scan
+        Unstage device after a scan.
 
-        Returns directly if self.stopped,
-        otherwise checks with self._finished
-        if data acquisition on device finished (an was successful)
+        We first check if the scanID has changed, thus, the scan was unexpectedly interrupted but the device was not stopped.
+        If that is the case, the stopped flag is set to True, which will immediately unstage the device.
 
-        Internal Calls:
-        - custom_prepare.check_scan_id          : check if scan_id changed or detector stopped
-        - custom_prepare.finished              : check if device finished acquisition (succesfully)
-        - custom_prepare.publish_file_location : publish file location to bec
+        Custom_prepare.on_unstage is called to allow for BL specific logic to be executed.
 
         Returns:
             list(object): list of objects that were unstaged
         """
-        self.custom_prepare.check_scan_id()
+        self.check_scan_id()
         if self.stopped is True:
             return super().unstage()
-        self.custom_prepare.finished()
-        state = True
-        self.custom_prepare.publish_file_location(done=state, successful=state)
+        self.custom_prepare.on_unstage()
         self.stopped = False
         return super().unstage()
 
@@ -320,11 +256,7 @@ class PSIDetectorBase(Device):
         """
         Stop the scan, with camera and file writer
 
-        Internal Calls:
-        - custom_prepare.stop_detector     : stop detector
-        - custom_prepare.stop_backend : stop detector filewriter
         """
-        self.custom_prepare.stop_detector()
-        self.custom_prepare.stop_detector_backend()
+        self.custom_prepare.on_stop()
         super().stop(success=success)
         self.stopped = True
