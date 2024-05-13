@@ -62,8 +62,7 @@ load_vars:
   script:
     - curl 'https://gitlab.psi.ch/bec/awi_utils/-/raw/main/awi_utils/gitlab_ci_tools/convert_to_env.py' -o convert_to_env.py
     - pip install pyyaml
-    - python ./convert_to_env.py ./ci/vars.yml
-    - cat ./ci/my_branch.env >> build.env
+    - python ./convert_to_env.py ./ci/vars.yml $CI_COMMIT_REF_NAME
   artifacts:
     reports:
       dotenv: build.env
