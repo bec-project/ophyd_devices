@@ -203,7 +203,8 @@ trigger:
         ref: $CHILD_PIPELINE_BRANCH
         file: /.gitlab-ci.yml
   variables:
-    BEC_CORE_BRANCH: $CI_COMMIT_REF_NAME
+    BEC_CORE_BRANCH: ${BEC_CORE_BRANCH}
+    OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
     CHILD_PROJECTS: ""
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
