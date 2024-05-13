@@ -61,7 +61,7 @@ load_vars:
     - ""
   script:
     - echo "Loading variables from vars.yml..."
-    - cat /ci/my_branch.env >> build.env
+    - cat ./ci/my_branch.env >> build.env
   artifacts:
     reports:
       dotenv: build.env
