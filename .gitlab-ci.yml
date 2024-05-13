@@ -58,9 +58,8 @@ stages:
 load_vars:
   stage: pre
   script:
-    script:
-      - echo "Loading variables from vars.yml..."
-      - cat /ci/vars.env >> build.env
+    - echo "Loading variables from vars.yml..."
+    - cat /ci/vars.env >> build.env
   artifacts:
     reports:
       dotenv: build.env
