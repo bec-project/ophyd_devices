@@ -7,7 +7,9 @@ The beamlines need to inherit from the CustomDetectorMixing for their mixin clas
 import os
 import time
 
+from bec_lib import messages
 from bec_lib.device import DeviceStatus
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import FileWriter
 from ophyd import Device
 from ophyd.device import Staged
@@ -84,6 +86,37 @@ class CustomDetectorMixin:
 
         Only use if needed, and it is recommended to keep this function as short/fast as possible.
         """
+
+    def publish_file_location(
+        self, done: bool = False, successful: bool = None, metadata: dict = {}
+    ) -> None:
+        """
+        Publish the filepath to REDIS.
+
+        We publish two events here:
+        - file_event: event for the filewriter
+        - public_file: event for any secondary service (e.g. radial integ code)
+
+        Args:
+            done (bool): True if scan is finished
+            successful (bool): True if scan was successful
+        """
+        pipe = self.parent.connector.pipeline()
+        if successful is None:
+            msg = messages.FileMessage(file_path=self.parent.filepath, done=done, metadata=metadata)
+        else:
+            msg = messages.FileMessage(
+                file_path=self.parent.filepath, done=done, successful=successful, metadata=metadata
+            )
+        self.parent.connector.set_and_publish(
+            MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
+            msg,
+            pipe=pipe,
+        )
+        self.parent.connector.set_and_publish(
+            MessageEndpoints.file_event(self.parent.name), msg, pipe=pipe
+        )
+        pipe.execute()
 
     def wait_for_signals(
         self,
