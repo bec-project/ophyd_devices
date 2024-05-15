@@ -2,6 +2,21 @@
 
 
 
+## v1.0.1 (2024-05-15)
+
+### Ci
+
+* ci: fixed bec_widgets env var ([`e900a4c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e900a4cb47c5ecaae8eca30d106771034dc9296d))
+
+* ci: fixed bec core dependency ([`8158e14`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8158e145fe2358a736a2fb9d2d3de7e6c8db021c))
+
+* ci: added echo to highlight the current branch ([`68b593f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/68b593f20d73c6463d5e97ddf7dcf94a5b036b06))
+
+### Fix
+
+* fix: bec_lib imports ([`3d8b023`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3d8b0231a3359db9a5430e49912147c049dbfab9))
+
+
 ## v1.0.0 (2024-05-08)
 
 ### Breaking
@@ -143,19 +158,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 
 ## v0.30.5 (2024-04-12)
-
-### Ci
-
-* ci: fixed bec install ([`a954640`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9546402f5b2f1a43e1c4e17f977c544c326e5dc))
-
-### Fix
-
-* fix: fixed bec_server import ([`434fa36`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/434fa36ca43f8dacd9c4f8fdd7556d77bd0a4b03))
-
-### Refactor
-
-* refactor(device_config): removed outdated config file ([`80a964f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/80a964fae7203cbfb642980e3f89ed35ad6ff0da))
-
-* refactor(device_config): fixed device schema ([`0f3665c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0f3665c32fec2f0f95cc57af81d448eca6978919))
-
-* refactor(device_config): upgraded device configs; closes #56 ([`65c72c9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/65c72c924847644f80fac768ed35e995a6999404))
