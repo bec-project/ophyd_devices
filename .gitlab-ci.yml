@@ -35,6 +35,10 @@ include:
       path: "."
       pytest_args: "-v --random-order tests/"
       exclude_packages: ""
+  - project: "bec/awi_utils"
+    file: "templates/device-list-job.yml"
+    inputs:
+      target: $CI_PROJECT_NAME
 
 #commands to run in the Docker container before starting each job.
 before_script:
