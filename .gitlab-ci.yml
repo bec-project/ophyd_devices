@@ -39,6 +39,7 @@ include:
     file: "templates/device-list-job.yml"
     inputs:
       target: $CI_PROJECT_NAME
+      token: $CI_UPDATES
 
 #commands to run in the Docker container before starting each job.
 before_script:
