@@ -2,6 +2,29 @@
 
 
 
+## v1.0.2 (2024-05-23)
+
+### Ci
+
+* ci: fixed dependency for bec ([`6630740`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/663074055977ca0a046a81bd9ba5187acf95afed))
+
+* ci: added ci token to update job ([`180891b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/180891becdc1aa16da0c3b83c407e82a288d36d1))
+
+* ci: added device-list-update job ([`3405e2a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3405e2acf59cea33b025d376291ccda96db9ea07))
+
+### Documentation
+
+* docs: Update device list ([`d4f2ead`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d4f2ead61b9eb4defb43d7e966a1ed5206461abd))
+
+* docs: Update device list ([`2f575d3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f575d3aa221e646166bfeb0470de1847358acca))
+
+* docs: Update device list ([`b5adc09`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b5adc097674068a90783a2ce4a093150d21cb736))
+
+### Fix
+
+* fix: pep8 compliant naming #64 ([`d705958`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7059589c84bacb560f738f4e4ae4aaf811b25d9))
+
+
 ## v1.0.1 (2024-05-15)
 
 ### Ci
@@ -135,26 +158,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 
 ## v0.31.0 (2024-04-19)
-
-### Build
-
-* build: fixed dependencies to compatible releases ([`26c04b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/26c04b5d03683b0159d5af127f19cda664bfb292))
-
-### Ci
-
-* ci: cleanup; added static device test job ([`ed66eac`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ed66eacc5310e878deb35be69f335f1b8eb10950))
-
-* ci: added pipeline as trigger source ([`e59def1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e59def138fb465abf7a33d13e47e78ac382feebf))
-
-* ci: changed master to main ([`701be52`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/701be5262ad402ff6e6a665db4bd1d5b30b3abac))
-
-* ci: pull images via gitlab dependency proxy ([`8d68e7d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8d68e7df70e54984e460f50cee5356a7ada4e761))
-
-* ci: remove AdditionalTests dependency on pytest job ([`4ee86ab`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ee86aba371698820ea16ff94ae6946cd0041fe4))
-
-### Feature
-
-* feat: added support for directories as input for the static device test ([`9748ca6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9748ca666c3c8668e8ced80e7d24eeaf7f19c28e))
-
-
-## v0.30.5 (2024-04-12)
