@@ -3,7 +3,7 @@ from ophyd import CamBase, DetectorBase, EpicsSignal, EpicsSignalRO, EpicsSignal
 from ophyd.areadetector.plugins import FileBase
 
 
-class slsDetectorCam(CamBase, FileBase):
+class SLSDetectorCam(CamBase, FileBase):
     detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
     delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
@@ -41,5 +41,5 @@ class slsDetectorCam(CamBase, FileBase):
     json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
 
 
-class slsDetector(DetectorBase):
-    cam = ADCpt(slsDetectorCam, "cam1:")
+class SLSDetector(DetectorBase):
+    cam = ADCpt(SLSDetectorCam, "cam1:")
