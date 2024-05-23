@@ -2,24 +2,6 @@ import numpy as np
 from ophyd import Component, Device, EpicsSignal, EpicsSignalRO
 
 
-class XbpmCsaxsOp(Device):
-    """Python wrapper for custom XBPMs in the cSAXS optics hutch
-
-    This is  completely custom XBPM with templates directly in the
-    VME repo. Thus it needs a custom ophyd template as well...
-
-    WARN: The x and y are not updated by the IOC
-    """
-
-    sum = Component(EpicsSignalRO, "SUM", auto_monitor=True)
-    x = Component(EpicsSignalRO, "POSH", auto_monitor=True)
-    y = Component(EpicsSignalRO, "POSV", auto_monitor=True)
-    s1 = Component(EpicsSignalRO, "CHAN1", auto_monitor=True)
-    s2 = Component(EpicsSignalRO, "CHAN2", auto_monitor=True)
-    s3 = Component(EpicsSignalRO, "CHAN3", auto_monitor=True)
-    s4 = Component(EpicsSignalRO, "CHAN4", auto_monitor=True)
-
-
 class XbpmBase(Device):
     """Python wrapper for X-ray Beam Position Monitors
 
