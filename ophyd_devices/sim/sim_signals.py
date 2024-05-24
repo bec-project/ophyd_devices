@@ -42,17 +42,17 @@ class SetableSignal(Signal):
         self,
         name: str,
         *args,
-        value: any = 0,
+        value: any = 0.0,
         kind: int = Kind.normal,
         precision: float = PRECISION,
         **kwargs,
     ):
         super().__init__(*args, name=name, value=value, kind=kind, **kwargs)
         self._metadata.update(connected=True, write_access=False)
-        self._value = value
+        self._value = self._readback
         self.precision = precision
         self.sim = getattr(self.parent, "sim", None)
-        self._update_sim_state(value)
+        self._update_sim_state(self._value)
         self._metadata.update(write_access=True)
 
     def _update_sim_state(self, value: any) -> None:
@@ -134,7 +134,7 @@ class ReadOnlySignal(Signal):
         name: str,
         *args,
         parent=None,
-        value: any = 0,
+        value: any = 0.0,
         kind: int = Kind.normal,
         precision: float = PRECISION,
         compute_readback: bool = False,
@@ -143,7 +143,7 @@ class ReadOnlySignal(Signal):
     ):
         super().__init__(*args, name=name, parent=parent, value=value, kind=kind, **kwargs)
         self._metadata.update(connected=True, write_access=False)
-        self._value = value
+        self._value = self._readback
         self.precision = precision
         self.compute_readback = compute_readback
         self.sim = sim if sim is not None else getattr(self.parent, "sim", None)
@@ -225,7 +225,7 @@ class CustomSetableSignal(BECDeviceBase):
         name: str,
         *args,
         parent=None,
-        value: any = 0,
+        value: float = 0.0,
         kind: int = Kind.normal,
         precision: float = PRECISION,
         sim=None,
@@ -233,26 +233,15 @@ class CustomSetableSignal(BECDeviceBase):
     ):
         if parent:
             name = f"{parent.name}_{name}"
-        super().__init__(*args, name=name, parent=parent, kind=kind, **kwargs)
+        super().__init__(*args, name=name, parent=parent, value=value, kind=kind, **kwargs)
         self._metadata = {"connected": self.connected, "write_access": True}
-        self._value = value
         self._timestamp = time.time()
-        self._dtype = type(value)
-        self._shape = self._get_shape(value)
         self.precision = precision
         self.sim = sim if sim is not None else getattr(self.parent, "sim", None)
         self._update_sim_state(value)
 
     def _get_shape(self, value: any) -> list:
-        """Get the shape of the value.
-        **Note: This logic is from ophyd, and replicated here.
-        There would be more sophisticated ways, but to keep it consistent, it is replicated here.**
-        """
-        if isinstance(value, np.ndarray):
-            return list(value.shape)
-        if isinstance(value, list):
-            return len(value)
-        return []
+        pass
 
     def _update_sim_state(self, value: any) -> None:
         """Update the readback value."""
@@ -260,13 +249,13 @@ class CustomSetableSignal(BECDeviceBase):
             self.sim.update_sim_state(self.name, value)
 
     def _get_value(self) -> any:
-        """Update the timestamp of the readback value."""
+        """Return the readback value."""
         if self.sim:
             return self.sim.sim_state[self.name]["value"]
         return self._value
 
     def _get_timestamp(self) -> any:
-        """Update the timestamp of the readback value."""
+        """Return the timestamp of the readback value."""
         if self.sim:
             return self.sim.sim_state[self.name]["timestamp"]
         return self._timestamp
@@ -295,9 +284,7 @@ class CustomSetableSignal(BECDeviceBase):
 
         Core function for signal.
         """
-        res = {
-            self.name: {"source": str(self.__class__), "dtype": self._dtype, "shape": self._shape}
-        }
+        res = super().describe()
         if self.precision is not None:
             res[self.name]["precision"] = self.precision
         return res

@@ -37,7 +37,13 @@ class SimFlyer(Device, FlyerInterface):
     sim_cls = SimulatedPositioner
 
     readback = Cpt(
-        ReadOnlySignal, name="readback", value=0, kind=Kind.hinted, compute_readback=False
+        ReadOnlySignal,
+        name="readback",
+        value=0,
+        dtype=float,
+        shape=(),
+        kind=Kind.hinted,
+        compute_readback=False,
     )
 
     def __init__(

@@ -154,15 +154,17 @@ class SimCamera(PSIDetectorBase):
     SUB_MONITOR = "device_monitor_2d"
     _default_sub = SUB_MONITOR
 
-    exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
+    exp_time = Cpt(SetableSignal, name="exp_time", value=1, dtype=float, shape=(), kind=Kind.config)
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
-    frames = Cpt(SetableSignal, name="frames", value=1, kind=Kind.config)
-    burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
+    frames = Cpt(SetableSignal, name="frames", value=1, dtype=int, shape=(), kind=Kind.config)
+    burst = Cpt(SetableSignal, name="burst", value=1, dtype=int, shape=(), kind=Kind.config)
 
     image_shape = Cpt(SetableSignal, name="image_shape", value=SHAPE, kind=Kind.config)
     image = Cpt(
         ReadOnlySignal,
         name="image",
+        dtype=BIT_DEPTH,
+        shape=SHAPE,
         value=np.empty(SHAPE, dtype=BIT_DEPTH),
         compute_readback=True,
         kind=Kind.omitted,

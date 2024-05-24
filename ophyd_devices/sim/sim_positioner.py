@@ -47,9 +47,11 @@ class SimPositioner(Device, PositionerBase):
     sim_cls = SimulatedPositioner
 
     # Define the signals as class attributes
-    readback = Cpt(ReadOnlySignal, name="readback", value=0, kind=Kind.hinted)
-    setpoint = Cpt(SetableSignal, value=0, kind=Kind.normal)
-    motor_is_moving = Cpt(SetableSignal, value=0, kind=Kind.normal)
+    readback = Cpt(
+        ReadOnlySignal, name="readback", value=0, dtype=float, shape=(), kind=Kind.hinted
+    )
+    setpoint = Cpt(SetableSignal, value=0, dtype=float, shape=(), kind=Kind.normal)
+    motor_is_moving = Cpt(SetableSignal, dtype=int, shape=(), value=0, kind=Kind.normal)
 
     # Config signals
     velocity = Cpt(SetableSignal, value=100, kind=Kind.config)

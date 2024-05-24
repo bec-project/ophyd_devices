@@ -49,17 +49,19 @@ class SimWaveform(Device):
     SUB_MONITOR = "device_monitor_1d"
     _default_sub = SUB_MONITOR
 
-    exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
+    exp_time = Cpt(SetableSignal, name="exp_time", value=1, dtype=float, shape=(), kind=Kind.config)
     file_path = Cpt(SetableSignal, name="file_path", value="", kind=Kind.config)
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
-    frames = Cpt(SetableSignal, name="frames", value=1, kind=Kind.config)
-    burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
+    frames = Cpt(SetableSignal, name="frames", value=1, dtype=int, shape=(), kind=Kind.config)
+    burst = Cpt(SetableSignal, name="burst", value=1, dtype=int, shape=(), kind=Kind.config)
 
     waveform_shape = Cpt(SetableSignal, name="waveform_shape", value=SHAPE, kind=Kind.config)
     waveform = Cpt(
         ReadOnlySignal,
         name="waveform",
         value=np.empty(SHAPE, dtype=BIT_DEPTH),
+        dtype=BIT_DEPTH,
+        shape=SHAPE,
         compute_readback=True,
         kind=Kind.normal,
     )
