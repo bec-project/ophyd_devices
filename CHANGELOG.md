@@ -2,6 +2,17 @@
 
 
 
+## v1.1.0 (2024-05-27)
+
+### Feature
+
+* feat: refactor psi_detector_base class, add tests ([`a0ac8c9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a0ac8c9ad701f52429f393a134fd0705583eddb1))
+
+### Refactor
+
+* refactor: add publish file location to base class ([`e8510fb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8510fb249b136781c03849497d85dfb11cca43a))
+
+
 ## v1.0.2 (2024-05-23)
 
 ### Ci
@@ -147,14 +158,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 
 ## v0.32.0 (2024-04-19)
-
-### Ci
-
-* ci: do not wait for additional tests to start ([`b88545f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b88545f6864a7d11ca39435906bcbd2cd0bb12b0))
-
-### Feature
-
-* feat: added support for nestes device configs ([`288f394`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/288f39483e83575d0bf3ec7a8e0d872b41b5b183))
-
-
-## v0.31.0 (2024-04-19)
