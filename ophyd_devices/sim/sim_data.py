@@ -90,14 +90,13 @@ class SimulatedDataBase(ABC):
 
     USER_ACCESS = ["sim_params", "sim_select_model", "sim_get_models", "sim_show_all"]
 
-    def __init__(self, *args, parent=None, device_manager=None, **kwargs) -> None:
+    def __init__(self, *args, parent=None, **kwargs) -> None:
         """
         Note:
         self._model_params duplicates parameters from _params that are solely relevant for the model used.
         This facilitates easier and faster access for computing the simulated state using the lmfit package.
         """
         self.parent = parent
-        self.device_manager = device_manager
         self.sim_state = defaultdict(dict)
         self.registered_proxies = getattr(self.parent, "registered_proxies", {})
         self._model = {}
@@ -109,10 +108,10 @@ class SimulatedDataBase(ABC):
         Execute either the provided method or reroutes the method execution
         to a device proxy in case it is registered in self.parentregistered_proxies.
         """
-        if self.registered_proxies and self.device_manager:
+        if self.registered_proxies and self.parent.device_manager:
             for proxy_name, signal in self.registered_proxies.items():
                 if signal == signal_name or f"{self.parent.name}_{signal}" == signal_name:
-                    sim_proxy = self.device_manager.devices.get(proxy_name, None)
+                    sim_proxy = self.parent.device_manager.devices.get(proxy_name, None)
                     if sim_proxy and sim_proxy.enabled is True:
                         method = sim_proxy.obj.lookup[self.parent.name]["method"]
                         args = sim_proxy.obj.lookup[self.parent.name]["args"]
@@ -304,9 +303,9 @@ class SimulatedPositioner(SimulatedDataBase):
 class SimulatedDataMonitor(SimulatedDataBase):
     """Simulated data class for a monitor."""
 
-    def __init__(self, *args, parent=None, device_manager=None, **kwargs) -> None:
+    def __init__(self, *args, parent=None, **kwargs) -> None:
         self._model_lookup = self.init_lmfit_models()
-        super().__init__(*args, parent=parent, device_manager=device_manager, **kwargs)
+        super().__init__(*args, parent=parent, **kwargs)
         self.bit_depth = self.parent.BIT_DEPTH
         self._init_default()
 
@@ -412,8 +411,8 @@ class SimulatedDataMonitor(SimulatedDataBase):
             float: Value computed by the active model.
         """
         mot_name = self.sim_params["ref_motor"]
-        if self.device_manager and mot_name in self.device_manager.devices:
-            motor_pos = self.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
+        if self.parent.device_manager and mot_name in self.parent.device_manager.devices:
+            motor_pos = self.parent.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
         else:
             motor_pos = 0
         method = self._model
@@ -502,11 +501,11 @@ class SimulatedDataWaveform(SimulatedDataMonitor):
 class SimulatedDataCamera(SimulatedDataBase):
     """Simulated class to compute data for a 2D camera."""
 
-    def __init__(self, *args, parent=None, device_manager=None, **kwargs) -> None:
+    def __init__(self, *args, parent=None, **kwargs) -> None:
         self._model_lookup = self.init_2D_models()
         self._all_default_model_params = defaultdict(dict)
         self._init_default_camera_params()
-        super().__init__(*args, parent=parent, device_manager=device_manager, **kwargs)
+        super().__init__(*args, parent=parent, **kwargs)
         self.bit_depth = self.parent.BIT_DEPTH
         self._init_default()
 

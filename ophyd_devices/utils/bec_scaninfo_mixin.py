@@ -76,6 +76,14 @@ class BecScaninfoMixin:
         else:
             self.bec_info_msg = bec_info_msg
 
+        self.metadata = None
+        self.scan_id = None
+        self.scan_number = None
+        self.exp_time = None
+        self.frames_per_trigger = None
+        self.num_points = None
+        self.scan_type = None
+
     def get_bec_info_msg(self) -> None:
         """Get BECInfoMsg object"""
         return self.bec_info_msg

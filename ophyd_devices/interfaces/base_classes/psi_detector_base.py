@@ -77,7 +77,8 @@ class CustomDetectorMixin:
 
     def on_trigger(self) -> None:
         """
-        Specify actions to be executed upon receiving trigger signal
+        Specify actions to be executed upon receiving trigger signal.
+        Return a DeviceStatus object or None
         """
 
     def on_pre_scan(self) -> None:
@@ -87,6 +88,7 @@ class CustomDetectorMixin:
         Only use if needed, and it is recommended to keep this function as short/fast as possible.
         """
 
+    # TODO add configurable file_path instead of hardcoding self.parent.filepath
     def publish_file_location(
         self, done: bool = False, successful: bool = None, metadata: dict = {}
     ) -> None:
