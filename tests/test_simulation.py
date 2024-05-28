@@ -20,6 +20,7 @@ from ophyd_devices.interfaces.protocols.bec_protocols import (
 from ophyd_devices.sim.sim import SimCamera, SimFlyer, SimMonitor, SimPositioner
 from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
+from ophyd_devices.sim.sim_utils import H5Writer
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
 
 
@@ -42,8 +43,20 @@ def monitor(name="monitor"):
 def camera(name="camera"):
     """Fixture for SimCamera."""
     dm = DMMock()
-    cam = SimCamera(name=name, device_manager=dm)
-    yield cam
+    with (
+        mock.patch(
+            "ophyd_devices.interfaces.base_classes.psi_detector_base.PSIDetectorBase._update_service_config",
+            mock.MagicMock(),
+        ) as mock_update_service_config,
+        mock.patch(
+            "ophyd_devices.interfaces.base_classes.psi_detector_base.PSIDetectorBase._update_filewriter",
+            mock.MagicMock(),
+        ) as mock_update_filewriter,
+    ):
+        cam = SimCamera(name=name, device_manager=dm)
+        cam.filewriter = mock.MagicMock()
+        cam.filewriter.compile_full_filename.return_value = ""
+        yield cam
 
 
 @pytest.fixture(scope="function")
@@ -55,20 +68,18 @@ def positioner(name="positioner"):
 
 
 @pytest.fixture(scope="function")
-def h5proxy_fixture(name="h5proxy"):
+def h5proxy_fixture(camera, name="h5proxy"):
     """Fixture for SimCamera."""
-    dm = DMMock()
+    dm = camera.device_manager
     proxy = H5ImageReplayProxy(name=name, device_manager=dm)
-    camera = SimCamera(name="eiger", device_manager=dm)
     yield proxy, camera
 
 
 @pytest.fixture(scope="function")
-def slitproxy_fixture(name="slit_proxy"):
+def slitproxy_fixture(camera, name="slit_proxy"):
     """Fixture for SimCamera."""
-    dm = DMMock()
+    dm = camera.device_manager
     proxy = SlitProxy(name=name, device_manager=dm)
-    camera = SimCamera(name="eiger", device_manager=dm)
     samx = SimPositioner(name="samx", device_manager=dm)
     yield proxy, camera, samx
 
@@ -121,7 +132,7 @@ def test_flyer__init__(flyer):
 def test_monitor_readback(monitor, center):
     """Test the readback method of SimMonitor."""
     motor_pos = 0
-    monitor.sim.device_manager.add_device("samx", value=motor_pos)
+    monitor.device_manager.add_device("samx", value=motor_pos)
     for model_name in monitor.sim.sim_get_models():
         monitor.sim.sim_select_model(model_name)
         monitor.sim.sim_params["noise_multipler"] = 10
@@ -201,7 +212,7 @@ def test_BECDeviceBase():
     assert isinstance(device, BECDevice)
 
 
-def test_h5proxy(h5proxy_fixture):
+def test_h5proxy(h5proxy_fixture, camera):
     """Test h5 camera proxy read from h5 file"""
     h5proxy, camera = h5proxy_fixture
     mock_proxy = mock.MagicMock()
@@ -219,6 +230,7 @@ def test_h5proxy(h5proxy_fixture):
     camera._registered_proxies.update({h5proxy.name: camera.image.name})
     camera.sim.sim_params = {"noise": "none", "noise_multiplier": 0}
     camera.scaninfo.sim_mode = True
+    camera.image_shape.set(data.shape[1:])
     camera.stage()
     img = camera.image.get()
     assert (img == data[0, ...]).all()
@@ -228,6 +240,10 @@ def test_h5proxy(h5proxy_fixture):
 def test_slitproxy(slitproxy_fixture):
     """Test slit proxy to compute readback from readback of positioner samx"""
     proxy, camera, samx = slitproxy_fixture
+    for dev_name, dev in proxy.device_manager.devices.items():
+        camera.device_manager.devices.update({dev_name: mock.MagicMock()})
+        camera.device_manager.devices.get(dev_name).obj = dev
+        camera.device_manager.devices.get(dev_name).enabled = True
     px_size = 0.5
     slitwidth = 2
     proxy._update_device_config(
@@ -278,3 +294,66 @@ def test_slitproxy(slitproxy_fixture):
     )
     assert (img[:, : edges[0]] == 0).all()
     assert (img[:, edges[1] :] == 0).all()
+
+
+def test_cam_stage_h5writer(camera):
+    """Test the H5Writer class"""
+    with (
+        mock.patch.object(camera, "h5_writer") as mock_h5_writer,
+        mock.patch.object(
+            camera.custom_prepare, "publish_file_location"
+        ) as mock_publish_file_location,
+    ):
+        camera.scaninfo.num_points = 10
+        camera.scaninfo.frames_per_trigger = 1
+        camera.scaninfo.exp_time = 1
+        camera.stage()
+        assert mock_h5_writer.prepare.call_count == 0
+        camera.unstage()
+        camera.write_to_disk.put(True)
+        camera.stage()
+        calls = [mock.call(file_path="", h5_entry="/entry/data/data")]
+        assert mock_h5_writer.prepare.mock_calls == calls
+        # mock_h5_writer.prepare
+
+
+def test_cam_complete(camera):
+    """Test the complete method of SimCamera."""
+    with mock.patch.object(camera, "h5_writer") as mock_h5_writer:
+        camera.complete()
+        assert mock_h5_writer.write_data.call_count == 0
+        camera.write_to_disk.put(True)
+        camera.complete()
+        assert mock_h5_writer.write_data.call_count == 1
+
+
+def test_cam_trigger(camera):
+    """Test the trigger method of SimCamera."""
+    with mock.patch.object(camera, "h5_writer") as mock_h5_writer:
+        data = []
+        camera.trigger()
+        assert mock_h5_writer.receive_data.call_count == 0
+        camera.write_to_disk.put(True)
+        camera.trigger()
+        assert mock_h5_writer.receive_data.call_count == 1
+        camera.trigger()
+        assert mock_h5_writer.receive_data.call_count == 2
+
+
+def test_h5writer():
+    """Test the H5Writer class"""
+
+    h5_writer = H5Writer()
+    with mock.patch.object(h5_writer, "create_dir") as mock_create_dir:
+        h5_writer.data_container = [0, 1, 2]
+        h5_writer.prepare(file_path="test.h5", h5_entry="entry/data/data")
+        assert mock_create_dir.call_count == 1
+        assert h5_writer.data_container == []
+        assert h5_writer.file_path == "test.h5"
+        assert h5_writer.h5_entry == "entry/data/data"
+
+        data = [0, 1, 2, 3]
+        h5_writer.receive_data(data)
+        assert h5_writer.data_container == [data]
+        h5_writer.receive_data(0)
+        assert h5_writer.data_container == [data, 0]
