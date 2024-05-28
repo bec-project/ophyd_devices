@@ -25,7 +25,6 @@ workflow:
   auto_cancel:
     on_new_commit: interruptible
 
-
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: "bec/awi_utils"
@@ -44,7 +43,7 @@ include:
 #commands to run in the Docker container before starting each job.
 before_script:
   - if [[ "$CI_PROJECT_PATH" != "bec/ophyd_devices" ]]; then
-    echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"; 
+    echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m";
     test -d ophyd_devices || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git; cd ophyd_devices;
     fi
   - pip install -e .[dev]
@@ -159,7 +158,7 @@ config_test:
 
 tests-3.11:
   stage: AdditionalTests
-  needs: 
+  needs:
     - job: "formatter"
       optional: true
     - job: "pylint"
@@ -180,6 +179,7 @@ trigger_bec:
   trigger:
     project: bec/bec
     strategy: depend
+    branch: $BEC_CORE_BRANCH
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
@@ -190,15 +190,15 @@ trigger:
   parallel:
     matrix:
       - CHILD_PROJECT: csaxs_bec
-        CHILD_PIPELINE_BRANCH: $CSAXS_BEC_BRANCH     
+        CHILD_PIPELINE_BRANCH: $CSAXS_BEC_BRANCH
       - CHILD_PROJECT: debye_bec
-        CHILD_PIPELINE_BRANCH: $DEBYE_BEC_BRANCH           
+        CHILD_PIPELINE_BRANCH: $DEBYE_BEC_BRANCH
       - CHILD_PROJECT: pxiii_bec
         CHILD_PIPELINE_BRANCH: $PXIII_BEC_BRANCH
       - CHILD_PROJECT: tomcat_bec
         CHILD_PIPELINE_BRANCH: $TOMCAT_BEC_BRANCH
       - CHILD_PROJECT: xtreme_bec
-        CHILD_PIPELINE_BRANCH: $XTREME_BEC_BRANCH             
+        CHILD_PIPELINE_BRANCH: $XTREME_BEC_BRANCH
 
   needs: []
   trigger:
@@ -236,7 +236,7 @@ semver:
     - pip install python-semantic-release==9.* wheel build twine
     - export GL_TOKEN=$CI_UPDATES
     - semantic-release -vv version
-    
+
     # check if any artifacts were created
     - if [ ! -d dist ]; then echo No release will be made; exit 0; fi
     - twine upload dist/* -u __token__ -p $CI_PYPI_TOKEN --skip-existing
