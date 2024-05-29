@@ -2,6 +2,31 @@
 
 
 
+## v1.2.0 (2024-05-29)
+
+### Ci
+
+* ci: fix bec_core_branch triggering in ci file ([`3cab569`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3cab5690db3fbabffecc179cbaadf6878f0ab2f1))
+
+### Documentation
+
+* docs: Update device list ([`08dfc9e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/08dfc9e314a1b498ec2fc1f9056234fe732d6428))
+
+* docs: Update device list ([`106233f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/106233f8d951794e261b08a11b20db6cbf4ef63a))
+
+* docs: Update device list ([`9c93916`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9c9391610845bc1b21e342e7c3b34b8db978a038))
+
+* docs: Update device list ([`018fdac`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/018fdaced4120557ea64501c107c027e362c93fb))
+
+### Feature
+
+* feat: add option to save Camera data to disk, closes #66 ([`60b2e75`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/60b2e756550196fb5c07bb91abb4c1ae5b815c6c))
+
+### Test
+
+* test: add tests ([`af908fa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/af908fa210914519de9a713ed2ef3e2e0c743742))
+
+
 ## v1.1.0 (2024-05-27)
 
 ### Feature
@@ -130,31 +155,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 ### Ci
 
 * ci: removed allow_failure from config check ([`d34b396`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d34b39669c4faf2d1c5518a632239303a48c2fd6))
-
-### Fix
-
-* fix: updated device configs to new import schema ([`5725fc3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5725fc36c7aff052fc704782a99bd04cfb13c112))
-
-
-## v0.33.2 (2024-04-22)
-
-### Fix
-
-* fix(pyproject.toml): add bec-server to dev dependencies; closes #62 ([`9353b46`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9353b46be804de967810f0d9370d230dfae5c92b))
-
-
-## v0.33.1 (2024-04-20)
-
-### Fix
-
-* fix: fix pyproject.toml ([`6081eb4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6081eb4ba54b2a6a2072f638af06c6f1cf264b69))
-
-
-## v0.33.0 (2024-04-19)
-
-### Feature
-
-* feat: move csaxs devices to plugin structure, fix imports and tests ([`74f6fa7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/74f6fa7ffdf339399504e15f27564e3f0e43db56))
-
-
-## v0.32.0 (2024-04-19)
