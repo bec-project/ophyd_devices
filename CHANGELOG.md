@@ -2,6 +2,19 @@
 
 
 
+## v1.2.1 (2024-05-29)
+
+### Documentation
+
+* docs: Update device list ([`5a591ce`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5a591ce024b7815a432460fe9e8d97e648dcdb5e))
+
+* docs: Update device list ([`ae0c766`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ae0c766975cdfc69ffe9d48eca92ad8d51a0497c))
+
+### Fix
+
+* fix: fixed psi_detector_base to allow init with mocked device_manager ([`e566c7f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e566c7f982ee519a5ec3e350cef349c3238eebae))
+
+
 ## v1.2.0 (2024-05-29)
 
 ### Ci
@@ -142,16 +155,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 ### Ci
 
 * ci: removed redundant build step ([`a919632`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9196328e7d7efe4b6718b22d72c6df9bf59411c))
-
-* ci(gitlab-ci): trigger gitlab job template from awi_utils ([`4ffeba4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ffeba4c3b890b2fcd8c694347a254b3bc1e3c96))
-
-### Fix
-
-* fix: static device test should use yaml_load ([`c77f924`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c77f924bb3665ab0896bc56076d05331e8b01f55))
-
-
-## v0.33.3 (2024-04-24)
-
-### Ci
-
-* ci: removed allow_failure from config check ([`d34b396`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d34b39669c4faf2d1c5518a632239303a48c2fd6))
