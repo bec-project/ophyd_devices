@@ -219,11 +219,17 @@ class PSIDetectorBase(Device):
         self.scaninfo.load_scan_metadata()
 
     def _update_service_config(self) -> None:
-        """Update service config from BEC service config"""
+        """Update service config from BEC service config
+
+        If bec services are not running and SERVICE_CONFIG is NONE, we fall back to the current directory.
+        """
         # pylint: disable=import-outside-toplevel
         from bec_lib.bec_service import SERVICE_CONFIG
 
-        self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
+        if SERVICE_CONFIG:
+            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
+            return
+        self.service_cfg = {"base_path": os.path.abspath(".")}
 
     def check_scan_id(self) -> None:
         """Checks if scan_id has changed and set stopped flagged to True if it has."""

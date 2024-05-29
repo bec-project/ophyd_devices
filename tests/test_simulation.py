@@ -43,20 +43,10 @@ def monitor(name="monitor"):
 def camera(name="camera"):
     """Fixture for SimCamera."""
     dm = DMMock()
-    with (
-        mock.patch(
-            "ophyd_devices.interfaces.base_classes.psi_detector_base.PSIDetectorBase._update_service_config",
-            mock.MagicMock(),
-        ) as mock_update_service_config,
-        mock.patch(
-            "ophyd_devices.interfaces.base_classes.psi_detector_base.PSIDetectorBase._update_filewriter",
-            mock.MagicMock(),
-        ) as mock_update_filewriter,
-    ):
-        cam = SimCamera(name=name, device_manager=dm)
-        cam.filewriter = mock.MagicMock()
-        cam.filewriter.compile_full_filename.return_value = ""
-        yield cam
+    cam = SimCamera(name=name, device_manager=dm)
+    cam.filewriter = mock.MagicMock()
+    cam.filewriter.compile_full_filename.return_value = ""
+    yield cam
 
 
 @pytest.fixture(scope="function")
