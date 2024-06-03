@@ -2,6 +2,19 @@
 
 
 
+## v1.3.1 (2024-06-03)
+
+### Documentation
+
+* docs: Update device list ([`33f5d8a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/33f5d8a6291e4ddfd905d83ff5c9384d648a632d))
+
+* docs: Update device list ([`6f29a79`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6f29a797965187ed0a608d0bb07eaa25f414440e))
+
+### Fix
+
+* fix: bugfix to fill data butter with value, timestamp properly ([`8520800`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85208002a305fa657c469ff98b45174eb2c1f29a))
+
+
 ## v1.3.0 (2024-06-03)
 
 ### Documentation
@@ -139,10 +152,6 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 * ci: fixed typo ([`81f1fee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/81f1feea853882e8d557063612cc0acc601bbe2a))
 
-* ci: fixed rules for downstream pipelines ([`f5e69f9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f5e69f9b9528871d9a011b2257b87c1faf89e6b0))
-
-* ci: limit stages to run in child pipelines ([`815921a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/815921a6c9cd97e5df94a584c5d4c2c22a4d408a))
-
 ### Documentation
 
 * docs: improved doc strings for controllerr ([`339f050`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/339f050a8662de86ed2528ad4ffed18482dd546b))
@@ -154,9 +163,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 ### Refactor
 
 * refactor: added common controller methods ([`00b3ae8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/00b3ae82580df6bbe8a01a52d37c43199cf761bd))
-
-### Unknown
-
-* Update file .gitlab-ci.yml ([`2f8772b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f8772b618836fc4029691ad03f7dafee17f1ca5))
-
-* Update file .gitlab-ci.yml ([`bd01f60`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd01f6050a6c4957e4943577dff1ff53a5179f8b))
