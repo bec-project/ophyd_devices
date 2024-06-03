@@ -561,7 +561,7 @@ class SimPositioner(Device, PositionerBase):
         return "mm"
 
 
-class SimFlyer(Device, PositionerBase, FlyerInterface):
+class SimFlyer(Device, FlyerInterface):
     """A simulated device mimicing any 2D Flyer device (position, temperature, rotation).
 
     The corresponding simulation class is sim_cls=SimulatedPositioner, more details on defaults within the simulation class.
