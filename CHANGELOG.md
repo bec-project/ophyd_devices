@@ -2,6 +2,29 @@
 
 
 
+## v1.3.0 (2024-06-03)
+
+### Documentation
+
+* docs: Update device list ([`f9b126c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f9b126c60ce710fba221ffb208d66541b8264c0b))
+
+* docs: Update device list ([`be25cba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/be25cbae92540b074bb4533331656d20a049a809))
+
+### Feature
+
+* feat: add async monitor, add on_complete to psi_det_base and rm duplicated mocks, closes #67 ([`1aece61`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1aece61a3b09267f87f0771b163a5d07b4549eff))
+
+### Refactor
+
+* refactor: add .wait() to set methods ([`7334925`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73349257ee0228a9563051d4f8e0bf5f7e6b551f))
+
+* refactor: removed deprecated devices ([`8ef6d10`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ef6d10eb759e6ce874ddf05a38c586e9475eed3))
+
+### Test
+
+* test: add tests for new device ([`c554422`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c5544226be3f12d238a0793a0f41da07af36e460))
+
+
 ## v1.2.1 (2024-05-29)
 
 ### Documentation
@@ -120,10 +143,6 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 * ci: limit stages to run in child pipelines ([`815921a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/815921a6c9cd97e5df94a584c5d4c2c22a4d408a))
 
-* ci: removed awi-utils for now ([`27d4b6a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/27d4b6ae83ec3d0f4d7a85c3cd4f6f70ecd528eb))
-
-* ci: added parent-child pipelines ([`e27d2db`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e27d2db4ac21830c95f2db2ccba58c650c25cad5))
-
 ### Documentation
 
 * docs: improved doc strings for controllerr ([`339f050`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/339f050a8662de86ed2528ad4ffed18482dd546b))
@@ -141,17 +160,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 * Update file .gitlab-ci.yml ([`2f8772b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f8772b618836fc4029691ad03f7dafee17f1ca5))
 
 * Update file .gitlab-ci.yml ([`bd01f60`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bd01f6050a6c4957e4943577dff1ff53a5179f8b))
-
-
-## v0.33.5 (2024-05-02)
-
-### Fix
-
-* fix: fixed device data signature ([`e8290db`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8290dbf4466f1415fb9c963ae203a4e6da7cc42))
-
-
-## v0.33.4 (2024-04-29)
-
-### Ci
-
-* ci: removed redundant build step ([`a919632`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a9196328e7d7efe4b6718b22d72c6df9bf59411c))
