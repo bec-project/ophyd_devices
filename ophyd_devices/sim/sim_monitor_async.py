@@ -35,7 +35,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
     def prep_random_interval(self):
         """Prepare counter and random interval to send data to BEC."""
         self._random_send_interval = np.random.randint(1, 10)
-        self.parent.current_trigger.set(0)
+        self.parent.current_trigger.set(0).wait()
         self._counter = self.parent.current_trigger.get()
 
     def on_stage(self):
@@ -74,7 +74,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         self.parent.data_buffer["value"].append(self.parent.readback.get())
         self.parent.data_buffer["value"].append(self.parent.readback.timestamp)
         self._counter += 1
-        self.parent.current_trigger.set(self._counter)
+        self.parent.current_trigger.set(self._counter).wait()
         if self._counter % self._random_send_interval == 0:
             self._send_data_to_bec()
 

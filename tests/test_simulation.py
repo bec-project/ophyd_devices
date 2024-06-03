@@ -399,7 +399,7 @@ def test_async_monitor_complete(async_monitor):
 def test_async_mon_on_trigger(async_monitor):
     """Test the on_trigger method of SimMonitorAsync."""
     with (mock.patch.object(async_monitor.custom_prepare, "_send_data_to_bec") as mock_send,):
-        async_monitor.stage()
+        async_monitor.custom_prepare.on_stage()
         upper_limit = async_monitor.custom_prepare._random_send_interval
         for ii in range(1, upper_limit + 1):
             async_monitor.custom_prepare.on_trigger()
