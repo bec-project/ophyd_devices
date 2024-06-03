@@ -54,7 +54,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         if self.parent.scaninfo.scan_msg is None:
             return
         metadata = self.parent.scaninfo.scan_msg.metadata
-        metadata.update({"async_update": "extend"})
+        metadata.update({"async_update": self.parent.async_update})
 
         msg = messages.DeviceMessage(
             signals={self.parent.readback.name: self.parent.data_buffer},
@@ -72,7 +72,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
     def on_trigger(self):
         """Prepare the device for triggering."""
         self.parent.data_buffer["value"].append(self.parent.readback.get())
-        self.parent.data_buffer["value"].append(self.parent.readback.timestamp)
+        self.parent.data_buffer["timestamp"].append(self.parent.readback.timestamp)
         self._counter += 1
         self.parent.current_trigger.set(self._counter).wait()
         if self._counter % self._random_send_interval == 0:
