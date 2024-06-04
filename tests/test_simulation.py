@@ -185,9 +185,13 @@ def test_camera_readback(camera, amplitude, noise_multiplier):
 def test_positioner_move(positioner):
     """Test the move method of SimPositioner."""
     positioner.move(0).wait()
-    assert np.isclose(positioner.read()[positioner.name]["value"], 0, atol=positioner.tolerance)
+    assert np.isclose(
+        positioner.read()[positioner.name]["value"], 0, atol=positioner.tolerance.get()
+    )
     positioner.move(10).wait()
-    assert np.isclose(positioner.read()[positioner.name]["value"], 10, atol=positioner.tolerance)
+    assert np.isclose(
+        positioner.read()[positioner.name]["value"], 10, atol=positioner.tolerance.get()
+    )
 
 
 @pytest.mark.parametrize("proxy_active", [True, False])

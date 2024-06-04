@@ -372,7 +372,6 @@ class SimPositioner(Device, PositionerBase):
     delay (int)             : If 0, execution of move will be instant. If 1, exectution will depend on motor velocity. Default is 1.
     update_frequency (int)  : Frequency in Hz of the update of the simulated state during a move. Default is 2 Hz.
     precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
-    tolerance (float)       : Tolerance of the positioner to accept reaching target positions. Default is 0.5.
     limits (tuple)          : Tuple of the low and high limits of the positioner. Overrides low/high_limit_travel is specified. Default is None.
     parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.
     kind                    : A member the Kind IntEnum (or equivalent integer), optional. Default is Kind.normal. See Kind for options.
@@ -394,6 +393,7 @@ class SimPositioner(Device, PositionerBase):
     # Config signals
     velocity = Cpt(SetableSignal, value=100, kind=Kind.config)
     acceleration = Cpt(SetableSignal, value=1, kind=Kind.config)
+    tolerance = Cpt(SetableSignal, value=0.5, kind=Kind.config)
 
     # Ommitted signals
     high_limit_travel = Cpt(SetableSignal, value=0, kind=Kind.omitted)
@@ -411,7 +411,6 @@ class SimPositioner(Device, PositionerBase):
         delay: int = 1,
         update_frequency=2,
         precision=3,
-        tolerance: float = 0.5,
         limits=None,
         parent=None,
         kind=None,
@@ -422,7 +421,6 @@ class SimPositioner(Device, PositionerBase):
         self.delay = delay
         self.device_manager = device_manager
         self.precision = precision
-        self.tolerance = tolerance
         self.init_sim_params = sim_init
         self._registered_proxies = {}
 
@@ -517,7 +515,7 @@ class SimPositioner(Device, PositionerBase):
                 try:
                     move_val = self._get_sim_state(
                         self.setpoint.name
-                    ) + self.tolerance * np.random.uniform(-1, 1)
+                    ) + self.tolerance.get() * np.random.uniform(-1, 1)
 
                     updates = np.ceil(
                         np.abs(old_setpoint - move_val)
