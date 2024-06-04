@@ -128,9 +128,10 @@ class SimCameraSetup(CustomDetectorMixin):
         FYI: No data is written to disk in the simulation, but upon each trigger it
         is published to the device_monitor endpoint in REDIS.
         """
-        self.parent.filepath = self.parent.filewriter.compile_full_filename(f"{self.parent.name}")
+        self.parent.filepath.set(
+            self.parent.filewriter.compile_full_filename(f"{self.parent.name}")
+        ).wait()
 
-        self.parent.file_path.set(self.parent.filepath)
         self.parent.frames.set(
             self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
         )
@@ -138,7 +139,7 @@ class SimCameraSetup(CustomDetectorMixin):
         self.parent.burst.set(self.parent.scaninfo.frames_per_trigger)
         if self.parent.write_to_disk.get():
             self.parent.h5_writer.prepare(
-                file_path=self.parent.filepath, h5_entry="/entry/data/data"
+                file_path=self.parent.filepath.get(), h5_entry="/entry/data/data"
             )
             self.publish_file_location(done=False)
         self.parent.stopped = False
@@ -182,7 +183,6 @@ class SimCamera(PSIDetectorBase):
     _default_sub = SUB_MONITOR
 
     exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
-    file_path = Cpt(SetableSignal, name="file_path", value="", kind=Kind.config)
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
     frames = Cpt(SetableSignal, name="frames", value=1, kind=Kind.config)
     burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
@@ -204,7 +204,6 @@ class SimCamera(PSIDetectorBase):
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
         self.h5_writer = H5Writer()
-        self.filepath = None
         super().__init__(
             name=name, parent=parent, kind=kind, device_manager=device_manager, **kwargs
         )

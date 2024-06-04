@@ -10,9 +10,10 @@ import time
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import FileWriter
-from ophyd import Device, DeviceStatus
+from ophyd import Component, Device, DeviceStatus, Kind
 from ophyd.device import Staged
 
+from ophyd_devices.sim.sim_signals import SetableSignal
 from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
@@ -111,10 +112,15 @@ class CustomDetectorMixin:
         """
         pipe = self.parent.connector.pipeline()
         if successful is None:
-            msg = messages.FileMessage(file_path=self.parent.filepath, done=done, metadata=metadata)
+            msg = messages.FileMessage(
+                file_path=self.parent.filepath.get(), done=done, metadata=metadata
+            )
         else:
             msg = messages.FileMessage(
-                file_path=self.parent.filepath, done=done, successful=successful, metadata=metadata
+                file_path=self.parent.filepath.get(),
+                done=done,
+                successful=successful,
+                metadata=metadata,
             )
         self.parent.connector.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
@@ -185,6 +191,8 @@ class PSIDetectorBase(Device):
         device_manager (object): bec device manager
         **kwargs: keyword arguments
     """
+
+    filepath = Component(SetableSignal, value="", kind=Kind.config)
 
     custom_prepare_cls = CustomDetectorMixin
 

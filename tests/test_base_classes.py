@@ -73,6 +73,12 @@ def test_unstage(detector_base):
         mock_on_unstage.assert_called_once()
 
 
+def test_complete(detector_base):
+    with mock.patch.object(detector_base.custom_prepare, "on_complete") as mock_on_complete:
+        detector_base.complete()
+        mock_on_complete.assert_called_once()
+
+
 def test_stop(detector_base):
     with mock.patch.object(detector_base.custom_prepare, "on_stop") as mock_on_stop:
         detector_base.stop()
