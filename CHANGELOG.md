@@ -2,6 +2,19 @@
 
 
 
+## v1.3.2 (2024-06-04)
+
+### Documentation
+
+* docs: Update device list ([`c1e977f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c1e977f639633167fe4e7dfb5f34b066c26933d0))
+
+* docs: Update device list ([`92be39f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/92be39f14fac756749631e64113d24f732bb5551))
+
+### Fix
+
+* fix: adapt SimPositioner, make tolerance changeable signal ([`3606a2f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3606a2fc5ad74ec949d388cc23fbd6618d1f3083))
+
+
 ## v1.3.1 (2024-06-03)
 
 ### Documentation
@@ -141,16 +154,6 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 
 ## v0.33.6 (2024-05-08)
-
-### Ci
-
-* ci: made pipeline interruptible ([`44de499`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/44de499d40db01e2d9ad0ae50235240e2103bf02))
-
-* ci: added downstream pipelines ([`b8134ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b8134edbff58e1f92c45c3ab9b41f88e1ad3069b))
-
-* ci: added support for different branches in child pipelines ([`c74cbe3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c74cbe358cf24943e1badc32ef53ced1f8d149f1))
-
-* ci: fixed typo ([`81f1fee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/81f1feea853882e8d557063612cc0acc601bbe2a))
 
 ### Documentation
 
