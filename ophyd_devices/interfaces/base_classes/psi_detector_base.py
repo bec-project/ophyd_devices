@@ -95,10 +95,7 @@ class CustomDetectorMixin:
         This can for instance be to check with the detector and backend if all data is written succsessfully.
         """
 
-    # TODO add configurable file_path instead of hardcoding self.parent.filepath
-    def publish_file_location(
-        self, done: bool = False, successful: bool = None, metadata: dict = {}
-    ) -> None:
+    def publish_file_location(self, done: bool, successful: bool, metadata: dict = None) -> None:
         """
         Publish the filepath to REDIS.
 
@@ -109,19 +106,18 @@ class CustomDetectorMixin:
         Args:
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
+            metadata (dict): additional metadata to publish
         """
+        if metadata is None:
+            metadata = {}
+
+        msg = messages.FileMessage(
+            file_path=self.parent.filepath.get(),
+            done=done,
+            successful=successful,
+            metadata=metadata,
+        )
         pipe = self.parent.connector.pipeline()
-        if successful is None:
-            msg = messages.FileMessage(
-                file_path=self.parent.filepath.get(), done=done, metadata=metadata
-            )
-        else:
-            msg = messages.FileMessage(
-                file_path=self.parent.filepath.get(),
-                done=done,
-                successful=successful,
-                metadata=metadata,
-            )
         self.parent.connector.set_and_publish(
             MessageEndpoints.public_file(self.parent.scaninfo.scan_id, self.parent.name),
             msg,
