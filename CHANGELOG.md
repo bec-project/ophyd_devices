@@ -2,6 +2,15 @@
 
 
 
+## v1.3.3 (2024-06-06)
+
+### Fix
+
+* fix: make done and successful mandatory args. ([`79b821a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/79b821ae7e38b78e35ab5165db590cb7123afbf4))
+
+* fix: make filepath a signal ([`e9aaa03`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9aaa0383e4120a09b6aa40b7e33fb53f31cb9a3))
+
+
 ## v1.3.2 (2024-06-04)
 
 ### Documentation
@@ -154,15 +163,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 
 
 ## v0.33.6 (2024-05-08)
-
-### Documentation
-
-* docs: improved doc strings for controllerr ([`339f050`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/339f050a8662de86ed2528ad4ffed18482dd546b))
-
-### Fix
-
-* fix: fixed controller error classes ([`c3fa7ad`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3fa7ad30d1b9a151bce599b34b4a3f82e4e6ce8))
-
-### Refactor
-
-* refactor: added common controller methods ([`00b3ae8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/00b3ae82580df6bbe8a01a52d37c43199cf761bd))
