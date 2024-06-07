@@ -2,6 +2,13 @@
 
 
 
+## v1.3.4 (2024-06-07)
+
+### Fix
+
+* fix: remove inheritance from ophyd.PostionerBase for simflyer ([`c9247ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c9247ef82ee32aeb50474979d414b98d67a2b840))
+
+
 ## v1.3.3 (2024-06-06)
 
 ### Fix
@@ -158,8 +165,3 @@ BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared 
 ### Ci
 
 * ci: fix dep and add CI JOB for package dep checks ([`d89f8b8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d89f8b87568d30d467279d96b0100cd318e2b5a2))
-
-* ci: added trigger for xtreme-bec ([`be689ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/be689baa29d54632bbac9b523f0fe3a66e061f84))
-
-
-## v0.33.6 (2024-05-08)
