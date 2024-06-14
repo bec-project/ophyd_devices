@@ -2,6 +2,13 @@
 
 
 
+## v1.3.5 (2024-06-14)
+
+### Fix
+
+* fix: fixed pyepics version for now as it segfaults on startup ([`f1a2368`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1a2368101e6b4af2d08d1a3540680f7f3ff9762))
+
+
 ## v1.3.4 (2024-06-07)
 
 ### Fix
@@ -155,13 +162,3 @@
 
 
 ## v1.0.0 (2024-05-08)
-
-### Breaking
-
-* refactor!: moved to new ophyd_devices repo structure
-
-BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared devices will be hosted in ophyd_devices. Everything else will be in the beamline-specific repositories ([`3415ae2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3415ae2007cc447835906271de23e5f7a41ba373))
-
-### Ci
-
-* ci: fix dep and add CI JOB for package dep checks ([`d89f8b8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d89f8b87568d30d467279d96b0100cd318e2b5a2))
