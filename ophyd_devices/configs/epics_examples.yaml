@@ -1,0 +1,31 @@
+my_epics_motor:
+  description: 'This is an example of an EpicsMotor device'
+  deviceClass: ophyd.EpicsMotor
+  deviceConfig: 
+    prefix: 'X06DA-OP-SLH:TRXW'
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+  readOnly: false
+  softwareTrigger: false
+my_diode:
+  description: 'This is an example of a read-only Epics signal'
+  deviceClass: ophyd.EpicsSignalRO
+  deviceConfig: 
+    read_pv: 'X06DA-OP-XPM1:BOT:READOUT'
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+  readOnly: true
+  softwareTrigger: false
+my_settable_signal:
+  description: 'This is an example of a settable Epics signal'
+  deviceClass: ophyd.EpicsSignal
+  deviceConfig:
+    read_pv: 'X07MA-FE-DSAPER'
+  onFailure: retry
+  enabled: true
+  readoutPriority: baseline
+  readOnly: false
+  softwareTrigger: false
+
