@@ -1,6 +1,14 @@
 # CHANGELOG
 
+## v1.4.0 (2024-06-17)
 
+### Documentation
+
+* docs: Update device list ([`22a6970`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/22a69705865ee137f76c207807240562d4609560))
+
+### Feature
+
+* feat(config): added epics example config ([`a10e5bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a10e5bcadcbd3e8bfbc061abd247d0655534095d))
 
 ## v1.3.5 (2024-06-14)
 
@@ -8,13 +16,11 @@
 
 * fix: fixed pyepics version for now as it segfaults on startup ([`f1a2368`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1a2368101e6b4af2d08d1a3540680f7f3ff9762))
 
-
 ## v1.3.4 (2024-06-07)
 
 ### Fix
 
 * fix: remove inheritance from ophyd.PostionerBase for simflyer ([`c9247ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c9247ef82ee32aeb50474979d414b98d67a2b840))
-
 
 ## v1.3.3 (2024-06-06)
 
@@ -23,7 +29,6 @@
 * fix: make done and successful mandatory args. ([`79b821a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/79b821ae7e38b78e35ab5165db590cb7123afbf4))
 
 * fix: make filepath a signal ([`e9aaa03`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9aaa0383e4120a09b6aa40b7e33fb53f31cb9a3))
-
 
 ## v1.3.2 (2024-06-04)
 
@@ -37,7 +42,6 @@
 
 * fix: adapt SimPositioner, make tolerance changeable signal ([`3606a2f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3606a2fc5ad74ec949d388cc23fbd6618d1f3083))
 
-
 ## v1.3.1 (2024-06-03)
 
 ### Documentation
@@ -49,7 +53,6 @@
 ### Fix
 
 * fix: bugfix to fill data butter with value, timestamp properly ([`8520800`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85208002a305fa657c469ff98b45174eb2c1f29a))
-
 
 ## v1.3.0 (2024-06-03)
 
@@ -73,7 +76,6 @@
 
 * test: add tests for new device ([`c554422`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c5544226be3f12d238a0793a0f41da07af36e460))
 
-
 ## v1.2.1 (2024-05-29)
 
 ### Documentation
@@ -85,7 +87,6 @@
 ### Fix
 
 * fix: fixed psi_detector_base to allow init with mocked device_manager ([`e566c7f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e566c7f982ee519a5ec3e350cef349c3238eebae))
-
 
 ## v1.2.0 (2024-05-29)
 
@@ -111,7 +112,6 @@
 
 * test: add tests ([`af908fa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/af908fa210914519de9a713ed2ef3e2e0c743742))
 
-
 ## v1.1.0 (2024-05-27)
 
 ### Feature
@@ -121,7 +121,6 @@
 ### Refactor
 
 * refactor: add publish file location to base class ([`e8510fb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8510fb249b136781c03849497d85dfb11cca43a))
-
 
 ## v1.0.2 (2024-05-23)
 
@@ -145,20 +144,12 @@
 
 * fix: pep8 compliant naming #64 ([`d705958`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7059589c84bacb560f738f4e4ae4aaf811b25d9))
 
-
 ## v1.0.1 (2024-05-15)
 
 ### Ci
 
 * ci: fixed bec_widgets env var ([`e900a4c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e900a4cb47c5ecaae8eca30d106771034dc9296d))
 
-* ci: fixed bec core dependency ([`8158e14`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8158e145fe2358a736a2fb9d2d3de7e6c8db021c))
-
-* ci: added echo to highlight the current branch ([`68b593f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/68b593f20d73c6463d5e97ddf7dcf94a5b036b06))
-
 ### Fix
 
 * fix: bec_lib imports ([`3d8b023`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3d8b0231a3359db9a5430e49912147c049dbfab9))
-
-
-## v1.0.0 (2024-05-08)
