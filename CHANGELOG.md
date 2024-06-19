@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.5.0 (2024-06-19)
+
+### Feature
+
+* feat: add option to return DeviceStatus for on_trigger, on_complete; extend wait_for_signals ([`2c7c48a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2c7c48a7576cca90cc7be0d22b5a86c416f49fa9))
+
 ## v1.4.0 (2024-06-17)
 
 ### Documentation
@@ -145,11 +151,3 @@
 * fix: pep8 compliant naming #64 ([`d705958`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7059589c84bacb560f738f4e4ae4aaf811b25d9))
 
 ## v1.0.1 (2024-05-15)
-
-### Ci
-
-* ci: fixed bec_widgets env var ([`e900a4c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e900a4cb47c5ecaae8eca30d106771034dc9296d))
-
-### Fix
-
-* fix: bec_lib imports ([`3d8b023`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3d8b0231a3359db9a5430e49912147c049dbfab9))
