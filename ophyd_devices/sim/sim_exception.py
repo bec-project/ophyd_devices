@@ -1,0 +1,2 @@
+class DeviceStop(Exception):
+    pass

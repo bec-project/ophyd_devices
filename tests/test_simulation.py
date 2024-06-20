@@ -20,9 +20,11 @@ from ophyd_devices.interfaces.protocols.bec_protocols import (
     BECScanProtocol,
     BECSignalProtocol,
 )
-from ophyd_devices.sim.sim import SimCamera, SimFlyer, SimMonitor, SimPositioner
+from ophyd_devices.sim.sim_camera import SimCamera
+from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
-from ophyd_devices.sim.sim_monitor_async import SimMonitorAsync
+from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
+from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.sim.sim_utils import H5Writer
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase

@@ -1,10 +1,9 @@
-"""This module provides an asynchronous monitor to simulate the behaviour of a device sending data not in sync with the point ID."""
-
 from typing import Literal
 
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, Kind
 from typeguard import typechecked
@@ -15,6 +14,65 @@ from ophyd_devices.interfaces.base_classes.psi_detector_base import (
 )
 from ophyd_devices.sim.sim_data import SimulatedDataMonitor
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
+
+logger = bec_logger.logger
+
+
+class SimMonitor(Device):
+    """
+    A simulated device mimic any 1D Axis (position, temperature, beam).
+
+    It's readback is a computed signal, which is configurable by the user and from the command line.
+    The corresponding simulation class is sim_cls=SimulatedDataMonitor, more details on defaults within the simulation class.
+
+    >>> monitor = SimMonitor(name="monitor")
+
+    Parameters
+    ----------
+    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.
+    precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
+    sim_init (dict)         : Dictionary to initiate parameters of the simulation, check simulation type defaults for more details.
+    parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.
+    kind                    : A member the Kind IntEnum (or equivalent integer), optional. Default is Kind.normal. See Kind for options.
+    device_manager          : DeviceManager from BEC, optional . Within startup of simulation, device_manager is passed on automatically.
+
+    """
+
+    USER_ACCESS = ["sim", "registered_proxies"]
+
+    sim_cls = SimulatedDataMonitor
+    BIT_DEPTH = np.uint32
+
+    readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
+
+    SUB_READBACK = "readback"
+    _default_sub = SUB_READBACK
+
+    def __init__(
+        self,
+        name,
+        *,
+        precision: int = 3,
+        sim_init: dict = None,
+        parent=None,
+        kind=None,
+        device_manager=None,
+        **kwargs,
+    ):
+        self.precision = precision
+        self.init_sim_params = sim_init
+        self.device_manager = device_manager
+        self.sim = self.sim_cls(parent=self, **kwargs)
+        self._registered_proxies = {}
+
+        super().__init__(name=name, parent=parent, kind=kind, **kwargs)
+        self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
+        self.readback.name = self.name
+
+    @property
+    def registered_proxies(self) -> None:
+        """Dictionary of registered signal_names and proxies."""
+        return self._registered_proxies
 
 
 class SimMonitorAsyncPrepare(CustomDetectorMixin):
