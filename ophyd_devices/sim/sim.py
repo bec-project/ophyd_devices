@@ -79,7 +79,7 @@ class SimMonitor(Device):
         **kwargs,
     ):
         self.precision = precision
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self.device_manager = device_manager
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
@@ -87,6 +87,8 @@ class SimMonitor(Device):
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
+        if self.sim_init:
+            self.sim.sim_set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:
@@ -141,7 +143,7 @@ class SimCameraSetup(CustomDetectorMixin):
             self.parent.h5_writer.prepare(
                 file_path=self.parent.filepath.get(), h5_entry="/entry/data/data"
             )
-            self.publish_file_location(done=False)
+            self.publish_file_location(done=False, successful=False)
         self.parent.stopped = False
 
     def on_unstage(self) -> None:
@@ -200,13 +202,15 @@ class SimCamera(PSIDetectorBase):
     def __init__(
         self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
         self.h5_writer = H5Writer()
         super().__init__(
             name=name, parent=parent, kind=kind, device_manager=device_manager, **kwargs
         )
+        if self.sim_init:
+            self.sim.sim_set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:
@@ -269,7 +273,7 @@ class SimWaveform(Device):
         self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
         self.device_manager = device_manager
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
 
@@ -278,6 +282,8 @@ class SimWaveform(Device):
         self._staged = False
         self.scaninfo = None
         self._update_scaninfo()
+        if self.sim_init:
+            self.sim.sim_set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:
@@ -420,7 +426,7 @@ class SimPositioner(Device, PositionerBase):
         self.delay = delay
         self.device_manager = device_manager
         self.precision = precision
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
 
         self.update_frequency = update_frequency
@@ -436,11 +442,8 @@ class SimPositioner(Device, PositionerBase):
             assert len(limits) == 2
             self.low_limit_travel.put(limits[0])
             self.high_limit_travel.put(limits[1])
-
-    # @property
-    # def connected(self):
-    #     """Return the connected state of the simulated device."""
-    #     return self.dummy_controller.connected
+        if self.sim_init:
+            self.sim.sim_set_init(self.sim_init)
 
     @property
     def limits(self):

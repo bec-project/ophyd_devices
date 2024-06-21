@@ -260,6 +260,29 @@ class SimulatedDataBase(ABC):
         table._min_table_width = width
         print(table)
 
+    def sim_set_init(self, sim_init: dict["model", "params"]) -> None:
+        """Set the initial simulation parameters.
+
+        Args:
+            sim_init (dict["model"]): Dictionary to initiate parameters of the simulation.
+        """
+        model = sim_init.get("model", None)
+        if model:
+            try:
+                self.sim_select_model(model)
+            except Exception as e:
+                logger.info(
+                    f"Model {model} not found in available models: {self.sim_get_models()}. Exception raised {e}"
+                )
+        params = sim_init.get("params", None)
+        if params:
+            try:
+                self.sim_params = params
+            except Exception as e:
+                logger.info(
+                    f"Seeting the simulation parameters failed for {params} and active model {self.self._model()}. Exception raised {e}"
+                )
+
 
 class SimulatedPositioner(SimulatedDataBase):
     """Simulated data class for a positioner."""
@@ -680,6 +703,11 @@ class SimulatedDataCamera(SimulatedDataBase):
         dim = cen_off.shape[0]
         cov_det = np.linalg.det(cov)
         cov_inv = np.linalg.inv(cov)
+        input = (2 * np.pi) ** dim * cov_det
+        if input < 0:
+            raise SimulatedDataException(
+                f"Covariance matrix leads to negative input for sqrt: {input}"
+            )
         norm = np.sqrt((2 * np.pi) ** dim * cov_det)
         # This einsum call calculates (x-mu)T.Sigma-1.(x-mu) in a vectorized
         # way across all the input variables.

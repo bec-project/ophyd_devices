@@ -94,6 +94,46 @@ def flyer(name="flyer"):
     yield fly
 
 
+def test_camera_with_sim_init():
+    """Test to see if the sim init parameters are passed to the device"""
+    dm = DMMock()
+    sim = SimCamera(name="sim", device_manager=dm)
+    assert sim.sim._model.value == "gaussian"
+    model = "constant"
+    params = {
+        "amplitude": 300,
+        "noise": "uniform",
+        "noise_multiplier": 1,
+        "hot_pixel_coords": [[0, 0], [50, 50]],
+        "hot_pixel_types": ["fluctuating", "constant"],
+        "hot_pixel_values": [2.0, 2.0],
+    }
+    sim = SimCamera(name="sim", device_manager=dm, sim_init={"model": model, "params": params})
+    assert sim.sim._model.value == model
+    assert sim.sim.sim_params == params
+
+
+def test_monitor_with_sim_init():
+    """Test to see if the sim init parameters are passed to the device"""
+    dm = DMMock()
+    sim = SimMonitor(name="sim", device_manager=dm)
+    assert sim.sim._model._name == "constant"
+    model = "GaussianModel"
+    params = {
+        "amplitude": 500,
+        "center": 5,
+        "sigma": 4,
+        "noise": "uniform",
+        "noise_multiplier": 1,
+        "ref_motor": "samy",
+    }
+    sim = SimMonitor(name="sim", device_manager=dm, sim_init={"model": model, "params": params})
+    assert sim.sim._model._name == model.strip("Model").lower()
+    diff_keys = set(sim.sim.sim_params.keys()) - set(params.keys())
+    for k in params:
+        assert sim.sim.sim_params[k] == params[k]
+
+
 def test_signal__init__(signal):
     """Test the BECProtocol class"""
     assert isinstance(signal, BECDeviceProtocol)
