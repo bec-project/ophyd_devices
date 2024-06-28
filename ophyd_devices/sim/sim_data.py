@@ -294,6 +294,7 @@ class SimulatedPositioner(SimulatedDataBase):
         The position is updated by the parent device, and readback/setpoint values
         have a jitter/tolerance introduced directly in the parent class (SimPositioner).
         """
+        self.sim_state[signal_name].update({"timestamp": ttime.time()})
         if compute_readback:
             method = None
             value = self.execute_simulation_method(method=method, signal_name=signal_name)

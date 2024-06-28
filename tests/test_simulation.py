@@ -433,3 +433,15 @@ def test_async_mon_send_data_to_bec(async_monitor):
         ]
         assert mock_xadd.mock_calls == call
         assert async_monitor.data_buffer["value"] == []
+
+
+def test_positioner_updated_timestamp(positioner):
+    """Test the updated_timestamp method of SimPositioner."""
+    positioner.sim.sim_state[positioner.name]["value"] = 1
+    readback = positioner.read()[positioner.name]
+    timestamp = readback["timestamp"]
+    assert readback["value"] == 1
+    positioner.sim.sim_state[positioner.name]["value"] = 5
+    readback = positioner.read()[positioner.name]
+    assert readback["value"] == 5
+    assert readback["timestamp"] > timestamp
