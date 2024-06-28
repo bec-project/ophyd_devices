@@ -129,6 +129,59 @@ class LinearTrajectory:
     def velocity_profile(self):
         return np.array(self._velocity_profile)
 
+    def plot_trajectory(self):
+        # visual check of LinearTrajectory class
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError("plot_trajectory requires matplotlib to be installed")
+
+        initial_time = time.time()
+        trajectory = LinearTrajectory(
+            self.initial_position,
+            self.final_position,
+            self.max_velocity,
+            self.acceleration,
+            initial_time,
+        )
+
+        # Simulate some time points
+        positions = []
+        times = []
+        while not trajectory.ended:
+            times.append(time.time())
+            pos = trajectory.position(times[-1])
+            positions.append(pos)
+            time.sleep(0.01)
+
+        # Plotting
+        plt.figure(figsize=(12, 6))
+
+        # Plot velocity profile
+        plt.subplot(1, 2, 1)
+        plt.plot(
+            trajectory.velocity_profile[:, 0] - initial_time,
+            trajectory.velocity_profile[:, 1],
+            label="Velocity",
+        )
+        plt.xlabel("Time (s)")
+        plt.ylabel("Velocity (m/s)")
+        plt.title("Velocity Profile")
+        plt.grid(True)
+        plt.legend()
+
+        # Plot position profile
+        plt.subplot(1, 2, 2)
+        plt.plot(np.array(times) - initial_time, positions, label="Position")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Position (m)")
+        plt.title("Position Profile")
+        plt.grid(True)
+        plt.legend()
+
+        plt.tight_layout()
+        plt.show()
+
 
 def stop_trajectory(trajectory, stop_time=None):
     """Return a trajectory that starts to decelerate at stop_time,

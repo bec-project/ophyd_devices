@@ -2,6 +2,7 @@
 
 # pylint: disable: all
 import os
+import time
 from types import SimpleNamespace
 from unittest import mock
 
@@ -24,9 +25,9 @@ from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
 from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
-from ophyd_devices.sim.sim_positioner import SimPositioner
+from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
-from ophyd_devices.sim.sim_utils import H5Writer
+from ophyd_devices.sim.sim_utils import H5Writer, LinearTrajectory
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
 
 
@@ -60,6 +61,14 @@ def positioner(name="positioner"):
     """Fixture for SimPositioner."""
     dm = DMMock()
     pos = SimPositioner(name=name, device_manager=dm)
+    yield pos
+
+
+@pytest.fixture(scope="function")
+def linear_traj_positioner(name="linear_traj_positioner"):
+    """Fixture for SimLinearTrajectoryPositioner."""
+    dm = DMMock()
+    pos = SimLinearTrajectoryPositioner(name=name, device_manager=dm)
     yield pos
 
 
@@ -234,6 +243,77 @@ def test_positioner_move(positioner):
     assert np.isclose(
         positioner.read()[positioner.name]["value"], 10, atol=positioner.tolerance.get()
     )
+
+
+@pytest.mark.parametrize(
+    "initial_position, final_position, max_velocity, acceleration",
+    [(0, 100, 5, 20), (0, 1, 5, 20)],  # Trapezoidal profile  # Triangular profile
+)
+def test_linear_traj(initial_position, final_position, max_velocity, acceleration):
+    """Test the LinearTrajectory class"""
+    initial_time = time.time()
+    trajectory = LinearTrajectory(
+        initial_position, final_position, max_velocity, acceleration, initial_time
+    )
+
+    # Test acceleration phase
+    t1 = initial_time + trajectory.time_accel / 2  # Halfway through acceleration phase
+    pos1 = trajectory.position(t1)
+    expected_pos1 = initial_position + 0.5 * acceleration * (trajectory.time_accel / 2) ** 2
+    assert np.isclose(pos1, expected_pos1), f"Expected {expected_pos1}, got {pos1}"
+
+    # Test constant velocity phase
+    if trajectory.time_const_vel > 0:
+        t2 = (
+            initial_time + trajectory.time_accel + trajectory.time_const_vel / 2
+        )  # Halfway through constant velocity phase
+        pos2 = trajectory.position(t2)
+        expected_pos2 = (
+            initial_position
+            + trajectory.distance_to_max_velocity
+            + max_velocity * (t2 - initial_time - trajectory.time_accel)
+        )
+        assert np.isclose(pos2, expected_pos2), f"Expected {expected_pos2}, got {pos2}"
+
+    # Test deceleration phase
+    t3 = (
+        initial_time + trajectory.total_time - trajectory.time_decel / 2
+    )  # Halfway through deceleration phase
+    pos3 = trajectory.position(t3)
+    t_decel = t3 - (initial_time + trajectory.time_accel + trajectory.time_const_vel)
+    expected_pos3 = final_position - 0.5 * acceleration * (trajectory.time_decel / 2) ** 2
+    assert np.isclose(pos3, expected_pos3), f"Expected {expected_pos3}, got {pos3}"
+
+    # Test end
+    t4 = initial_time + trajectory.total_time + 0.1  # Slightly after end
+    pos4 = trajectory.position(t4)
+    assert pos4 == final_position
+    assert trajectory.ended
+
+
+def test_sim_linear_trajectory_positioner(linear_traj_positioner):
+    vel = 5  # velocity 5 m.s^-1
+    acc = 20  # acceleration 20 m.s^-2
+    linear_traj_positioner.velocity.set(vel)
+    linear_traj_positioner.acceleration.set(vel / acc)  # acctime 250 ms
+    linear_traj_positioner.update_frequency = 100
+    assert linear_traj_positioner.position == 0
+
+    t0 = time.time()
+    trajectory = LinearTrajectory(0, 50, vel, acc, t0)
+    t2 = (
+        t0 + trajectory.time_accel + trajectory.time_const_vel / 2
+    )  # Halfway through constant velocity phase
+    decel_distance = trajectory.position(t0 + trajectory.time_accel)
+    expected_pos = trajectory.position(t2) + decel_distance
+
+    linear_traj_positioner.move(50)
+    # move is non-blocking, so sleep until it is time to stop:
+    time.sleep(t2 - t0)
+    linear_traj_positioner.stop()
+
+    # ensure position is ok
+    assert pytest.approx(linear_traj_positioner.position - expected_pos, abs=1e-1) == 0
 
 
 @pytest.mark.parametrize("proxy_active", [True, False])
