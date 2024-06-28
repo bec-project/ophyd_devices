@@ -5,8 +5,6 @@ This module provides a class for creating a pseudo signal that is computed from 
 from functools import reduce
 from typing import Callable
 
-import numpy as np
-import scipy as sp
 from bec_lib import bec_logger
 from ophyd import SignalRO
 from ophyd.ophydobj import Kind

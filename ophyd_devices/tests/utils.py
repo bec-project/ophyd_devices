@@ -1,8 +1,5 @@
 from unittest import mock
 
-from bec_lib.devicemanager import DeviceContainer
-from bec_lib.tests.utils import ConnectorMock
-
 
 class SocketMock:
     """Socket Mock. Used for testing"""

@@ -1,6 +1,5 @@
 import inspect
 import threading
-import types
 from unittest.mock import Mock, patch
 
 from ophyd import status as ophyd_status_module
