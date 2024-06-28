@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v1.5.1 (2024-06-28)
+
+### Documentation
+
+* docs: Update device list ([`f818ff0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f818ff0234edb75840ab7ba60b66d0aa47d1d520))
+
+* docs: Update device list ([`ac5e794`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac5e79425ddf5b52350e45d392e2e6f048b5856a))
+
+* docs: Update device list ([`cc6773e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cc6773e14e1c758ec3296c41e969731e8ce4cfe4))
+
+* docs: Update device list ([`2ad4a70`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2ad4a70971e73ed8d38d0e3ed54f18053e79048b))
+
+### Fix
+
+* fix: update timestamp upon reading of non computed readback signal ([`17e8cd9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/17e8cd9234727e1bdc3d2a2ba2c47a9c8ec43c32))
+
 ## v1.5.0 (2024-06-19)
 
 ### Feature
@@ -130,24 +146,8 @@
 
 ## v1.0.2 (2024-05-23)
 
-### Ci
-
-* ci: fixed dependency for bec ([`6630740`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/663074055977ca0a046a81bd9ba5187acf95afed))
-
-* ci: added ci token to update job ([`180891b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/180891becdc1aa16da0c3b83c407e82a288d36d1))
-
-* ci: added device-list-update job ([`3405e2a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3405e2acf59cea33b025d376291ccda96db9ea07))
-
 ### Documentation
 
 * docs: Update device list ([`d4f2ead`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d4f2ead61b9eb4defb43d7e966a1ed5206461abd))
 
 * docs: Update device list ([`2f575d3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f575d3aa221e646166bfeb0470de1847358acca))
-
-* docs: Update device list ([`b5adc09`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b5adc097674068a90783a2ce4a093150d21cb736))
-
-### Fix
-
-* fix: pep8 compliant naming #64 ([`d705958`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7059589c84bacb560f738f4e4ae4aaf811b25d9))
-
-## v1.0.1 (2024-05-15)
