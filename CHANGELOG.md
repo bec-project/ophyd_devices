@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v1.5.2 (2024-07-02)
+
+### Fix
+
+* fix: put noqa comment on hdf5plugin import, compress HDF5 test file to ensure it requires the module for reading
+
+hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/55ea6a16be831e375281f014c75f0146b1b9a488))
+
+* fix: split simulation classes in multiple files ([`2622ddb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2622ddbee2edfe9e092c643fbbfbabeed0c06e35))
+
+### Unknown
+
+* remove unused imports ([`755ee20`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/755ee207c5f9816d2270b6f57f6973ddf525238d))
+
 ## v1.5.1 (2024-06-28)
 
 ### Documentation
@@ -136,18 +150,6 @@
 
 ## v1.1.0 (2024-05-27)
 
-### Feature
-
-* feat: refactor psi_detector_base class, add tests ([`a0ac8c9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a0ac8c9ad701f52429f393a134fd0705583eddb1))
-
 ### Refactor
 
 * refactor: add publish file location to base class ([`e8510fb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8510fb249b136781c03849497d85dfb11cca43a))
-
-## v1.0.2 (2024-05-23)
-
-### Documentation
-
-* docs: Update device list ([`d4f2ead`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d4f2ead61b9eb4defb43d7e966a1ed5206461abd))
-
-* docs: Update device list ([`2f575d3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2f575d3aa221e646166bfeb0470de1847358acca))
