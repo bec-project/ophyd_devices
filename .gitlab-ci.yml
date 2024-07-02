@@ -177,9 +177,11 @@ tests-3.12:
 
 trigger_bec:
   trigger:
-    project: bec/bec
     strategy: depend
-    branch: $BEC_CORE_BRANCH
+    include:
+      - project: bec/bec
+        ref: $BEC_CORE_BRANCH
+        file: /.gitlab-ci.yml
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
   rules:
