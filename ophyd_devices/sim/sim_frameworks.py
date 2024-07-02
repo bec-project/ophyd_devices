@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import h5py
-import hdf5plugin
+import hdf5plugin  # noqa: F401
 import numpy as np
 from ophyd import Kind, Staged
 from scipy.ndimage import gaussian_filter
