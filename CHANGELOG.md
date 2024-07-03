@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.5.3 (2024-07-03)
+
+### Fix
+
+* fix: device sim params can be set through init ([`f481c1f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f481c1f81298552067aea91fba54e90d61cd2dcb))
+
+### Refactor
+
+* refactor: ensure temporary backward compatibility after API changes ([`73c636b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73c636b46f35381ac0a82b99f9965612770ca6c1))
+
 ## v1.5.2 (2024-07-02)
 
 ### Fix
@@ -138,8 +148,6 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 
 * docs: Update device list ([`9c93916`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9c9391610845bc1b21e342e7c3b34b8db978a038))
 
-* docs: Update device list ([`018fdac`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/018fdaced4120557ea64501c107c027e362c93fb))
-
 ### Feature
 
 * feat: add option to save Camera data to disk, closes #66 ([`60b2e75`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/60b2e756550196fb5c07bb91abb4c1ae5b815c6c))
@@ -147,9 +155,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 ### Test
 
 * test: add tests ([`af908fa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/af908fa210914519de9a713ed2ef3e2e0c743742))
-
-## v1.1.0 (2024-05-27)
-
-### Refactor
-
-* refactor: add publish file location to base class ([`e8510fb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e8510fb249b136781c03849497d85dfb11cca43a))
