@@ -20,8 +20,9 @@ def device_manager_with_devices():
 
 
 def test_computed_signal(device_manager_with_devices):
-    signal = ComputedSignal(name="test", device_manager=device_manager_with_devices)
+    signal = ComputedSignal(name="test", precision=4, device_manager=device_manager_with_devices)
     assert signal.get() is None
+    assert signal.precision == 4
 
     signal.compute_method = "def test(a, b): return a.get() + b.get()"
     signal.input_signals = ["a_readback", "b_readback"]
