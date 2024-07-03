@@ -78,7 +78,7 @@ class SimPositioner(Device, PositionerBase):
         self.delay = delay
         self.device_manager = device_manager
         self.precision = precision
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
 
         self.update_frequency = update_frequency
@@ -94,11 +94,8 @@ class SimPositioner(Device, PositionerBase):
             assert len(limits) == 2
             self.low_limit_travel.put(limits[0])
             self.high_limit_travel.put(limits[1])
-
-    # @property
-    # def connected(self):
-    #     """Return the connected state of the simulated device."""
-    #     return self.dummy_controller.connected
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def limits(self):

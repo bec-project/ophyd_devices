@@ -63,7 +63,7 @@ class SimCameraSetup(CustomDetectorMixin):
             self.parent.h5_writer.prepare(
                 file_path=self.parent.filepath.get(), h5_entry="/entry/data/data"
             )
-            self.publish_file_location(done=False)
+            self.publish_file_location(done=False, successful=False)
         self.parent.stopped = False
 
     def on_unstage(self) -> None:
@@ -122,13 +122,15 @@ class SimCamera(PSIDetectorBase):
     def __init__(
         self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
         self.h5_writer = H5Writer()
         super().__init__(
             name=name, parent=parent, kind=kind, device_manager=device_manager, **kwargs
         )
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:

@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import h5py
+
+# Necessary import to allow h5py to open compressed h5files.
+# pylint: disable=unused-import
 import hdf5plugin  # noqa: F401
 import numpy as np
 from ophyd import Kind, Staged
@@ -87,20 +90,7 @@ class SlitProxy(DeviceProxy):
     To update for instance the pixel_size directly, you can directly access the DeviceConfig via
     `dev.eiger.get_device_config()` or update it `dev.eiger.get_device_config({'eiger' : {'pixel_size': 0.1}})`
 
-    slit_sim:
-        readoutPriority: baseline
-        deviceClass: SlitProxy
-        deviceConfig:
-            eiger:
-                signal_name: image
-                center_offset: [0, 0] # [x,y]
-                covariance: [[1000, 500], [200, 1000]] # [[x,x],[y,y]]
-                pixel_size: 0.01
-                ref_motors: [samx, samy]
-                slit_width: [1, 1]
-                motor_dir: [0, 1] # x:0 , y:1, z:2 coordinates
-        enabled: true
-        readOnly: false
+    An example for the configuration of this is device is in ophyd_devices.configs.ophyd_devices_simulation.yaml
     """
 
     USER_ACCESS = ["enabled", "lookup", "help"]
@@ -126,7 +116,7 @@ class SlitProxy(DeviceProxy):
             np.ndarray: Lookup table for the simulated camera.
         """
         device_obj = self.device_manager.devices.get(device_name).obj
-        params = device_obj.sim.sim_params
+        params = device_obj.sim.params
         shape = device_obj.image_shape.get()
         params.update(
             {
@@ -197,18 +187,10 @@ class SlitProxy(DeviceProxy):
 class H5ImageReplayProxy(DeviceProxy):
     """This Proxy class can be used to replay images from an h5 file.
 
-    If the number of requested images is larger than the number of available iamges, the images will be replayed from the beginning.
+    If the number of requested images is larger than the number of available iamges,
+    the images will be replayed from the beginning.
 
-    h5_image_sim:
-        readoutPriority: baseline
-        deviceClass: H5ImageReplayProxy
-        deviceConfig:
-            eiger:
-                signal_name: image
-                file_source: /path/to/h5file.h5
-                h5_entry: /entry/data
-        enabled: true
-        readOnly: false
+    An example for the configuration of this is device is in ophyd_devices.configs.ophyd_devices_simulation.yaml
     """
 
     USER_ACCESS = ["file_source", "h5_entry"]

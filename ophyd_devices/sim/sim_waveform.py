@@ -7,6 +7,7 @@ from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, Kind
 
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
+from ophyd_devices.sim.sim_exception import DeviceStop
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
@@ -60,7 +61,7 @@ class SimWaveform(Device):
         self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
         self.device_manager = device_manager
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
 
@@ -69,6 +70,8 @@ class SimWaveform(Device):
         self._staged = False
         self.scaninfo = None
         self._update_scaninfo()
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:

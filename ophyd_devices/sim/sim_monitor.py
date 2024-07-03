@@ -1,12 +1,9 @@
-from typing import Literal
-
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, Kind
-from typeguard import typechecked
 
 from ophyd_devices.interfaces.base_classes.psi_detector_base import (
     CustomDetectorMixin,
@@ -60,7 +57,7 @@ class SimMonitor(Device):
         **kwargs,
     ):
         self.precision = precision
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self.device_manager = device_manager
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
@@ -68,6 +65,8 @@ class SimMonitor(Device):
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:
@@ -112,7 +111,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         if self.parent.scaninfo.scan_msg is None:
             return
         metadata = self.parent.scaninfo.scan_msg.metadata
-        metadata.update({"async_update": self.parent.async_update})
+        metadata.update({"async_update": self.parent.async_update.get()})
 
         msg = messages.DeviceMessage(
             signals={self.parent.readback.name: self.parent.data_buffer},
@@ -163,6 +162,7 @@ class SimMonitorAsync(PSIDetectorBase):
 
     readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
     current_trigger = Cpt(SetableSignal, value=BIT_DEPTH(0), kind=Kind.config)
+    async_update = Cpt(SetableSignal, value="extend", kind=Kind.config)
 
     SUB_READBACK = "readback"
     SUB_PROGRESS = "progress"
@@ -171,7 +171,7 @@ class SimMonitorAsync(PSIDetectorBase):
     def __init__(
         self, name, *, sim_init: dict = None, parent=None, kind=None, device_manager=None, **kwargs
     ):
-        self.init_sim_params = sim_init
+        self.sim_init = sim_init
         self.device_manager = device_manager
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
@@ -182,7 +182,8 @@ class SimMonitorAsync(PSIDetectorBase):
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
         self._data_buffer = {"value": [], "timestamp": []}
-        self._async_update = "extend"
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def data_buffer(self) -> list:
@@ -193,18 +194,3 @@ class SimMonitorAsync(PSIDetectorBase):
     def registered_proxies(self) -> None:
         """Dictionary of registered signal_names and proxies."""
         return self._registered_proxies
-
-    @property
-    def async_update(self) -> str:
-        """Update method for the asynchronous monitor."""
-        return self._async_update
-
-    @async_update.setter
-    @typechecked
-    def async_update(self, value: Literal["extend", "append"]) -> None:
-        """Set the update method for the asynchronous monitor.
-
-        Args:
-            value (str): Can only be "extend" or "append".
-        """
-        self._async_update = value

@@ -96,6 +96,46 @@ def flyer(name="flyer"):
     yield fly
 
 
+def test_camera_with_sim_init():
+    """Test to see if the sim init parameters are passed to the device"""
+    dm = DMMock()
+    sim = SimCamera(name="sim", device_manager=dm)
+    assert sim.sim._model.value == "gaussian"
+    model = "constant"
+    params = {
+        "amplitude": 300,
+        "noise": "uniform",
+        "noise_multiplier": 1,
+        "hot_pixel_coords": [[0, 0], [50, 50]],
+        "hot_pixel_types": ["fluctuating", "constant"],
+        "hot_pixel_values": [2.0, 2.0],
+    }
+    sim = SimCamera(name="sim", device_manager=dm, sim_init={"model": model, "params": params})
+    assert sim.sim._model.value == model
+    assert sim.sim.params == params
+
+
+def test_monitor_with_sim_init():
+    """Test to see if the sim init parameters are passed to the device"""
+    dm = DMMock()
+    sim = SimMonitor(name="sim", device_manager=dm)
+    assert sim.sim._model._name == "constant"
+    model = "GaussianModel"
+    params = {
+        "amplitude": 500,
+        "center": 5,
+        "sigma": 4,
+        "noise": "uniform",
+        "noise_multiplier": 1,
+        "ref_motor": "samy",
+    }
+    sim = SimMonitor(name="sim", device_manager=dm, sim_init={"model": model, "params": params})
+    assert sim.sim._model._name == model.strip("Model").lower()
+    diff_keys = set(sim.sim.params.keys()) - set(params.keys())
+    for k in params:
+        assert sim.sim.params[k] == params[k]
+
+
 def test_signal__init__(signal):
     """Test the BECProtocol class"""
     assert isinstance(signal, BECDeviceProtocol)
@@ -144,41 +184,41 @@ def test_monitor_readback(monitor, center):
     """Test the readback method of SimMonitor."""
     motor_pos = 0
     monitor.device_manager.add_device("samx", value=motor_pos)
-    for model_name in monitor.sim.sim_get_models():
-        monitor.sim.sim_select_model(model_name)
-        monitor.sim.sim_params["noise_multipler"] = 10
-        monitor.sim.sim_params["ref_motor"] = "samx"
-        if "c" in monitor.sim.sim_params:
-            monitor.sim.sim_params["c"] = center
-        elif "center" in monitor.sim.sim_params:
-            monitor.sim.sim_params["center"] = center
+    for model_name in monitor.sim.get_models():
+        monitor.sim.select_model(model_name)
+        monitor.sim.params["noise_multipler"] = 10
+        monitor.sim.params["ref_motor"] = "samx"
+        if "c" in monitor.sim.params:
+            monitor.sim.params["c"] = center
+        elif "center" in monitor.sim.params:
+            monitor.sim.params["center"] = center
         assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
         expected_value = monitor.sim._model.eval(monitor.sim._model_params, x=motor_pos)
         print(expected_value, monitor.read()[monitor.name]["value"])
         tolerance = (
-            monitor.sim.sim_params["noise_multipler"] + 1
+            monitor.sim.params["noise_multipler"] + 1
         )  # due to ceiling in calculation, but maximum +1int
         assert np.isclose(
             monitor.read()[monitor.name]["value"],
             expected_value,
-            atol=monitor.sim.sim_params["noise_multipler"] + 1,
+            atol=monitor.sim.params["noise_multipler"] + 1,
         )
 
 
 @pytest.mark.parametrize("amplitude, noise_multiplier", [(0, 1), (100, 10), (1000, 50)])
 def test_camera_readback(camera, amplitude, noise_multiplier):
     """Test the readback method of SimMonitor."""
-    for model_name in camera.sim.sim_get_models():
-        camera.sim.sim_select_model(model_name)
-        camera.sim.sim_params = {"noise_multiplier": noise_multiplier}
-        camera.sim.sim_params = {"amplitude": amplitude}
-        camera.sim.sim_params = {"noise": "poisson"}
+    for model_name in camera.sim.get_models():
+        camera.sim.select_model(model_name)
+        camera.sim.params = {"noise_multiplier": noise_multiplier}
+        camera.sim.params = {"amplitude": amplitude}
+        camera.sim.params = {"noise": "poisson"}
         assert camera.image.get().shape == camera.SHAPE
         assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
-        camera.sim.sim_params = {"noise": "uniform"}
-        camera.sim.sim_params = {"hot_pixel_coords": []}
-        camera.sim.sim_params = {"hot_pixel_values": []}
-        camera.sim.sim_params = {"hot_pixel_types": []}
+        camera.sim.params = {"noise": "uniform"}
+        camera.sim.params = {"hot_pixel_coords": []}
+        camera.sim.params = {"hot_pixel_values": []}
+        camera.sim.params = {"hot_pixel_types": []}
         assert camera.image.get().shape == camera.SHAPE
         assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
         assert (camera.image.get() <= (amplitude + noise_multiplier + 1)).all()
@@ -243,8 +283,9 @@ def test_h5proxy(h5proxy_fixture, camera):
         {camera.name: {"signal_name": "image", "file_source": fname, "h5_entry": h5entry}}
     )
     camera._registered_proxies.update({h5proxy.name: camera.image.name})
-    camera.sim.sim_params = {"noise": "none", "noise_multiplier": 0}
+    camera.sim.params = {"noise": "none", "noise_multiplier": 0}
     camera.scaninfo.sim_mode = True
+    # pylint: disable=no-member
     camera.image_shape.set(data.shape[1:])
     camera.stage()
     img = camera.image.get()
@@ -288,7 +329,7 @@ def test_slitproxy(slitproxy_fixture):
     mock_camera.obj = camera
     mock_samx.obj = samx
     mock_proxy.obj = proxy
-    camera.sim.sim_params = {"noise": "none", "noise_multiplier": 0, "hot_pixel_values": [0, 0, 0]}
+    camera.sim.params = {"noise": "none", "noise_multiplier": 0, "hot_pixel_values": [0, 0, 0]}
     samx.delay = 0
     samx_pos = 0
     samx.move(samx_pos)
@@ -421,7 +462,7 @@ def test_async_mon_send_data_to_bec(async_monitor):
         async_monitor.custom_prepare._send_data_to_bec()
         dev_msg = messages.DeviceMessage(
             signals={async_monitor.readback.name: async_monitor.data_buffer},
-            metadata={"async_update": async_monitor.async_update},
+            metadata={"async_update": async_monitor.async_update.get()},
         )
 
         call = [

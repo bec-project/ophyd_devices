@@ -82,13 +82,13 @@ class SimulatedDataBase(ABC):
     The class provides the following methods:
 
     - execute_simulation_method:    execute a method from the simulated data class or reroute execution to device proxy class
-    - sim_select_model:             select the active simulation model
-    - sim_params:                   get the parameters for the active simulation mdoel
+    - select_model:             select the active simulation model
+    - params:                   get the parameters for the active simulation mdoel
     - sim_models:                   get the available simulation models
     - update_sim_state:             update the simulated state of the device
     """
 
-    USER_ACCESS = ["sim_params", "sim_select_model", "sim_get_models", "sim_show_all"]
+    USER_ACCESS = ["params", "select_model", "get_models", "show_all"]
 
     def __init__(self, *args, parent=None, **kwargs) -> None:
         """
@@ -122,7 +122,12 @@ class SimulatedDataBase(ABC):
             return method(*args, **kwargs)
         raise SimulatedDataException(f"Method {method} is not available for {self.parent.name}")
 
+    # TODO remove after refactoring code in main
     def sim_select_model(self, model: str) -> None:
+        """Select the active simulation model."""
+        self.select_model(model)
+
+    def select_model(self, model: str) -> None:
         """
         Method to select the active simulation model.
         It will initiate the model_cls and parameters for the model.
@@ -138,7 +143,7 @@ class SimulatedDataBase(ABC):
         print(self._get_table_active_simulation())
 
     @property
-    def sim_params(self) -> dict:
+    def params(self) -> dict:
         """
         Property that returns the parameters for the active simulation model. It can also
         be used to set the parameters for the active simulation updating the parameters of the model.
@@ -147,17 +152,17 @@ class SimulatedDataBase(ABC):
             dict: Parameters for the active simulation model.
 
         The following example shows how to update the noise parameter of the current simulation.
-        >>> dev.<device>.sim.sim_params = {"noise": "poisson"}
+        >>> dev.<device>.sim.params = {"noise": "poisson"}
         """
         return self._params
 
-    @sim_params.setter
-    def sim_params(self, params: dict):
+    @params.setter
+    def params(self, params: dict):
         """
         Method to set the parameters for the active simulation model.
         """
         for k, v in params.items():
-            if k in self.sim_params:
+            if k in self.params:
                 if k == "noise":
                     self._params[k] = NoiseType(v)
                 elif k == "hot_pixel_types":
@@ -167,9 +172,9 @@ class SimulatedDataBase(ABC):
                 if isinstance(self._model, Model) and k in self._model_params:
                     self._model_params[k].value = v
             else:
-                raise SimulatedDataException(f"Parameter {k} not found in {self.sim_params}.")
+                raise SimulatedDataException(f"Parameter {k} not found in {self.params}.")
 
-    def sim_get_models(self) -> list:
+    def get_models(self) -> list:
         """
         Method to get the all available simulation models.
         """
@@ -221,7 +226,7 @@ class SimulatedDataBase(ABC):
         table = PrettyTable()
         table.title = f"Currently active model: {self._model}"
         table.field_names = ["Parameter", "Value", "Type"]
-        for k, v in self.sim_params.items():
+        for k, v in self.params.items():
             table.add_row([k, f"{v}", f"{type(v)}"])
         table._min_width["Parameter"] = 25 if width > 75 else width // 3
         table._min_width["Type"] = 25 if width > 75 else width // 3
@@ -238,16 +243,16 @@ class SimulatedDataBase(ABC):
         table.title = "Available methods within the simulation module"
         table.field_names = ["Method", "Docstring"]
 
-        table.add_row([self.sim_get_models.__name__, f"{self.sim_get_models.__doc__}"])
-        table.add_row([self.sim_select_model.__name__, self.sim_select_model.__doc__])
-        table.add_row(["sim_params", self.__class__.sim_params.__doc__])
+        table.add_row([self.get_models.__name__, f"{self.get_models.__doc__}"])
+        table.add_row([self.select_model.__name__, self.select_model.__doc__])
+        table.add_row(["params", self.__class__.params.__doc__])
         table.max_table_width = width
         table._min_table_width = width
         table.align["Docstring"] = "l"
 
         return table
 
-    def sim_show_all(self):
+    def show_all(self):
         """Returns a summary about the active simulation and available methods."""
         width = 150
         print(self._get_table_active_simulation(width=width))
@@ -259,6 +264,15 @@ class SimulatedDataBase(ABC):
         table.max_table_width = width
         table._min_table_width = width
         print(table)
+
+    def set_init(self, sim_init: dict["model", "params"]) -> None:
+        """Set the initial simulation parameters.
+
+        Args:
+            sim_init (dict["model"]): Dictionary to initiate parameters of the simulation.
+        """
+        self.select_model(sim_init.get("model"))
+        self.params = sim_init.get("params", {})
 
 
 class SimulatedPositioner(SimulatedDataBase):
@@ -317,7 +331,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
 
     def _init_default(self) -> None:
         """Initialize the default parameters for the simulated data."""
-        self.sim_select_model("ConstantModel")
+        self.select_model("ConstantModel")
 
     def get_model_cls(self, model: str) -> any:
         """Get the class for the active simulation model."""
@@ -411,14 +425,14 @@ class SimulatedDataMonitor(SimulatedDataBase):
         Returns:
             float: Value computed by the active model.
         """
-        mot_name = self.sim_params["ref_motor"]
+        mot_name = self.params["ref_motor"]
         if self.parent.device_manager and mot_name in self.parent.device_manager.devices:
             motor_pos = self.parent.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
         else:
             motor_pos = 0
         method = self._model
         value = int(method.eval(params=self._model_params, x=motor_pos))
-        return self._add_noise(value, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+        return self._add_noise(value, self.params["noise"], self.params["noise_multiplier"])
 
     def _add_noise(self, v: int, noise: NoiseType, noise_multiplier: float) -> int:
         """
@@ -478,8 +492,8 @@ class SimulatedDataWaveform(SimulatedDataMonitor):
         size = size[0] if isinstance(size, tuple) else size
         method = self._model
         value = method.eval(params=self._model_params, x=np.array(range(size)))
-        value *= self.sim_params["amplitude"] / np.max(value)
-        return self._add_noise(value, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+        value *= self.params["amplitude"] / np.max(value)
+        return self._add_noise(value, self.params["noise"], self.params["noise_multiplier"])
 
     def _add_noise(self, v: np.ndarray, noise: NoiseType, noise_multiplier: float) -> np.ndarray:
         """Add noise to the simulated data.
@@ -515,7 +529,7 @@ class SimulatedDataCamera(SimulatedDataBase):
 
         Use the default model "Gaussian".
         """
-        self.sim_select_model(SimulationType2D.GAUSSIAN)
+        self.select_model(SimulationType2D.GAUSSIAN)
 
     def init_2D_models(self) -> dict:
         """
@@ -609,13 +623,13 @@ class SimulatedDataCamera(SimulatedDataBase):
         """Compute a return value for SimulationType2D constant."""
         try:
             shape = self.parent.image_shape.get()
-            v = self.sim_params.get("amplitude") * np.ones(shape, dtype=np.float32)
-            v = self._add_noise(v, self.sim_params["noise"], self.sim_params["noise_multiplier"])
+            v = self.params.get("amplitude") * np.ones(shape, dtype=np.float32)
+            v = self._add_noise(v, self.params["noise"], self.params["noise_multiplier"])
             return self._add_hot_pixel(
                 v,
-                coords=self.sim_params["hot_pixel_coords"],
-                hot_pixel_types=self.sim_params["hot_pixel_types"],
-                values=self.sim_params["hot_pixel_values"],
+                coords=self.params["hot_pixel_coords"],
+                hot_pixel_types=self.params["hot_pixel_types"],
+                values=self.params["hot_pixel_values"],
             )
         except SimulatedDataException as exc:
             raise SimulatedDataException(
@@ -634,9 +648,9 @@ class SimulatedDataCamera(SimulatedDataBase):
         """
 
         try:
-            amp = self.sim_params.get("amplitude")
-            cov = self.sim_params.get("covariance")
-            cen_off = self.sim_params.get("center_offset")
+            amp = self.params.get("amplitude")
+            cov = self.params.get("covariance")
+            cen_off = self.params.get("center_offset")
             shape = self.sim_state[self.parent.image_shape.name]["value"]
             pos, offset, cov, amp = self._prepare_params_gauss(
                 amp=amp, cov=cov, offset=cen_off, shape=shape
@@ -644,15 +658,13 @@ class SimulatedDataCamera(SimulatedDataBase):
 
             v = self._compute_multivariate_gaussian(pos=pos, cen_off=offset, cov=cov, amp=amp)
             v = self._add_noise(
-                v,
-                noise=self.sim_params["noise"],
-                noise_multiplier=self.sim_params["noise_multiplier"],
+                v, noise=self.params["noise"], noise_multiplier=self.params["noise_multiplier"]
             )
             return self._add_hot_pixel(
                 v,
-                coords=self.sim_params["hot_pixel_coords"],
-                hot_pixel_types=self.sim_params["hot_pixel_types"],
-                values=self.sim_params["hot_pixel_values"],
+                coords=self.params["hot_pixel_coords"],
+                hot_pixel_types=self.params["hot_pixel_types"],
+                values=self.params["hot_pixel_values"],
             )
         except SimulatedDataException as exc:
             raise SimulatedDataException(

@@ -48,6 +48,7 @@ class SimFlyer(Device, FlyerInterface):
         parent=None,
         kind=None,
         device_manager=None,
+        sim_init: dict = None,
         # TODO remove after refactoring config
         delay: int = 1,
         update_frequency: int = 100,
@@ -55,6 +56,7 @@ class SimFlyer(Device, FlyerInterface):
     ):
 
         self.sim = self.sim_cls(parent=self, **kwargs)
+        self.sim_init = sim_init
         self.precision = precision
         self.device_manager = device_manager
         self._registered_proxies = {}
@@ -62,6 +64,8 @@ class SimFlyer(Device, FlyerInterface):
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
         self.readback.name = self.name
+        if self.sim_init:
+            self.sim.set_init(self.sim_init)
 
     @property
     def registered_proxies(self) -> None:
