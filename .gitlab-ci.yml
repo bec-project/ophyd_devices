@@ -184,6 +184,7 @@ trigger_bec:
         file: /.gitlab-ci.yml
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
+    CHILD_PIPELINE_BRANCH: ${BEC_CORE_BRANCH}
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
   interruptible: true
