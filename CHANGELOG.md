@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.5.4 (2024-07-05)
+
+### Fix
+
+* fix(sim): fixed sim positioner moving state update ([`8efa93a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8efa93a7023c939ce535f829a5e41468372ae78e))
+
 ## v1.5.3 (2024-07-03)
 
 ### Fix
@@ -145,12 +151,6 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * docs: Update device list ([`08dfc9e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/08dfc9e314a1b498ec2fc1f9056234fe732d6428))
 
 * docs: Update device list ([`106233f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/106233f8d951794e261b08a11b20db6cbf4ef63a))
-
-* docs: Update device list ([`9c93916`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9c9391610845bc1b21e342e7c3b34b8db978a038))
-
-### Feature
-
-* feat: add option to save Camera data to disk, closes #66 ([`60b2e75`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/60b2e756550196fb5c07bb91abb4c1ae5b815c6c))
 
 ### Test
 
