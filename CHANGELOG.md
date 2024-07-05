@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.6.1 (2024-07-05)
+
+### Fix
+
+* fix(softpositioner): fixed input args for softpositioner ([`e80811c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e80811c19736cd70be2dbcfac0bcedfe975bf419))
+
 ## v1.6.0 (2024-07-05)
 
 ### Feature
@@ -147,9 +153,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * fix: fixed psi_detector_base to allow init with mocked device_manager ([`e566c7f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e566c7f982ee519a5ec3e350cef349c3238eebae))
 
 ## v1.2.0 (2024-05-29)
-
-### Documentation
-
-* docs: Update device list ([`08dfc9e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/08dfc9e314a1b498ec2fc1f9056234fe732d6428))
-
-* docs: Update device list ([`106233f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/106233f8d951794e261b08a11b20db6cbf4ef63a))
