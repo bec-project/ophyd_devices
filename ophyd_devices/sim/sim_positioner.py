@@ -6,6 +6,7 @@ from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, Kind, PositionerBase
 from ophyd.utils import LimitError
+from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedPositioner
 from ophyd_devices.sim.sim_exception import DeviceStop
@@ -128,6 +129,7 @@ class SimPositioner(Device, PositionerBase):
         if low_limit < high_limit and not low_limit <= value <= high_limit:
             raise LimitError(f"position={value} not within limits {self.limits}")
 
+    @typechecked
     def _set_sim_state(self, signal_name: str, value: any) -> None:
         """Update the simulated state of the device."""
         self.sim.sim_state[signal_name]["value"] = value
@@ -181,8 +183,9 @@ class SimPositioner(Device, PositionerBase):
                         ttime.sleep(1 / self.update_frequency)
                         update_state(ii)
 
+                    self._set_sim_state(self.motor_is_moving.name, 0)
                     update_state(move_val)
-                    self._set_sim_state(self.motor_is_moving, 0)
+
                 except DeviceStop:
                     success = False
                 finally:
