@@ -12,6 +12,7 @@ from ophyd_devices.sim.sim_data import SimulatedPositioner
 from ophyd_devices.sim.sim_exception import DeviceStop
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_test_devices import DummyController
+from ophyd_devices.sim.sim_utils import LinearTrajectory, stop_trajectory
 
 logger = bec_logger.logger
 
@@ -217,6 +218,40 @@ class SimPositioner(Device, PositionerBase):
     def egu(self):
         """Return the engineering units of the simulated device."""
         return "mm"
+
+
+class SimLinearTrajectoryPositioner(SimPositioner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _move_and_finish(self, start_pos, end_pos, st):
+        success = True
+        acc_time = (
+            self.acceleration.get()
+        )  # acceleration in Ophyd refers to acceleration time in seconds
+        vel = self.velocity.get()
+        acc = abs(vel / acc_time)
+        traj = LinearTrajectory(start_pos, end_pos, vel, acc)
+
+        try:
+            while not traj.ended:
+                ttime.sleep(1 / self.update_frequency)
+                self._update_state(traj.position())
+                if self._stopped:
+                    break
+            if self._stopped:
+                # simulate deceleration
+                traj = stop_trajectory(traj)
+                while not traj.ended:
+                    ttime.sleep(1 / self.update_frequency)
+                    self._update_state(traj.position())
+            self._update_state(traj.position())
+        except DeviceStop:
+            success = False
+        finally:
+            self._set_sim_state(self.motor_is_moving.name, 0)
+            self._done_moving(success=success)
+            st.set_finished()
 
 
 class SimPositionerWithCommFailure(SimPositioner):

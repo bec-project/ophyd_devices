@@ -8,7 +8,7 @@ from .sim.sim_monitor import SimMonitor, SimMonitorAsync
 
 SynAxisMonitor = SimMonitor
 SynGaussBEC = SimMonitor
-from .sim.sim_positioner import SimPositioner
+from .sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 
 SynAxisOPAAS = SimPositioner
 from .sim.sim_flyer import SimFlyer
