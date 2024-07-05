@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.6.0 (2024-07-05)
+
+### Feature
+
+* feat(devices): added softpositioner ([`e803829`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e803829f6c2bab1724a2f30eb0633fd52033ffe7))
+
 ## v1.5.4 (2024-07-05)
 
 ### Fix
@@ -142,16 +148,8 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 
 ## v1.2.0 (2024-05-29)
 
-### Ci
-
-* ci: fix bec_core_branch triggering in ci file ([`3cab569`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3cab5690db3fbabffecc179cbaadf6878f0ab2f1))
-
 ### Documentation
 
 * docs: Update device list ([`08dfc9e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/08dfc9e314a1b498ec2fc1f9056234fe732d6428))
 
 * docs: Update device list ([`106233f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/106233f8d951794e261b08a11b20db6cbf4ef63a))
-
-### Test
-
-* test: add tests ([`af908fa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/af908fa210914519de9a713ed2ef3e2e0c743742))
