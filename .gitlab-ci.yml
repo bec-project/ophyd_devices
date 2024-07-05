@@ -4,7 +4,7 @@
 image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 
 variables:
-  BEC_CORE_BRANCH: "main"
+  BEC_CORE_BRANCH: "ci/child_pipeline_support"
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
   CSAXS_BEC_BRANCH: "main"
   PXIII_BEC_BRANCH: "main"
