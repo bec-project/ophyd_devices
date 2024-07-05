@@ -89,3 +89,12 @@ ring_current_sim:
     - beamline
   enabled: true
   readOnly: false
+
+soft_pos:
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.SoftPositioner
+  deviceConfig:
+  deviceTags:
+    - user motors
+  enabled: true
+  readOnly: false
