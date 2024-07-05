@@ -7,8 +7,8 @@ class SoftPositioner(_SoftPositioner):
     ophyd device protocol.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, egu="", limits=None, source="computed", init_pos=None, **kwargs):
+        super().__init__(egu=egu, limits=limits, source=source, init_pos=init_pos, **kwargs)
         self._destroyed = False
 
     def destroy(self):
