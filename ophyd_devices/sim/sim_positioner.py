@@ -9,7 +9,6 @@ from ophyd.utils import LimitError
 from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedPositioner
-from ophyd_devices.sim.sim_exception import DeviceStop
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_test_devices import DummyController
 from ophyd_devices.sim.sim_utils import LinearTrajectory, stop_trajectory
@@ -143,8 +142,6 @@ class SimPositioner(Device, PositionerBase):
 
     def _update_state(self, val):
         """Update the state of the simulated device."""
-        if self._stopped:
-            raise DeviceStop
         old_readback = self._get_sim_state(self.readback.name)
         self._set_sim_state(self.readback.name, val)
 
@@ -160,22 +157,19 @@ class SimPositioner(Device, PositionerBase):
         """Move the simulated device and finish the motion."""
         success = True
 
+        target = stop_pos + self.tolerance.get() * np.random.uniform(-1, 1)
+
+        updates = np.ceil(np.abs(target - start_pos) / self.velocity.get() * self.update_frequency)
+
         try:
-            target = stop_pos + self.tolerance.get() * np.random.uniform(-1, 1)
-
-            updates = np.ceil(
-                np.abs(target - start_pos) / self.velocity.get() * self.update_frequency
-            )
-
             for ii in np.linspace(start_pos, target, int(updates)):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(ii)
                 if self._stopped:
+                    success = False
                     break
             else:
                 self._update_state(target)
-        except DeviceStop:
-            success = False
         finally:
             self._done_moving(success=success)
             self._set_sim_state(self.motor_is_moving.name, 0)
@@ -238,6 +232,7 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(traj.position())
                 if self._stopped:
+                    success = False
                     break
             if self._stopped:
                 # simulate deceleration
@@ -246,8 +241,6 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                     ttime.sleep(1 / self.update_frequency)
                     self._update_state(traj.position())
             self._update_state(traj.position())
-        except DeviceStop:
-            success = False
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
             self._done_moving(success=success)

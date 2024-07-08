@@ -7,7 +7,6 @@ from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, Kind
 
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
-from ophyd_devices.sim.sim_exception import DeviceStop
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 
@@ -95,9 +94,7 @@ class SimWaveform(Device):
                 for _ in range(self.burst.get()):
                     self._run_subs(sub_type=self.SUB_MONITOR, value=self.waveform.get())
                     if self._stopped:
-                        raise DeviceStop
-            except DeviceStop:
-                pass
+                        break
             finally:
                 self._stopped = False
                 self._done_acquiring()

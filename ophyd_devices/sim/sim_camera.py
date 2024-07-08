@@ -9,7 +9,6 @@ from ophyd_devices.interfaces.base_classes.psi_detector_base import (
     PSIDetectorBase,
 )
 from ophyd_devices.sim.sim_data import SimulatedDataCamera
-from ophyd_devices.sim.sim_exception import DeviceStop
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
 
@@ -32,11 +31,9 @@ class SimCameraSetup(CustomDetectorMixin):
                 data = self.parent.image.get()
                 self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=data)
                 if self.parent.stopped:
-                    raise DeviceStop
+                    break
                 if self.parent.write_to_disk.get():
                     self.parent.h5_writer.receive_data(data)
-        except DeviceStop:
-            pass
         finally:
             self.parent.stopped = False
 
