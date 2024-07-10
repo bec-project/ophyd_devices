@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v1.7.0 (2024-07-10)
+
+### Feature
+
+* feat: add SimLinearTrajectoryPositioner to better motion simulation ([`b5918c4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b5918c424de005d1510afedc05b0e217fd09616e))
+
+### Fix
+
+* fix: _update_state() does not raise an exception if stopped ([`207b9b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/207b9b571c6df1c2de75b187e794d2dcd7bd0108))
+
+### Refactor
+
+* refactor: make it easier to subclass SimPositioner ([`9037553`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/903755325230b2c93eba219dd0e4d2aadd05d16f))
+
+### Test
+
+* test: add test for SimLinearTrajectoryPositioner ([`ba7db78`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ba7db7819439c89c3f160acaf399b1ffd538ac7f))
+
 ## v1.6.1 (2024-07-05)
 
 ### Fix
@@ -139,17 +157,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 ### Test
 
 * test: add tests for new device ([`c554422`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c5544226be3f12d238a0793a0f41da07af36e460))
-
-## v1.2.1 (2024-05-29)
-
-### Documentation
-
-* docs: Update device list ([`5a591ce`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5a591ce024b7815a432460fe9e8d97e648dcdb5e))
-
-* docs: Update device list ([`ae0c766`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ae0c766975cdfc69ffe9d48eca92ad8d51a0497c))
-
-### Fix
-
-* fix: fixed psi_detector_base to allow init with mocked device_manager ([`e566c7f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e566c7f982ee519a5ec3e350cef349c3238eebae))
-
-## v1.2.0 (2024-05-29)
