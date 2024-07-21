@@ -1,9 +1,11 @@
+from threading import Thread
+
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, Kind
+from ophyd import Device, DeviceStatus, Kind
 
 from ophyd_devices.interfaces.base_classes.psi_detector_base import (
     CustomDetectorMixin,
@@ -82,6 +84,8 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         self._stream_ttl = 1800
         self._random_send_interval = None
         self._counter = 0
+        self._thread_trigger = None
+        self._thread_complete = None
         self.prep_random_interval()
         self.parent.current_trigger.subscribe(self._progress_update, run=False)
 
@@ -103,8 +107,25 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
 
     def on_complete(self):
         """Prepare the device for completion."""
-        if self.parent.data_buffer["value"]:
-            self._send_data_to_bec()
+        status = DeviceStatus(self.parent)
+
+        def on_complete_call(status: DeviceStatus) -> None:
+            exception = None
+            try:
+                if self.parent.data_buffer["value"]:
+                    self._send_data_to_bec()
+            # pylint: disable=broad-except
+            except Exception as exc:
+                exception = exc
+            finally:
+                if exception:
+                    status.set_exception(exception)
+                else:
+                    status.set_finished()
+
+        self._thread_complete = Thread(target=on_complete_call, args=(status,))
+        self._thread_complete.start()
+        return status
 
     def _send_data_to_bec(self) -> None:
         """Sends bundled data to BEC"""
@@ -128,22 +149,49 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
 
     def on_trigger(self):
         """Prepare the device for triggering."""
-        self.parent.data_buffer["value"].append(self.parent.readback.get())
-        self.parent.data_buffer["timestamp"].append(self.parent.readback.timestamp)
-        self._counter += 1
-        self.parent.current_trigger.set(self._counter).wait()
-        if self._counter % self._random_send_interval == 0:
-            self._send_data_to_bec()
+        status = DeviceStatus(self.parent)
+
+        def on_trigger_call(status: DeviceStatus) -> None:
+            exception = None
+            try:
+                self.parent.data_buffer["value"].append(self.parent.readback.get())
+                self.parent.data_buffer["timestamp"].append(self.parent.readback.timestamp)
+                self._counter += 1
+                self.parent.current_trigger.set(self._counter).wait()
+                if self._counter % self._random_send_interval == 0:
+                    self._send_data_to_bec()
+            # pylint: disable=broad-except
+            except Exception as exc:
+                exception = exc
+            finally:
+                if exception:
+                    status.set_exception(exception)
+                else:
+                    status.set_finished()
+
+        self._thread_trigger = Thread(target=on_trigger_call, args=(status,))
+        self._thread_trigger.start()
+        return status
 
     def _progress_update(self, value: int, **kwargs):
         """Update the progress of the device."""
         max_value = self.parent.scaninfo.num_points
+        # pylint: disable=protected-access
         self.parent._run_subs(
             sub_type=self.parent.SUB_PROGRESS,
             value=value,
             max_value=max_value,
             done=bool(max_value == value),
         )
+
+    def on_stop(self):
+        """Stop the device."""
+        if self._thread_trigger:
+            self._thread_trigger.join()
+        if self._thread_complete:
+            self._thread_complete.join()
+        self._thread_trigger = None
+        self._thread_complete = None
 
 
 class SimMonitorAsync(PSIDetectorBase):

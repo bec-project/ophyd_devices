@@ -400,8 +400,6 @@ class PSIDetectorBase(Device):
             list(object): list of objects that were unstaged
         """
         self.check_scan_id()
-        if self.stopped is True:
-            return super().unstage()
         self.custom_prepare.on_unstage()
         self.stopped = False
         return super().unstage()

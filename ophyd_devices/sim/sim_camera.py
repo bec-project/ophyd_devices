@@ -1,8 +1,10 @@
+import traceback
+from threading import Thread
+
 import numpy as np
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import DeviceStatus, Kind
-from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_detector_base import (
     CustomDetectorMixin,
@@ -18,6 +20,11 @@ logger = bec_logger.logger
 class SimCameraSetup(CustomDetectorMixin):
     """Mixin class for the SimCamera device."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._thread_trigger = None
+        self._thread_complete = None
+
     def on_trigger(self) -> None:
         """Trigger the camera to acquire images.
 
@@ -26,16 +33,33 @@ class SimCameraSetup(CustomDetectorMixin):
 
         Here, we also run a callback on SUB_MONITOR to send the image data the device_monitor endpoint in BEC.
         """
-        try:
-            for _ in range(self.parent.burst.get()):
-                data = self.parent.image.get()
-                self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=data)
-                if self.parent.stopped:
-                    break
-                if self.parent.write_to_disk.get():
-                    self.parent.h5_writer.receive_data(data)
-        finally:
-            self.parent.stopped = False
+        status = DeviceStatus(self.parent)
+
+        def on_trigger_call(status: DeviceStatus) -> None:
+            success = True
+            try:
+                for _ in range(self.parent.burst.get()):
+                    data = self.parent.image.get()
+                    # pylint: disable=protected-access
+                    self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=data)
+                    if self.parent.stopped:
+                        success = False
+                        break
+                    if self.parent.write_to_disk.get():
+                        self.parent.h5_writer.receive_data(data)
+                # pylint: disable=protected-access
+                status._finished(success=success)
+            # pylint: disable=broad-except
+            except Exception as exc:
+                content = traceback.format_exc()
+                logger.warning(
+                    f"Error in on_trigger_call in device {self.parent.name}. Error traceback: {content}"
+                )
+                status.set_exception(exc)
+
+        self._thread_trigger = Thread(target=on_trigger_call, args=(status,))
+        self._thread_trigger.start()
+        return status
 
     def on_stage(self) -> None:
         """Stage the camera for upcoming scan
@@ -63,13 +87,41 @@ class SimCameraSetup(CustomDetectorMixin):
             self.publish_file_location(done=False, successful=False)
         self.parent.stopped = False
 
-    def on_unstage(self) -> None:
-        """Unstage the device
+    def on_complete(self) -> None:
+        """Complete the motion of the simulated device."""
+        status = DeviceStatus(self.parent)
 
-        Send reads from all config signals to redis
-        """
-        if self.parent.write_to_disk.get():
-            self.publish_file_location(done=True, successful=True)
+        def on_complete_call(status: DeviceStatus) -> None:
+            success = True
+            try:
+                if self.parent.write_to_disk.get():
+                    self.parent.h5_writer.write_data()
+                self.publish_file_location(done=True, successful=True)
+                # pylint: disable=protected-access
+                if self.parent.stopped:
+                    success = False
+                # pylint: disable=protected-access
+                status._finished(success=success)
+            # pylint: disable=broad-except
+            except Exception as exc:
+                content = traceback.format_exc()
+                logger.warning(
+                    f"Error in on_complete call in device {self.parent.name}. Error traceback: {content}"
+                )
+                status.set_exception(exc)
+
+        self._thread_complete = Thread(target=on_complete_call, args=(status,), daemon=True)
+        self._thread_complete.start()
+        return status
+
+    def on_stop(self) -> None:
+        """Stop the camera acquisition."""
+        if self._thread_trigger:
+            self._thread_trigger.join()
+        if self._thread_complete:
+            self._thread_complete.join()
+        self._thread_trigger = None
+        self._thread_complete = None
 
 
 class SimCamera(PSIDetectorBase):
@@ -133,11 +185,3 @@ class SimCamera(PSIDetectorBase):
     def registered_proxies(self) -> None:
         """Dictionary of registered signal_names and proxies."""
         return self._registered_proxies
-
-    def complete(self) -> StatusBase:
-        """Complete the motion of the simulated device."""
-        status = DeviceStatus(self)
-        if self.write_to_disk.get():
-            self.h5_writer.write_data()
-        status.set_finished()
-        return status
