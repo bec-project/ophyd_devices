@@ -72,13 +72,12 @@ def test_unstage(detector_base):
         rtr = detector_base.unstage()
         assert isinstance(rtr, list)
         assert mock_check_scan_id.call_count == 1
-        mock_on_unstage.assert_not_called()
+        assert mock_on_unstage.call_count == 1
         detector_base.stopped = False
         rtr = detector_base.unstage()
         assert isinstance(rtr, list)
         assert mock_check_scan_id.call_count == 2
-        assert detector_base.stopped is False
-        mock_on_unstage.assert_called_once()
+        assert mock_on_unstage.call_count == 2
 
 
 def test_complete(detector_base):
