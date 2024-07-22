@@ -83,6 +83,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         self._random_send_interval = None
         self._counter = 0
         self.prep_random_interval()
+        self.parent.current_trigger.subscribe(self._progress_update, run=False)
 
     def clear_buffer(self):
         """Clear the data buffer."""
@@ -99,7 +100,6 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         """Prepare the device for staging."""
         self.clear_buffer()
         self.prep_random_interval()
-        self.parent.current_trigger.subscribe(self._progress_update, run=False)
 
     def on_complete(self):
         """Prepare the device for completion."""
@@ -135,7 +135,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         if self._counter % self._random_send_interval == 0:
             self._send_data_to_bec()
 
-    def _progress_update(self, value: int):
+    def _progress_update(self, value: int, **kwargs):
         """Update the progress of the device."""
         max_value = self.parent.scaninfo.num_points
         self.parent._run_subs(

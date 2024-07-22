@@ -34,6 +34,8 @@ class SetableSignal(Signal):
     precision (float)        : Precision of the signal, default PRECISION.
     """
 
+    SUB_VALUE = "value"
+
     def __init__(
         self,
         name: str,
@@ -84,6 +86,7 @@ class SetableSignal(Signal):
         """
         self._update_sim_state(value)
         self._value = value
+        self._run_subs(sub_type=self.SUB_VALUE, value=value)
 
     def describe(self):
         """Describe the readback signal.
