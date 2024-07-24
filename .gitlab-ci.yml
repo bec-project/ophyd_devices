@@ -4,7 +4,7 @@
 image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 
 variables:
-  BEC_CORE_BRANCH: "main"
+  BEC_CORE_BRANCH: "ci/child_pipeline_support"
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
   CSAXS_BEC_BRANCH: "main"
   PXIII_BEC_BRANCH: "main"
@@ -177,11 +177,14 @@ tests-3.12:
 
 trigger_bec:
   trigger:
-    project: bec/bec
     strategy: depend
-    branch: $BEC_CORE_BRANCH
+    include:
+      - project: bec/bec
+        ref: $BEC_CORE_BRANCH
+        file: /.gitlab-ci.yml
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
+    CHILD_PIPELINE_BRANCH: ${BEC_CORE_BRANCH}
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
   interruptible: true
