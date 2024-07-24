@@ -98,7 +98,7 @@ class SimCamera(PSIDetectorBase):
     SHAPE = (100, 100)
     BIT_DEPTH = np.uint16
 
-    SUB_MONITOR = "monitor"
+    SUB_MONITOR = "device_monitor_2d"
     _default_sub = SUB_MONITOR
 
     exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
