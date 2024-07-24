@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.7.1 (2024-07-24)
+
+### Fix
+
+* fix: add run._subs SUB_VALUE to settable signal put method ([`ca6d96e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ca6d96e25b4a2d5011c0882e512b84e16cf7b264))
+
 ## v1.7.0 (2024-07-10)
 
 ### Feature
@@ -142,8 +148,6 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 
 * docs: Update device list ([`f9b126c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f9b126c60ce710fba221ffb208d66541b8264c0b))
 
-* docs: Update device list ([`be25cba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/be25cbae92540b074bb4533331656d20a049a809))
-
 ### Feature
 
 * feat: add async monitor, add on_complete to psi_det_base and rm duplicated mocks, closes #67 ([`1aece61`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1aece61a3b09267f87f0771b163a5d07b4549eff))
@@ -151,8 +155,6 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 ### Refactor
 
 * refactor: add .wait() to set methods ([`7334925`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73349257ee0228a9563051d4f8e0bf5f7e6b551f))
-
-* refactor: removed deprecated devices ([`8ef6d10`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ef6d10eb759e6ce874ddf05a38c586e9475eed3))
 
 ### Test
 
