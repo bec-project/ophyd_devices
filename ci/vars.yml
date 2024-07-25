@@ -1,0 +1,20 @@
+# Description: Variables for the CI/CD pipeline
+# specify the branch name and the corresponding branches in related repositories
+#
+# The variables for main are only provided as an example. DO NOT MODIFY THEM.
+main:
+  BEC_CORE_BRANCH: "main"
+  CSAXS_BEC_BRANCH: "main"
+  PXIII_BEC_BRANCH: "main"
+  DEBYE_BEC_BRANCH: "main"
+  TOMCAT_BEC_BRANCH: "main"
+  XTREME_BEC_BRANCH: "main"
+
+# EXAMPLE for a branch named my_branch
+# my_branch:
+#   BEC_CORE_BRANCH: "fix/fix-branch"
+#   CSAXS_BEC_BRANCH: "main"
+#   PXIII_BEC_BRANCH: "main"
+#   DEBYE_BEC_BRANCH: "main"
+#   TOMCAT_BEC_BRANCH: "main"
+#   XTREME_BEC_BRANCH: "main"

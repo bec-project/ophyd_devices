@@ -53,13 +53,27 @@ before_script:
 
 # different stages in the pipeline
 stages:
+  - .pre
   - Formatter
   - test # must be called test for security/secret-detection to work
   - AdditionalTests
   - Deploy
 
+load_vars:
+  stage: .pre
+  before_script:
+    - ""
+  script:
+    - curl 'https://gitlab.psi.ch/bec/awi_utils/-/raw/main/awi_utils/gitlab_ci_tools/convert_to_env.py' -o convert_to_env.py
+    - pip install pyyaml
+    - python ./convert_to_env.py ./ci/vars.yml $CI_COMMIT_REF_NAME
+  artifacts:
+    reports:
+      dotenv: build.env
+
 formatter:
   stage: Formatter
+  needs: ["load_vars"]
   before_script:
     - ""
   script:
@@ -73,6 +87,7 @@ formatter:
 
 pylint:
   stage: Formatter
+  needs: ["load_vars"]
   script:
     - pip install pylint pylint-exit anybadge
     - mkdir ./pylint
@@ -90,7 +105,7 @@ pylint:
 
 pylint-check:
   stage: Formatter
-  needs: []
+  needs: ["load_vars"]
   allow_failure: true
   before_script:
     - pip install pylint pylint-exit anybadge
@@ -131,6 +146,7 @@ secret_detection:
 
 pytest:
   stage: test
+  needs: ["load_vars"]
   script:
     - pip install coverage
     - coverage run --source=./ophyd_devices -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
@@ -147,6 +163,7 @@ pytest:
 
 config_test:
   stage: test
+  needs: ["load_vars"]
   script:
     - ophyd_test --config ./ophyd_devices/configs/ --output ./config_tests
   artifacts:
@@ -163,6 +180,7 @@ tests-3.11:
       optional: true
     - job: "pylint"
       optional: true
+    - job: "load_vars"
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.11
   script:
     - pytest -v --random-order ./tests
@@ -176,6 +194,7 @@ tests-3.12:
   allow_failure: true
 
 trigger_bec:
+  needs: ["load_vars"]
   trigger:
     project: bec/bec
     strategy: depend
@@ -200,7 +219,7 @@ trigger:
       - CHILD_PROJECT: xtreme_bec
         CHILD_PIPELINE_BRANCH: $XTREME_BEC_BRANCH
 
-  needs: []
+  needs: ["load_vars"]
   trigger:
     strategy: depend
     include:
@@ -220,7 +239,7 @@ trigger:
 
 semver:
   stage: Deploy
-  needs: ["pytest"]
+  needs: ["pytest", "load_vars"]
   script:
     - git config --global user.name "ci_update_bot"
     - git config --global user.email "ci_update_bot@bec.ch"
