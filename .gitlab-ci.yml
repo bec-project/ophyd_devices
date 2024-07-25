@@ -68,6 +68,8 @@ formatter:
     - isort --check --diff ./
     - black --check --diff --color ./
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+      when: never
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
   interruptible: true
 
@@ -85,6 +87,8 @@ pylint:
       - ./pylint/
     expire_in: 1 week
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+      when: never
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
   interruptible: true
 
@@ -119,6 +123,8 @@ pylint-check:
       - ./pylint/
     expire_in: 1 week
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+      when: never
     - if: $CI_PROJECT_PATH == "bec/ophyd_devices"
   interruptible: true
 
@@ -176,12 +182,16 @@ tests-3.12:
   allow_failure: true
 
 trigger_bec:
+  needs: []
   trigger:
-    project: bec/bec
     strategy: depend
-    branch: $BEC_CORE_BRANCH
+    include:
+      - project: bec/bec
+        ref: $BEC_CORE_BRANCH
+        file: /.gitlab-ci.yml
   variables:
     OPHYD_DEVICES_BRANCH: $CI_COMMIT_REF_NAME
+    CHILD_PIPELINE_BRANCH: $BEC_CORE_BRANCH
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PROJECT_PATH == "bec/ophyd_devices"'
   interruptible: true
