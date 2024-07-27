@@ -161,7 +161,6 @@ class SimulatedDataBase(ABC):
         self._model = model_cls() if callable(model_cls) else model_cls
         self._params = self.get_params_for_model_cls()
         self._params.update(self._get_additional_params())
-        print(self._get_table_active_simulation())
 
     @property
     def params(self) -> dict:
