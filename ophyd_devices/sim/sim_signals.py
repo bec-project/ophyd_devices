@@ -1,3 +1,5 @@
+"""Module for signals of the ophyd_devices simulation."""
+
 import time
 
 import numpy as np
@@ -51,6 +53,7 @@ class SetableSignal(Signal):
         self.precision = precision
         self.sim = getattr(self.parent, "sim", None)
         self._update_sim_state(value)
+        self._metadata.update(write_access=True)
 
     def _update_sim_state(self, value: any) -> None:
         """Update the readback value."""
@@ -145,6 +148,7 @@ class ReadOnlySignal(Signal):
         self.sim = getattr(self.parent, "sim", None)
         if self.sim:
             self._init_sim_state()
+        self._metadata.update(write_access=False)
 
     def _init_sim_state(self) -> None:
         """Create the initial sim_state in the SimulatedData class of the parent device."""
