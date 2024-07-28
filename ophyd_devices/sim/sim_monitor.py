@@ -1,3 +1,6 @@
+"""Module for simulated monitor devices."""
+
+import traceback
 from threading import Thread
 
 import numpy as np
@@ -13,6 +16,7 @@ from ophyd_devices.interfaces.base_classes.psi_detector_base import (
 )
 from ophyd_devices.sim.sim_data import SimulatedDataMonitor
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
+from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
 
@@ -110,18 +114,19 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_complete_call(status: DeviceStatus) -> None:
-            exception = None
+            error = None
             try:
                 if self.parent.data_buffer["value"]:
                     self._send_data_to_bec()
+                if self.parent.stopped:
+                    error = DeviceStopError(f"{self.parent.name} was stopped")
+                # pylint: disable=expression-not-assigned
+                status.set_finished() if not error else status.set_exception(exc=error)
             # pylint: disable=broad-except
             except Exception as exc:
-                exception = exc
-            finally:
-                if exception:
-                    status.set_exception(exception)
-                else:
-                    status.set_finished()
+                content = traceback.format_exc()
+                status.set_exception(exc=exc)
+                logger.warning(f"Error in {self.parent.name} on_complete; Traceback: {content}")
 
         self._thread_complete = Thread(target=on_complete_call, args=(status,))
         self._thread_complete.start()
@@ -152,7 +157,7 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_trigger_call(status: DeviceStatus) -> None:
-            exception = None
+            error = None
             try:
                 self.parent.data_buffer["value"].append(self.parent.readback.get())
                 self.parent.data_buffer["timestamp"].append(self.parent.readback.timestamp)
@@ -160,14 +165,17 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
                 self.parent.current_trigger.set(self._counter).wait()
                 if self._counter % self._random_send_interval == 0:
                     self._send_data_to_bec()
+                if self.parent.stopped:
+                    error = DeviceStopError(f"{self.parent.name} was stopped")
+                # pylint: disable=expression-not-assigned
+                status.set_finished() if not error else status.set_exception(exc=error)
             # pylint: disable=broad-except
             except Exception as exc:
-                exception = exc
-            finally:
-                if exception:
-                    status.set_exception(exception)
-                else:
-                    status.set_finished()
+                content = traceback.format_exc()
+                logger.warning(
+                    f"Error in on_trigger_call in device {self.parent.name}; Traceback: {content}"
+                )
+                status.set_exception(exc=exc)
 
         self._thread_trigger = Thread(target=on_trigger_call, args=(status,))
         self._thread_trigger.start()
@@ -199,7 +207,7 @@ class SimMonitorAsync(PSIDetectorBase):
     A simulated device to mimic the behaviour of an asynchronous monitor.
 
     During a scan, this device will send data not in sync with the point ID to BEC,
-    but buffer data and send it in random intervals.
+    but buffer data and send it in random intervals.s
     """
 
     USER_ACCESS = ["sim", "registered_proxies", "async_update"]

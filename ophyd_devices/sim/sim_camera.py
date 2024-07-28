@@ -13,6 +13,7 @@ from ophyd_devices.interfaces.base_classes.psi_detector_base import (
 from ophyd_devices.sim.sim_data import SimulatedDataCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
+from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
 
@@ -36,19 +37,19 @@ class SimCameraSetup(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_trigger_call(status: DeviceStatus) -> None:
-            success = True
+            error = None
             try:
                 for _ in range(self.parent.burst.get()):
                     data = self.parent.image.get()
                     # pylint: disable=protected-access
                     self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=data)
                     if self.parent.stopped:
-                        success = False
+                        error = DeviceStopError(f"{self.parent.name} was stopped")
                         break
                     if self.parent.write_to_disk.get():
                         self.parent.h5_writer.receive_data(data)
-                # pylint: disable=protected-access
-                status._finished(success=success)
+                # pylint: disable=expression-not-assigned
+                status.set_finished() if not error else status.set_exception(exc=error)
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()
@@ -92,16 +93,15 @@ class SimCameraSetup(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_complete_call(status: DeviceStatus) -> None:
-            success = True
+            error = None
             try:
                 if self.parent.write_to_disk.get():
                     self.parent.h5_writer.write_data()
                 self.publish_file_location(done=True, successful=True)
-                # pylint: disable=protected-access
                 if self.parent.stopped:
-                    success = False
-                # pylint: disable=protected-access
-                status._finished(success=success)
+                    error = DeviceStopError(f"{self.parent.name} was stopped")
+                # pylint: disable=expression-not-assigned
+                status.set_finished() if not error else status.set_exception(exc=error)
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()

@@ -1,5 +1,8 @@
+""" Module for simulated positioner devices. """
+
 import threading
 import time as ttime
+import traceback
 
 import numpy as np
 from bec_lib.logger import bec_logger
@@ -12,6 +15,7 @@ from ophyd_devices.sim.sim_data import SimulatedPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_test_devices import DummyController
 from ophyd_devices.sim.sim_utils import LinearTrajectory, stop_trajectory
+from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
 
@@ -155,7 +159,7 @@ class SimPositioner(Device, PositionerBase):
 
     def _move_and_finish(self, start_pos, stop_pos, st):
         """Move the simulated device and finish the motion."""
-        success = True
+        error = None
 
         target = stop_pos + self.tolerance.get() * np.random.uniform(-1, 1)
 
@@ -166,14 +170,21 @@ class SimPositioner(Device, PositionerBase):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(ii)
                 if self._stopped:
-                    success = False
+                    error = DeviceStopError(f"{self.name} was stopped")
                     break
             else:
                 self._update_state(target)
+            # pylint: disable=expression-not-assigned
+            st.set_finished() if error is None else st.set_exception(error)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            content = traceback.format_exc()
+            logger.warning(
+                f"Error in on_complete call in device {self.name}. Error traceback: {content}"
+            )
+            st.set_exception(exc=exc)
         finally:
-            self._done_moving(success=success)
             self._set_sim_state(self.motor_is_moving.name, 0)
-            st.set_finished()
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
@@ -201,6 +212,7 @@ class SimPositioner(Device, PositionerBase):
         self._stopped = True
         if self.move_thread:
             self.move_thread.join()
+        self.move_thread = None
         super().stop(success=success)
 
     @property
@@ -219,7 +231,7 @@ class SimLinearTrajectoryPositioner(SimPositioner):
         super().__init__(*args, **kwargs)
 
     def _move_and_finish(self, start_pos, end_pos, st):
-        success = True
+        error = None
         acc_time = (
             self.acceleration.get()
         )  # acceleration in Ophyd refers to acceleration time in seconds
@@ -232,7 +244,7 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(traj.position())
                 if self._stopped:
-                    success = False
+                    error = DeviceStopError(f"{self.name} was stopped")
                     break
             if self._stopped:
                 # simulate deceleration
@@ -241,10 +253,17 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                     ttime.sleep(1 / self.update_frequency)
                     self._update_state(traj.position())
             self._update_state(traj.position())
+            # pylint: disable=expression-not-assigned
+            st.set_finished() if error is None else st.set_exception(error)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            content = traceback.format_exc()
+            logger.warning(
+                f"Error in on_complete call in device {self.name}. Error traceback: {content}"
+            )
+            st.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
-            self._done_moving(success=success)
-            st.set_finished()
 
 
 class SimPositionerWithCommFailure(SimPositioner):

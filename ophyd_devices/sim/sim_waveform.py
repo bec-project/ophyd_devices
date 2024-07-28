@@ -1,5 +1,8 @@
+"""Module for a simulated 1D Waveform detector, i.e. a Falcon XRF detector."""
+
 import os
 import threading
+import traceback
 
 import numpy as np
 from bec_lib.logger import bec_logger
@@ -9,6 +12,7 @@ from ophyd import Device, DeviceStatus, Kind
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
 
@@ -65,9 +69,10 @@ class SimWaveform(Device):
         self.sim = self.sim_cls(parent=self, **kwargs)
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
-        self._stopped = False
+        self.stopped = False
         self._staged = False
         self.scaninfo = None
+        self._trigger_thread = None
         self._update_scaninfo()
         if self.sim_init:
             self.sim.set_init(self.sim_init)
@@ -87,19 +92,24 @@ class SimWaveform(Device):
         """
         status = DeviceStatus(self)
 
-        self.subscribe(status._finished, event_type=self.SUB_ACQ_DONE, run=False)
-
-        def acquire():
+        def acquire(status: DeviceStatus):
+            error = None
             try:
                 for _ in range(self.burst.get()):
                     self._run_subs(sub_type=self.SUB_MONITOR, value=self.waveform.get())
-                    if self._stopped:
+                    if self.stopped:
+                        error = DeviceStopError(f"{self.name} was stopped")
                         break
-            finally:
-                self._stopped = False
-                self._done_acquiring()
+                # pylint: disable=expression-not-assigned
+                status.set_finished() if not error else status.set_exception(exc=error)
+            # pylint: disable=broad-except
+            except Exception as exc:
+                content = traceback.format_exc()
+                status.set_exception(exc=exc)
+                logger.warning(f"Error in {self.name} trigger; Traceback: {content}")
 
-        threading.Thread(target=acquire, daemon=True).start()
+        self._trigger_thread = threading.Thread(target=acquire, args=(status,), daemon=True)
+        self._trigger_thread.start()
         return status
 
     def _update_scaninfo(self) -> None:
@@ -129,7 +139,7 @@ class SimWaveform(Device):
         self.frames.set(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
         self.exp_time.set(self.scaninfo.exp_time)
         self.burst.set(self.scaninfo.frames_per_trigger)
-        self._stopped = False
+        self.stopped = False
         return super().stage()
 
     def unstage(self) -> list[object]:
@@ -137,12 +147,15 @@ class SimWaveform(Device):
 
         Send reads from all config signals to redis
         """
-        if self._stopped is True or not self._staged:
+        if self.stopped is True or not self._staged:
             return super().unstage()
 
         return super().unstage()
 
     def stop(self, *, success=False):
         """Stop the device"""
-        self._stopped = True
+        self.stopped = True
+        if self._trigger_thread:
+            self._trigger_thread.join()
+        self._trigger_thread = None
         super().stop(success=success)

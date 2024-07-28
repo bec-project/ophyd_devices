@@ -7,16 +7,21 @@ The beamlines need to inherit from the CustomDetectorMixing for their mixin clas
 import os
 import threading
 import time
+import traceback
 
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import FileWriter
+from bec_lib.logger import bec_logger
 from ophyd import Component, Device, DeviceStatus, Kind
 from ophyd.device import Staged
 
 from ophyd_devices.sim.sim_signals import SetableSignal
 from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.errors import DeviceStopError, DeviceTimeoutError
+
+logger = bec_logger.logger
 
 
 class DetectorInitError(Exception):
@@ -176,7 +181,7 @@ class CustomDetectorMixin:
         check_stopped: bool = False,
         interval: float = 0.05,
         all_signals: bool = False,
-        exception_on_timeout: Exception = TimeoutError("Timeout while waiting for signals"),
+        exception_on_timeout: Exception = None,
     ) -> DeviceStatus:
         """Utility function to wait for signals in a thread.
         Returns a DevicesStatus object that resolves either to set_finished or set_exception.
@@ -200,6 +205,10 @@ class CustomDetectorMixin:
         Returns:
             DeviceStatus: DeviceStatus object that resolves either to set_finished or set_exception
         """
+        if exception_on_timeout is None:
+            exception_on_timeout = DeviceTimeoutError(
+                f"Timeout error for {self.parent.name} while waiting for signals {signal_conditions}"
+            )
 
         status = DeviceStatus(self.parent)
 
@@ -211,7 +220,7 @@ class CustomDetectorMixin:
             check_stopped: bool,
             interval: float,
             all_signals: bool,
-            exception_on_timeout: Exception = TimeoutError("Timeout while waiting for signals"),
+            exception_on_timeout: Exception,
         ):
             """Convenient wrapper around wait_for_signals to set status based on the result.
 
@@ -231,8 +240,16 @@ class CustomDetectorMixin:
                 if result:
                     status.set_finished()
                 else:
-                    status.set_exception(exception_on_timeout)
+                    if self.stopped:
+                        status.set_exception(exc=DeviceStopError(f"{self.parent.name} was stopped"))
+                    else:
+                        status.set_exception(exc=exception_on_timeout)
+            # pylint: disable=broad-except
             except Exception as exc:
+                content = traceback.format_exc()
+                logger.warning(
+                    f"Error in wait_for_signals in {self.parent.name}; Traceback: {content}"
+                )
                 status.set_exception(exc=exc)
 
         thread = threading.Thread(
