@@ -37,19 +37,16 @@ class SimCameraSetup(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_trigger_call(status: DeviceStatus) -> None:
-            error = None
             try:
                 for _ in range(self.parent.burst.get()):
                     data = self.parent.image.get()
                     # pylint: disable=protected-access
                     self.parent._run_subs(sub_type=self.parent.SUB_MONITOR, value=data)
                     if self.parent.stopped:
-                        error = DeviceStopError(f"{self.parent.name} was stopped")
-                        break
+                        raise DeviceStopError(f"{self.parent.name} was stopped")
                     if self.parent.write_to_disk.get():
                         self.parent.h5_writer.receive_data(data)
-                # pylint: disable=expression-not-assigned
-                status.set_finished() if not error else status.set_exception(exc=error)
+                status.set_finished()
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()
@@ -93,15 +90,13 @@ class SimCameraSetup(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_complete_call(status: DeviceStatus) -> None:
-            error = None
             try:
                 if self.parent.write_to_disk.get():
                     self.parent.h5_writer.write_data()
                 self.publish_file_location(done=True, successful=True)
                 if self.parent.stopped:
-                    error = DeviceStopError(f"{self.parent.name} was stopped")
-                # pylint: disable=expression-not-assigned
-                status.set_finished() if not error else status.set_exception(exc=error)
+                    raise DeviceStopError(f"{self.parent.name} was stopped")
+                status.set_finished()
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()

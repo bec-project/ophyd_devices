@@ -240,9 +240,11 @@ class CustomDetectorMixin:
                 if result:
                     status.set_finished()
                 else:
-                    if self.stopped:
+                    if self.parent.stopped:
+                        # INFO This will execute a callback to the parent device.stop() method
                         status.set_exception(exc=DeviceStopError(f"{self.parent.name} was stopped"))
                     else:
+                        # INFO This will execute a callback to the parent device.stop() method
                         status.set_exception(exc=exception_on_timeout)
             # pylint: disable=broad-except
             except Exception as exc:
@@ -250,6 +252,7 @@ class CustomDetectorMixin:
                 logger.warning(
                     f"Error in wait_for_signals in {self.parent.name}; Traceback: {content}"
                 )
+                # INFO This will execute a callback to the parent device.stop() method
                 status.set_exception(exc=exc)
 
         thread = threading.Thread(

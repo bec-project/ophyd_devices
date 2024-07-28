@@ -93,15 +93,12 @@ class SimWaveform(Device):
         status = DeviceStatus(self)
 
         def acquire(status: DeviceStatus):
-            error = None
             try:
                 for _ in range(self.burst.get()):
                     self._run_subs(sub_type=self.SUB_MONITOR, value=self.waveform.get())
                     if self.stopped:
-                        error = DeviceStopError(f"{self.name} was stopped")
-                        break
-                # pylint: disable=expression-not-assigned
-                status.set_finished() if not error else status.set_exception(exc=error)
+                        raise DeviceStopError(f"{self.name} was stopped")
+                status.set_finished()
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()

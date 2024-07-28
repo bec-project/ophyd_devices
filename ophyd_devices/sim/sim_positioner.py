@@ -159,8 +159,6 @@ class SimPositioner(Device, PositionerBase):
 
     def _move_and_finish(self, start_pos, stop_pos, st):
         """Move the simulated device and finish the motion."""
-        error = None
-
         target = stop_pos + self.tolerance.get() * np.random.uniform(-1, 1)
 
         updates = np.ceil(np.abs(target - start_pos) / self.velocity.get() * self.update_frequency)
@@ -170,12 +168,9 @@ class SimPositioner(Device, PositionerBase):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(ii)
                 if self._stopped:
-                    error = DeviceStopError(f"{self.name} was stopped")
-                    break
-            else:
-                self._update_state(target)
-            # pylint: disable=expression-not-assigned
-            st.set_finished() if error is None else st.set_exception(error)
+                    raise DeviceStopError(f"{self.parent.name} was stopped")
+            self._update_state(target)
+            st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
             content = traceback.format_exc()
@@ -231,7 +226,6 @@ class SimLinearTrajectoryPositioner(SimPositioner):
         super().__init__(*args, **kwargs)
 
     def _move_and_finish(self, start_pos, end_pos, st):
-        error = None
         acc_time = (
             self.acceleration.get()
         )  # acceleration in Ophyd refers to acceleration time in seconds
@@ -244,17 +238,13 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(traj.position())
                 if self._stopped:
-                    error = DeviceStopError(f"{self.name} was stopped")
-                    break
-            if self._stopped:
-                # simulate deceleration
-                traj = stop_trajectory(traj)
-                while not traj.ended:
-                    ttime.sleep(1 / self.update_frequency)
-                    self._update_state(traj.position())
-            self._update_state(traj.position())
-            # pylint: disable=expression-not-assigned
-            st.set_finished() if error is None else st.set_exception(error)
+                    # simulate deceleration
+                    traj = stop_trajectory(traj)
+                    while not traj.ended:
+                        ttime.sleep(1 / self.update_frequency)
+                        self._update_state(traj.position())
+                    raise DeviceStopError(f"{self.parent.name} was stopped")
+            st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
             content = traceback.format_exc()

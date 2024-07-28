@@ -114,14 +114,12 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_complete_call(status: DeviceStatus) -> None:
-            error = None
             try:
                 if self.parent.data_buffer["value"]:
                     self._send_data_to_bec()
                 if self.parent.stopped:
-                    error = DeviceStopError(f"{self.parent.name} was stopped")
-                # pylint: disable=expression-not-assigned
-                status.set_finished() if not error else status.set_exception(exc=error)
+                    raise DeviceStopError(f"{self.parent.name} was stopped")
+                status.set_finished()
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()
@@ -157,7 +155,6 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
         status = DeviceStatus(self.parent)
 
         def on_trigger_call(status: DeviceStatus) -> None:
-            error = None
             try:
                 self.parent.data_buffer["value"].append(self.parent.readback.get())
                 self.parent.data_buffer["timestamp"].append(self.parent.readback.timestamp)
@@ -166,9 +163,8 @@ class SimMonitorAsyncPrepare(CustomDetectorMixin):
                 if self._counter % self._random_send_interval == 0:
                     self._send_data_to_bec()
                 if self.parent.stopped:
-                    error = DeviceStopError(f"{self.parent.name} was stopped")
-                # pylint: disable=expression-not-assigned
-                status.set_finished() if not error else status.set_exception(exc=error)
+                    raise DeviceStopError(f"{self.parent.name} was stopped")
+                status.set_finished()
             # pylint: disable=broad-except
             except Exception as exc:
                 content = traceback.format_exc()

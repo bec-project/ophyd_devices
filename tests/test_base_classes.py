@@ -11,6 +11,7 @@ from ophyd_devices.interfaces.base_classes.psi_detector_base import (
     PSIDetectorBase,
 )
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
+from ophyd_devices.utils.errors import DeviceStopError, DeviceTimeoutError
 
 
 @pytest.fixture
@@ -113,13 +114,12 @@ def test_check_scan_id(detector_base):
 
 def test_wait_for_signal(detector_base):
     expected_value = "test"
-    exception = TimeoutError("Timeout")
     status = detector_base.custom_prepare.wait_with_status(
         [(detector_base.filepath.get, expected_value)],
         check_stopped=True,
         timeout=5,
         interval=0.01,
-        exception_on_timeout=exception,
+        exception_on_timeout=None,
     )
     time.sleep(0.1)
     assert status.done is False
@@ -128,14 +128,14 @@ def test_wait_for_signal(detector_base):
     # some delay to allow the stop to take effect
     time.sleep(0.15)
     assert status.done is True
-    assert id(status.exception()) == id(exception)
+    assert status.exception().args == DeviceStopError(f"{detector_base.name} was stopped").args
     detector_base.stopped = False
     status = detector_base.custom_prepare.wait_with_status(
         [(detector_base.filepath.get, expected_value)],
         check_stopped=True,
         timeout=5,
         interval=0.01,
-        exception_on_timeout=exception,
+        exception_on_timeout=None,
     )
     # Check that thread resolves when expected value is set
     detector_base.filepath.set(expected_value)
@@ -144,3 +144,56 @@ def test_wait_for_signal(detector_base):
     assert status.done is True
     assert status.success is True
     assert status.exception() is None
+
+    detector_base.stopped = False
+    # Check that wait for status runs into timeout with expectd exception
+    detector_base.filepath.set("wrong_value")
+    exception = TimeoutError("Timeout")
+    status = detector_base.custom_prepare.wait_with_status(
+        [(detector_base.filepath.get, expected_value)],
+        check_stopped=True,
+        timeout=0.01,
+        interval=0.01,
+        exception_on_timeout=exception,
+    )
+    time.sleep(0.2)
+    assert status.done is True
+    assert id(status.exception()) == id(exception)
+    assert status.success is False
+
+
+def test_wait_for_signal_returns_exception(detector_base):
+    expected_value = "test"
+    # Check that wait for status runs into timeout with expectd exception
+    detector_base.filepath.set("wrong_value")
+    exception = TimeoutError("Timeout")
+    status = detector_base.custom_prepare.wait_with_status(
+        [(detector_base.filepath.get, expected_value)],
+        check_stopped=True,
+        timeout=0.01,
+        interval=0.01,
+        exception_on_timeout=exception,
+    )
+    time.sleep(0.2)
+    assert status.done is True
+    assert id(status.exception()) == id(exception)
+    assert status.success is False
+
+    detector_base.stopped = False
+    # Check that standard exception is thrown
+    status = detector_base.custom_prepare.wait_with_status(
+        [(detector_base.filepath.get, expected_value)],
+        check_stopped=True,
+        timeout=0.01,
+        interval=0.01,
+        exception_on_timeout=None,
+    )
+    time.sleep(0.2)
+    assert status.done is True
+    assert (
+        status.exception().args
+        == DeviceTimeoutError(
+            f"Timeout error for {detector_base.name} while waiting for signals {[(detector_base.filepath.get, expected_value)]}"
+        ).args
+    )
+    assert status.success is False
