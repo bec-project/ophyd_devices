@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v1.7.2 (2024-07-29)
+
+### Build
+
+* build(ci): update variable for ophyd_devices branch ([`1d55214`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1d55214fbd25a111f8a81d804fd7f39470934c74))
+
+### Ci
+
+* ci: made BEC a child pipeline ([`9eb67a0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9eb67a0900159248e785b17e4250ae6a7e954348))
+
+* ci: moved to awi utils trigger pipelines ([`0f6494a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0f6494ae2caafc0727a394683718031670614aeb))
+
+* ci: changed default branch ([`fe5f1c3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fe5f1c314f51cb07bae4044a406ed5dc738c7837))
+
+* ci: fixed default branch for ophyd ci var ([`85630f3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85630f3d733897945ef3421b9805e66191edb537))
+
+### Fix
+
+* fix: add write_access attribute to simulated readonly signal ([`c3e17ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3e17ba05632309adcc896f858e52ecb07048a30))
+
+* fix: remove print for select_model method of sim module ([`5009316`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5009316a82897d739b2a26eb341e9f5a1e083e51))
+
+* fix: Improve asyn_monitor and camera on_trigger and on_complete to return status ([`f311876`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3118765b0efc38dd12a3d72d290e517490f9fbf))
+
+### Refactor
+
+* refactor: review DeviceStatus and error handling in simulation ([`87858ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/87858edfe290cb711bc30c2f3ba2653460d15af6))
+
+* refactor: rename monitor to device_monitor_2d ([`6a6b907`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6a6b907022532e20626b8ed97d347da04beea4b0))
+
+### Test
+
+* test: Fix and add test scenarios for DeviceStatus error handling ([`4397db9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4397db919a852d70c53d80a532540eaabdffc3ad))
+
+* test: adapt tests to consider returned DeviceStatus for on_trigger/complete ([`f8e9aaf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f8e9aaf55a5734f3bf557bbf5e51eb7ea41257d4))
+
+### Unknown
+
+* wip ([`35141e9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/35141e94b1c8a6ba70e96b915b45871d19bd5f7e))
+
 ## v1.7.1 (2024-07-24)
 
 ### Fix
@@ -115,47 +155,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 ### Fix
 
 * fix: make done and successful mandatory args. ([`79b821a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/79b821ae7e38b78e35ab5165db590cb7123afbf4))
-
-* fix: make filepath a signal ([`e9aaa03`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e9aaa0383e4120a09b6aa40b7e33fb53f31cb9a3))
-
-## v1.3.2 (2024-06-04)
-
-### Documentation
-
-* docs: Update device list ([`c1e977f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c1e977f639633167fe4e7dfb5f34b066c26933d0))
-
-* docs: Update device list ([`92be39f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/92be39f14fac756749631e64113d24f732bb5551))
-
-### Fix
-
-* fix: adapt SimPositioner, make tolerance changeable signal ([`3606a2f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3606a2fc5ad74ec949d388cc23fbd6618d1f3083))
-
-## v1.3.1 (2024-06-03)
-
-### Documentation
-
-* docs: Update device list ([`33f5d8a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/33f5d8a6291e4ddfd905d83ff5c9384d648a632d))
-
-* docs: Update device list ([`6f29a79`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6f29a797965187ed0a608d0bb07eaa25f414440e))
-
-### Fix
-
-* fix: bugfix to fill data butter with value, timestamp properly ([`8520800`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85208002a305fa657c469ff98b45174eb2c1f29a))
-
-## v1.3.0 (2024-06-03)
-
-### Documentation
-
-* docs: Update device list ([`f9b126c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f9b126c60ce710fba221ffb208d66541b8264c0b))
-
-### Feature
-
-* feat: add async monitor, add on_complete to psi_det_base and rm duplicated mocks, closes #67 ([`1aece61`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1aece61a3b09267f87f0771b163a5d07b4549eff))
-
-### Refactor
-
-* refactor: add .wait() to set methods ([`7334925`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73349257ee0228a9563051d4f8e0bf5f7e6b551f))
-
-### Test
-
-* test: add tests for new device ([`c554422`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c5544226be3f12d238a0793a0f41da07af36e460))
