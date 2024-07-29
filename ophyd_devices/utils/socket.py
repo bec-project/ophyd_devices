@@ -202,9 +202,17 @@ class SocketIO:
         return self.sock.send(msg_bytes)
 
     def _recv(self, buffer_length=1024):
-        msg = self.sock.recv(buffer_length)
-        logger.debug(f"recv message: {msg}")
-        return msg
+        full_msg = b""
+        while True:
+            try:
+                msg = self.sock.recv(buffer_length)
+                logger.debug(f"recv message: {msg}")
+            except TimeoutError:
+                msg = b""
+            full_msg += msg
+            if len(msg) < buffer_length:
+                break
+        return full_msg
 
     def _initialize_socket(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
