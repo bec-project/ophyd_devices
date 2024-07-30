@@ -24,6 +24,7 @@ dependencies = [
     "pytest ~= 8.0",
     "h5py ~= 3.10",
     "hdf5plugin ~= 4.3",
+    "pandablocks ~= 0.10",
 ]
 
 [project.optional-dependencies]
