@@ -1,7 +1,7 @@
 
 from ophyd_devices.utils.controller import ControllerError
 from pandablocks.blocking import BlockingClient
-from pandablocks.responses import ReadyData, EndData
+from pandablocks.responses import ReadyData, EndData, FrameData
 from pandablocks.commands import GetState, SetState, Arm, Disarm, Raw
 import os
 import threading
@@ -12,6 +12,7 @@ from ophyd_devices.utils import bec_utils
 from bec_lib.messages import DeviceMessage
 from bec_lib.endpoints import MessageEndpoints
 import numpy as np
+from collections import defaultdict
 
 
 class PandaControllerError(ControllerError):
@@ -79,8 +80,8 @@ class PandaController(Device):
         out = defaultdict(list)
         keys = data.dtype.names
         for entry in data:
-            for i in range(len(keys)):
-                out[keys[i]].append(entry[i])
+            for i, key in enumerate(keys):
+                out[key].append(entry[i])
         msg = DeviceMessage(signals=out, metadata={})#TODO add here scan_msg metadata + done flag
         self.connector.xadd(
             topic=MessageEndpoints.device_async_readback(scan_id=self.scaninfo.scan_id, device=self.name), 
@@ -98,7 +99,7 @@ class PandaController(Device):
                         self.started_event.set()
                         continue
 
-                    if isinstance(data, dict):
+                    if isinstance(data, FrameData):
                         # print(f"received frame data: {data}")
                         self.data_bucket.append(data)
                         continue
@@ -166,21 +167,21 @@ class PandaController(Device):
 if __name__ == "__main__":
     import time
     controller = PandaController(name="redpanda", socket_host="x02da-panda-2.psi.ch")
-    # controller.write_state_to_disk("test_config_3.ini")
-    controller.load_state_from_disk("test_config.ini")
-    # start_time = time.time()
-    # controller.stage()
-    # print(f"\n Time after stage: {time.time()- start_time}\n")
-    # controller.kickoff().wait()
-    # print(f"\nTime after kickoff {time.time()- start_time}\n")
-    # time.sleep(2)
-    # print(f"\nTime after sleep {time.time()- start_time}\n")
-    # controller.unstage()
-    # print(f"\nTime after unstage {time.time()- start_time}\n")
+    # controller.write_state_to_disk("panda_config_time_.ini")
+    # controller.load_state_from_disk("test_config.ini")
+    start_time = time.time()
+    controller.stage()
+    print(f"\n Time after stage: {time.time()- start_time}\n")
+    controller.kickoff().wait()
+    print(f"\nTime after kickoff {time.time()- start_time}\n")
+    time.sleep(2)
+    print(f"\nTime after sleep {time.time()- start_time}\n")
+    controller.unstage()
+    print(f"\nTime after unstage {time.time()- start_time}\n")
 
-    # print("-----------")
-    # print(len(controller.data_bucket))
-    # print(sum([len(data)for data in controller.data_bucket]))
+    print("-----------")
+    print(len(controller.data_bucket))
+    print(sum([len(data.data)for data in controller.data_bucket]))
 
 
     # try:
