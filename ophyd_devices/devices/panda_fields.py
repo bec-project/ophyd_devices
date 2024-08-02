@@ -137,7 +137,7 @@ class BitMuxField(FieldBase):
     max_delay: Optional[int]
 
 
-available_fields = {
+PANDA_FIELDS = {
     "uint": UIntField,
     "int": IntField,
     "scalar": ScalarField,

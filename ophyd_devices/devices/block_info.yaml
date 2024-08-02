@@ -1,0 +1,2469 @@
+BITS:
+  A:
+    type:
+    - param
+    - bit
+  B:
+    type:
+    - param
+    - bit
+  C:
+    type:
+    - param
+    - bit
+  D:
+    type:
+    - param
+    - bit
+  OUTA:
+    type:
+    - bit_out
+  OUTB:
+    type:
+    - bit_out
+  OUTC:
+    type:
+    - bit_out
+  OUTD:
+    type:
+    - bit_out
+CALC1:
+  INPA:
+    type:
+    - pos_mux
+  INPB:
+    type:
+    - pos_mux
+  INPC:
+    type:
+    - pos_mux
+  INPD:
+    type:
+    - pos_mux
+  OUT:
+    type:
+    - pos_out
+  SHIFT:
+    type:
+    - param
+    - uint
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+CALC2:
+  INPA:
+    type:
+    - pos_mux
+  INPB:
+    type:
+    - pos_mux
+  INPC:
+    type:
+    - pos_mux
+  INPD:
+    type:
+    - pos_mux
+  OUT:
+    type:
+    - pos_out
+  SHIFT:
+    type:
+    - param
+    - uint
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+CLOCK1:
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PERIOD:
+    type:
+    - param
+    - time
+  WIDTH:
+    type:
+    - param
+    - time
+CLOCK2:
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PERIOD:
+    type:
+    - param
+    - time
+  WIDTH:
+    type:
+    - param
+    - time
+COUNTER1:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER2:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER3:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER4:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER5:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER6:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER7:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+COUNTER8:
+  CARRY:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - bit_mux
+  ENABLE:
+    type:
+    - bit_mux
+  MAX:
+    type:
+    - param
+    - int
+  MIN:
+    type:
+    - param
+    - int
+  OUT:
+    type:
+    - pos_out
+  OUT_MODE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STEP:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+DIV1:
+  COUNT:
+    type:
+    - read
+    - uint
+  DIVISOR:
+    type:
+    - param
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  FIRST_PULSE:
+    type:
+    - param
+    - enum
+  INP:
+    type:
+    - bit_mux
+  OUTD:
+    type:
+    - bit_out
+  OUTN:
+    type:
+    - bit_out
+DIV2:
+  COUNT:
+    type:
+    - read
+    - uint
+  DIVISOR:
+    type:
+    - param
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  FIRST_PULSE:
+    type:
+    - param
+    - enum
+  INP:
+    type:
+    - bit_mux
+  OUTD:
+    type:
+    - bit_out
+  OUTN:
+    type:
+    - bit_out
+FILTER1:
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  INP:
+    type:
+    - pos_mux
+  MODE:
+    type:
+    - param
+    - enum
+  OUT:
+    type:
+    - pos_out
+  READY:
+    type:
+    - bit_out
+  TRIG:
+    type:
+    - bit_mux
+FILTER2:
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  INP:
+    type:
+    - pos_mux
+  MODE:
+    type:
+    - param
+    - enum
+  OUT:
+    type:
+    - pos_out
+  READY:
+    type:
+    - bit_out
+  TRIG:
+    type:
+    - bit_mux
+FMC_IN:
+  ADC_B_FITTED:
+    type:
+    - read
+    - enum
+  GAIN1:
+    type:
+    - param
+    - enum
+  GAIN2:
+    type:
+    - param
+    - enum
+  GAIN3:
+    type:
+    - param
+    - enum
+  GAIN4:
+    type:
+    - param
+    - enum
+  GAIN5:
+    type:
+    - param
+    - enum
+  GAIN6:
+    type:
+    - param
+    - enum
+  GAIN7:
+    type:
+    - param
+    - enum
+  GAIN8:
+    type:
+    - param
+    - enum
+  TTL:
+    type:
+    - bit_out
+  VAL1:
+    type:
+    - pos_out
+  VAL2:
+    type:
+    - pos_out
+  VAL3:
+    type:
+    - pos_out
+  VAL4:
+    type:
+    - pos_out
+  VAL5:
+    type:
+    - pos_out
+  VAL6:
+    type:
+    - pos_out
+  VAL7:
+    type:
+    - pos_out
+  VAL8:
+    type:
+    - pos_out
+FMC_OUT:
+  DAC_FITTED:
+    type:
+    - read
+    - enum
+  GAIN1:
+    type:
+    - param
+    - enum
+  GAIN2:
+    type:
+    - param
+    - enum
+  GAIN3:
+    type:
+    - param
+    - enum
+  GAIN4:
+    type:
+    - param
+    - enum
+  VAL1:
+    type:
+    - pos_mux
+  VAL2:
+    type:
+    - pos_mux
+  VAL3:
+    type:
+    - pos_mux
+  VAL4:
+    type:
+    - pos_mux
+INENC1:
+  A:
+    type:
+    - bit_out
+  B:
+    type:
+    - bit_out
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_mux
+  CLK_PERIOD:
+    type:
+    - param
+    - time
+  CLK_SRC:
+    type:
+    - param
+    - enum
+  CONN:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_out
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENCODING:
+    type:
+    - param
+    - enum
+  FRAME_PERIOD:
+    type:
+    - param
+    - time
+  HEALTH:
+    type:
+    - read
+    - enum
+  HOMED:
+    type:
+    - read
+    - bit
+  LSB_DISCARD:
+    type:
+    - param
+    - uint
+  MSB_DISCARD:
+    type:
+    - param
+    - uint
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  RST_ON_Z:
+    type:
+    - param
+    - bit
+  SETP:
+    type:
+    - write
+    - int
+  VAL:
+    type:
+    - pos_out
+  Z:
+    type:
+    - bit_out
+INENC2:
+  A:
+    type:
+    - bit_out
+  B:
+    type:
+    - bit_out
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_mux
+  CLK_PERIOD:
+    type:
+    - param
+    - time
+  CLK_SRC:
+    type:
+    - param
+    - enum
+  CONN:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_out
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENCODING:
+    type:
+    - param
+    - enum
+  FRAME_PERIOD:
+    type:
+    - param
+    - time
+  HEALTH:
+    type:
+    - read
+    - enum
+  HOMED:
+    type:
+    - read
+    - bit
+  LSB_DISCARD:
+    type:
+    - param
+    - uint
+  MSB_DISCARD:
+    type:
+    - param
+    - uint
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  RST_ON_Z:
+    type:
+    - param
+    - bit
+  SETP:
+    type:
+    - write
+    - int
+  VAL:
+    type:
+    - pos_out
+  Z:
+    type:
+    - bit_out
+INENC3:
+  A:
+    type:
+    - bit_out
+  B:
+    type:
+    - bit_out
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_mux
+  CLK_PERIOD:
+    type:
+    - param
+    - time
+  CLK_SRC:
+    type:
+    - param
+    - enum
+  CONN:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_out
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENCODING:
+    type:
+    - param
+    - enum
+  FRAME_PERIOD:
+    type:
+    - param
+    - time
+  HEALTH:
+    type:
+    - read
+    - enum
+  HOMED:
+    type:
+    - read
+    - bit
+  LSB_DISCARD:
+    type:
+    - param
+    - uint
+  MSB_DISCARD:
+    type:
+    - param
+    - uint
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  RST_ON_Z:
+    type:
+    - param
+    - bit
+  SETP:
+    type:
+    - write
+    - int
+  VAL:
+    type:
+    - pos_out
+  Z:
+    type:
+    - bit_out
+INENC4:
+  A:
+    type:
+    - bit_out
+  B:
+    type:
+    - bit_out
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_mux
+  CLK_PERIOD:
+    type:
+    - param
+    - time
+  CLK_SRC:
+    type:
+    - param
+    - enum
+  CONN:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_out
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENCODING:
+    type:
+    - param
+    - enum
+  FRAME_PERIOD:
+    type:
+    - param
+    - time
+  HEALTH:
+    type:
+    - read
+    - enum
+  HOMED:
+    type:
+    - read
+    - bit
+  LSB_DISCARD:
+    type:
+    - param
+    - uint
+  MSB_DISCARD:
+    type:
+    - param
+    - uint
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  RST_ON_Z:
+    type:
+    - param
+    - bit
+  SETP:
+    type:
+    - write
+    - int
+  VAL:
+    type:
+    - pos_out
+  Z:
+    type:
+    - bit_out
+LUT1:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT2:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT3:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT4:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT5:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT6:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LUT8:
+  FUNC:
+    type:
+    - param
+    - lut
+  INPA:
+    type:
+    - bit_mux
+  INPB:
+    type:
+    - bit_mux
+  INPC:
+    type:
+    - bit_mux
+  INPD:
+    type:
+    - bit_mux
+  INPE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  TYPEA:
+    type:
+    - param
+    - enum
+  TYPEB:
+    type:
+    - param
+    - enum
+  TYPEC:
+    type:
+    - param
+    - enum
+  TYPED:
+    type:
+    - param
+    - enum
+  TYPEE:
+    type:
+    - param
+    - enum
+LVDSIN1:
+  VAL:
+    type:
+    - bit_out
+LVDSIN2:
+  VAL:
+    type:
+    - bit_out
+LVDSOUT1:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+LVDSOUT2:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+OUTENC1:
+  A:
+    type:
+    - bit_mux
+  B:
+    type:
+    - bit_mux
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_mux
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  ENCODING:
+    type:
+    - param
+    - enum
+  GENERATOR_ERROR:
+    type:
+    - param
+    - enum
+  HEALTH:
+    type:
+    - read
+    - enum
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  QPERIOD:
+    type:
+    - param
+    - time
+  QSTATE:
+    type:
+    - read
+    - enum
+  VAL:
+    type:
+    - pos_mux
+  Z:
+    type:
+    - bit_mux
+OUTENC2:
+  A:
+    type:
+    - bit_mux
+  B:
+    type:
+    - bit_mux
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_mux
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  ENCODING:
+    type:
+    - param
+    - enum
+  GENERATOR_ERROR:
+    type:
+    - param
+    - enum
+  HEALTH:
+    type:
+    - read
+    - enum
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  QPERIOD:
+    type:
+    - param
+    - time
+  QSTATE:
+    type:
+    - read
+    - enum
+  VAL:
+    type:
+    - pos_mux
+  Z:
+    type:
+    - bit_mux
+OUTENC3:
+  A:
+    type:
+    - bit_mux
+  B:
+    type:
+    - bit_mux
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_mux
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  ENCODING:
+    type:
+    - param
+    - enum
+  GENERATOR_ERROR:
+    type:
+    - param
+    - enum
+  HEALTH:
+    type:
+    - read
+    - enum
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  QPERIOD:
+    type:
+    - param
+    - time
+  QSTATE:
+    type:
+    - read
+    - enum
+  VAL:
+    type:
+    - pos_mux
+  Z:
+    type:
+    - bit_mux
+OUTENC4:
+  A:
+    type:
+    - bit_mux
+  B:
+    type:
+    - bit_mux
+  BITS:
+    type:
+    - param
+    - uint
+  CLK:
+    type:
+    - bit_out
+  DATA:
+    type:
+    - bit_mux
+  DCARD_TYPE:
+    type:
+    - read
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  ENCODING:
+    type:
+    - param
+    - enum
+  GENERATOR_ERROR:
+    type:
+    - param
+    - enum
+  HEALTH:
+    type:
+    - read
+    - enum
+  PROTOCOL:
+    type:
+    - param
+    - enum
+  QPERIOD:
+    type:
+    - param
+    - time
+  QSTATE:
+    type:
+    - read
+    - enum
+  VAL:
+    type:
+    - pos_mux
+  Z:
+    type:
+    - bit_mux
+PCAP:
+  ACTIVE:
+    type:
+    - bit_out
+  BITS0:
+    type:
+    - ext_out
+    - bits
+  BITS1:
+    type:
+    - ext_out
+    - bits
+  BITS2:
+    type:
+    - ext_out
+    - bits
+  BITS3:
+    type:
+    - ext_out
+    - bits
+  ENABLE:
+    type:
+    - bit_mux
+  GATE:
+    type:
+    - bit_mux
+  GATE_DURATION:
+    type:
+    - ext_out
+    - samples
+  HEALTH:
+    type:
+    - read
+    - enum
+  SHIFT_SUM:
+    type:
+    - param
+    - uint
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+  TS_END:
+    type:
+    - ext_out
+    - timestamp
+  TS_START:
+    type:
+    - ext_out
+    - timestamp
+  TS_TRIG:
+    type:
+    - ext_out
+    - timestamp
+PCOMP1:
+  ACTIVE:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - param
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  INP:
+    type:
+    - pos_mux
+  OUT:
+    type:
+    - bit_out
+  PRE_START:
+    type:
+    - param
+    - int
+  PRODUCED:
+    type:
+    - read
+    - uint
+  PULSES:
+    type:
+    - param
+    - uint
+  RELATIVE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STATE:
+    type:
+    - read
+    - enum
+  STEP:
+    type:
+    - param
+    - int
+  WIDTH:
+    type:
+    - param
+    - int
+PCOMP2:
+  ACTIVE:
+    type:
+    - bit_out
+  DIR:
+    type:
+    - param
+    - enum
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  INP:
+    type:
+    - pos_mux
+  OUT:
+    type:
+    - bit_out
+  PRE_START:
+    type:
+    - param
+    - int
+  PRODUCED:
+    type:
+    - read
+    - uint
+  PULSES:
+    type:
+    - param
+    - uint
+  RELATIVE:
+    type:
+    - param
+    - enum
+  START:
+    type:
+    - param
+    - int
+  STATE:
+    type:
+    - read
+    - enum
+  STEP:
+    type:
+    - param
+    - int
+  WIDTH:
+    type:
+    - param
+    - int
+PGEN1:
+  ACTIVE:
+    type:
+    - bit_out
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  OUT:
+    type:
+    - pos_out
+  REPEATS:
+    type:
+    - param
+    - uint
+  TABLE:
+    type:
+    - table
+  TRIG:
+    type:
+    - bit_mux
+PGEN2:
+  ACTIVE:
+    type:
+    - bit_out
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  OUT:
+    type:
+    - pos_out
+  REPEATS:
+    type:
+    - param
+    - uint
+  TABLE:
+    type:
+    - table
+  TRIG:
+    type:
+    - bit_mux
+PULSE1:
+  DELAY:
+    type:
+    - time
+  DROPPED:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PULSES:
+    type:
+    - param
+    - uint
+  QUEUED:
+    type:
+    - read
+    - uint
+  STEP:
+    type:
+    - time
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+  WIDTH:
+    type:
+    - time
+PULSE2:
+  DELAY:
+    type:
+    - time
+  DROPPED:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PULSES:
+    type:
+    - param
+    - uint
+  QUEUED:
+    type:
+    - read
+    - uint
+  STEP:
+    type:
+    - time
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+  WIDTH:
+    type:
+    - time
+PULSE3:
+  DELAY:
+    type:
+    - time
+  DROPPED:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PULSES:
+    type:
+    - param
+    - uint
+  QUEUED:
+    type:
+    - read
+    - uint
+  STEP:
+    type:
+    - time
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+  WIDTH:
+    type:
+    - time
+PULSE4:
+  DELAY:
+    type:
+    - time
+  DROPPED:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  OUT:
+    type:
+    - bit_out
+  PULSES:
+    type:
+    - param
+    - uint
+  QUEUED:
+    type:
+    - read
+    - uint
+  STEP:
+    type:
+    - time
+  TRIG:
+    type:
+    - bit_mux
+  TRIG_EDGE:
+    type:
+    - param
+    - enum
+  WIDTH:
+    type:
+    - time
+SEQ1:
+  ACTIVE:
+    type:
+    - bit_out
+  BITA:
+    type:
+    - bit_mux
+  BITB:
+    type:
+    - bit_mux
+  BITC:
+    type:
+    - bit_mux
+  CAN_WRITE_NEXT:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  LINE_REPEAT:
+    type:
+    - read
+    - uint
+  OUTA:
+    type:
+    - bit_out
+  OUTB:
+    type:
+    - bit_out
+  OUTC:
+    type:
+    - bit_out
+  OUTD:
+    type:
+    - bit_out
+  OUTE:
+    type:
+    - bit_out
+  OUTF:
+    type:
+    - bit_out
+  POSA:
+    type:
+    - pos_mux
+  POSB:
+    type:
+    - pos_mux
+  POSC:
+    type:
+    - pos_mux
+  PRESCALE:
+    type:
+    - param
+    - time
+  REPEATS:
+    type:
+    - param
+    - uint
+  STATE:
+    type:
+    - read
+    - enum
+  TABLE:
+    type:
+    - table
+  TABLE_LINE:
+    type:
+    - read
+    - uint
+  TABLE_REPEAT:
+    type:
+    - read
+    - uint
+SEQ2:
+  ACTIVE:
+    type:
+    - bit_out
+  BITA:
+    type:
+    - bit_mux
+  BITB:
+    type:
+    - bit_mux
+  BITC:
+    type:
+    - bit_mux
+  CAN_WRITE_NEXT:
+    type:
+    - read
+    - uint
+  ENABLE:
+    type:
+    - bit_mux
+  HEALTH:
+    type:
+    - read
+    - enum
+  LINE_REPEAT:
+    type:
+    - read
+    - uint
+  OUTA:
+    type:
+    - bit_out
+  OUTB:
+    type:
+    - bit_out
+  OUTC:
+    type:
+    - bit_out
+  OUTD:
+    type:
+    - bit_out
+  OUTE:
+    type:
+    - bit_out
+  OUTF:
+    type:
+    - bit_out
+  POSA:
+    type:
+    - pos_mux
+  POSB:
+    type:
+    - pos_mux
+  POSC:
+    type:
+    - pos_mux
+  PRESCALE:
+    type:
+    - param
+    - time
+  REPEATS:
+    type:
+    - param
+    - uint
+  STATE:
+    type:
+    - read
+    - enum
+  TABLE:
+    type:
+    - table
+  TABLE_LINE:
+    type:
+    - read
+    - uint
+  TABLE_REPEAT:
+    type:
+    - read
+    - uint
+SFP3_SYNC_IN:
+  BIT1:
+    type:
+    - bit_out
+  BIT2:
+    type:
+    - bit_out
+  BIT3:
+    type:
+    - bit_out
+  BIT4:
+    type:
+    - bit_out
+  BIT5:
+    type:
+    - bit_out
+  BIT6:
+    type:
+    - bit_out
+  BIT7:
+    type:
+    - bit_out
+  BIT8:
+    type:
+    - bit_out
+  ERR_CNT:
+    type:
+    - read
+    - uint
+  HEALTH:
+    type:
+    - read
+    - enum
+  LINKUP:
+    type:
+    - read
+    - uint
+  POS1:
+    type:
+    - pos_out
+  POS2:
+    type:
+    - pos_out
+  POS3:
+    type:
+    - pos_out
+  POS4:
+    type:
+    - pos_out
+  SYNC_RESET:
+    type:
+    - write
+    - action
+SFP3_SYNC_OUT:
+  BIT1:
+    type:
+    - bit_mux
+  BIT2:
+    type:
+    - bit_mux
+  BIT3:
+    type:
+    - bit_mux
+  BIT4:
+    type:
+    - bit_mux
+  BIT5:
+    type:
+    - bit_mux
+  BIT6:
+    type:
+    - bit_mux
+  BIT7:
+    type:
+    - bit_mux
+  BIT8:
+    type:
+    - bit_mux
+  POS1:
+    type:
+    - pos_mux
+  POS2:
+    type:
+    - pos_mux
+  POS3:
+    type:
+    - pos_mux
+  POS4:
+    type:
+    - pos_mux
+SRGATE1:
+  ENABLE:
+    type:
+    - bit_mux
+  FORCE_RST:
+    type:
+    - write
+    - action
+  FORCE_SET:
+    type:
+    - write
+    - action
+  OUT:
+    type:
+    - bit_out
+  RST:
+    type:
+    - bit_mux
+  RST_EDGE:
+    type:
+    - param
+    - enum
+  SET:
+    type:
+    - bit_mux
+  SET_EDGE:
+    type:
+    - param
+    - enum
+  WHEN_DISABLED:
+    type:
+    - param
+    - enum
+SRGATE2:
+  ENABLE:
+    type:
+    - bit_mux
+  FORCE_RST:
+    type:
+    - write
+    - action
+  FORCE_SET:
+    type:
+    - write
+    - action
+  OUT:
+    type:
+    - bit_out
+  RST:
+    type:
+    - bit_mux
+  RST_EDGE:
+    type:
+    - param
+    - enum
+  SET:
+    type:
+    - bit_mux
+  SET_EDGE:
+    type:
+    - param
+    - enum
+  WHEN_DISABLED:
+    type:
+    - param
+    - enum
+SRGATE3:
+  ENABLE:
+    type:
+    - bit_mux
+  FORCE_RST:
+    type:
+    - write
+    - action
+  FORCE_SET:
+    type:
+    - write
+    - action
+  OUT:
+    type:
+    - bit_out
+  RST:
+    type:
+    - bit_mux
+  RST_EDGE:
+    type:
+    - param
+    - enum
+  SET:
+    type:
+    - bit_mux
+  SET_EDGE:
+    type:
+    - param
+    - enum
+  WHEN_DISABLED:
+    type:
+    - param
+    - enum
+SRGATE4:
+  ENABLE:
+    type:
+    - bit_mux
+  FORCE_RST:
+    type:
+    - write
+    - action
+  FORCE_SET:
+    type:
+    - write
+    - action
+  OUT:
+    type:
+    - bit_out
+  RST:
+    type:
+    - bit_mux
+  RST_EDGE:
+    type:
+    - param
+    - enum
+  SET:
+    type:
+    - bit_mux
+  SET_EDGE:
+    type:
+    - param
+    - enum
+  WHEN_DISABLED:
+    type:
+    - param
+    - enum
+SYSTEM:
+  ALIM_12V0:
+    type:
+    - read
+    - scalar
+  CLK_SEL_STAT:
+    type:
+    - read
+    - enum
+  CLOCK_SOURCE:
+    type:
+    - param
+    - enum
+  ENC_24V:
+    type:
+    - read
+    - scalar
+  EXT_CLOCK_FREQ:
+    type:
+    - read
+    - uint
+  FMC_12V:
+    type:
+    - read
+    - scalar
+  FMC_15VN:
+    type:
+    - read
+    - scalar
+  FMC_15VP:
+    type:
+    - read
+    - scalar
+  HEALTH:
+    type:
+    - read
+    - enum
+  IO_5V0:
+    type:
+    - read
+    - scalar
+  PICO_5V0:
+    type:
+    - read
+    - scalar
+  PLL_LOCKED:
+    type:
+    - read
+    - uint
+  SFP_3V3:
+    type:
+    - read
+    - scalar
+  TEMP_ENC_L:
+    type:
+    - read
+    - int
+  TEMP_ENC_R:
+    type:
+    - read
+    - int
+  TEMP_PICO:
+    type:
+    - read
+    - int
+  TEMP_PSU:
+    type:
+    - read
+    - int
+  TEMP_SFP:
+    type:
+    - read
+    - int
+  TEMP_ZYNQ:
+    type:
+    - read
+    - scalar
+  VCCINT:
+    type:
+    - read
+    - scalar
+TTLIN1:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLIN2:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLIN3:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLIN4:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLIN5:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLIN6:
+  TERM:
+    type:
+    - param
+    - enum
+  VAL:
+    type:
+    - bit_out
+TTLOUT1:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT10:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT2:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT3:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT4:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT5:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT6:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT7:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT8:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux
+TTLOUT9:
+  FINE_DELAY:
+    type:
+    - param
+    - uint
+  QUARTER_DELAY:
+    type:
+    - param
+    - uint
+  VAL:
+    type:
+    - bit_mux

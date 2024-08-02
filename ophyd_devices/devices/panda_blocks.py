@@ -1,3 +1,32 @@
+""" Field Types
+-----------
+
+Each field type determines the set of attributes available for the field.  The
+types and their attributes are documented below.
+
+=================== ============================================================
+Field type          Description
+=================== ============================================================
+``param`` subtype   Configurable parameter.  The `subtype` determines the
+                    precise behaviour and the available attributes.
+``read`` subtype    A read only hardware field, used for monitoring status.
+                    Again, `subtype` determines available attributes.
+``write`` subtype   A write only field, `subtype` determines possible values
+                    and attributes.
+``time``            Configurable timer parameter.
+``bit_out``         Bit output, can be configured as bit input for ``bit_mux``
+                    fields.
+``pos_out``         Position output, can be configured for data capture and as
+                    position input for ``pos_mux`` fields.
+``ext_out`` extra   Extended output values, can be configured for data capture,
+                    but not available on position bus.
+``bit_mux``         Bit input with configurable delay.
+``pos_mux``         Position input multiplexer selection.
+``table``           Table data with special access methods.
+=================== ============================================================
+
+"""
+
 from abc import ABC
 
 
