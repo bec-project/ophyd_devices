@@ -246,6 +246,17 @@ def test_positioner_move(positioner):
     )
 
 
+def test_positioner_motor_is_moving_signal(positioner):
+    """Test that motor is moving is 0 and 1 while (not) moving"""
+    positioner.move(0).wait()
+    positioner.velocity.set(2)
+    assert positioner.motor_is_moving.get() == 0
+    status = positioner.move(5)
+    assert positioner.motor_is_moving.get() == 1
+    status.wait()
+    assert positioner.motor_is_moving.get() == 0
+
+
 @pytest.mark.parametrize(
     "initial_position, final_position, max_velocity, acceleration",
     [(0, 100, 5, 20), (0, 1, 5, 20)],  # Trapezoidal profile  # Triangular profile
