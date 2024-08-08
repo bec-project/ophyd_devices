@@ -169,7 +169,6 @@ class SimPositioner(Device, PositionerBase):
                 self._update_state(ii)
                 if self._stopped:
                     raise DeviceStopError(f"{self.parent.name} was stopped")
-            self._update_state(target)
             st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
@@ -180,6 +179,7 @@ class SimPositioner(Device, PositionerBase):
             st.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
+            self._update_state(target)
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
@@ -196,9 +196,9 @@ class SimPositioner(Device, PositionerBase):
             )
             self.move_thread.start()
         else:
-            self._update_state(value)
             self._done_moving()
             self._set_sim_state(self.motor_is_moving.name, 0)
+            self._update_state(value)
             st.set_finished()
         return st
 
