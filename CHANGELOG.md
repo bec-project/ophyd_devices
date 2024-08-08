@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.7.3 (2024-08-08)
+
+### Fix
+
+* fix: small bugfix to ensure motor_is_moving updates at the end of a move ([`577b35f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/577b35f287ec997a41ce27fae2db9bbc669a2d9d))
+
+### Test
+
+* test: add test case ([`76e1cfc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/76e1cfc4aade9c691d9b5bfd4db0b678b7e2f1cc))
+
 ## v1.7.2 (2024-07-29)
 
 ### Build
@@ -145,13 +155,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * fix: fixed pyepics version for now as it segfaults on startup ([`f1a2368`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1a2368101e6b4af2d08d1a3540680f7f3ff9762))
 
 ## v1.3.4 (2024-06-07)
-
-### Fix
-
-* fix: remove inheritance from ophyd.PostionerBase for simflyer ([`c9247ef`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c9247ef82ee32aeb50474979d414b98d67a2b840))
-
-## v1.3.3 (2024-06-06)
-
-### Fix
-
-* fix: make done and successful mandatory args. ([`79b821a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/79b821ae7e38b78e35ab5165db590cb7123afbf4))
