@@ -268,3 +268,11 @@ class SimPositionerWithCommFailure(SimPositioner):
             status = DeviceStatus(self)
             status.set_exception(RuntimeError("Communication failure"))
         return super().move(value, **kwargs)
+
+
+class SimPositionerWithController(SimPositioner):
+    USER_ACCESS = ["sim", "readback", "dummy_controller", "registered_proxies"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.controller = DummyController()
