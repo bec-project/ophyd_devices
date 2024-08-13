@@ -13,7 +13,8 @@ from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
-from ophyd_devices.sim.sim_test_devices import DummyController
+
+# from ophyd_devices.sim.sim_test_devices import DummyController
 from ophyd_devices.sim.sim_utils import LinearTrajectory, stop_trajectory
 from ophyd_devices.utils.errors import DeviceStopError
 
@@ -89,7 +90,7 @@ class SimPositioner(Device, PositionerBase):
 
         self.update_frequency = update_frequency
         self._stopped = False
-        self.dummy_controller = DummyController()
+        # self.dummy_controller = DummyController()
 
         self.sim = self.sim_cls(parent=self, **kwargs)
 
