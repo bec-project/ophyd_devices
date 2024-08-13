@@ -1,0 +1,30 @@
+mono_roy:
+  description: 'This is an example of an EpicsMotor device'
+  deviceClass: ophyd.EpicsMotor
+  deviceConfig: 
+    prefix: 'X07DA-OP-MO1:ROY'
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+  readOnly: false
+  softwareTrigger: false
+slit_sh2:
+  description: 'This is an example of an EpicsMotor device'
+  deviceClass: ophyd.EpicsMotor
+  deviceConfig: 
+    prefix: 'X07DA-OP-SH2:TR1'
+  onFailure: buffer
+  enabled: true
+  readoutPriority: monitored
+  readOnly: false
+  softwareTrigger: false
+panda_box:
+  description: 'PandaBox implementation'
+  deviceClass: ophyd_devices.devices.panda_box.PandaController
+  deviceConfig:
+    socket_host: x02da-panda-2.psi.ch
+  onFailure: buffer
+  enabled: true
+  readoutPriority: async
+  readOnly: false
+  softwareTrigger: true

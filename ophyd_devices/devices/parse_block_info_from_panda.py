@@ -19,7 +19,6 @@ def main():
             field_type = field.split(" ")[2:]
             block_info[name][field_name] = {"type" : field_type}
 
-    print(block_info)
     import yaml
     import os
     cur_dir  = os.path.dirname(os.path.abspath(__file__))
