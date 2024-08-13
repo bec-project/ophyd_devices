@@ -4,7 +4,11 @@ import time as ttime
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
-from ophyd import Device, OphydObject, PositionerBase
+from ophyd import Component as Cpt
+from ophyd import Device, DeviceStatus, OphydObject, PositionerBase
+
+from ophyd_devices.sim.sim_positioner import SimPositioner
+from ophyd_devices.sim.sim_signals import SetableSignal
 
 
 class DummyControllerDevice(Device):
@@ -149,3 +153,21 @@ class SynFlyerLamNI(Device, PositionerBase):
 
         flyer = threading.Thread(target=produce_data, args=(self, metadata))
         flyer.start()
+
+
+class SimPositionerWithCommFailure(SimPositioner):
+    """
+    A simulated positioner that can be configured to fail on move.
+    """
+
+    fails = Cpt(SetableSignal, value=0)
+
+    def move(self, value: float, **kwargs) -> DeviceStatus:
+        if self.fails.get() == 1:
+            raise RuntimeError("Communication failure")
+        if self.fails.get() == 2:
+            while not self._stopped:
+                ttime.sleep(1)
+            status = DeviceStatus(self)
+            status.set_exception(RuntimeError("Communication failure"))
+        return super().move(value, **kwargs)

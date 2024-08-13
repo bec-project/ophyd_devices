@@ -254,17 +254,3 @@ class SimLinearTrajectoryPositioner(SimPositioner):
             st.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
-
-
-class SimPositionerWithCommFailure(SimPositioner):
-    fails = Cpt(SetableSignal, value=0)
-
-    def move(self, value: float, **kwargs) -> DeviceStatus:
-        if self.fails.get() == 1:
-            raise RuntimeError("Communication failure")
-        if self.fails.get() == 2:
-            while not self._stopped:
-                ttime.sleep(1)
-            status = DeviceStatus(self)
-            status.set_exception(RuntimeError("Communication failure"))
-        return super().move(value, **kwargs)
