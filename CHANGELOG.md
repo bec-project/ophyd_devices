@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.8.0 (2024-08-14)
+
+### Feature
+
+* feat(sim): added dedicated positioner with controller ([`4ad5723`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ad57230e327c3714a03ae138bc12a5028acb1dd))
+
 ## v1.7.3 (2024-08-08)
 
 ### Fix
@@ -149,9 +155,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * feat(config): added epics example config ([`a10e5bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a10e5bcadcbd3e8bfbc061abd247d0655534095d))
 
 ## v1.3.5 (2024-06-14)
-
-### Fix
-
-* fix: fixed pyepics version for now as it segfaults on startup ([`f1a2368`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1a2368101e6b4af2d08d1a3540680f7f3ff9762))
-
-## v1.3.4 (2024-06-07)
