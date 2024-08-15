@@ -2,7 +2,6 @@ from ophyd import Component as Cpt
 from ophyd import Device
 from ophyd import DynamicDeviceComponent as Dcpt
 
-from ophyd_devices.sim.sim_positioner import SimPositionerWithCommFailure  # noqa: F401
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import SetableSignal as SynSignal
 

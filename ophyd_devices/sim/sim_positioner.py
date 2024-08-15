@@ -13,7 +13,6 @@ from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
-from ophyd_devices.sim.sim_test_devices import DummyController
 from ophyd_devices.sim.sim_utils import LinearTrajectory, stop_trajectory
 from ophyd_devices.utils.errors import DeviceStopError
 
@@ -89,7 +88,6 @@ class SimPositioner(Device, PositionerBase):
 
         self.update_frequency = update_frequency
         self._stopped = False
-        self.dummy_controller = DummyController()
 
         self.sim = self.sim_cls(parent=self, **kwargs)
 
@@ -254,25 +252,3 @@ class SimLinearTrajectoryPositioner(SimPositioner):
             st.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
-
-
-class SimPositionerWithCommFailure(SimPositioner):
-    fails = Cpt(SetableSignal, value=0)
-
-    def move(self, value: float, **kwargs) -> DeviceStatus:
-        if self.fails.get() == 1:
-            raise RuntimeError("Communication failure")
-        if self.fails.get() == 2:
-            while not self._stopped:
-                ttime.sleep(1)
-            status = DeviceStatus(self)
-            status.set_exception(RuntimeError("Communication failure"))
-        return super().move(value, **kwargs)
-
-
-class SimPositionerWithController(SimPositioner):
-    USER_ACCESS = ["sim", "readback", "dummy_controller", "registered_proxies"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.controller = DummyController()
