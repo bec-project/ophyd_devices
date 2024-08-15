@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v1.8.1 (2024-08-15)
+
+### Build
+
+* build: moved pyepics deps to &gt;=3.5.5
+
+3.5.3 and 3.5.4 should not be used ([`8046f22`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8046f22a807f94f1dc7d9ab77ab3b9c3ce821633))
+
+### Fix
+
+* fix: fixed import of simpositioner test devices ([`f1f9721`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1f9721fe9c71da747558e4bb005c04592aa2bde))
+
 ## v1.8.0 (2024-08-14)
 
 ### Feature
@@ -145,13 +157,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * feat: add option to return DeviceStatus for on_trigger, on_complete; extend wait_for_signals ([`2c7c48a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2c7c48a7576cca90cc7be0d22b5a86c416f49fa9))
 
 ## v1.4.0 (2024-06-17)
-
-### Documentation
-
-* docs: Update device list ([`22a6970`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/22a69705865ee137f76c207807240562d4609560))
-
-### Feature
-
-* feat(config): added epics example config ([`a10e5bc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a10e5bcadcbd3e8bfbc061abd247d0655534095d))
-
-## v1.3.5 (2024-06-14)
