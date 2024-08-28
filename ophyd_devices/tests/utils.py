@@ -201,7 +201,7 @@ class MockPV:
         """MOCK PV, put function"""
         self.mock_data = value
         if callback is not None:
-            callback(None, None, None)
+            callback()
 
     # pylint: disable=unused-argument
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
