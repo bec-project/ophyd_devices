@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.9.1 (2024-08-28)
+
+### Fix
+
+* fix: removed arguments for callback call ([`d83c102`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d83c102d14430b9acd8525d1d61e6e092d9f6043))
+
+### Refactor
+
+* refactor: moved sim test devices to sim_test_devices ([`a49c6f6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a49c6f6a625a576524fceca62dd0a1582a4a4a7d))
+
 ## v1.9.0 (2024-08-28)
 
 ### Feature
@@ -148,12 +158,6 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 
 * docs: Update device list ([`ac5e794`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac5e79425ddf5b52350e45d392e2e6f048b5856a))
 
-* docs: Update device list ([`cc6773e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cc6773e14e1c758ec3296c41e969731e8ce4cfe4))
-
-* docs: Update device list ([`2ad4a70`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2ad4a70971e73ed8d38d0e3ed54f18053e79048b))
-
 ### Fix
 
 * fix: update timestamp upon reading of non computed readback signal ([`17e8cd9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/17e8cd9234727e1bdc3d2a2ba2c47a9c8ec43c32))
-
-## v1.5.0 (2024-06-19)
