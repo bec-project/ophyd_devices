@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.9.0 (2024-08-28)
+
+### Feature
+
+* feat: add dual patch pvs to ophyd_devices ([`c47918d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c47918d6e7ff41721aa4fa67043ff6cd1aeee2c7))
+
 ## v1.8.1 (2024-08-15)
 
 ### Build
@@ -151,9 +157,3 @@ hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https:
 * fix: update timestamp upon reading of non computed readback signal ([`17e8cd9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/17e8cd9234727e1bdc3d2a2ba2c47a9c8ec43c32))
 
 ## v1.5.0 (2024-06-19)
-
-### Feature
-
-* feat: add option to return DeviceStatus for on_trigger, on_complete; extend wait_for_signals ([`2c7c48a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2c7c48a7576cca90cc7be0d22b5a86c416f49fa9))
-
-## v1.4.0 (2024-06-17)
