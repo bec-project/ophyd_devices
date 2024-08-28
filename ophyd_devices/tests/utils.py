@@ -1,6 +1,17 @@
 from unittest import mock
 
 
+def patch_dual_pvs(device):
+    device.wait_for_connection(all_signals=True)
+    for walk in device.walk_signals():
+        if not hasattr(walk.item, "_read_pv"):
+            continue
+        if not hasattr(walk.item, "_write_pv"):
+            continue
+        if walk.item._read_pv.pvname.endswith("_RBV"):
+            walk.item._read_pv = walk.item._write_pv
+
+
 class SocketMock:
     """Socket Mock. Used for testing"""
 
