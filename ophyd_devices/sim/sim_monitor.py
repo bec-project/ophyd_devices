@@ -21,7 +21,7 @@ from ophyd_devices.utils.errors import DeviceStopError
 logger = bec_logger.logger
 
 
-class SimMonitor(Device):
+class SimMonitor(ReadOnlySignal):
     """
     A simulated device mimic any 1D Axis (position, temperature, beam).
 
@@ -46,10 +46,10 @@ class SimMonitor(Device):
     sim_cls = SimulatedDataMonitor
     BIT_DEPTH = np.uint32
 
-    readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
-
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
+    # TODO: to be removed once changes in BEC are merged
+    readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
 
     def __init__(
         self,
@@ -58,7 +58,7 @@ class SimMonitor(Device):
         precision: int = 3,
         sim_init: dict = None,
         parent=None,
-        kind=None,
+        kind: Kind = None,
         device_manager=None,
         **kwargs,
     ):
@@ -68,9 +68,14 @@ class SimMonitor(Device):
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
 
-        super().__init__(name=name, parent=parent, kind=kind, **kwargs)
-        self.sim.sim_state[self.name] = self.sim.sim_state.pop(self.readback.name, None)
-        self.readback.name = self.name
+        super().__init__(
+            name=name,
+            parent=self,
+            kind=kind,
+            value=self.BIT_DEPTH(0),
+            compute_readback=True,
+            **kwargs,
+        )
         if self.sim_init:
             self.sim.set_init(self.sim_init)
 

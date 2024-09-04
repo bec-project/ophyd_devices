@@ -155,8 +155,7 @@ def test_signal__init__(signal):
 def test_monitor__init__(monitor):
     """Test the __init__ method of SimMonitor."""
     assert isinstance(monitor, SimMonitor)
-    assert isinstance(monitor, BECDeviceProtocol)
-    assert isinstance(monitor, BECScanProtocol)
+    assert isinstance(monitor, BECSignalProtocol)
 
 
 def test_camera__init__(camera):
@@ -193,7 +192,7 @@ def test_init_async_monitor(async_monitor):
 def test_monitor_readback(monitor, center):
     """Test the readback method of SimMonitor."""
     motor_pos = 0
-    monitor.device_manager.add_device("samx", value=motor_pos)
+    monitor.device_manager.add_device(name="samx", value=motor_pos)
     for model_name in monitor.sim.get_models():
         monitor.sim.select_model(model_name)
         monitor.sim.params["noise_multipler"] = 10
