@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v1.9.2 (2024-09-05)
+
+### Ci
+
+* ci: prefill variables for manual pipeline start ([`3f2c6dc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3f2c6dc4efddfa06bebff13ac2984e45efd13a90))
+
+### Fix
+
+* fix: change inheritance for simmonitor from device to signal ([`a675420`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a6754208a0991f8ccf546cbb2bee015f6daecb93))
+
+* fix: fix inheritance for SimMonitor ([`f56961b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f56961ba8c179d4ca75e574fd8565ae4c3f41eed))
+
+### Refactor
+
+* refactor: bodge to make simmonitor compatible with tests; to be removed asap ([`9d9a5fe`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9d9a5fe305981f845c87e3417dd1072d2b8692b0))
+
 ## v1.9.1 (2024-08-28)
 
 ### Fix
@@ -144,20 +160,6 @@
 
 hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/55ea6a16be831e375281f014c75f0146b1b9a488))
 
-* fix: split simulation classes in multiple files ([`2622ddb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2622ddbee2edfe9e092c643fbbfbabeed0c06e35))
-
 ### Unknown
 
 * remove unused imports ([`755ee20`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/755ee207c5f9816d2270b6f57f6973ddf525238d))
-
-## v1.5.1 (2024-06-28)
-
-### Documentation
-
-* docs: Update device list ([`f818ff0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f818ff0234edb75840ab7ba60b66d0aa47d1d520))
-
-* docs: Update device list ([`ac5e794`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac5e79425ddf5b52350e45d392e2e6f048b5856a))
-
-### Fix
-
-* fix: update timestamp upon reading of non computed readback signal ([`17e8cd9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/17e8cd9234727e1bdc3d2a2ba2c47a9c8ec43c32))
