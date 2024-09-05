@@ -138,6 +138,7 @@ class ReadOnlySignal(Signal):
         kind: int = Kind.normal,
         precision: float = PRECISION,
         compute_readback: bool = False,
+        sim=None,
         **kwargs,
     ):
         super().__init__(*args, name=name, parent=parent, value=value, kind=kind, **kwargs)
@@ -145,7 +146,7 @@ class ReadOnlySignal(Signal):
         self._value = value
         self.precision = precision
         self.compute_readback = compute_readback
-        self.sim = getattr(self.parent, "sim", None)
+        self.sim = sim if sim is not None else getattr(self.parent, "sim", None)
         if self.sim:
             self._init_sim_state()
         self._metadata.update(write_access=False)
@@ -227,6 +228,7 @@ class CustomSetableSignal(BECDeviceBase):
         value: any = 0,
         kind: int = Kind.normal,
         precision: float = PRECISION,
+        sim=None,
         **kwargs,
     ):
         if parent:
@@ -238,7 +240,7 @@ class CustomSetableSignal(BECDeviceBase):
         self._dtype = type(value)
         self._shape = self._get_shape(value)
         self.precision = precision
-        self.sim = getattr(self.parent, "sim", None)
+        self.sim = sim if sim is not None else getattr(self.parent, "sim", None)
         self._update_sim_state(value)
 
     def _get_shape(self, value: any) -> list:

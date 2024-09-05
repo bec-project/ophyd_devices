@@ -46,11 +46,6 @@ class SimMonitor(ReadOnlySignal):
     sim_cls = SimulatedDataMonitor
     BIT_DEPTH = np.uint32
 
-    SUB_READBACK = "readback"
-    _default_sub = SUB_READBACK
-    # TODO: to be removed once changes in BEC are merged
-    readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
-
     def __init__(
         self,
         name,
@@ -70,14 +65,17 @@ class SimMonitor(ReadOnlySignal):
 
         super().__init__(
             name=name,
-            parent=self,
+            parent=parent,
             kind=kind,
             value=self.BIT_DEPTH(0),
             compute_readback=True,
+            sim=self.sim,
             **kwargs,
         )
         if self.sim_init:
             self.sim.set_init(self.sim_init)
+        # TODO remove after refactoring, ensures backward compatibility with old simulation config of BEC core (pseudo signal)
+        self.readback = ReadOnlySignal(name=self.name, parent=self, value=self.BIT_DEPTH(0))
 
     @property
     def registered_proxies(self) -> None:
