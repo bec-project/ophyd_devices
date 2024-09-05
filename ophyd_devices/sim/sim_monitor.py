@@ -74,8 +74,8 @@ class SimMonitor(ReadOnlySignal):
         )
         if self.sim_init:
             self.sim.set_init(self.sim_init)
-        # TODO remove after refactoring, ensures backward compatibility with old simulation config of BEC core (pseudo signal)
-        self.readback = ReadOnlySignal(name=self.name, parent=self, value=self.BIT_DEPTH(0))
+        # TODO remove after refactoring, this is a temporary bodge to avoid breaking tests
+        self.readback = self
 
     @property
     def registered_proxies(self) -> None:
