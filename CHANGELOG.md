@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.9.3 (2024-09-06)
+
+### Fix
+
+* fix: remove bodge (readback) in SimMonitor ([`cd75fc0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cd75fc0e01e565445f7176e52faada264544d439))
+
 ## v1.9.2 (2024-09-05)
 
 ### Ci
@@ -153,13 +159,3 @@
 * refactor: ensure temporary backward compatibility after API changes ([`73c636b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73c636b46f35381ac0a82b99f9965612770ca6c1))
 
 ## v1.5.2 (2024-07-02)
-
-### Fix
-
-* fix: put noqa comment on hdf5plugin import, compress HDF5 test file to ensure it requires the module for reading
-
-hd5plugin import has the side effect of installing LZ4 codec ([`55ea6a1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/55ea6a16be831e375281f014c75f0146b1b9a488))
-
-### Unknown
-
-* remove unused imports ([`755ee20`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/755ee207c5f9816d2270b6f57f6973ddf525238d))
