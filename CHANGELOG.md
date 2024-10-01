@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v1.9.5 (2024-10-01)
+
+### Fix
+
+* fix: bugfix for proxy devices ([`b1639ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1639ea3baddec722a444b7c65bdc39d763b7d07))
+
+* fix: Fixed SimWaveform, works as async device and device_monitor_1d simultaneously ([`7ff37c0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7ff37c0dcdd87bfa8f518b1dd7acc4aab353b71f))
+
+### Refactor
+
+* refactor: cleanup of scan_status prints in scaninfo_mixin ([`449dadb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/449dadb593a0432d31f905e4e507102d0c4f3fd6))
+
 ## v1.9.4 (2024-10-01)
 
 ### Build
@@ -147,15 +159,3 @@
 * fix(softpositioner): fixed input args for softpositioner ([`e80811c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e80811c19736cd70be2dbcfac0bcedfe975bf419))
 
 ## v1.6.0 (2024-07-05)
-
-### Feature
-
-* feat(devices): added softpositioner ([`e803829`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e803829f6c2bab1724a2f30eb0633fd52033ffe7))
-
-## v1.5.4 (2024-07-05)
-
-### Fix
-
-* fix(sim): fixed sim positioner moving state update ([`8efa93a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8efa93a7023c939ce535f829a5e41468372ae78e))
-
-## v1.5.3 (2024-07-03)
