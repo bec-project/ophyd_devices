@@ -9,6 +9,23 @@ eiger:
   readOnly: false
   softwareTrigger: true
 
+waveform:
+  readoutPriority: async
+  deviceClass: ophyd_devices.SimWaveform
+  deviceConfig:
+    waveform_shape: 1000
+    sim_init:
+      model: GaussianModel
+      params:
+        amplitude: 100
+        center: 500
+        sigma: 50
+  deviceTags:
+    - detector
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
 dyn_signals:
   readoutPriority: baseline
   deviceClass: ophyd_devices.sim.sim.SynDynamicComponents
@@ -20,7 +37,7 @@ pseudo_signal1:
   deviceClass: ophyd_devices.ComputedSignal
   deviceConfig:
     compute_method: "def compute_signals(signal1, signal2):\n    return signal1.get()*signal2.get()\n"
-    input_signals: 
+    input_signals:
       - "bpm4i_readback"
       - "bpm5i_readback"
   enabled: true
@@ -40,7 +57,7 @@ eyefoc:
   readoutPriority: baseline
   deviceClass: ophyd_devices.SimPositioner
   deviceConfig:
-    delay: 1    
+    delay: 1
     limits:
       - -50
       - 50
@@ -55,7 +72,7 @@ flyer_sim:
   readoutPriority: on_request
   deviceClass: ophyd_devices.SynFlyer
   deviceConfig:
-    delay: 1    
+    delay: 1
     device_access: true
     update_frequency: 400
   deviceTags:
@@ -96,5 +113,38 @@ soft_pos:
   deviceConfig:
   deviceTags:
     - user motors
+  enabled: true
+  readOnly: false
+
+# Proxy devices
+# 1. Replay image data from an HDF5 file,
+# this assumes that a SimCamera with name eiger exists
+hdf5_proxy:
+  readoutPriority: on_request
+  deviceClass: ophyd_devices.sim.sim_frameworks.H5ImageReplayProxy
+  deviceConfig:
+    eiger:
+      signal_name: image
+      file_source: /path/to/file.h5
+      h5_entry: entry
+  onFailure: buffer
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
+# 2. Simulate scanning a center position of hor/ver slits with a camera
+# this assumes that a SimCamera with name eiger exists
+slit_proxy:
+  readoutPriority: on_request
+  deviceClass: ophyd_devices.sim.sim_frameworks.SlitProxy
+  deviceConfig:
+    eiger:
+      signal_name: image
+      center_offset: [0, 0] # [x,y]
+      covariance: [[1000, 500], [200, 1000]] # [[x,x],[y,y]]
+      pixel_size: 0.01
+      ref_motors: [samx, samy]
+      slit_width: [1, 1]
+      motor_dir: [0, 1] # 0:x, 1:y in image coordinates
   enabled: true
   readOnly: false
