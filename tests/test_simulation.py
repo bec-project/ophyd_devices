@@ -29,7 +29,16 @@ from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.sim.sim_utils import H5Writer, LinearTrajectory
+from ophyd_devices.sim.sim_waveform import SimWaveform
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
+
+
+@pytest.fixture(scope="function")
+def waveform(name="waveform"):
+    """Fixture for SimWaveform."""
+    dm = DMMock()
+    wave = SimWaveform(name=name, device_manager=dm)
+    yield wave
 
 
 @pytest.fixture(scope="function")
@@ -595,3 +604,33 @@ def test_positioner_updated_timestamp(positioner):
     readback = positioner.read()[positioner.name]
     assert readback["value"] == 5
     assert readback["timestamp"] > timestamp
+
+
+def test_waveform(waveform):
+    """Test the SimWaveform class"""
+    waveform.sim.sim_select_model("GaussianModel")
+    waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
+    data = waveform.waveform.get()
+    assert isinstance(data, np.ndarray)
+    assert data.shape == waveform.SHAPE
+    assert np.isclose(np.argmax(data), 500, atol=5)
+    waveform.waveform_shape.put(50)
+    data = waveform.waveform.get()
+    for model in waveform.sim.get_all_sim_models():
+        waveform.sim.sim_select_model(model)
+        waveform.waveform.get()
+    # Now also test the async readback
+    mock_connector = waveform.connector = mock.MagicMock()
+    mock_run_subs = waveform._run_subs = mock.MagicMock()
+    waveform.scaninfo.scan_msg = SimpleNamespace(metadata={})
+    waveform.scaninfo.scan_id = "test"
+    status = waveform.trigger()
+    timer = 0
+    while not status.done:
+        time.sleep(0.1)
+        timer += 0.1
+        if timer > 5:
+            raise TimeoutError("Trigger did not complete")
+    assert status.done is True
+    assert mock_connector.xadd.call_count == 1
+    assert mock_run_subs.call_count == 1

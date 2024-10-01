@@ -2,15 +2,19 @@
 
 import os
 import threading
+import time
 import traceback
 
 import numpy as np
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, Kind
+from ophyd import Device, DeviceStatus, Kind, Staged
 
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
+from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils.errors import DeviceStopError
 
@@ -42,7 +46,7 @@ class SimWaveform(Device):
     SHAPE = (1000,)
     BIT_DEPTH = np.uint16
 
-    SUB_MONITOR = "monitor"
+    SUB_MONITOR = "device_monitor_1d"
     _default_sub = SUB_MONITOR
 
     exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
@@ -57,20 +61,28 @@ class SimWaveform(Device):
         name="waveform",
         value=np.empty(SHAPE, dtype=BIT_DEPTH),
         compute_readback=True,
-        kind=Kind.omitted,
+        kind=Kind.normal,
     )
+    # Can be extend or append
+    async_update = Cpt(SetableSignal, value="append", kind=Kind.config)
 
     def __init__(
         self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
     ):
-        self.device_manager = device_manager
         self.sim_init = sim_init
         self._registered_proxies = {}
         self.sim = self.sim_cls(parent=self, **kwargs)
 
         super().__init__(name=name, parent=parent, kind=kind, **kwargs)
+        if device_manager:
+            self.device_manager = device_manager
+        else:
+            self.device_manager = bec_utils.DMMock()
+
+        self.connector = self.device_manager.connector
+        self._stream_ttl = 1800  # 30 min max
         self.stopped = False
-        self._staged = False
+        self._staged = Staged.no
         self.scaninfo = None
         self._trigger_thread = None
         self._update_scaninfo()
@@ -96,6 +108,7 @@ class SimWaveform(Device):
             try:
                 for _ in range(self.burst.get()):
                     self._run_subs(sub_type=self.SUB_MONITOR, value=self.waveform.get())
+                    self._send_async_update()
                     if self.stopped:
                         raise DeviceStopError(f"{self.name} was stopped")
                 status.set_finished()
@@ -108,6 +121,25 @@ class SimWaveform(Device):
         self._trigger_thread = threading.Thread(target=acquire, args=(status,), daemon=True)
         self._trigger_thread.start()
         return status
+
+    def _send_async_update(self):
+        """Send the async update to BEC."""
+        metadata = self.scaninfo.scan_msg.metadata
+        async_update_type = self.async_update.get()
+        if async_update_type not in ["extend", "append"]:
+            raise ValueError(f"Invalid async_update type: {async_update_type}")
+        metadata.update({"async_update": async_update_type})
+
+        msg = messages.DeviceMessage(
+            signals={self.waveform.name: {"value": self.waveform.get(), "timestamp": time.time()}},
+            metadata=metadata,
+        )
+        # logger.warning(f"Adding async update to {self.name} and {self.scaninfo.scan_id}")
+        self.connector.xadd(
+            MessageEndpoints.device_async_readback(scan_id=self.scaninfo.scan_id, device=self.name),
+            {"data": msg},
+            expire=self._stream_ttl,
+        )
 
     def _update_scaninfo(self) -> None:
         """Update scaninfo from BecScaninfoMixing
@@ -125,7 +157,8 @@ class SimWaveform(Device):
         FYI: No data is written to disk in the simulation, but upon each trigger it
         is published to the device_monitor endpoint in REDIS.
         """
-        if self._staged:
+        if self._staged is Staged.yes:
+
             return super().stage()
         self.scaninfo.load_scan_metadata()
         self.file_path.set(
@@ -137,6 +170,7 @@ class SimWaveform(Device):
         self.exp_time.set(self.scaninfo.exp_time)
         self.burst.set(self.scaninfo.frames_per_trigger)
         self.stopped = False
+        logger.warning(f"Staged {self.name}, scan_id : {self.scaninfo.scan_id}")
         return super().stage()
 
     def unstage(self) -> list[object]:
@@ -144,9 +178,9 @@ class SimWaveform(Device):
 
         Send reads from all config signals to redis
         """
+        logger.warning(f"Unstaging {self.name}, {self._staged}")
         if self.stopped is True or not self._staged:
             return super().unstage()
-
         return super().unstage()
 
     def stop(self, *, success=False):
@@ -156,3 +190,8 @@ class SimWaveform(Device):
             self._trigger_thread.join()
         self._trigger_thread = None
         super().stop(success=success)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    waveform = SimWaveform(name="waveform")
+    waveform.sim.sim_select_model("GaussianModel")

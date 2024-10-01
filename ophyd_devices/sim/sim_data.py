@@ -351,7 +351,11 @@ class SimulatedDataMonitor(SimulatedDataBase):
 
     def _init_default(self) -> None:
         """Initialize the default parameters for the simulated data."""
-        self.select_model("ConstantModel")
+        models = self.get_all_sim_models()
+        if "ConstantModel" in models:
+            self.select_model("ConstantModel")
+        else:
+            self.select_model(models[0])
 
     def get_model_cls(self, model: str) -> any:
         """Get the class for the active simulation model."""
@@ -512,7 +516,9 @@ class SimulatedDataWaveform(SimulatedDataMonitor):
         size = size[0] if isinstance(size, tuple) else size
         method = self._model
         value = method.eval(params=self._model_params, x=np.array(range(size)))
-        value *= self.params["amplitude"] / np.max(value)
+        # Upscale the normalised gaussian if possible
+        if "amplitude" in method.param_names:
+            value *= self.params["amplitude"] / np.max(value)
         return self._add_noise(value, self.params["noise"], self.params["noise_multiplier"])
 
     def _add_noise(self, v: np.ndarray, noise: NoiseType, noise_multiplier: float) -> np.ndarray:
