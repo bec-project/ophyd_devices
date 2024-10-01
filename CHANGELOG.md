@@ -157,5 +157,3 @@
 ### Fix
 
 * fix(softpositioner): fixed input args for softpositioner ([`e80811c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e80811c19736cd70be2dbcfac0bcedfe975bf419))
-
-## v1.6.0 (2024-07-05)
