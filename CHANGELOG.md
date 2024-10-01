@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.9.4 (2024-10-01)
+
+### Build
+
+* build: allow numpy v2 ([`825a7de`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/825a7dee5e948d9decb4e8649c0573a2d9d4b83f))
+
+### Fix
+
+* fix: increased min version of typeguard ([`e379282`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e3792826644e01adf84435891d500ec5bef85cda))
+
 ## v1.9.3 (2024-09-06)
 
 ### Fix
@@ -149,13 +159,3 @@
 * fix(sim): fixed sim positioner moving state update ([`8efa93a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8efa93a7023c939ce535f829a5e41468372ae78e))
 
 ## v1.5.3 (2024-07-03)
-
-### Fix
-
-* fix: device sim params can be set through init ([`f481c1f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f481c1f81298552067aea91fba54e90d61cd2dcb))
-
-### Refactor
-
-* refactor: ensure temporary backward compatibility after API changes ([`73c636b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/73c636b46f35381ac0a82b99f9965612770ca6c1))
-
-## v1.5.2 (2024-07-02)
