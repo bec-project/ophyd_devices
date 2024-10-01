@@ -122,8 +122,8 @@ class BecScaninfoMixin:
         This function loads scan metadata from the current scan message
         """
         self.scan_msg = scan_msg = self._get_current_scan_msg()
-        logger.info(f"{self.scan_msg}")
         try:
+            logger.info(f"Received scan msg for {self.scan_msg.content['scan_id']}")
             self.metadata = {
                 "scan_id": scan_msg.content["scan_id"],
                 "RID": scan_msg.content["info"]["RID"],

@@ -166,7 +166,7 @@ class SimPositioner(Device, PositionerBase):
                 ttime.sleep(1 / self.update_frequency)
                 self._update_state(ii)
                 if self._stopped:
-                    raise DeviceStopError(f"{self.parent.name} was stopped")
+                    raise DeviceStopError(f"{self.name} was stopped")
             st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
@@ -241,7 +241,7 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                     while not traj.ended:
                         ttime.sleep(1 / self.update_frequency)
                         self._update_state(traj.position())
-                    raise DeviceStopError(f"{self.parent.name} was stopped")
+                    raise DeviceStopError(f"{self.name} was stopped")
             st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
