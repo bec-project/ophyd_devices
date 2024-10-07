@@ -325,7 +325,6 @@ class PSIDelayGeneratorBase(Device):
         configuration_attrs=None,
         parent=None,
         device_manager=None,
-        sim_mode=False,
         **kwargs,
     ):
         super().__init__(
@@ -337,24 +336,16 @@ class PSIDelayGeneratorBase(Device):
             parent=parent,
             **kwargs,
         )
-        if device_manager is None and not sim_mode:
-            raise DeviceInitError(
-                f"No device manager for device: {name}, and not started sim_mode: {sim_mode}. Add"
-                " DeviceManager to initialization or init with sim_mode=True"
-            )
         # Init variables
-        self.sim_mode = sim_mode
         self.stopped = False
         self.name = name
         self.scaninfo = None
         self.timeout = 5
         self.all_channels = ["channelT0", "channelAB", "channelCD", "channelEF", "channelGH"]
         self.all_delay_pairs = ["AB", "CD", "EF", "GH"]
-        self.wait_for_connection(all_signals=True)
-
         # Init custom prepare class with BL specific logic
         self.custom_prepare = self.custom_prepare_cls(parent=self, **kwargs)
-        if not sim_mode:
+        if device_manager:
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
@@ -368,7 +359,7 @@ class PSIDelayGeneratorBase(Device):
 
         In sim_mode, scaninfo output is mocked - see bec_scaninfo_mixin.py
         """
-        self.scaninfo = BecScaninfoMixin(self.device_manager, self.sim_mode)
+        self.scaninfo = BecScaninfoMixin(self.device_manager)
         self.scaninfo.load_scan_metadata()
 
     def _init(self) -> None:
@@ -402,7 +393,19 @@ class PSIDelayGeneratorBase(Device):
                 getattr(channel.io, signal).set(value)
 
     def set_trigger(self, trigger_source: TriggerSource) -> None:
-        """Set trigger source on DDG - possible values defined in TriggerSource enum"""
+        """Set trigger source on DDG - possible values defined in TriggerSource enum
+        
+        Args:
+            trigger_source (TriggerSource): Can be one of the following  
+                INTERNAL = 0
+                EXT_RISING_EDGE = 1
+                EXT_FALLING_EDGE = 2
+                SS_EXT_RISING_EDGE = 3
+                SS_EXT_FALLING_EDGE = 4
+                SINGLE_SHOT = 5
+                LINE = 6
+        """
+        
         value = int(trigger_source)
         self.source.put(value)
 
