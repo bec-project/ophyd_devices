@@ -177,7 +177,8 @@ class SimPositioner(Device, PositionerBase):
             st.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
-            self._update_state(target)
+            if not self._stopped:
+                self._update_state(target)
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""

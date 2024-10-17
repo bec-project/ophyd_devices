@@ -608,7 +608,7 @@ def test_positioner_updated_timestamp(positioner):
 
 def test_waveform(waveform):
     """Test the SimWaveform class"""
-    waveform.sim.sim_select_model("GaussianModel")
+    waveform.sim.select_model("GaussianModel")
     waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
     data = waveform.waveform.get()
     assert isinstance(data, np.ndarray)
@@ -617,7 +617,7 @@ def test_waveform(waveform):
     waveform.waveform_shape.put(50)
     data = waveform.waveform.get()
     for model in waveform.sim.get_all_sim_models():
-        waveform.sim.sim_select_model(model)
+        waveform.sim.select_model(model)
         waveform.waveform.get()
     # Now also test the async readback
     mock_connector = waveform.connector = mock.MagicMock()

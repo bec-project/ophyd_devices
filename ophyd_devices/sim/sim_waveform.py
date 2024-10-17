@@ -194,4 +194,4 @@ class SimWaveform(Device):
 
 if __name__ == "__main__":  # pragma: no cover
     waveform = SimWaveform(name="waveform")
-    waveform.sim.sim_select_model("GaussianModel")
+    waveform.sim.select_model("GaussianModel")
