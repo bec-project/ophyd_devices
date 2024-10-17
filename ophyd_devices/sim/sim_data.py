@@ -88,16 +88,7 @@ class SimulatedDataBase(ABC):
     - update_sim_state:             update the simulated state of the device
     """
 
-    # USER_ACCESS = ["params", "select_model", "get_models", "show_all"]
-    # TODO remove
-    USER_ACCESS = [
-        "params",
-        "select_model",
-        "get_models",
-        "show_all",
-        "sim_select_model",
-        "sim_params",
-    ]
+    USER_ACCESS = ["params", "select_model", "get_models", "show_all"]
 
     def __init__(self, *args, parent=None, **kwargs) -> None:
         """
@@ -130,23 +121,6 @@ class SimulatedDataBase(ABC):
         if method is not None:
             return method(*args, **kwargs)
         raise SimulatedDataException(f"Method {method} is not available for {self.parent.name}")
-
-    # TODO remove after refactoring code in main
-    def sim_select_model(self, model: str) -> None:
-        """Select the active simulation model."""
-        self.select_model(model)
-
-    @property
-    def sim_params(self) -> None:
-        """Set the parameters for the active simulation model."""
-        return self.params
-
-    @sim_params.setter
-    def sim_params(self, params: dict):
-        """Set the parameters for the active simulation model."""
-        self.params = params
-
-    # TODO remove after refactoring code in main
 
     def select_model(self, model: str) -> None:
         """

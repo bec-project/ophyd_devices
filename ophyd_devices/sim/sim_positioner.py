@@ -42,7 +42,7 @@ class SimPositioner(Device, PositionerBase):
     """
 
     # Specify which attributes are accessible via BEC client
-    USER_ACCESS = ["sim", "readback", "dummy_controller", "registered_proxies"]
+    USER_ACCESS = ["sim", "readback", "registered_proxies"]
 
     sim_cls = SimulatedPositioner
 
