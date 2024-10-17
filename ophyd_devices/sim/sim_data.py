@@ -597,6 +597,10 @@ class SimulatedDataCamera(SimulatedDataBase):
                 method = "_compute_constant"
             elif self._model == SimulationType2D.GAUSSIAN:
                 method = "_compute_gaussian"
+            else:
+                raise SimulatedDataException(
+                    f"Model {self._model} not found in {self._model_lookup.keys()}."
+                )
             value = self.execute_simulation_method(
                 signal_name=signal_name, method=getattr(self, method)
             )

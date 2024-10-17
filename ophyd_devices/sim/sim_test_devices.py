@@ -1,14 +1,19 @@
 import threading
 import time as ttime
+import traceback
 
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, OphydObject, PositionerBase
 
+from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import SetableSignal
+
+logger = bec_logger.logger
 
 
 class DummyControllerDevice(Device):
@@ -175,3 +180,62 @@ class SimPositionerWithController(SimPositioner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dummy_controller = DummyController()
+
+
+class SimCameraWithStageStatus(SimCamera):
+    """Simulated camera which returns a status object when staged.
+
+    Note: This is a minimum implementation for test purposes without refactoring
+    the super().stage() method. In theory, the super().stage() method should take
+    into account a thread event to stop the staging process if the device is stopped.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.raise_on_stage = False
+        if "raise_on_stage" in kwargs:
+            self.raise_on_stage = kwargs.pop("raise_on_stage")
+
+    def stage(self):
+        status = DeviceStatus(self)
+
+        def _stage_device(obj, status: DeviceStatus):
+            """Start thread to stage the device"""
+            try:
+                logger.info(f"Staging device {obj.name} with status object")
+                super(SimCamera, obj).stage()
+                if obj.raise_on_stage is True:
+                    raise RuntimeError(f"Error during staging in {obj.name}")
+            # pylint: disable=broad-except
+            except Exception as exc:
+                content = traceback.format_exc()
+                logger.warning(f"Error in staging of {obj.name}; Traceback: {content}")
+                status.set_exception(exc=exc)
+            else:
+                status.set_finished()
+
+        thread = threading.Thread(target=_stage_device, args=(self, status), daemon=True)
+        thread.start()
+        return status
+
+    def unstage(self):
+        status = DeviceStatus(self)
+
+        def _unstage_device(obj, status: DeviceStatus):
+            """Start thread to stage the device"""
+            try:
+                logger.info(f"Unstaging device {obj.name} with status object")
+                super(SimCamera, obj).unstage()
+                if obj.raise_on_stage is True:
+                    raise RuntimeError(f"Error during unstaging in {obj.name}")
+            # pylint: disable=broad-except
+            except Exception as exc:
+                content = traceback.format_exc()
+                logger.warning(f"Error in unstaging of {obj.name}; Traceback: {content}")
+                status.set_exception(exc=exc)
+            else:
+                status.set_finished()
+
+        thread = threading.Thread(target=_unstage_device, args=(self, status), daemon=True)
+        thread.start()
+        return status
