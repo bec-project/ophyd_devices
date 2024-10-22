@@ -1,9 +1,24 @@
 # CHANGELOG
 
 
+## v1.10.0 (2024-10-22)
+
+### Bug Fixes
+
+* fix: improved patching of Ophyd 1.9 ([`8a9a6a9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8a9a6a9910b44d55412e80443f145d629b1cfc2f))
+
+### Features
+
+* feat: add test device for return status for stage/unstage ([`f5ab78e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f5ab78e933c2bbb34c571a72c25a7fc5c2b20e65))
+
+### Unknown
+
+* tests: add 'conftest.py' with ophyd_devices import to ensure ophyd is always patched, first ([`3a1202d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3a1202d0d894120f786af80a8873d0fd049e417a))
+
+
 ## v1.9.6 (2024-10-17)
 
-### Fixes
+### Bug Fixes
 
 * fix: cleanup and bugfix in positioner; closes #84 ([`6a7c074`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6a7c0745e33a2b2cc561b42ad90e61ac08fb9d51))
 
@@ -14,7 +29,7 @@
 
 ## v1.9.5 (2024-10-01)
 
-### Fixes
+### Bug Fixes
 
 * fix: bugfix for proxy devices ([`b1639ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1639ea3baddec722a444b7c65bdc39d763b7d07))
 
@@ -27,33 +42,33 @@
 
 ## v1.9.4 (2024-10-01)
 
+### Bug Fixes
+
+* fix: increased min version of typeguard ([`e379282`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e3792826644e01adf84435891d500ec5bef85cda))
+
 ### Build System
 
 * build: allow numpy v2 ([`825a7de`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/825a7dee5e948d9decb4e8649c0573a2d9d4b83f))
 
-### Fixes
-
-* fix: increased min version of typeguard ([`e379282`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e3792826644e01adf84435891d500ec5bef85cda))
-
 
 ## v1.9.3 (2024-09-06)
 
-### Fixes
+### Bug Fixes
 
 * fix: remove bodge (readback) in SimMonitor ([`cd75fc0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cd75fc0e01e565445f7176e52faada264544d439))
 
 
 ## v1.9.2 (2024-09-05)
 
-### Continuous Integration
-
-* ci: prefill variables for manual pipeline start ([`3f2c6dc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3f2c6dc4efddfa06bebff13ac2984e45efd13a90))
-
-### Fixes
+### Bug Fixes
 
 * fix: change inheritance for simmonitor from device to signal ([`a675420`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a6754208a0991f8ccf546cbb2bee015f6daecb93))
 
 * fix: fix inheritance for SimMonitor ([`f56961b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f56961ba8c179d4ca75e574fd8565ae4c3f41eed))
+
+### Continuous Integration
+
+* ci: prefill variables for manual pipeline start ([`3f2c6dc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3f2c6dc4efddfa06bebff13ac2984e45efd13a90))
 
 ### Refactoring
 
@@ -62,7 +77,7 @@
 
 ## v1.9.1 (2024-08-28)
 
-### Fixes
+### Bug Fixes
 
 * fix: removed arguments for callback call ([`d83c102`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d83c102d14430b9acd8525d1d61e6e092d9f6043))
 
@@ -80,15 +95,15 @@
 
 ## v1.8.1 (2024-08-15)
 
+### Bug Fixes
+
+* fix: fixed import of simpositioner test devices ([`f1f9721`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1f9721fe9c71da747558e4bb005c04592aa2bde))
+
 ### Build System
 
 * build: moved pyepics deps to >=3.5.5
 
 3.5.3 and 3.5.4 should not be used ([`8046f22`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8046f22a807f94f1dc7d9ab77ab3b9c3ce821633))
-
-### Fixes
-
-* fix: fixed import of simpositioner test devices ([`f1f9721`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1f9721fe9c71da747558e4bb005c04592aa2bde))
 
 
 ## v1.8.0 (2024-08-14)
@@ -100,7 +115,7 @@
 
 ## v1.7.3 (2024-08-08)
 
-### Fixes
+### Bug Fixes
 
 * fix: small bugfix to ensure motor_is_moving updates at the end of a move ([`577b35f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/577b35f287ec997a41ce27fae2db9bbc669a2d9d))
 
@@ -110,6 +125,14 @@
 
 
 ## v1.7.2 (2024-07-29)
+
+### Bug Fixes
+
+* fix: add write_access attribute to simulated readonly signal ([`c3e17ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3e17ba05632309adcc896f858e52ecb07048a30))
+
+* fix: remove print for select_model method of sim module ([`5009316`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5009316a82897d739b2a26eb341e9f5a1e083e51))
+
+* fix: Improve asyn_monitor and camera on_trigger and on_complete to return status ([`f311876`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3118765b0efc38dd12a3d72d290e517490f9fbf))
 
 ### Build System
 
@@ -124,14 +147,6 @@
 * ci: changed default branch ([`fe5f1c3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fe5f1c314f51cb07bae4044a406ed5dc738c7837))
 
 * ci: fixed default branch for ophyd ci var ([`85630f3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85630f3d733897945ef3421b9805e66191edb537))
-
-### Fixes
-
-* fix: add write_access attribute to simulated readonly signal ([`c3e17ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3e17ba05632309adcc896f858e52ecb07048a30))
-
-* fix: remove print for select_model method of sim module ([`5009316`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5009316a82897d739b2a26eb341e9f5a1e083e51))
-
-* fix: Improve asyn_monitor and camera on_trigger and on_complete to return status ([`f311876`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3118765b0efc38dd12a3d72d290e517490f9fbf))
 
 ### Refactoring
 
@@ -152,21 +167,6 @@
 
 ## v1.7.1 (2024-07-24)
 
-### Fixes
+### Bug Fixes
 
 * fix: add run._subs SUB_VALUE to settable signal put method ([`ca6d96e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ca6d96e25b4a2d5011c0882e512b84e16cf7b264))
-
-
-## v1.7.0 (2024-07-10)
-
-### Features
-
-* feat: add SimLinearTrajectoryPositioner to better motion simulation ([`b5918c4`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b5918c424de005d1510afedc05b0e217fd09616e))
-
-### Fixes
-
-* fix: _update_state() does not raise an exception if stopped ([`207b9b5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/207b9b571c6df1c2de75b187e794d2dcd7bd0108))
-
-### Testing
-
-* test: add test for SimLinearTrajectoryPositioner ([`ba7db78`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ba7db7819439c89c3f160acaf399b1ffd538ac7f))
