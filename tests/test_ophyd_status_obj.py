@@ -3,13 +3,10 @@ import time
 from unittest.mock import Mock
 
 import pytest
-
-import ophyd_devices  # ensure we are patched
+from ophyd.status import DeviceStatus, StatusBase, StatusTimeoutError
 
 
 def test_ophyd_status_patch():
-    from ophyd.status import DeviceStatus, StatusBase, StatusTimeoutError
-
     assert StatusBase._bec_patched
 
     st = DeviceStatus(device="test")
