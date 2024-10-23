@@ -147,7 +147,9 @@ def test_wait_for_signal(detector_base):
 
     detector_base.stopped = False
     # Check that wait for status runs into timeout with expectd exception
-    detector_base.filepath.set("wrong_value")
+    st = detector_base.filepath.set("wrong_value")
+    st.wait()
+    assert detector_base.filepath.get() == "wrong_value"
     exception = TimeoutError("Timeout")
     status = detector_base.custom_prepare.wait_with_status(
         [(detector_base.filepath.get, expected_value)],
