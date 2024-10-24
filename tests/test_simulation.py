@@ -464,12 +464,12 @@ def test_cam_stage_h5writer(camera):
         camera.scaninfo.frames_per_trigger = 1
         camera.scaninfo.exp_time = 1
         camera.stage()
-        assert mock_h5_writer.prepare.call_count == 0
+        assert mock_h5_writer.on_stage.call_count == 0
         camera.unstage()
         camera.write_to_disk.put(True)
         camera.stage()
         calls = [mock.call(file_path="", h5_entry="/entry/data/data")]
-        assert mock_h5_writer.prepare.mock_calls == calls
+        assert mock_h5_writer.on_stage.mock_calls == calls
         # mock_h5_writer.prepare
 
 
@@ -480,11 +480,11 @@ def test_cam_complete(camera):
         status_wait(status)
         assert status.done is True
         assert status.success is True
-        assert mock_h5_writer.write_data.call_count == 0
+        assert mock_h5_writer.on_complete.call_count == 0
         camera.write_to_disk.put(True)
         status = camera.complete()
         status_wait(status)
-        assert mock_h5_writer.write_data.call_count == 1
+        assert mock_h5_writer.on_complete.call_count == 1
 
 
 def test_cam_trigger(camera):
@@ -505,23 +505,28 @@ def test_cam_trigger(camera):
         assert mock_h5_writer.receive_data.call_count == 2
 
 
-def test_h5writer():
+def test_h5writer(tmp_path):
     """Test the H5Writer class"""
 
     h5_writer = H5Writer()
-    with mock.patch.object(h5_writer, "create_dir") as mock_create_dir:
-        h5_writer.data_container = [0, 1, 2]
-        h5_writer.prepare(file_path="test.h5", h5_entry="entry/data/data")
-        assert mock_create_dir.call_count == 1
-        assert h5_writer.data_container == []
-        assert h5_writer.file_path == "test.h5"
-        assert h5_writer.h5_entry == "entry/data/data"
+    h5_writer.data_container = [np.array([0, 1, 2, 3, 4])]
+    fp = tmp_path / "test.h5"
+    h5_writer.on_stage(file_path=fp, h5_entry="entry/data/data")
+    assert h5_writer.data_container == []
+    assert h5_writer.file_path == fp
+    assert h5_writer.h5_entry == "entry/data/data"
 
-        data = [0, 1, 2, 3]
-        h5_writer.receive_data(data)
-        assert h5_writer.data_container == [data]
-        h5_writer.receive_data(0)
-        assert h5_writer.data_container == [data, 0]
+    data = np.array([0, 1])
+    h5_writer.receive_data(data)
+    assert h5_writer.data_container == [data]
+    new_data = np.array([3, 4])
+    h5_writer.receive_data(new_data)
+    assert h5_writer.data_container == [data, new_data]
+    h5_writer.receive_data(new_data)
+    assert h5_writer.data_container == []
+    h5_writer.receive_data(new_data)
+    h5_writer.on_complete()
+    assert h5_writer.data_container == []
 
 
 def test_async_monitor_stage(async_monitor):

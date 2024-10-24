@@ -101,7 +101,15 @@ class CustomDetectorMixin:
         This can for instance be to check with the detector and backend if all data is written succsessfully.
         """
 
-    def publish_file_location(self, done: bool, successful: bool, metadata: dict = None) -> None:
+    # TODO make this a SUB event in the device manager
+    def publish_file_location(
+        self,
+        done: bool,
+        successful: bool,
+        filepath: str = None,
+        hinted_locations: dict = None,
+        metadata: dict = None,
+    ) -> None:
         """
         Publish the filepath to REDIS.
 
@@ -112,13 +120,19 @@ class CustomDetectorMixin:
         Args:
             done (bool): True if scan is finished
             successful (bool): True if scan was successful
+            filepath (str): Optional, filepath to publish. If None, it will be taken from self.parent.filepath.get()
+            hinted_locations (dict): Optional, dictionary with hinted locations; {dev_name : h5_entry}
             metadata (dict): additional metadata to publish
         """
         if metadata is None:
             metadata = {}
 
+        if filepath is None:
+            file_path = self.parent.filepath.get()
+
         msg = messages.FileMessage(
             file_path=self.parent.filepath.get(),
+            hinted_locations=hinted_locations,
             done=done,
             successful=successful,
             metadata=metadata,

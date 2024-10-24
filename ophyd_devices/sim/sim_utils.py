@@ -15,6 +15,7 @@ class H5Writer:
         self.file_path = file_path
         self.h5_entry = h5_entry
         self.h5_file = None
+        self.file_handle = None
         self.data_container = []
 
     def create_dir(self):
@@ -27,18 +28,45 @@ class H5Writer:
     def receive_data(self, data: any):
         """Store data to be written to h5 file"""
         self.data_container.append(data)
+        if len(self.data_container) > 2:
+            self.write_data()
 
-    def prepare(self, file_path: str, h5_entry: str):
+    def on_stage(self, file_path: str, h5_entry: str):
         """Prepare to write data to h5 file"""
-        self.data_container = []
+        self.data_container.clear()
         self.file_path = file_path
         self.h5_entry = h5_entry
         self.create_dir()
+        # Create file and truncate if it exists
+        with h5py.File(self.file_path, "w") as f:
+            pass
+
+    def on_complete(self):
+        """Write data to h5 file"""
+        if len(self.data_container) > 0:
+            self.write_data()
+
+    def on_unstage(self):
+        """Close file handle"""
 
     def write_data(self):
-        """Write data to h5 file"""
-        with h5py.File(self.file_path, "w") as h5_file:
-            h5_file.create_dataset(self.h5_entry, data=self.data_container, **hdf5plugin.LZ4())
+        """Write data to h5 file. If the scan is started, the file will be truncated first"""
+        with h5py.File(self.file_path, "a") as f:
+            dataset = self.h5_entry
+            value = self.data_container
+            if isinstance(value, list):
+                shape = (
+                    value[0].shape if hasattr(value[0], "shape") else (len(value), len(value[0]))
+                )
+                shape = (None, *shape)
+            if dataset not in f:
+                f.create_dataset(
+                    dataset, data=np.array(value), maxshape=shape, chunks=True, **hdf5plugin.LZ4()
+                )
+            else:
+                f[dataset].resize((f[dataset].shape[0] + len(value)), axis=0)
+                f[dataset][-len(value) :] = np.array(value)
+            self.data_container.clear()
 
 
 class LinearTrajectory:

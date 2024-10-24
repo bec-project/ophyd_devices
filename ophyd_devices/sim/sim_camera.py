@@ -79,7 +79,7 @@ class SimCameraSetup(CustomDetectorMixin):
         self.parent.exp_time.set(self.parent.scaninfo.exp_time)
         self.parent.burst.set(self.parent.scaninfo.frames_per_trigger)
         if self.parent.write_to_disk.get():
-            self.parent.h5_writer.prepare(
+            self.parent.h5_writer.on_stage(
                 file_path=self.parent.filepath.get(), h5_entry="/entry/data/data"
             )
             self.publish_file_location(done=False, successful=False)
@@ -92,7 +92,7 @@ class SimCameraSetup(CustomDetectorMixin):
         def on_complete_call(status: DeviceStatus) -> None:
             try:
                 if self.parent.write_to_disk.get():
-                    self.parent.h5_writer.write_data()
+                    self.parent.h5_writer.on_complete()
                 self.publish_file_location(done=True, successful=True)
                 if self.parent.stopped:
                     raise DeviceStopError(f"{self.parent.name} was stopped")
@@ -109,12 +109,18 @@ class SimCameraSetup(CustomDetectorMixin):
         self._thread_complete.start()
         return status
 
+    def on_unstage(self):
+        """Unstage the camera device."""
+        if self.parent.write_to_disk.get():
+            self.parent.h5_writer.on_unstage()
+
     def on_stop(self) -> None:
         """Stop the camera acquisition."""
         if self._thread_trigger:
             self._thread_trigger.join()
         if self._thread_complete:
             self._thread_complete.join()
+        self.on_unstage()
         self._thread_trigger = None
         self._thread_complete = None
 
