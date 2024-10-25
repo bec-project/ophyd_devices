@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.10.2 (2024-10-25)
+
+### Bug Fixes
+
+* fix: ensure filepath is set to the required value before waiting ([`db9e191`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/db9e191e4a5c1ee340094400dff93b7ba10f8dfb))
+
+
 ## v1.10.1 (2024-10-25)
 
 ### Bug Fixes
@@ -147,10 +154,6 @@
 
 * fix: Improve asyn_monitor and camera on_trigger and on_complete to return status ([`f311876`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f3118765b0efc38dd12a3d72d290e517490f9fbf))
 
-### Build System
-
-* build(ci): update variable for ophyd_devices branch ([`1d55214`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1d55214fbd25a111f8a81d804fd7f39470934c74))
-
 ### Continuous Integration
 
 * ci: made BEC a child pipeline ([`9eb67a0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9eb67a0900159248e785b17e4250ae6a7e954348))
@@ -158,8 +161,6 @@
 * ci: moved to awi utils trigger pipelines ([`0f6494a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0f6494ae2caafc0727a394683718031670614aeb))
 
 * ci: changed default branch ([`fe5f1c3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fe5f1c314f51cb07bae4044a406ed5dc738c7837))
-
-* ci: fixed default branch for ophyd ci var ([`85630f3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/85630f3d733897945ef3421b9805e66191edb537))
 
 ### Refactoring
 
