@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.10.1 (2024-10-25)
+
+### Bug Fixes
+
+* fix: ophyd patch, compatibility with Python >=3.12
+
+"find_module" has been deleted from Finder class ([`97982dd`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/97982dd1385f065b04aa780c91aee9f67b9beda2))
+
+### Refactoring
+
+* refactor: Refactored SimCamera write_to_disk option to continously write to h5 file. ([`41c54aa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/41c54aa851e7fcf22b139aeb041d000395524b7e))
+
+
 ## v1.10.0 (2024-10-22)
 
 ### Bug Fixes
@@ -152,8 +165,6 @@
 
 * refactor: review DeviceStatus and error handling in simulation ([`87858ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/87858edfe290cb711bc30c2f3ba2653460d15af6))
 
-* refactor: rename monitor to device_monitor_2d ([`6a6b907`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6a6b907022532e20626b8ed97d347da04beea4b0))
-
 ### Testing
 
 * test: Fix and add test scenarios for DeviceStatus error handling ([`4397db9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4397db919a852d70c53d80a532540eaabdffc3ad))
@@ -163,10 +174,3 @@
 ### Unknown
 
 * wip ([`35141e9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/35141e94b1c8a6ba70e96b915b45871d19bd5f7e))
-
-
-## v1.7.1 (2024-07-24)
-
-### Bug Fixes
-
-* fix: add run._subs SUB_VALUE to settable signal put method ([`ca6d96e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ca6d96e25b4a2d5011c0882e512b84e16cf7b264))
