@@ -126,6 +126,16 @@ class BECDeviceBase:
             root = root.parent
 
     @property
+    def dotted_name(self):
+        """Return the dotted name"""
+        names = []
+        obj = self
+        while obj.parent is not None:
+            names.append(obj.name)
+            obj = obj.parent
+        return ".".join(names[::-1])
+
+    @property
     def hints(self) -> dict:
         """hints property"""
         return {}
