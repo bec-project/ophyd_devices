@@ -3,12 +3,49 @@
 ### ophyd_devices 
 | Device | Documentation | Module |
 | :----- | :------------- | :------ |
+| Andor3DetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| AravisDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| AttributePlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| AttrPlotPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| CamBase |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| CircularBuffPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| CodecPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ColorConvPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| EigerDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
 | EpicsMotorEx | Extend EpicsMotor with extra configuration fields.<br>    motor_done_move<br>    motor_is_moving<br>     | [ophyd_devices.devices.epics_motor_ex](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/epics_motor_ex.py) |
-| SLSDetector |  | [ophyd_devices.devices.sls_detector](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/sls_detector.py) |
-| SLSDetectorCam |  | [ophyd_devices.devices.sls_detector](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/sls_detector.py) |
+| FFTPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| FileBase |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| FilePlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| GenICam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| HDF5Plugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ImagePlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| JPEGPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| MagickPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| NetCDFPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| NexusPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| OverlayPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| PilatusDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| PluginBase_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| PosPluginPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ProcessPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ProsilicaDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| PvaPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| PylonDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| ROIPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ROIStatNPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ROIStatPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| ScatterPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| SimDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| SLSDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
 | SLSInfo |  | [ophyd_devices.devices.sls_devices](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/sls_devices.py) |
 | SLSOperatorMessages |  | [ophyd_devices.devices.sls_devices](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/sls_devices.py) |
 | SpmBase | Python wrapper for the Staggered Blade Pair Monitors<br><br>    SPM's consist of a set of four horizontal tungsten blades and are<br>    used to monitor the beam height (only Y) for the bending magnet<br>    beamlines of SLS.<br><br>    Note: EPICS provided signals are read only, but the users can<br>    change the beam position offset.<br>     | [ophyd_devices.devices.SpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/SpmBase.py) |
 | SpmSim | Python wrapper for simulated Staggered Blade Pair Monitors<br><br>    SPM's consist of a set of four horizontal tungsten blades and are<br>    used to monitor the beam height (only Y) for the bending magnet<br>    beamlines of SLS.<br><br>    This simulation device extends the basic proxy with a script that<br>    fills signals with quasi-randomized values.<br>     | [ophyd_devices.devices.SpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/SpmBase.py) |
+| StatsPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| TIFFPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| TimeSeriesPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| TransformPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| URLDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| VimbaDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
 | XbpmBase | Python wrapper for X-ray Beam Position Monitors<br><br>    XBPM's consist of a metal-coated diamond window that ejects<br>    photoelectrons from the incoming X-ray beam. These electons<br>    are collected and their current is measured. Effectively<br>    they act as four quadrant photodiodes and are used as BPMs<br>    at the undulator beamlines of SLS.<br><br>    Note: EPICS provided signals are read only, but the user can<br>    change the beam position offset.<br>     | [ophyd_devices.devices.XbpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/XbpmBase.py) |
 | XbpmSim | Python wrapper for simulated X-ray Beam Position Monitors<br><br>    XBPM's consist of a metal-coated diamond window that ejects<br>    photoelectrons from the incoming X-ray beam. These electons<br>    are collected and their current is measured. Effectively<br>    they act as four quadrant photodiodes and are used as BPMs<br>    at the undulator beamlines of SLS.<br><br>    Note: EPICS provided signals are read only, but the user can<br>       change the beam position offset.<br><br>    This simulation device extends the basic proxy with a script that<br>    fills signals with quasi-randomized values.<br>     | [ophyd_devices.devices.XbpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/XbpmBase.py) |
