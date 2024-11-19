@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.10.4 (2024-11-19)
+
+### Bug Fixes
+
+- **device base**: Added missing property to BECDeviceBase
+  ([`cc0e26a`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cc0e26a91a84b015b03aa7656ccd0528d7465697))
+
+- **sim**: Ensure to update the state before setting the status to finished
+  ([`2e8ddbb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/2e8ddbb1adafca0727a5235b24e7cbe8de078708))
+
+
 ## v1.10.3 (2024-11-18)
 
 ### Bug Fixes
@@ -185,14 +196,6 @@
 
 ## v1.7.2 (2024-07-29)
 
-### Bug Fixes
-
-- Add write_access attribute to simulated readonly signal
-  ([`c3e17ba`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c3e17ba05632309adcc896f858e52ecb07048a30))
-
-- Remove print for select_model method of sim module
-  ([`5009316`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5009316a82897d739b2a26eb341e9f5a1e083e51))
-
 ### Refactoring
 
 - Review DeviceStatus and error handling in simulation
@@ -202,6 +205,3 @@
 
 - Fix and add test scenarios for DeviceStatus error handling
   ([`4397db9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4397db919a852d70c53d80a532540eaabdffc3ad))
-
-- Adapt tests to consider returned DeviceStatus for on_trigger/complete
-  ([`f8e9aaf`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f8e9aaf55a5734f3bf557bbf5e51eb7ea41257d4))
