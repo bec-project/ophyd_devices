@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.10.5 (2024-11-19)
+
+### Bug Fixes
+
+- Add __init__ to tests folder
+  ([`2034539`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/203453976981b7077815a571697447c5e96aa747))
+
+### Continuous Integration
+
+- Update no pragma for coverage
+  ([`cd64d57`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cd64d57c658f3ff166aa610153e534b9c82135aa))
+
+
 ## v1.10.4 (2024-11-19)
 
 ### Bug Fixes
@@ -192,16 +205,3 @@
 
 - Add test case
   ([`76e1cfc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/76e1cfc4aade9c691d9b5bfd4db0b678b7e2f1cc))
-
-
-## v1.7.2 (2024-07-29)
-
-### Refactoring
-
-- Review DeviceStatus and error handling in simulation
-  ([`87858ed`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/87858edfe290cb711bc30c2f3ba2653460d15af6))
-
-### Testing
-
-- Fix and add test scenarios for DeviceStatus error handling
-  ([`4397db9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4397db919a852d70c53d80a532540eaabdffc3ad))
