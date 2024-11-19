@@ -34,25 +34,24 @@ An example usage for a 4-element FalconX system. ::
     falcon.mca1.spectrum.get()
 
 """
+
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind
 from ophyd.areadetector import EpicsSignalWithRBV
 from ophyd.mca import EpicsDXPBaseSystem, EpicsDXPMapping, EpicsDXPMultiElementSystem
 from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
 
-__all__ = (
-    'EpicsMCARecord',
-    'EpicsDXPFalcon',
-    'Falcon',
-    'xMAP'
-)
+__all__ = ("EpicsMCARecord", "EpicsDXPFalcon", "Falcon", "xMAP")
+
 
 class EpicsMCARecord(_EpicsMCARecord):
     """EpicsMCARecord with addtional fields"""
+
     calo = Cpt(EpicsSignal, ".CALO")
     cals = Cpt(EpicsSignal, ".CALS")
     calq = Cpt(EpicsSignal, ".CALQ")
     tth = Cpt(EpicsSignal, ".TTH")
+
 
 class EpicsDXPFalcon(Device):
     """All high-level DXP parameters for each channel"""
@@ -89,7 +88,10 @@ class EpicsDXPFalcon(Device):
     # Diagnostic trace
     trace_data = Cpt(EpicsSignal, "TraceData")
 
+
 class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
+    """System-wide parameters as defined in dxpMED.template"""
+
     # Preset control
     preset_events = Cpt(EpicsSignal, "PresetEvents")
     preset_real_time = Cpt(EpicsSignal, "PresetReal")
@@ -117,12 +119,14 @@ class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
     # misconfigured:
     snl_connected = Cpt(EpicsSignal, "SNL_Connected")
 
-    # High-level parameters 
+    # High-level parameters
     copy_decay_time = Cpt(EpicsSignal, "CopyDecayTime", kind=Kind.omitted)
     copy_detection_filter = Cpt(EpicsSignal, "CopyDetectionFilter", kind=Kind.omitted)
     copy_detection_threshold = Cpt(EpicsSignal, "CopyDetectionThreshold", kind=Kind.omitted)
     copy_detector_polarity = Cpt(EpicsSignal, "CopyDetectorPolarity", kind=Kind.omitted)
-    copy_min_pulse_pair_separation = Cpt(EpicsSignal, "CopyMinPulsePairSeparation", kind=Kind.omitted)
+    copy_min_pulse_pair_separation = Cpt(
+        EpicsSignal, "CopyMinPulsePairSeparation", kind=Kind.omitted
+    )
     copt_risetime_optimization = Cpt(EpicsSignal, "CopyRisetimeOptimization", kind=Kind.omitted)
     copy_scale_factor = Cpt(EpicsSignal, "CopyScaleFactor", kind=Kind.omitted)
     read_traces = Cpt(EpicsSignal, "ReadTraces", kind=Kind.omitted)
@@ -150,16 +154,20 @@ class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
 
 
 class EpicsDxpFalconMapping(EpicsDXPMapping):
+    """Mapping mode parameters as defined in dxpMapping.template"""
+
     auto_apply = None
     apply = None
     nd_array_mode = Cpt(EpicsSignalWithRBV, "NDArrayMode")
 
 
 class Falcon(EpicsDXPFalconMultiElementSystem, EpicsDxpFalconMapping):
-    ...
+    """Falcon base device"""
 
 
 class xMAP(EpicsDXPMultiElementSystem, EpicsDXPMapping):
+    """xMAP base device"""
+
     # Override signals from EpicsDXPMultiElementSystem, so calling `set`` method
     # returns a waitable Status object. Otherwise the Status object is immediately done.
     erase_start = Cpt(EpicsSignal, "EraseStart", put_complete=True, trigger_value=1)
