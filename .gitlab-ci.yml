@@ -141,7 +141,7 @@ pytest:
   stage: test
   script:
     - pip install coverage
-    - coverage run --source=./ophyd_devices -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
+    - coverage run --source=./ophyd_devices --omit=*/ophyd_devices/tests/* -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
