@@ -35,9 +35,10 @@ An example usage for a 4-element FalconX system. ::
 
 """
 from ophyd import Component as Cpt
-from ophyd import Kind, EpicsSignal, EpicsSignalRO, Device
-from ophyd.mca import EpicsMCARecord as _EpicsMCARecord, EpicsDXPBaseSystem, EpicsDXPMultiElementSystem, EpicsDXPMapping
+from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind
 from ophyd.areadetector import EpicsSignalWithRBV
+from ophyd.mca import EpicsDXPBaseSystem, EpicsDXPMapping, EpicsDXPMultiElementSystem
+from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
 
 __all__ = (
     'EpicsMCARecord',
