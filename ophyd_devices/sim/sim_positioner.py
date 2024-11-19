@@ -167,6 +167,7 @@ class SimPositioner(Device, PositionerBase):
                 self._update_state(ii)
                 if self._stopped:
                     raise DeviceStopError(f"{self.name} was stopped")
+            self._update_state(target)
             st.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
