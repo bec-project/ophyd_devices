@@ -8,6 +8,10 @@ variables:
     description: bec branch
     value: main
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
+  CHECK_PKG_VERSIONS:
+    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running. 
+    value: 0
+
 
 workflow:
   rules:
@@ -29,8 +33,8 @@ include:
     inputs:
       stage: test
       path: "."
-      pytest_args: "-v --random-order tests/"
-      exclude_packages: ""
+      pytest_args: "-v,--random-order,tests/"
+      ignore_dep_group: ""
   - project: "bec/awi_utils"
     file: "templates/device-list-job.yml"
     inputs:
