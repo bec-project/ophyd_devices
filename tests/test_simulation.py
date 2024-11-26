@@ -16,10 +16,10 @@ from ophyd import Device, Signal
 from ophyd.status import wait as status_wait
 
 from ophyd_devices.interfaces.protocols.bec_protocols import (
+    BECBaseProtocol,
     BECDeviceProtocol,
     BECFlyerProtocol,
     BECPositionerProtocol,
-    BECScanProtocol,
     BECSignalProtocol,
 )
 from ophyd_devices.sim.sim_camera import SimCamera
@@ -157,7 +157,6 @@ def test_monitor_with_sim_init():
 
 def test_signal__init__(signal):
     """Test the BECProtocol class"""
-    assert isinstance(signal, BECDeviceProtocol)
     assert isinstance(signal, BECSignalProtocol)
 
 
@@ -171,22 +170,17 @@ def test_camera__init__(camera):
     """Test the __init__ method of SimMonitor."""
     assert isinstance(camera, SimCamera)
     assert isinstance(camera, BECDeviceProtocol)
-    assert isinstance(camera, BECScanProtocol)
 
 
 def test_positioner__init__(positioner):
     """Test the __init__ method of SimPositioner."""
     assert isinstance(positioner, SimPositioner)
-    assert isinstance(positioner, BECDeviceProtocol)
-    assert isinstance(positioner, BECScanProtocol)
     assert isinstance(positioner, BECPositionerProtocol)
 
 
 def test_flyer__init__(flyer):
     """Test the __init__ method of SimFlyer."""
     assert isinstance(flyer, SimFlyer)
-    assert isinstance(flyer, BECDeviceProtocol)
-    assert isinstance(flyer, BECScanProtocol)
     assert isinstance(flyer, BECFlyerProtocol)
 
 
@@ -194,7 +188,6 @@ def test_init_async_monitor(async_monitor):
     """Test the __init__ method of SimMonitorAsync."""
     assert isinstance(async_monitor, SimMonitorAsync)
     assert isinstance(async_monitor, BECDeviceProtocol)
-    assert isinstance(async_monitor, BECScanProtocol)
 
 
 @pytest.mark.parametrize("center", [-10, 0, 10])

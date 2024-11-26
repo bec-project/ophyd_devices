@@ -4,15 +4,15 @@ The protocols below can be used as teamplates for functionality to be implemeted
 They further facilitate runtime checks on devices and provide a minimum set of properties required for a device to be loadable by BEC.
 
 The protocols are:
-- BECDeviceProtocol: Protocol for devices in BEC. All devices must at least implement this protocol.
+- BECBaseProtocol: Protocol for devices in BEC. All devices must at least implement this protocol.
 - BECSignalProtocol: Protocol for signals.
-- BECScanProtocol: Protocol for the scan interface.
+- BECDeviceProtocol: Protocol for the scan interface.
 - BECMixinProtocol: Protocol for utilities in particular relevant for detector implementations.
 - BECPositionerProtocol: Protocol for positioners.
 - BECFlyerProtocol: Protocol with for flyers.
 
-Keep in mind, that a device of type flyer should generally also implement the BECScanProtocol that provides the required functionality for scans.
-Flyers in addition, also implement the BECFlyerProtocol. Similarly, positioners should also implement the BECScanProtocol and BECPositionerProtocol.
+Keep in mind, that a device of type flyer should generally also implement the BECDeviceProtocol that provides the required functionality for scans.
+Flyers in addition, also implement the BECFlyerProtocol. Similarly, positioners should also implement the BECDeviceProtocol and BECPositionerProtocol.
 
 """
 
@@ -25,7 +25,7 @@ from ophyd_devices.utils import bec_scaninfo_mixin
 
 
 @runtime_checkable
-class BECDeviceProtocol(Protocol):
+class BECBaseProtocol(Protocol):
     """Protocol for ophyd objects with zero functionality."""
 
     _destroyed: bool
@@ -126,11 +126,11 @@ class BECDeviceProtocol(Protocol):
 
 
 @runtime_checkable
-class BECSignalProtocol(Protocol):
+class BECSignalProtocol(BECBaseProtocol, Protocol):
     """Protocol for BEC signals with zero functionality.
 
     This protocol adds the specific implementation for a signal.
-    Please be aware that a signal must also implement BECDeviceProtocol.
+    Please be aware that a signal must also implement BECBaseProtocol.
 
     Note: Currently the implementation of the protocol is not taking into account the
     event_model from ophyd, i.e. _run_sbus
@@ -205,7 +205,7 @@ class BECSignalProtocol(Protocol):
 
 
 @runtime_checkable
-class BECScanProtocol(BECDeviceProtocol, Protocol):
+class BECDeviceProtocol(BECBaseProtocol, Protocol):
     """Protocol for devices offering an Protocol with all relevant functionality for scans.
 
     In BEC, scans typically follow the order of stage, (pre_scan), trigger, unstage.
@@ -263,45 +263,7 @@ class BECScanProtocol(BECDeviceProtocol, Protocol):
 
 
 @runtime_checkable
-class BECMixinProtocol(Protocol):
-    """Protocol that offers BEC specific utility functionality for detectors."""
-
-    USER_ACCESS: list[str]
-    """
-    List of methods/properties that will be exposed to the client interface in addition
-    to the the already exposed signals, methods and properties.
-    """
-
-    scaninfo: bec_scaninfo_mixin
-    """ 
-    BEC scan info mixin class that provides an transparent Protocol to scan parameter 
-    as provided by BEC. It is recommended to use this Protocol to retrieve scaninfo from Redis. 
-    """
-
-    stopped: bool
-    """ 
-    Flag to indicate if the device is stopped. 
-    
-    The stop method should set this flag to True, and i.e. stage to set it to False. 
-    """
-
-    filewriter: FileWriter
-    """
-    The file writer mixin main purpose is to unify and centralize the creation of 
-    file paths within BEC. Therefore, we recommend devices to use the same mixin for creation of paths.
-    """
-
-    def pre_scan(self):
-        """Pre-scan method is called from BEC right before executing scancore, thus
-        right before the start of an acquisition.
-
-        It can be used to trigger time critical functions from the device, which
-        are prone to run into timeouts in case called too early.
-        """
-
-
-@runtime_checkable
-class BECPositionerProtocol(Protocol):
+class BECPositionerProtocol(BECDeviceProtocol, Protocol):
     """Protocol with functionality specific for positioners in BEC."""
 
     @property
@@ -369,19 +331,8 @@ class BECPositionerProtocol(Protocol):
 
 
 @runtime_checkable
-class BECFlyerProtocol(BECScanProtocol, Protocol):
+class BECFlyerProtocol(BECDeviceProtocol, Protocol):
     """Protocol with functionality specific for flyers in BEC."""
-
-    # def configure(self, d: dict):
-    #     """Configure method of the flyer.
-    #     It is an optional method, but does not need to be implemented by a flyer.
-    #     Instead, stage can be used to prepare time critical operations on the device in preparation of a scan.
-
-    #     Method to configure the flyer in preparation of a scan.
-
-    #     Args:
-    #         d (dict): Dictionary with configuration parameters, i.e. key value pairs of signal_name : value
-    #     """
 
     def kickoff(self) -> DeviceStatus:
         """Kickoff method for flyers.
@@ -404,40 +355,40 @@ class BECFlyerProtocol(BECScanProtocol, Protocol):
 
 
 @runtime_checkable
-class BECRotationProtocol(Protocol):
-    """Protocol which defines functionality for a tomography stage for ophyd devices"""
+class BECMixinProtocol(Protocol):
+    """Protocol that offers BEC specific utility functionality for detectors."""
 
-    allow_mod360: Component
-    """Signal to define whether mod360 operations are allowed. """
+    USER_ACCESS: list[str]
+    """
+    List of methods/properties that will be exposed to the client interface in addition
+    to the the already exposed signals, methods and properties.
+    """
 
-    @property
-    def has_mod360(self) -> bool:
-        """Property to check if the motor has mod360 option
+    scaninfo: bec_scaninfo_mixin
+    """ 
+    BEC scan info mixin class that provides an transparent Protocol to scan parameter 
+    as provided by BEC. It is recommended to use this Protocol to retrieve scaninfo from Redis. 
+    """
 
-        Returns:
-            bool: True if mod360 is possible on device, False otherwise
-        """
+    stopped: bool
+    """ 
+    Flag to indicate if the device is stopped. 
+    
+    The stop method should set this flag to True, and i.e. stage to set it to False. 
+    """
 
-    @property
-    def has_freerun(self) -> bool:
-        """Property to check if the motor has freerun option
+    filewriter: FileWriter
+    """
+    The file writer mixin main purpose is to unify and centralize the creation of 
+    file paths within BEC. Therefore, we recommend devices to use the same mixin for creation of paths.
+    """
 
-        Returns:
-            bool: True if freerun is allowed, False otherwise
-        """
+    def pre_scan(self):
+        """Pre-scan method is called from BEC right before executing scancore, thus
+        right before the start of an acquisition.
 
-    @property
-    def valid_rotation_modes(self) -> list[str]:
-        """Method to get the valid rotation modes for the implemented motor.
-
-        Returns:
-            list: List of strings with valid rotation modes
-        """
-
-    def apply_mod360(self) -> None:
-        """Method to apply the modulus 360 operation on the specific device.
-
-        Childrens should override this method
+        It can be used to trigger time critical functions from the device, which
+        are prone to run into timeouts in case called too early.
         """
 
 
