@@ -37,20 +37,22 @@ An example usage for a 4-element FalconX system. ::
 
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind
-from ophyd.areadetector import EpicsSignalWithRBV
-from ophyd.mca import EpicsDXPBaseSystem, EpicsDXPMapping, EpicsDXPMultiElementSystem
+from ophyd.areadetector import ADComponent as ADCpt, EpicsSignalWithRBV, ADBase
+from ophyd.mca import EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
+from ophyd.mca import EpicsDXPMultiElementSystem as _EpicsDXPMultiElementSystem
 from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
 
-__all__ = ("EpicsMCARecord", "EpicsDXPFalcon", "Falcon", "xMAP")
+__all__ = ("EpicsMCARecord", "EpicsDXP", "EpicsDXPFalcon", "Falcon", "Mercury", "xMAP")
 
 
 class EpicsMCARecord(_EpicsMCARecord):
     """EpicsMCARecord with addtional fields"""
 
-    calo = Cpt(EpicsSignal, ".CALO")
-    cals = Cpt(EpicsSignal, ".CALS")
-    calq = Cpt(EpicsSignal, ".CALQ")
-    tth = Cpt(EpicsSignal, ".TTH")
+    # Calibration values
+    calo = Cpt(EpicsSignal, ".CALO", kind=Kind.config)
+    cals = Cpt(EpicsSignal, ".CALS", kind=Kind.config)
+    calq = Cpt(EpicsSignal, ".CALQ", kind=Kind.config)
+    tth = Cpt(EpicsSignal, ".TTH", kind=Kind.config)
 
 
 class EpicsDXPFalcon(Device):
@@ -132,8 +134,8 @@ class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
     read_traces = Cpt(EpicsSignal, "ReadTraces", kind=Kind.omitted)
 
     # ROI and SCA
-    copy_roic_hannel = Cpt(EpicsSignal, "CopyROIChannel", kind=Kind.omitted)
-    copy_roie_nergy = Cpt(EpicsSignal, "CopyROIEnergy", kind=Kind.omitted)
+    copy_roi_channel = Cpt(EpicsSignal, "CopyROIChannel", kind=Kind.omitted)
+    copy_roi_energy = Cpt(EpicsSignal, "CopyROIEnergy", kind=Kind.omitted)
     copy_roi_sca = Cpt(EpicsSignal, "CopyROI_SCA", kind=Kind.omitted)
 
     # do_* executes the process:
@@ -161,14 +163,37 @@ class EpicsDxpFalconMapping(EpicsDXPMapping):
     nd_array_mode = Cpt(EpicsSignalWithRBV, "NDArrayMode")
 
 
-class Falcon(EpicsDXPFalconMultiElementSystem, EpicsDxpFalconMapping):
+class Falcon(EpicsDXPFalconMultiElementSystem, EpicsDxpFalconMapping, ADBase):
     """Falcon base device"""
 
+    # attribute required by ADBase
+    port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
 
-class xMAP(EpicsDXPMultiElementSystem, EpicsDXPMapping):
-    """xMAP base device"""
 
-    # Override signals from EpicsDXPMultiElementSystem, so calling `set`` method
+class EpicsDXPMultiElementSystem(_EpicsDXPMultiElementSystem):
+    """System-wide parameters as defined in dxpMED.template"""
+
+    # Override some action signals, so calling `set`` method
     # returns a waitable Status object. Otherwise the Status object is immediately done.
     erase_start = Cpt(EpicsSignal, "EraseStart", put_complete=True, trigger_value=1)
     start_all = Cpt(EpicsSignal, "StartAll", put_complete=True, trigger_value=1)
+
+    # mca.EpicsDXPMultiElementSystem maps the EPICS records under wrong names, i.e.
+    # copy_adcp_ercent_rule, copy_roic_hannel and copy_roie_nergy
+    copy_adc_percent_rule = Cpt(EpicsSignal, "CopyADCPercentRule")
+    copy_roi_channel = Cpt(EpicsSignal, "CopyROIChannel")
+    copy_roi_energy = Cpt(EpicsSignal, "CopyROIEnergy")
+
+
+class Mercury(EpicsDXPMultiElementSystem, ADBase):
+    """Mercury base device"""
+
+    # attribute required by ADBase
+    port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
+
+
+class xMAP(EpicsDXPMultiElementSystem, EpicsDXPMapping, ADBase):
+    """xMAP base device"""
+
+    # attribute required by ADBase
+    port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
