@@ -37,7 +37,9 @@ An example usage for a 4-element FalconX system. ::
 
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind
-from ophyd.areadetector import ADComponent as ADCpt, EpicsSignalWithRBV, ADBase
+from ophyd.areadetector import ADBase
+from ophyd.areadetector import ADComponent as ADCpt
+from ophyd.areadetector import EpicsSignalWithRBV
 from ophyd.mca import EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
 from ophyd.mca import EpicsDXPMultiElementSystem as _EpicsDXPMultiElementSystem
 from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
