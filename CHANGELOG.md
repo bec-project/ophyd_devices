@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v1.11.0 (2024-12-04)
+
+### Bug Fixes
+
+- Falcon and xMAP inherit ADBase
+  ([`e37accd`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e37accdf94f48b2f3de767ba736e1ca7595978c5))
+
+It is needed for ND plugins to inspect the asyn pipeline.
+
+### Documentation
+
+- Update device list
+  ([`49630f8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/49630f82abdfa2588100a268798766b1a4d8b655))
+
+### Features
+
+- Xmap and FalconX devices
+  ([`3cf9d15`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3cf9d15bd35a50cac873d1b75effeb4b482f9efd))
+
+
 ## v1.10.6 (2024-12-04)
 
 ### Bug Fixes
@@ -164,44 +184,3 @@
 
 
 ## v1.9.1 (2024-08-28)
-
-### Bug Fixes
-
-- Removed arguments for callback call
-  ([`d83c102`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d83c102d14430b9acd8525d1d61e6e092d9f6043))
-
-### Refactoring
-
-- Moved sim test devices to sim_test_devices
-  ([`a49c6f6`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a49c6f6a625a576524fceca62dd0a1582a4a4a7d))
-
-
-## v1.9.0 (2024-08-28)
-
-### Features
-
-- Add dual patch pvs to ophyd_devices
-  ([`c47918d`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/c47918d6e7ff41721aa4fa67043ff6cd1aeee2c7))
-
-
-## v1.8.1 (2024-08-15)
-
-### Bug Fixes
-
-- Fixed import of simpositioner test devices
-  ([`f1f9721`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1f9721fe9c71da747558e4bb005c04592aa2bde))
-
-### Build System
-
-- Moved pyepics deps to >=3.5.5
-  ([`8046f22`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8046f22a807f94f1dc7d9ab77ab3b9c3ce821633))
-
-3.5.3 and 3.5.4 should not be used
-
-
-## v1.8.0 (2024-08-14)
-
-### Features
-
-- **sim**: Added dedicated positioner with controller
-  ([`4ad5723`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ad57230e327c3714a03ae138bc12a5028acb1dd))
