@@ -12,7 +12,13 @@
 | CodecPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | ColorConvPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | EigerDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
+| EpicsDXPFalcon | All high-level DXP parameters for each channel | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
+| EpicsDxpFalconMapping | Mapping mode parameters as defined in dxpMapping.template | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
+| EpicsDXPFalconMultiElementSystem | System-wide parameters as defined in dxpMED.template | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
+| EpicsDXPMultiElementSystem | System-wide parameters as defined in dxpMED.template | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
+| EpicsMCARecord | EpicsMCARecord with addtional fields | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
 | EpicsMotorEx | Extend EpicsMotor with extra configuration fields.<br>    motor_done_move<br>    motor_is_moving<br>     | [ophyd_devices.devices.epics_motor_ex](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/epics_motor_ex.py) |
+| Falcon | Falcon base device | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
 | FFTPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | FileBase |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
 | FilePlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
@@ -21,6 +27,7 @@
 | ImagePlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | JPEGPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | MagickPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
+| Mercury | Mercury base device | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
 | NetCDFPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | NexusPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
 | OverlayPlugin_V35 |  | [ophyd_devices.devices.areadetector.plugins](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/plugins.py) |
@@ -49,3 +56,4 @@
 | VimbaDetectorCam |  | [ophyd_devices.devices.areadetector.cam](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/areadetector/cam.py) |
 | XbpmBase | Python wrapper for X-ray Beam Position Monitors<br><br>    XBPM's consist of a metal-coated diamond window that ejects<br>    photoelectrons from the incoming X-ray beam. These electons<br>    are collected and their current is measured. Effectively<br>    they act as four quadrant photodiodes and are used as BPMs<br>    at the undulator beamlines of SLS.<br><br>    Note: EPICS provided signals are read only, but the user can<br>    change the beam position offset.<br>     | [ophyd_devices.devices.XbpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/XbpmBase.py) |
 | XbpmSim | Python wrapper for simulated X-ray Beam Position Monitors<br><br>    XBPM's consist of a metal-coated diamond window that ejects<br>    photoelectrons from the incoming X-ray beam. These electons<br>    are collected and their current is measured. Effectively<br>    they act as four quadrant photodiodes and are used as BPMs<br>    at the undulator beamlines of SLS.<br><br>    Note: EPICS provided signals are read only, but the user can<br>       change the beam position offset.<br><br>    This simulation device extends the basic proxy with a script that<br>    fills signals with quasi-randomized values.<br>     | [ophyd_devices.devices.XbpmBase](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/XbpmBase.py) |
+| xMAP | xMAP base device | [ophyd_devices.devices.dxp](https://gitlab.psi.ch/bec/ophyd_devices/-/blob/main/ophyd_devices/devices/dxp.py) |
