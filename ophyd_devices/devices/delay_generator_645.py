@@ -143,7 +143,7 @@ class DelayGenerator(Device):
     https://www.thinksrs.com/downloads/pdfs/manuals/DG645m.pdf
     """
 
-    USER_ACCESS = ["set_channels", "burst_enable", "burst_disable", "set_trigger", "is_ddg_okay"]
+    USER_ACCESS = ["set_channels", "burst_enable", "burst_disable", "set_trigger", "check_if_ddg_okay"]
 
     # PVs
     trigger_burst_readout = Component(
@@ -302,7 +302,7 @@ class DelayGenerator(Device):
             if "io" in channel.component_names and signal in channel.io.component_names:
                 getattr(channel.io, signal).set(value)
 
-    def is_ddg_okay(self, raise_on_error: bool = False) -> None:
+    def check_if_ddg_okay(self, raise_on_error: bool = False) -> None:
         """
         Utility method to check if the DDG is okay.
 
@@ -314,7 +314,7 @@ class DelayGenerator(Device):
             raise_on_error (bool, optional): raise exception if DDG is not okay. Defaults to False.
         """
         sleep_time = 0.5
-        status = self.status.read()[self.parent.status.name]["value"]
+        status = self.status.read()[self.status.name]["value"]
         if status != "STATUS OK" and not raise_on_error:
             logger.warning(f"DDG returns {status}, trying to clear ERROR")
             self.parent.clear_error()
