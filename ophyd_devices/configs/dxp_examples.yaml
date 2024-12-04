@@ -1,0 +1,17 @@
+falcon:
+  description: Falcon for SDD detectors
+  deviceClass: ophyd_devices.devices.dxp.Falcon
+  deviceConfig:
+    prefix: 'X07MB-SITORO:'
+
+xmap:
+  description: xMAP for SDD detectors
+  deviceClass: ophyd_devices.devices.dxp.xMAP
+  deviceConfig:
+    prefix: 'X07MB-XMAP:'
+
+mercury:
+  description: Mercury for SDD detectors
+  deviceClass: ophyd_devices.devices.dxp.Mercury
+  deviceConfig:
+    prefix: 'X06SA-ES-SiD:'
