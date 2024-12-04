@@ -449,9 +449,7 @@ def test_cam_stage_h5writer(camera):
     """Test the H5Writer class"""
     with (
         mock.patch.object(camera, "h5_writer") as mock_h5_writer,
-        mock.patch.object(
-            camera.custom_prepare, "publish_file_location"
-        ) as mock_publish_file_location,
+        mock.patch.object(camera, "_run_subs") as mock_run_subs,
     ):
         camera.scaninfo.num_points = 10
         camera.scaninfo.frames_per_trigger = 1

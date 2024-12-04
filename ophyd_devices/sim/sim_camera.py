@@ -25,6 +25,7 @@ class SimCameraSetup(CustomDetectorMixin):
         super().__init__(*args, **kwargs)
         self._thread_trigger = None
         self._thread_complete = None
+        self.file_path = None
 
     def on_trigger(self) -> None:
         """Trigger the camera to acquire images.
@@ -69,9 +70,7 @@ class SimCameraSetup(CustomDetectorMixin):
         FYI: No data is written to disk in the simulation, but upon each trigger it
         is published to the device_monitor endpoint in REDIS.
         """
-        self.parent.filepath.set(
-            self.parent.filewriter.compile_full_filename(f"{self.parent.name}")
-        ).wait()
+        self.file_path = self.parent.filewriter.compile_full_filename(f"{self.parent.name}")
 
         self.parent.frames.set(
             self.parent.scaninfo.num_points * self.parent.scaninfo.frames_per_trigger
@@ -79,10 +78,14 @@ class SimCameraSetup(CustomDetectorMixin):
         self.parent.exp_time.set(self.parent.scaninfo.exp_time)
         self.parent.burst.set(self.parent.scaninfo.frames_per_trigger)
         if self.parent.write_to_disk.get():
-            self.parent.h5_writer.on_stage(
-                file_path=self.parent.filepath.get(), h5_entry="/entry/data/data"
+            self.parent.h5_writer.on_stage(file_path=self.file_path, h5_entry="/entry/data/data")
+            self.parent._run_subs(
+                sub_type=self.parent.SUB_FILE_EVENT,
+                file_path=self.file_path,
+                done=False,
+                successful=False,
+                hinted_location={"data": "/entry/data/data"},
             )
-            self.publish_file_location(done=False, successful=False)
         self.parent.stopped = False
 
     def on_complete(self) -> None:
@@ -93,7 +96,13 @@ class SimCameraSetup(CustomDetectorMixin):
             try:
                 if self.parent.write_to_disk.get():
                     self.parent.h5_writer.on_complete()
-                self.publish_file_location(done=True, successful=True)
+                self.parent._run_subs(
+                    sub_type=self.parent.SUB_FILE_EVENT,
+                    file_path=self.file_path,
+                    done=True,
+                    successful=True,
+                    hinted_location={"data": "/entry/data/data"},
+                )
                 if self.parent.stopped:
                     raise DeviceStopError(f"{self.parent.name} was stopped")
                 status.set_finished()
