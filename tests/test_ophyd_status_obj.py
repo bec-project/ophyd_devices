@@ -6,11 +6,10 @@ import pytest
 from ophyd.status import DeviceStatus, StatusBase, StatusTimeoutError
 
 
-def test_ophyd_status_patch():
-    assert StatusBase._bec_patched
-
-    st = DeviceStatus(device="test")
-    assert st._bec_patched
+def test_ophyd_status():
+    device = Mock()
+    device.name.return_value = "test"
+    st = DeviceStatus(device)
     assert isinstance(st, StatusBase)
 
     cb = Mock()
@@ -25,7 +24,7 @@ def test_ophyd_status_patch():
     cb.reset_mock()
 
     st = StatusBase()
-    assert isinstance(st._callback_thread, Mock)
+    assert st._callback_thread is None
     st.add_callback(cb)
     st.set_finished()
     cb.assert_called_once()
@@ -34,7 +33,7 @@ def test_ophyd_status_patch():
 
     st = StatusBase(settle_time=1)
     st.add_callback(cb)
-    assert isinstance(st._callback_thread, Mock)
+    assert st._callback_thread is None
     st.set_finished()
     assert cb.call_count == 0
     time.sleep(0.5)
