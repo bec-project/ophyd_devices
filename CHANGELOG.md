@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.10.6 (2024-12-04)
+
+### Bug Fixes
+
+- Bump ophyd version to 1.10, remove patch, fix corresponding test
+  ([`f166847`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f1668473872e4fd8231204c123dac6a07d201266))
+
+### Continuous Integration
+
+- Update ci syntax for dependency job
+  ([`35f3819`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/35f3819c03fc4ad16fccc72a5fdea1f59318a764))
+
+
 ## v1.10.5 (2024-11-19)
 
 ### Bug Fixes
@@ -192,16 +205,3 @@
 
 - **sim**: Added dedicated positioner with controller
   ([`4ad5723`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4ad57230e327c3714a03ae138bc12a5028acb1dd))
-
-
-## v1.7.3 (2024-08-08)
-
-### Bug Fixes
-
-- Small bugfix to ensure motor_is_moving updates at the end of a move
-  ([`577b35f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/577b35f287ec997a41ce27fae2db9bbc669a2d9d))
-
-### Testing
-
-- Add test case
-  ([`76e1cfc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/76e1cfc4aade9c691d9b5bfd4db0b678b7e2f1cc))
