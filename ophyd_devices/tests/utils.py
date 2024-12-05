@@ -2,14 +2,27 @@ from unittest import mock
 
 
 def patch_dual_pvs(device):
+    """Patch dual PVs"""
+    patch_functions_required_for_connection(device)
     device.wait_for_connection(all_signals=True)
     for walk in device.walk_signals():
         if not hasattr(walk.item, "_read_pv"):
             continue
         if not hasattr(walk.item, "_write_pv"):
             continue
-        if walk.item._read_pv.pvname.endswith("_RBV"):
+        if walk.item._read_pv.pvname != walk.item._write_pv.pvname:
             walk.item._read_pv = walk.item._write_pv
+
+
+def patch_functions_required_for_connection(device):
+    """Patch functions required for connection. This will run the subs for all sub devices and devices.
+    This is needed to ensure that the wait_for_connection method of required for connections methods are properly patched.
+    """
+    for event in device.event_types:
+        device._run_subs(sub_type=event, value=0, timestamp=0)
+    for name, dev in device.walk_subdevices(include_lazy=True):
+        for event in dev.event_types:
+            dev._run_subs(sub_type=event, value=0, timestamp=0)
 
 
 class SocketMock:

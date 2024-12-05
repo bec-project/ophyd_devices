@@ -143,7 +143,13 @@ class DelayGenerator(Device):
     https://www.thinksrs.com/downloads/pdfs/manuals/DG645m.pdf
     """
 
-    USER_ACCESS = ["set_channels", "burst_enable", "burst_disable", "set_trigger", "check_if_ddg_okay"]
+    USER_ACCESS = [
+        "set_channels",
+        "burst_enable",
+        "burst_disable",
+        "set_trigger",
+        "check_if_ddg_okay",
+    ]
 
     # PVs
     trigger_burst_readout = Component(
@@ -241,7 +247,7 @@ class DelayGenerator(Device):
                                             LINE = 6
         """
         value = int(source)
-        self.source.put(value)
+        self.source.set(value).wait()
 
     @typechecked
     def burst_enable(
@@ -251,9 +257,12 @@ class DelayGenerator(Device):
 
         Args:
             count (int):    Number of bursts >0
-            delay (float):  Delay between bursts in seconds >=0
+            delay (float):  Delay before bursts start in seconds >=0
             period (float): Period of the bursts in seconds >0
-            config (str):   Configuration of the burst. Default is "all"
+            config (str):   Configuration of T0 duiring burst.
+                            In addition, to simplify triggering of other instruments synchronously with the burst,
+                            the T0 output may be configured to fire on the first delay cycle of the burst,
+                            rather than for all delay cycles as is normally the case.
         """
 
         # Check inputs first
@@ -317,8 +326,9 @@ class DelayGenerator(Device):
         status = self.status.read()[self.status.name]["value"]
         if status != "STATUS OK" and not raise_on_error:
             logger.warning(f"DDG returns {status}, trying to clear ERROR")
-            self.parent.clear_error()
+            # TODO check if clear_error is working
+            self.clear_error.put(1)
             time.sleep(sleep_time)
-            self.is_ddg_okay(raise_on_error=True)
+            self.check_if_ddg_okay(raise_on_error=True)
         elif status != "STATUS OK":
             raise DelayGeneratorError(f"DDG failed to start with status: {status}")

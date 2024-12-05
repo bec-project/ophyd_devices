@@ -1,0 +1,12 @@
+ddg:
+  description: DelayGenerator for detectors
+  deviceClass: ophyd_devices.devices.delay_generator_645.DelayGenerator
+  deviceConfig:
+    prefix: 'X12SA-CPCL-DDG3:'
+  deviceTags:
+  - cSAXS
+  - ddg_mcs
+  onFailure: buffer
+  enabled: true
+  readoutPriority: async
+  softwareTrigger: True
