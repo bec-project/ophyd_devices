@@ -71,6 +71,49 @@ class BECBaseProtocol(Protocol):
     def connected(self, value: bool):
         """connected setter"""
 
+    @property
+    def event_types(self) -> tuple[str]:
+        """Event types property"""
+
+    def _run_subs(self, sub_type: str, **kwargs):
+        """Run subscriptions for the event.
+
+        Args:
+            sub_type: Subscription type
+            kwargs: Keyword arguments
+        """
+
+    def subscribe(self, callback: callable, event_type: str = None, run: bool = True):
+        """Subscribe to the event.
+
+        Args:
+            callback (callable) :   Callback function
+                                    The expected callback structure is:
+                                    def cb(*args, obj:OphydObject, sub_type:str, **kwargs) -> None:
+                                        pass
+            event_type (str)    :   Event type, if None it defaults to obj._default_sub
+                                    This maps to sub_type in _run_subs
+            run (bool)          :   If true, run the callback directly.
+
+        Returns:
+            cid (int):              Callback id
+        """
+
+    def clear_sub(self, cb: callable, event_type: str = None):
+        """Clear subscription, given the origianl callback fucntion
+
+        Args:
+            cb (callable)   : Callback
+            event_type (str): Event type, if None it will be remove from all event_types
+        """
+
+    def unsubscribe(self, cid: int):
+        """Unsubscribe from the event.
+
+        Args:
+            cid (int): Callback id
+        """
+
     def read(self) -> dict:
         """read method
 
@@ -351,96 +394,4 @@ class BECFlyerProtocol(BECDeviceProtocol, Protocol):
 
         Returns:
             DeviceStatus: DeviceStatus object
-        """
-
-
-@runtime_checkable
-class BECMixinProtocol(Protocol):
-    """Protocol that offers BEC specific utility functionality for detectors."""
-
-    USER_ACCESS: list[str]
-    """
-    List of methods/properties that will be exposed to the client interface in addition
-    to the the already exposed signals, methods and properties.
-    """
-
-    scaninfo: bec_scaninfo_mixin
-    """ 
-    BEC scan info mixin class that provides an transparent Protocol to scan parameter 
-    as provided by BEC. It is recommended to use this Protocol to retrieve scaninfo from Redis. 
-    """
-
-    stopped: bool
-    """ 
-    Flag to indicate if the device is stopped. 
-    
-    The stop method should set this flag to True, and i.e. stage to set it to False. 
-    """
-
-    filewriter: FileWriter
-    """
-    The file writer mixin main purpose is to unify and centralize the creation of 
-    file paths within BEC. Therefore, we recommend devices to use the same mixin for creation of paths.
-    """
-
-    def pre_scan(self):
-        """Pre-scan method is called from BEC right before executing scancore, thus
-        right before the start of an acquisition.
-
-        It can be used to trigger time critical functions from the device, which
-        are prone to run into timeouts in case called too early.
-        """
-
-
-@runtime_checkable
-class BECEventProtocol(Protocol):
-    """Protocol for events in BEC.
-
-    This is a first draft for the event protocol introduced throughout BEC.
-    It needs to be review and extended before it can be used in production.
-    """
-
-    _callbacks: dict[dict]
-
-    @property
-    def event_types(self) -> tuple[str]:
-        """Event types property"""
-
-    def _run_subs(self, sub_type: str, **kwargs):
-        """Run subscriptions for the event.
-
-        Args:
-            sub_type: Subscription type
-            kwargs: Keyword arguments
-        """
-
-    def subscribe(self, callback: callable, event_type: str = None, run: bool = True):
-        """Subscribe to the event.
-
-        Args:
-            callback (callable) :   Callback function
-                                    The expected callback structure is:
-                                    def cb(*args, obj:OphydObject, sub_type:str, **kwargs) -> None:
-                                        pass
-            event_type (str)    :   Event type, if None it defaults to obj._default_sub
-                                    This maps to sub_type in _run_subs
-            run (bool)          :   If true, run the callback directly.
-
-        Returns:
-            cid (int):              Callback id
-        """
-
-    def clear_sub(self, cb: callable, event_type: str = None):
-        """Clear subscription, given the origianl callback fucntion
-
-        Args:
-            cb (callable)   : Callback
-            event_type (str): Event type, if None it will be remove from all event_types
-        """
-
-    def unsubscribe(self, cid: int):
-        """Unsubscribe from the event.
-
-        Args:
-            cid (int): Callback id
         """
