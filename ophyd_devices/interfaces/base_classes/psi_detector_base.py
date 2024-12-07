@@ -3,7 +3,7 @@ from bec_lib.endpoints import MessageEndpoints
 from ophyd import Component as Cpt
 from ophyd import Kind
 
-from ophyd_devices.interfaces.base_classes.psi_device_base import CustomPrepare, PSIDeviceBase
+from ophyd_devices.interfaces.base_classes.bec_device_base import BECDeviceBase, CustomPrepare
 from ophyd_devices.sim.sim_signals import SetableSignal
 
 
@@ -57,8 +57,8 @@ class CustomDetectorMixin(CustomPrepare):
         pipe.execute()
 
 
-class PSIDetectorBase(PSIDeviceBase):
-    """Deprecated, use PSIDeviceBase instead. Here for backwards compatibility."""
+class PSIDetectorBase(BECDeviceBase):
+    """Deprecated, use BECDeviceBase instead. Here for backwards compatibility."""
 
     custom_prepare_cls = CustomDetectorMixin
 
