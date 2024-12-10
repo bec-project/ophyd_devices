@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.11.1 (2024-12-10)
+
+### Bug Fixes
+
+- Cleanup protocols, moved event_types to BECBaseProtocol
+  ([`6e71da7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6e71da79c82aae9d847dccd3624643193c478fc4))
+
+- Update protocls for docs in main
+  ([`482e232`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/482e2320b9ec80cabc6b81a024e7bf851fa161be))
+
+
 ## v1.11.0 (2024-12-04)
 
 ### Bug Fixes
@@ -169,18 +180,7 @@ It is needed for ND plugins to inspect the asyn pipeline.
 - Change inheritance for simmonitor from device to signal
   ([`a675420`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a6754208a0991f8ccf546cbb2bee015f6daecb93))
 
-- Fix inheritance for SimMonitor
-  ([`f56961b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f56961ba8c179d4ca75e574fd8565ae4c3f41eed))
-
-### Continuous Integration
-
-- Prefill variables for manual pipeline start
-  ([`3f2c6dc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/3f2c6dc4efddfa06bebff13ac2984e45efd13a90))
-
 ### Refactoring
 
 - Bodge to make simmonitor compatible with tests; to be removed asap
   ([`9d9a5fe`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9d9a5fe305981f845c87e3417dd1072d2b8692b0))
-
-
-## v1.9.1 (2024-08-28)
