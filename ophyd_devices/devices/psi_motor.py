@@ -14,7 +14,8 @@ from ophyd.utils.epics_pvs import AlarmSeverity
 
 
 class SpmgStates:
-    """ Enum for the EPICS MotorRecord's SPMG state"""
+    """Enum for the EPICS MotorRecord's SPMG state"""
+
     # pylint: disable=too-few-public-methods
     STOP = 0
     PAUSE = 1
@@ -23,25 +24,24 @@ class SpmgStates:
 
 
 class EpicsMotorMR(EpicsMotor):
-    """ Extended EPICS Motor class
+    """Extended EPICS Motor class
 
     Special motor class that exposes additional motor record functionality.
     It extends EpicsMotor base class to provide some simple status checks
     before movement. Usage is the same as EpicsMotor.
     """
+
     tolerated_alarm = AlarmSeverity.INVALID
 
-    motor_deadband = Component(
-        EpicsSignalRO, ".RDBD", auto_monitor=True, kind=Kind.config)
+    motor_deadband = Component(EpicsSignalRO, ".RDBD", auto_monitor=True, kind=Kind.config)
     motor_mode = Component(
-        EpicsSignal, ".SPMG", auto_monitor=True, put_complete=True, kind=Kind.omitted)
-    motor_status = Component(
-        EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted)
-    motor_enable = Component(
-        EpicsSignal, ".CNEN", auto_monitor=True, kind=Kind.omitted)
+        EpicsSignal, ".SPMG", auto_monitor=True, put_complete=True, kind=Kind.omitted
+    )
+    motor_status = Component(EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted)
+    motor_enable = Component(EpicsSignal, ".CNEN", auto_monitor=True, kind=Kind.omitted)
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
-        """ Extended move function with a few sanity checks
+        """Extended move function with a few sanity checks
 
         Note that the default EpicsMotor only supports the 'GO' movement mode.
         This could get it deadlock if it was previously explicitly stopped.
@@ -54,16 +54,15 @@ class EpicsMotorMR(EpicsMotor):
         status = self.motor_status.get()
         if status:
             warnings.warn(
-                f"EPICS MotorRecord is in alarm state {status}, ophyd will raise",
-                RuntimeWarning
-                )
+                f"EPICS MotorRecord is in alarm state {status}, ophyd will raise", RuntimeWarning
+            )
         # Warni if trying to move beyond an active limit
         # if self.high_limit_switch and position > self.position:
         #     warnings.warn("Attempting to move above active HLS", RuntimeWarning)
         # if self.low_limit_switch and position < self.position:
         #     warnings.warn("Attempting to move below active LLS", RuntimeWarning)
 
-        # EpicsMotor might raise 
+        # EpicsMotor might raise
         try:
             status = super().move(position, wait, **kwargs)
             return status
@@ -75,16 +74,18 @@ class EpicsMotorMR(EpicsMotor):
 
 
 class EpicsMotorEC(EpicsMotorMR):
-    """ Detailed ECMC EPICS motor class
+    """Detailed ECMC EPICS motor class
 
     Special motor class to provide additional functionality  for ECMC based motors.
     It exposes additional diagnostic fields and includes basic error management.
     Usage is the same as EpicsMotor.
     """
-    USER_ACCESS = ['reset']
+
+    USER_ACCESS = ["reset"]
     motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
     motor_enable = Component(
-        EpicsSignal, "-EnaCmd-RB", write_pv="-EnaCmd", auto_monitor=True, kind=Kind.normal)
+        EpicsSignal, "-EnaCmd-RB", write_pv="-EnaCmd", auto_monitor=True, kind=Kind.normal
+    )
     homed = Component(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
     velocity_readback = Component(EpicsSignalRO, "-VelAct", auto_monitor=True, kind=Kind.normal)
     position_readback = Component(EpicsSignalRO, "-PosAct", auto_monitor=True, kind=Kind.normal)
@@ -99,7 +100,7 @@ class EpicsMotorEC(EpicsMotorMR):
     error_reset = Component(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
-        """ Extended move function with a few sanity checks
+        """Extended move function with a few sanity checks
 
         Note that the default EpicsMotor only supports the 'GO' movement mode.
         This could get it deadlock if it was previously explicitly stopped.
@@ -114,7 +115,7 @@ class EpicsMotorEC(EpicsMotorMR):
         return super().move(position, wait, **kwargs)
 
     def reset(self):
-        """ Resets an ECMC axis
+        """Resets an ECMC axis
 
         Recovers an ECMC axis from a previous error. Note that this does not
         solve the cause of the error, that you'll have to do yourself.
@@ -127,7 +128,7 @@ class EpicsMotorEC(EpicsMotorMR):
         - MAX_VELOCITY_EXCEEDED : PID is wrong or the motor is sticking-slipping
         - BOTH_LIMITS_ACTIVE : The motors are probably not connected
         - HW_ERROR : Tricky one, usually the drive power supply is cut due to
-                fuse or safety, might need to push physical buttons. 
+                fuse or safety, might need to push physical buttons.
         """
         # Reset the error
         self.error_reset.set(1, settle_time=0.2).wait()
