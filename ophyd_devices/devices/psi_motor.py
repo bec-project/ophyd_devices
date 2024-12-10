@@ -27,7 +27,7 @@ class EpicsMotorMR(EpicsMotor):
 
     Special motor class that exposes additional motor record functionality.
     It extends EpicsMotor base class to provide some simple status checks
-    before movement.
+    before movement. Usage is the same as EpicsMotor.
     """
     tolerated_alarm = AlarmSeverity.INVALID
 
@@ -44,12 +44,13 @@ class EpicsMotorMR(EpicsMotor):
         """ Extended move function with a few sanity checks
 
         Note that the default EpicsMotor only supports the 'GO' movement mode.
+        This could get it deadlock if it was previously explicitly stopped.
         """
         # Reset SPMG before move
         spmg = self.motor_mode.get()
         if spmg != SpmgStates.GO:
             self.motor_mode.set(SpmgStates.GO).wait()
-        # Warn if EPIC motorRecord claims an error
+        # Warn if EPIC motorRecord claims an error (it's not easy to reset)
         status = self.motor_status.get()
         if status:
             warnings.warn(
@@ -62,6 +63,7 @@ class EpicsMotorMR(EpicsMotor):
         # if self.low_limit_switch and position < self.position:
         #     warnings.warn("Attempting to move below active LLS", RuntimeWarning)
 
+        # EpicsMotor might raise 
         try:
             status = super().move(position, wait, **kwargs)
             return status
@@ -77,17 +79,19 @@ class EpicsMotorEC(EpicsMotorMR):
 
     Special motor class to provide additional functionality  for ECMC based motors.
     It exposes additional diagnostic fields and includes basic error management.
+    Usage is the same as EpicsMotor.
     """
     USER_ACCESS = ['reset']
-    enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
-    enable = Component(
+    motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
+    motor_enable = Component(
         EpicsSignal, "-EnaCmd-RB", write_pv="-EnaCmd", auto_monitor=True, kind=Kind.normal)
     homed = Component(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
     velocity_readback = Component(EpicsSignalRO, "-VelAct", auto_monitor=True, kind=Kind.normal)
     position_readback = Component(EpicsSignalRO, "-PosAct", auto_monitor=True, kind=Kind.normal)
     position_error = Component(EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal)
-    # high_interlock = Component(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
-    # low_interlock = Component(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.normal)
+    # Virtual motor and temperature limits are interlocks
+    high_interlock = Component(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
+    low_interlock = Component(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.normal)
 
     # ecmc_status = Component(EpicsSignalRO, "-Status", auto_monitor=True, kind=Kind.normal)
     error = Component(EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.normal)
@@ -98,6 +102,9 @@ class EpicsMotorEC(EpicsMotorMR):
         """ Extended move function with a few sanity checks
 
         Note that the default EpicsMotor only supports the 'GO' movement mode.
+        This could get it deadlock if it was previously explicitly stopped.
+        In addition to parent method, this also checks the ECMC error status
+        before moving.
         """
         # Check ECMC error status before move
         error = self.error.get()
@@ -114,12 +121,16 @@ class EpicsMotorEC(EpicsMotorMR):
 
         Common error causes:
         -------------------------
-        - MAX_POSITION_LAG_EXCEEDED : The PID tuning is wrong.
+        - MAX_POSITION_LAG_EXCEEDED : The PID tuning is wrong, tolerance is too
+                low,  acceleration is too high, scaling is off, or the motor
+                lacks torque.
         - MAX_VELOCITY_EXCEEDED : PID is wrong or the motor is sticking-slipping
         - BOTH_LIMITS_ACTIVE : The motors are probably not connected
+        - HW_ERROR : Tricky one, usually the drive power supply is cut due to
+                fuse or safety, might need to push physical buttons. 
         """
         # Reset the error
-        self.error_reset.set(1, settle_time=0.1).wait()
+        self.error_reset.set(1, settle_time=0.2).wait()
         # Check if it disappeared
         if self.error.get():
             raise RuntimeError(f"Failed to reset axis, still in error: '{self.error_msg.get()}'")
