@@ -6,15 +6,14 @@ import pytest
 from ophyd import DeviceStatus, Staged
 from ophyd.utils.errors import RedundantStaging
 
-from ophyd_devices.interfaces.base_classes.psi_detector_base import PSIDetectorBase
-from ophyd_devices.interfaces.base_classes.psi_device_base import CustomPrepare
+from ophyd_devices.interfaces.base_classes.bec_device_base import BECDeviceBase, CustomPrepare
 from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils.errors import DeviceStopError, DeviceTimeoutError
 
 
 @pytest.fixture
 def detector_base():
-    yield PSIDetectorBase(name="test_detector")
+    yield BECDeviceBase(name="test_detector")
 
 
 def test_detector_base_init(detector_base):
