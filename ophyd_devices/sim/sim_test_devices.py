@@ -174,6 +174,16 @@ class SimPositionerWithCommFailure(SimPositioner):
         return super().move(value, **kwargs)
 
 
+class SimPositionerWithDescribeFailure(SimPositioner):
+    _fail = True
+
+    def describe(self):
+        SimPositionerWithDescribeFailure._fail = not SimPositionerWithDescribeFailure._fail
+        if SimPositionerWithDescribeFailure._fail:
+            raise RuntimeError("Communication failure")
+        return super().describe()
+
+
 class SimPositionerWithController(SimPositioner):
     USER_ACCESS = ["sim", "readback", "dummy_controller", "registered_proxies"]
 
