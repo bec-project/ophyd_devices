@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.12.0 (2024-12-19)
+
+### Features
+
+- **tests**: Added simulated device for testing disconnected iocs
+  ([`6cd4044`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6cd404434d5ef50b76c566b9f44be26d48fcc2dd))
+
+
 ## v1.11.1 (2024-12-10)
 
 ### Bug Fixes
@@ -174,13 +182,3 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 
 ## v1.9.2 (2024-09-05)
-
-### Bug Fixes
-
-- Change inheritance for simmonitor from device to signal
-  ([`a675420`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a6754208a0991f8ccf546cbb2bee015f6daecb93))
-
-### Refactoring
-
-- Bodge to make simmonitor compatible with tests; to be removed asap
-  ([`9d9a5fe`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/9d9a5fe305981f845c87e3417dd1072d2b8692b0))
