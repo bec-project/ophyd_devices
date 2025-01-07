@@ -175,11 +175,23 @@ class SimPositionerWithCommFailure(SimPositioner):
 
 
 class SimPositionerWithDescribeFailure(SimPositioner):
-    _fail = True
+    """
+    Simulated positioner that raises a RuntimeError if the 'e2e_test_<name>_fail' endpoint is set to 1 using
+    a DeviceStatusMessage. This is used to test the behavior of the device when the describe method fails.
+    """
+
+    def __init__(self, *args, device_manager=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.device_manager = device_manager
+
+    def _get_fail_state(self):
+        msg = self.device_manager.connector.get(f"e2e_test_{self.name}_fail")
+        if not msg:
+            return 0
+        return msg.status
 
     def describe(self):
-        SimPositionerWithDescribeFailure._fail = not SimPositionerWithDescribeFailure._fail
-        if SimPositionerWithDescribeFailure._fail:
+        if self._get_fail_state() == 1:
             raise RuntimeError("Communication failure")
         return super().describe()
 
