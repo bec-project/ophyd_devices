@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.12.1 (2025-01-07)
+
+### Bug Fixes
+
+- **sim**: Fixed device for testing a describe failure
+  ([`905535b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/905535b049c3f8809c755599bee3428dabf476c6))
+
+
 ## v1.12.0 (2024-12-19)
 
 ### Features
@@ -174,11 +182,3 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 
 ## v1.9.3 (2024-09-06)
-
-### Bug Fixes
-
-- Remove bodge (readback) in SimMonitor
-  ([`cd75fc0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cd75fc0e01e565445f7176e52faada264544d439))
-
-
-## v1.9.2 (2024-09-05)
