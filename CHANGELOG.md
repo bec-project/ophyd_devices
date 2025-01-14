@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.12.2 (2025-01-14)
+
+### Bug Fixes
+
+- **sim positions**: Fixed support for setting a new setpoint while the motor is still moving
+  ([`1482124`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1482124e24e338611daadfb5a6d782231b764ad7))
+
+
 ## v1.12.1 (2025-01-07)
 
 ### Bug Fixes
@@ -174,11 +182,3 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 - Increased min version of typeguard
   ([`e379282`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e3792826644e01adf84435891d500ec5bef85cda))
-
-### Build System
-
-- Allow numpy v2
-  ([`825a7de`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/825a7dee5e948d9decb4e8649c0573a2d9d4b83f))
-
-
-## v1.9.3 (2024-09-06)
