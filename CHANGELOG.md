@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v1.12.3 (2025-01-14)
+
+### Bug Fixes
+
+- Cleanup after testing with HW
+  ([`13f456e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/13f456e78eb6009203fd9884a13fbf3b560ab9b8))
+
+- Cleanup, add test for ddg base class
+  ([`7fe80c1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7fe80c1608c6940413ed5aacc499beed91096835))
+
+### Documentation
+
+- Update device list
+  ([`d7294e1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/d7294e183eae45d77f808c2fb63cd353325bd466))
+
+- Update docstrings for base class
+  ([`f10060b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f10060bceefac2a776e0d5d9300770b33c2e8ac0))
+
+### Refactoring
+
+- Refactored delay generator DG645
+  ([`8f51789`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8f51789f5b0e0e62b949bb202a3b7c3159cd86e5))
+
+- Reviewed and refactored based class for device integration
+  ([`5b55ff2`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5b55ff25b6c06972ac597c0829f60dcd890963a9))
+
+### Testing
+
+- Fixed import of BECDeviceBase
+  ([`88ca831`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/88ca831bca90c31199c4d0b50f587712954a6c52))
+
+- Update tests
+  ([`a1da3a5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a1da3a5f40d432560d68c59fad05581217a54b9c))
+
+
 ## v1.12.2 (2025-01-14)
 
 ### Bug Fixes
@@ -148,37 +183,3 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 
 ## v1.9.6 (2024-10-17)
-
-### Bug Fixes
-
-- Cleanup and bugfix in positioner; closes #84
-  ([`6a7c074`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/6a7c0745e33a2b2cc561b42ad90e61ac08fb9d51))
-
-### Refactoring
-
-- Cleanup sim module namespace; closes #80
-  ([`fa32b42`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/fa32b4234b786d93ddf872c7a8220f2d0518b465))
-
-
-## v1.9.5 (2024-10-01)
-
-### Bug Fixes
-
-- Bugfix for proxy devices
-  ([`b1639ea`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b1639ea3baddec722a444b7c65bdc39d763b7d07))
-
-- Fixed SimWaveform, works as async device and device_monitor_1d simultaneously
-  ([`7ff37c0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7ff37c0dcdd87bfa8f518b1dd7acc4aab353b71f))
-
-### Refactoring
-
-- Cleanup of scan_status prints in scaninfo_mixin
-  ([`449dadb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/449dadb593a0432d31f905e4e507102d0c4f3fd6))
-
-
-## v1.9.4 (2024-10-01)
-
-### Bug Fixes
-
-- Increased min version of typeguard
-  ([`e379282`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/e3792826644e01adf84435891d500ec5bef85cda))
