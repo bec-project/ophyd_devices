@@ -15,7 +15,6 @@ from ophyd import Device, DeviceStatus, Kind, Staged
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
-from ophyd_devices.utils.bec_scaninfo_mixin import BecScaninfoMixin
 from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
@@ -67,7 +66,15 @@ class SimWaveform(Device):
     async_update = Cpt(SetableSignal, value="append", kind=Kind.config)
 
     def __init__(
-        self, name, *, kind=None, parent=None, sim_init: dict = None, device_manager=None, **kwargs
+        self,
+        name,
+        *,
+        kind=None,
+        parent=None,
+        sim_init: dict = None,
+        device_manager=None,
+        scan_info=None,
+        **kwargs,
     ):
         self.sim_init = sim_init
         self._registered_proxies = {}
@@ -83,9 +90,8 @@ class SimWaveform(Device):
         self._stream_ttl = 1800  # 30 min max
         self.stopped = False
         self._staged = Staged.no
-        self.scaninfo = None
         self._trigger_thread = None
-        self._update_scaninfo()
+        self.scan_info = scan_info
         if self.sim_init:
             self.sim.set_init(self.sim_init)
 
@@ -124,7 +130,7 @@ class SimWaveform(Device):
 
     def _send_async_update(self):
         """Send the async update to BEC."""
-        metadata = self.scaninfo.scan_msg.metadata
+        metadata = self.scan_info.msg.metadata
         async_update_type = self.async_update.get()
         if async_update_type not in ["extend", "append"]:
             raise ValueError(f"Invalid async_update type: {async_update_type}")
@@ -134,18 +140,14 @@ class SimWaveform(Device):
             signals={self.waveform.name: {"value": self.waveform.get(), "timestamp": time.time()}},
             metadata=metadata,
         )
-        # logger.warning(f"Adding async update to {self.name} and {self.scaninfo.scan_id}")
+        # logger.warning(f"Adding async update to {self.name} and {self.scan_info.msg.scan_id}")
         self.connector.xadd(
-            MessageEndpoints.device_async_readback(scan_id=self.scaninfo.scan_id, device=self.name),
+            MessageEndpoints.device_async_readback(
+                scan_id=self.scan_info.msg.scan_id, device=self.name
+            ),
             {"data": msg},
             expire=self._stream_ttl,
         )
-
-    def _update_scaninfo(self) -> None:
-        """Update scaninfo from BecScaninfoMixing
-        This depends on device manager and operation/sim_mode
-        """
-        self.scaninfo = BecScaninfoMixin(self.device_manager)
 
     def stage(self) -> list[object]:
         """Stage the camera for upcoming scan
@@ -160,17 +162,18 @@ class SimWaveform(Device):
         if self._staged is Staged.yes:
 
             return super().stage()
-        self.scaninfo.load_scan_metadata()
         self.file_path.set(
             os.path.join(
-                self.file_path.get(), self.file_pattern.get().format(self.scaninfo.scan_number)
+                self.file_path.get(), self.file_pattern.get().format(self.scan_info.msg.scan_number)
             )
         )
-        self.frames.set(self.scaninfo.num_points * self.scaninfo.frames_per_trigger)
-        self.exp_time.set(self.scaninfo.exp_time)
-        self.burst.set(self.scaninfo.frames_per_trigger)
+        self.frames.set(
+            self.scan_info.msg.num_points * self.scan_info.msg.scan_parameters["frames_per_trigger"]
+        )
+        self.exp_time.set(self.scan_info.msg.scan_parameters["exp_time"])
+        self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"])
         self.stopped = False
-        logger.warning(f"Staged {self.name}, scan_id : {self.scaninfo.scan_id}")
+        logger.warning(f"Staged {self.name}, scan_id : {self.scan_info.msg.scan_id}")
         return super().stage()
 
     def unstage(self) -> list[object]:

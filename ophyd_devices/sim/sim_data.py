@@ -106,7 +106,7 @@ class SimulatedDataBase(ABC):
     def execute_simulation_method(self, *args, method=None, signal_name: str = "", **kwargs) -> any:
         """
         Execute either the provided method or reroutes the method execution
-        to a device proxy in case it is registered in self.parentregistered_proxies.
+        to a device proxy in case it is registered in self.parent.registered_proxies.
         """
         if self.registered_proxies and self.parent.device_manager:
             for proxy_name, signal in self.registered_proxies.items():

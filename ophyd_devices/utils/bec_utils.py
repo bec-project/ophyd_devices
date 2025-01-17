@@ -1,3 +1,5 @@
+""" Utility class linked to BEC"""
+
 import time
 
 from bec_lib import bec_logger
@@ -11,8 +13,9 @@ logger = bec_logger.logger
 DEFAULT_EPICSSIGNAL_VALUE = object()
 
 
-# TODO maybe specify here that this DeviceMock is for usage in the DeviceServer
 class DeviceMock:
+    """Mock for Device"""
+
     def __init__(self, name: str, value: float = 0.0):
         self.name = name
         self.read_buffer = value
@@ -21,13 +24,16 @@ class DeviceMock:
         self._enabled = True
 
     def read(self):
+        """Return the current value of the device"""
         return {self.name: {"value": self.read_buffer}}
 
     def readback(self):
+        """Return the current value of the device"""
         return self.read_buffer
 
     @property
     def read_only(self) -> bool:
+        """Get the read only status of the device"""
         return self._read_only
 
     @read_only.setter
@@ -36,6 +42,7 @@ class DeviceMock:
 
     @property
     def enabled(self) -> bool:
+        """Get the enabled status of the device"""
         return self._enabled
 
     @enabled.setter
@@ -44,10 +51,12 @@ class DeviceMock:
 
     @property
     def user_parameter(self):
+        """Get the user parameter of the device"""
         return self._config["userParameter"]
 
     @property
     def obj(self):
+        """Get the device object"""
         return self
 
 
