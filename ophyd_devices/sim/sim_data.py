@@ -68,7 +68,7 @@ DEFAULT_PARAMS_CAMERA_CONSTANT = {"amplitude": 100}
 DEFAULT_PARAMS_HOT_PIXEL = {
     "hot_pixel_coords": np.array([[24, 24], [50, 20], [4, 40]]),
     "hot_pixel_types": [HotPixelType.FLUCTUATING, HotPixelType.CONSTANT, HotPixelType.FLUCTUATING],
-    "hot_pixel_values": np.array([1e4, 1e6, 1e4]),
+    "hot_pixel_values": np.array([1e3, 1e4, 1e3]),
 }
 
 
