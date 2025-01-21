@@ -254,7 +254,8 @@ def test_positioner_motor_is_moving_signal(positioner):
     assert positioner.motor_is_moving.get() == 0
     status = positioner.move(5)
     assert positioner.motor_is_moving.get() == 1
-    status.wait()
+    status.wait()  # Wait will not block until callbacks are executed
+    time.sleep(0.3)
     assert positioner.motor_is_moving.get() == 0
 
 
