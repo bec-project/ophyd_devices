@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.12.4 (2025-01-22)
+
+### Bug Fixes
+
+- Change default values for hot pixels to avoid issues while casting to uint16
+  ([`35a45a3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/35a45a3a738f528b431e1146236b6baca177d742))
+
+### Testing
+
+- Fix flaky test for positioner is moving signal
+  ([`92a3176`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/92a3176bfd07e1cfa7a1112bb8a7b59dac63bded))
+
+
 ## v1.12.3 (2025-01-14)
 
 ### Bug Fixes
@@ -171,15 +184,7 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 ## v1.10.0 (2024-10-22)
 
-### Bug Fixes
-
-- Improved patching of Ophyd 1.9
-  ([`8a9a6a9`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8a9a6a9910b44d55412e80443f145d629b1cfc2f))
-
 ### Features
 
 - Add test device for return status for stage/unstage
   ([`f5ab78e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f5ab78e933c2bbb34c571a72c25a7fc5c2b20e65))
-
-
-## v1.9.6 (2024-10-17)
