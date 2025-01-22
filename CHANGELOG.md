@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.13.0 (2025-01-22)
+
+### Features
+
+- Add sim device for tests that returns device status for stage/unstage
+  ([`5c02e1e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/5c02e1ecaea2b282e838fcea13c0e18d9beeb10e))
+
+
 ## v1.12.4 (2025-01-22)
 
 ### Bug Fixes
@@ -180,11 +188,3 @@ It is needed for ND plugins to inspect the asyn pipeline.
 
 - Refactored SimCamera write_to_disk option to continously write to h5 file.
   ([`41c54aa`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/41c54aa851e7fcf22b139aeb041d000395524b7e))
-
-
-## v1.10.0 (2024-10-22)
-
-### Features
-
-- Add test device for return status for stage/unstage
-  ([`f5ab78e`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f5ab78e933c2bbb34c571a72c25a7fc5c2b20e65))
