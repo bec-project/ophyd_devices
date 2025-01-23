@@ -25,7 +25,7 @@ from ophyd_devices.interfaces.protocols.bec_protocols import (
 )
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_flyer import SimFlyer
-from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy
+from ophyd_devices.sim.sim_frameworks import H5ImageReplayProxy, SlitProxy, StageCameraProxy
 from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
@@ -92,7 +92,7 @@ def async_monitor(name="async_monitor"):
 
 
 @pytest.fixture(scope="function")
-def h5proxy_fixture(camera, name="h5proxy"):
+def h5proxy_fixture(camera: SimCamera, name="h5proxy"):
     """Fixture for SimCamera."""
     dm = camera.device_manager
     proxy = H5ImageReplayProxy(name=name, device_manager=dm)
@@ -106,6 +106,26 @@ def slitproxy_fixture(camera, name="slit_proxy"):
     proxy = SlitProxy(name=name, device_manager=dm)
     samx = SimPositioner(name="samx", device_manager=dm)
     yield proxy, camera, samx
+
+
+@pytest.fixture(scope="function")
+def stage_camera_proxy_fixture(camera, name="stage_camera_proxy"):
+    """Fixture for SimCamera."""
+    dm = camera.device_manager
+    proxy = StageCameraProxy(name=name, device_manager=dm)
+    samx = SimPositioner(name="samx", limits=[-50, 50], device_manager=dm)
+    samy = SimPositioner(name="samy", limits=[-50, 50], device_manager=dm)
+    for device in (camera, proxy, samx, samy):
+        device_mock = mock.MagicMock()
+        device_mock.obj = device
+        device_mock.enabled = True
+        dm.devices[device.name] = device_mock
+    proxy._update_device_config(
+        {camera.name: {"signal_name": "image", "ref_motors": [samx.name, samy.name]}}
+    )
+    camera._registered_proxies.update({proxy.name: camera.image.name})
+    proxy.enabled = True
+    yield proxy, camera, samx, samy
 
 
 @pytest.fixture(scope="function")
@@ -368,7 +388,7 @@ def test_BECDeviceBase():
     assert isinstance(device, BECDevice)
 
 
-def test_h5proxy(h5proxy_fixture, camera):
+def test_h5proxy(h5proxy_fixture):
     """Test h5 camera proxy read from h5 file"""
     h5proxy, camera = h5proxy_fixture
     mock_proxy = mock.MagicMock()
@@ -468,6 +488,36 @@ def test_proxy_config_and_props_stay_in_sync(h5proxy_fixture: tuple[H5ImageRepla
     assert h5proxy.config[cam.name]["file_source"] == h5proxy.file_source
     h5proxy.h5_entry = "/entry/data/data_000001"
     assert h5proxy.config[cam.name]["h5_entry"] == h5proxy.h5_entry
+
+
+def test_stage_camera_proxy_image_moves_with_samx_and_samy(
+    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner]
+):
+    """Test camera stage proxy to compute readback from readback of positioner samx and samy"""
+    proxy, camera, samx, samy = stage_camera_proxy_fixture
+
+    proxy.stage()
+    image_at_0: np.ndarray = camera.image.get()
+    image_at_0_again: np.ndarray = camera.image.get()
+    assert np.array_equal(image_at_0, image_at_0_again)
+    samx.move(-10).wait()
+    image_at_x_10 = camera.image.get()
+    assert not np.array_equal(image_at_0, image_at_x_10)
+    samy.move(-10).wait()
+    image_at_x_10_y_10 = camera.image.get()
+    assert not np.array_equal(image_at_x_10, image_at_x_10_y_10)
+
+
+def test_stage_camera_proxy_image_shape(
+    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner]
+):
+    """Make sure that the produced image has the same shape as the detector being proxied"""
+    proxy, camera, samx, samy = stage_camera_proxy_fixture
+    test_shape = (102, 77)
+    camera.image_shape.set(test_shape).wait()
+    proxy.stage()
+    image = camera.image.get()
+    assert image.shape == (*reversed(test_shape), 3)
 
 
 def test_cam_stage_h5writer(camera):

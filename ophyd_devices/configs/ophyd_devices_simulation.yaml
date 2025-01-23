@@ -148,3 +148,18 @@ slit_proxy:
       motor_dir: [0, 1] # 0:x, 1:y in image coordinates
   enabled: true
   readOnly: false
+
+# 2. Simulate scanning a camera with two positioners.
+# this config assumes that a SimCamera with name oav exists
+# and positioners with names samx and samy
+camera_stages_proxy:
+  readoutPriority: on_request
+  deviceClass: ophyd_devices.sim.sim_frameworks.StageCameraProxy
+  deviceConfig:
+    oav:
+      signal_name: image
+      ref_motors: [samx, samy]
+      file_source: "" # optional: there is a default image which will be used
+      roi_fraction: 0.25 # optional: there is a default value which will be used
+  enabled: true
+  readOnly: false

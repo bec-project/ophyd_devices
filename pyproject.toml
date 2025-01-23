@@ -30,6 +30,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "bec-server~=3.0",
+    "pillow ~= 11.1",
     "black~=24.0",
     "isort~=5.13, >=5.13.2",
     "coverage~=7.0",
