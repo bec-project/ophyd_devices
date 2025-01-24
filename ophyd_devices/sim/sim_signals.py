@@ -73,7 +73,7 @@ class SetableSignal(Signal):
         return time.time()
 
     # pylint: disable=arguments-differ
-    def get(self):
+    def get(self, **kwargs):
         """Get the current position of the simulated device.
 
         Core function for signal.
