@@ -64,7 +64,7 @@ class GenICam(CamBase):
     frame_rate = ADCpt(EpicsSignalWithRBV, "FrameRate")
     frame_rate_enable = ADCpt(EpicsSignalWithRBV, "FrameRateEnable")
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
-    trigger_overlay = ADCpt(EpicsSignalWithRBV, "TriggerOverlay")
+    trigger_overlap = ADCpt(EpicsSignalWithRBV, "TriggerOverlap")
     trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
     exposure_mode = ADCpt(EpicsSignalWithRBV, "ExposureMode")
     exposure_auto = ADCpt(EpicsSignalWithRBV, "ExposureAuto")
