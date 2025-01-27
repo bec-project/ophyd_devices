@@ -453,6 +453,23 @@ def test_slitproxy(slitproxy_fixture):
     assert (img[:, edges[1] :] == 0).all()
 
 
+def test_proxy_config_and_props_stay_in_sync(h5proxy_fixture: tuple[H5ImageReplayProxy, SimCamera]):
+    h5proxy, cam = h5proxy_fixture
+    h5proxy._update_device_config(
+        {
+            cam.name: {
+                "signal_name": "image",
+                "file_source": "test first thing",
+                "h5_entry": "/entry/data/data",
+            }
+        }
+    )
+    h5proxy.file_source = "test different thing"
+    assert h5proxy.config[cam.name]["file_source"] == h5proxy.file_source
+    h5proxy.h5_entry = "/entry/data/data_000001"
+    assert h5proxy.config[cam.name]["h5_entry"] == h5proxy.h5_entry
+
+
 def test_cam_stage_h5writer(camera):
     """Test the H5Writer class"""
     with (

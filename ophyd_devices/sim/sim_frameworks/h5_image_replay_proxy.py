@@ -39,6 +39,7 @@ class H5ImageReplayProxy(DeviceProxy):
 
     @file_source.setter
     def file_source(self, file_source: str) -> None:
+        self.config[list(self.config.keys())[0]]["file_source"] = file_source
         self._file_source = file_source
 
     @property
@@ -48,6 +49,7 @@ class H5ImageReplayProxy(DeviceProxy):
 
     @h5_entry.setter
     def h5_entry(self, h5_entry: str) -> None:
+        self.config[list(self.config.keys())[0]]["h5_entry"] = h5_entry
         self._h5_entry = h5_entry
 
     def _update_device_config(self, config: dict) -> None:
