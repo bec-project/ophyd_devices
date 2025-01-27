@@ -85,6 +85,9 @@ class SimPositioner(Device, PositionerBase):
         self.precision = precision
         self.sim_init = sim_init
         self._registered_proxies = {}
+        self._lock = threading.Lock()
+        self._cleanup_done = threading.Event()
+        self._cleanup_done.set()
 
         self.update_frequency = update_frequency
         self._stopped = False
@@ -179,21 +182,26 @@ class SimPositioner(Device, PositionerBase):
                     raise DeviceStopError(f"{self.name} was stopped")
                 ttime.sleep(1 / self.update_frequency)
             self._update_state(self.readback.get())
-            for status in self._status_list:
-                status.set_finished()
+            with self._lock:
+                self._cleanup_done.clear()
+                for status in self._status_list:
+                    status.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
             content = traceback.format_exc()
             logger.warning(
                 f"Error in on_complete call in device {self.name}. Error traceback: {content}"
             )
-            for status in self._status_list:
-                status.set_exception(exc=exc)
+            with self._lock:
+                self._cleanup_done.clear()
+                for status in self._status_list:
+                    status.set_exception(exc=exc)
         finally:
             self._set_sim_state(self.motor_is_moving.name, 0)
             if not self._stopped:
                 self._update_state(self.readback.get())
             self._status_list = []
+            self._cleanup_done.set()
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
@@ -202,6 +210,7 @@ class SimPositioner(Device, PositionerBase):
         self._set_sim_state(self.motor_is_moving.name, 1)
         self._set_sim_state(self.setpoint.name, value)
 
+        self._cleanup_done.wait()
         st = DeviceStatus(device=self)
         self._status_list.append(st)
         if self.delay:
