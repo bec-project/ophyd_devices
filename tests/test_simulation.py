@@ -2,6 +2,7 @@
 
 # pylint: disable: all
 import os
+import threading
 import time
 from types import SimpleNamespace
 from unittest import mock
@@ -249,13 +250,19 @@ def test_positioner_move(positioner):
 
 def test_positioner_motor_is_moving_signal(positioner):
     """Test that motor is moving is 0 and 1 while (not) moving"""
+    done = threading.Event()
+
+    def cb_motor_done():
+        done.set()
+
     positioner.move(0).wait()
-    positioner.velocity.set(2)
+    positioner.velocity.set(3)
     assert positioner.motor_is_moving.get() == 0
     status = positioner.move(5)
+    status.add_callback(cb_motor_done)
     assert positioner.motor_is_moving.get() == 1
     status.wait()  # Wait will not block until callbacks are executed
-    time.sleep(0.3)
+    done.wait(5)  # Wait for the additional callback to be executed
     assert positioner.motor_is_moving.get() == 0
 
 
