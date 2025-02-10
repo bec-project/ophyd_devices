@@ -190,7 +190,7 @@ class SimPositioner(Device, PositionerBase):
             for status in self._status_list:
                 status.set_exception(exc=exc)
         finally:
-            self._set_sim_state(self.motor_is_moving.name, 0)
+            self.motor_is_moving.put(0)
             if not self._stopped:
                 self._update_state(self.readback.get())
             self._status_list = []
@@ -199,8 +199,8 @@ class SimPositioner(Device, PositionerBase):
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
         self._stopped = False
         self.check_value(value)
-        self._set_sim_state(self.motor_is_moving.name, 1)
-        self._set_sim_state(self.setpoint.name, value)
+        self.motor_is_moving.put(1)
+        self.setpoint.put(value)
 
         st = DeviceStatus(device=self)
         self._status_list.append(st)
@@ -210,7 +210,7 @@ class SimPositioner(Device, PositionerBase):
                 self.move_thread.start()
         else:
             self._done_moving()
-            self._set_sim_state(self.motor_is_moving.name, 0)
+            self.motor_is_moving.put(0)
             self._update_state(value)
             st.set_finished()
         return st

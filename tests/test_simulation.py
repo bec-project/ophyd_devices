@@ -268,22 +268,40 @@ def test_positioner_move(positioner):
     )
 
 
+@pytest.mark.timeout(30)
 def test_positioner_motor_is_moving_signal(positioner):
     """Test that motor is moving is 0 and 1 while (not) moving"""
-    done = threading.Event()
 
-    def cb_motor_done():
-        done.set()
+    recorded_data = []
+    cid = None
 
-    positioner.move(0).wait()
-    positioner.velocity.set(3)
-    assert positioner.motor_is_moving.get() == 0
-    status = positioner.move(5)
-    status.add_callback(cb_motor_done)
-    assert positioner.motor_is_moving.get() == 1
-    status.wait()  # Wait will not block until callbacks are executed
-    done.wait(5)  # Wait for the additional callback to be executed
-    assert positioner.motor_is_moving.get() == 0
+    init_velocity = positioner.velocity.get()
+
+    def motor_is_moving_cb(value: any, obj, **kwargs):
+        data = obj.read()[f"{obj.name}_motor_is_moving"]["value"]
+        recorded_data.append(data)
+
+    try:
+        cid = positioner.subscribe(motor_is_moving_cb, event_type="readback", run=False)
+
+        status = positioner.move(-20)
+        status.wait()
+
+        positioner.velocity.set(10)
+
+        status = positioner.move(20)
+        status.wait()
+
+        # Check that motor was moving and motor_is_moving switched to "1"
+        assert any(recorded_data)
+
+        # Check that motor is not moving and motor_is_moving switched back to "0"
+        assert recorded_data[-1] == 0
+    finally:
+        # Restore initial velocity, remove subscription
+        positioner.velocity.set(init_velocity)
+        if cid is not None:
+            positioner.unsubscribe(cid)
 
 
 @pytest.mark.parametrize(
