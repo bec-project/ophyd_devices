@@ -17,7 +17,6 @@ from ophyd import Device, Signal
 from ophyd.status import wait as status_wait
 
 from ophyd_devices.interfaces.protocols.bec_protocols import (
-    BECBaseProtocol,
     BECDeviceProtocol,
     BECFlyerProtocol,
     BECPositionerProtocol,
@@ -31,6 +30,7 @@ from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimP
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.sim.sim_utils import H5Writer, LinearTrajectory
 from ophyd_devices.sim.sim_waveform import SimWaveform
+from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
 
 
@@ -423,7 +423,6 @@ def test_h5proxy(h5proxy_fixture):
     )
     camera._registered_proxies.update({h5proxy.name: camera.image.name})
     camera.sim.params = {"noise": "none", "noise_multiplier": 0}
-    camera.scaninfo.sim_mode = True
     # pylint: disable=no-member
     camera.image_shape.set(data.shape[1:])
     camera.stage()
@@ -544,15 +543,15 @@ def test_cam_stage_h5writer(camera):
         mock.patch.object(camera, "h5_writer") as mock_h5_writer,
         mock.patch.object(camera, "_run_subs") as mock_run_subs,
     ):
-        camera.scaninfo.num_points = 10
-        camera.scaninfo.frames_per_trigger = 1
-        camera.scaninfo.exp_time = 1
+        camera.scan_info.msg.num_points = 10
+        camera.scan_info.msg.scan_parameters["frames_per_trigger"] = 1
+        camera.scan_info.msg.scan_parameters["exp_time"] = 1
         camera.stage()
         assert mock_h5_writer.on_stage.call_count == 0
         camera.unstage()
         camera.write_to_disk.put(True)
         camera.stage()
-        calls = [mock.call(file_path="", h5_entry="/entry/data/data")]
+        calls = [mock.call(file_path="./data/test_file_camera.h5", h5_entry="/entry/data/data")]
         assert mock_h5_writer.on_stage.mock_calls == calls
         # mock_h5_writer.prepare
 
@@ -622,17 +621,17 @@ def test_async_monitor_stage(async_monitor):
 
 def test_async_monitor_prep_random_interval(async_monitor):
     """Test the stage method of SimMonitorAsync."""
-    async_monitor.custom_prepare.prep_random_interval()
-    assert async_monitor.custom_prepare._counter == 0
+    async_monitor.prep_random_interval()
+    assert async_monitor._counter == 0
     assert async_monitor.current_trigger.get() == 0
-    assert 0 < async_monitor.custom_prepare._random_send_interval < 10
+    assert 0 < async_monitor._random_send_interval < 10
 
 
 def test_async_monitor_complete(async_monitor):
     """Test the on_complete method of SimMonitorAsync."""
     with (
-        mock.patch.object(async_monitor.custom_prepare, "_send_data_to_bec") as mock_send,
-        mock.patch.object(async_monitor.custom_prepare, "prep_random_interval") as mock_prep,
+        mock.patch.object(async_monitor, "_send_data_to_bec") as mock_send,
+        mock.patch.object(async_monitor, "prep_random_interval") as mock_prep,
     ):
         status = async_monitor.complete()
         status_wait(status)
@@ -649,11 +648,11 @@ def test_async_monitor_complete(async_monitor):
 
 def test_async_mon_on_trigger(async_monitor):
     """Test the on_trigger method of SimMonitorAsync."""
-    with (mock.patch.object(async_monitor.custom_prepare, "_send_data_to_bec") as mock_send,):
-        async_monitor.custom_prepare.on_stage()
-        upper_limit = async_monitor.custom_prepare._random_send_interval
+    with (mock.patch.object(async_monitor, "_send_data_to_bec") as mock_send,):
+        async_monitor.on_stage()
+        upper_limit = async_monitor._random_send_interval
         for ii in range(1, upper_limit + 1):
-            status = async_monitor.custom_prepare.on_trigger()
+            status = async_monitor.on_trigger()
             status_wait(status)
             assert async_monitor.current_trigger.get() == ii
         assert mock_send.call_count == 1
@@ -661,10 +660,10 @@ def test_async_mon_on_trigger(async_monitor):
 
 def test_async_mon_send_data_to_bec(async_monitor):
     """Test the _send_data_to_bec method of SimMonitorAsync."""
-    async_monitor.scaninfo.scan_msg = SimpleNamespace(metadata={})
+    async_monitor.scan_info = get_mock_scan_info()
     async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [0, 0]})
     with mock.patch.object(async_monitor.connector, "xadd") as mock_xadd:
-        async_monitor.custom_prepare._send_data_to_bec()
+        async_monitor._send_data_to_bec()
         dev_msg = messages.DeviceMessage(
             signals={async_monitor.readback.name: async_monitor.data_buffer},
             metadata={"async_update": async_monitor.async_update.get()},
@@ -673,10 +672,10 @@ def test_async_mon_send_data_to_bec(async_monitor):
         call = [
             mock.call(
                 MessageEndpoints.device_async_readback(
-                    scan_id=async_monitor.scaninfo.scan_id, device=async_monitor.name
+                    scan_id=async_monitor.scan_info.msg.scan_id, device=async_monitor.name
                 ),
                 {"data": dev_msg},
-                expire=async_monitor.custom_prepare._stream_ttl,
+                expire=async_monitor._stream_ttl,
             )
         ]
         assert mock_xadd.mock_calls == call
@@ -711,8 +710,8 @@ def test_waveform(waveform):
     # Now also test the async readback
     mock_connector = waveform.connector = mock.MagicMock()
     mock_run_subs = waveform._run_subs = mock.MagicMock()
-    waveform.scaninfo.scan_msg = SimpleNamespace(metadata={})
-    waveform.scaninfo.scan_id = "test"
+    waveform.scan_info = get_mock_scan_info()
+    waveform.scan_info.msg.scan_id = "test"
     status = waveform.trigger()
     timer = 0
     while not status.done:

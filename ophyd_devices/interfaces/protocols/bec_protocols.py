@@ -1,7 +1,9 @@
-""" This module provides a range of protocols that describe the expected interface for different types of devices.
+""" This module provides a range of protocols that describe the expected 
+interface for different types of devices.
 
-The protocols below can be used as teamplates for functionality to be implemeted by different type of devices.
-They further facilitate runtime checks on devices and provide a minimum set of properties required for a device to be loadable by BEC.
+The protocols below can be used as teamplates for functionality to be implemeted 
+by different type of devices. They further facilitate runtime checks on devices 
+and provide a minimum set of properties required for a device to be loadable by BEC.
 
 The protocols are:
 - BECBaseProtocol: Protocol for devices in BEC. All devices must at least implement this protocol.
@@ -11,17 +13,15 @@ The protocols are:
 - BECPositionerProtocol: Protocol for positioners.
 - BECFlyerProtocol: Protocol with for flyers.
 
-Keep in mind, that a device of type flyer should generally also implement the BECDeviceProtocol that provides the required functionality for scans.
-Flyers in addition, also implement the BECFlyerProtocol. Similarly, positioners should also implement the BECDeviceProtocol and BECPositionerProtocol.
+Keep in mind, that a device of type flyer should generally also implement the BECDeviceProtocol 
+with the functionality needed for scans. In addition, flyers also implement the BECFlyerProtocol.
+Similarly, positioners should also implement the BECDeviceProtocol and BECPositionerProtocol.
 
 """
 
 from typing import Protocol, runtime_checkable
 
-from bec_lib.file_utils import FileWriter
-from ophyd import Component, DeviceStatus, Kind, Staged
-
-from ophyd_devices.utils import bec_scaninfo_mixin
+from ophyd import DeviceStatus, Kind, Staged
 
 
 @runtime_checkable
@@ -349,8 +349,8 @@ class BECPositionerProtocol(BECDeviceProtocol, Protocol):
 
     def move(self, position: float) -> DeviceStatus:
         """Move method for positioners.
-        The returned DeviceStatus is marked as done once the positioner has reached the target position.
-        DeviceStatus.wait() can be used to block until the move is completed.
+        The returned DeviceStatus is marked as done once the positioner has reached the target
+        position. DeviceStatus.wait() can be used to block until the move is completed.
 
         Args:
             position: position to move to
