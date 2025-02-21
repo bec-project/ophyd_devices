@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.14.1 (2025-02-21)
+
+### Bug Fixes
+
+- **AD**: Fix typo in AreaDetector plugin instantiation
+  ([`cc4a9ad`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/cc4a9ad5e98bea400a1e5a6117f355ca0a4257b5))
+
+### Testing
+
+- Fix flaky test for positioner is moving
+  ([`1cc8a67`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1cc8a67dedbc5063411402dd0d5f035da7a7137c))
+
+
 ## v1.14.0 (2025-01-29)
 
 ### Bug Fixes
@@ -754,7 +767,7 @@ hd5plugin import has the side effect of installing LZ4 codec
 BREAKING CHANGE: cleaned up and migrated to the new repo structure. Only shared devices will be
   hosted in ophyd_devices. Everything else will be in the beamline-specific repositories
 
-### BREAKING CHANGES
+### Breaking Changes
 
 - Cleaned up and migrated to the new repo structure. Only shared devices will be hosted in
   ophyd_devices. Everything else will be in the beamline-specific repositories
