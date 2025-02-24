@@ -5,7 +5,7 @@ import threading
 import traceback
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
@@ -50,18 +50,13 @@ class TaskStatus(DeviceStatus):
         self._task_id = str(uuid.uuid4())
 
     @property
-    def exc(self) -> Exception:
-        """Get the exception of the task"""
-        return self.exception()
-
-    @property
     def state(self) -> str:
         """Get the state of the task"""
         return self._state.value
 
     @state.setter
     def state(self, value: TaskState):
-        self._state = value
+        self._state = TaskState(value)
 
     @property
     def task_id(self) -> bool:
@@ -76,8 +71,9 @@ class TaskHandler:
         """Initialize the handler"""
         self._tasks = {}
         self._parent = parent
+        self._lock = threading.RLock()
 
-    def submit_task(self, task: callable, run: bool = True) -> TaskStatus:
+    def submit_task(self, task: Callable, run: bool = True) -> TaskStatus:
         """Submit a task to the task handler.
 
         Args:
@@ -109,7 +105,7 @@ class TaskHandler:
         thread.start()
         task_status.state = TaskState.RUNNING
 
-    def _wrap_task(self, task: callable, task_status: TaskStatus):
+    def _wrap_task(self, task: Callable, task_status: TaskStatus):
         """Wrap the task in a function"""
         try:
             task()
@@ -121,8 +117,8 @@ class TaskHandler:
                     f" Traceback: {content}"
                 )
             )
-            task_status.set_exception(exc)
             task_status.state = TaskState.TIMEOUT
+            task_status.set_exception(exc)
         except TaskKilledError as exc:
             exc = exc.__class__(
                 f"Task {task_status.task_id} was killed. ThreadID:"
@@ -135,20 +131,21 @@ class TaskHandler:
                     f" Traceback: {content}"
                 )
             )
-            task_status.set_exception(exc)
             task_status.state = TaskState.KILLED
+            task_status.set_exception(exc)
         except Exception as exc:  # pylint: disable=broad-except
             content = traceback.format_exc()
             logger.warning(
                 f"Exception in task handler for task {task_status.task_id}, Traceback: {content}"
             )
-            task_status.set_exception(exc)
             task_status.state = TaskState.ERROR
+            task_status.set_exception(exc)
         else:
-            task_status.set_finished()
             task_status.state = TaskState.COMPLETED
+            task_status.set_finished()
         finally:
-            self._tasks.pop(task_status.task_id)
+            with self._lock:
+                self._tasks.pop(task_status.task_id)
 
     def kill_task(self, task_status: TaskStatus) -> None:
         """Kill the thread
@@ -172,9 +169,9 @@ class TaskHandler:
 
     def shutdown(self):
         """Shutdown all tasks of task handler"""
-        for info in self._tasks.values():
-            self.kill_task(info[0])
-        self._tasks.clear()
+        with self._lock:
+            for info in self._tasks.values():
+                self.kill_task(info[0])
 
 
 class FileHandler:
