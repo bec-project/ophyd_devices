@@ -1,4 +1,20 @@
+""" Utilities to mock and test devices."""
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from unittest import mock
+
+from bec_lib.devicemanager import ScanInfo
+from bec_lib.logger import bec_logger
+from bec_lib.utils.import_utils import lazy_import_from
+
+if TYPE_CHECKING:
+    from bec_lib.messages import ScanStatusMessage
+else:
+    # TODO: put back normal import when Pydantic gets faster
+    ScanStatusMessage = lazy_import_from("bec_lib.messages", ("ScanStatusMessage",))
+
+logger = bec_logger.logger
 
 
 def patch_dual_pvs(device):
@@ -255,3 +271,128 @@ class MockPV:
             use_monitor=use_monitor,
         )
         return data["value"] if data is not None else None
+
+
+def get_mock_scan_info():
+    """
+    Get a mock scan info object.
+    """
+    return ScanInfo(msg=fake_scan_status_msg())
+
+
+def fake_scan_status_msg():
+    """
+    Create a fake scan status message.
+    """
+    logger.warning(
+        ("Device is not connected to a Redis server. Fetching mocked ScanStatusMessage.")
+    )
+    return ScanStatusMessage(
+        metadata={},
+        scan_id="mock_scan_id",
+        status="closed",
+        scan_number=0,
+        session_id=None,
+        num_points=11,
+        scan_name="mock_line_scan",
+        scan_type="step",
+        dataset_number=0,
+        scan_report_devices=["samx"],
+        user_metadata={},
+        readout_priority={
+            "monitored": ["bpm4a", "samx"],
+            "baseline": ["eyex"],
+            "async": ["waveform"],
+            "continuous": [],
+            "on_request": ["flyer_sim"],
+        },
+        scan_parameters={
+            "exp_time": 0,
+            "frames_per_trigger": 1,
+            "settling_time": 0,
+            "readout_time": 0,
+            "optim_trajectory": None,
+            "return_to_start": True,
+            "relative": True,
+            "system_config": {"file_suffix": None, "file_directory": None},
+        },
+        request_inputs={
+            "arg_bundle": ["samx", -10, 10],
+            "inputs": {},
+            "kwargs": {
+                "steps": 11,
+                "relative": True,
+                "system_config": {"file_suffix": None, "file_directory": None},
+            },
+        },
+        info={
+            "readout_priority": {
+                "monitored": ["bpm4a", "samx"],
+                "baseline": ["eyex"],
+                "async": ["waveform"],
+                "continuous": [],
+                "on_request": ["flyer_sim"],
+            },
+            "file_suffix": None,
+            "file_directory": None,
+            "user_metadata": {},
+            "RID": "a1d86f61-191c-4460-bcd6-f33c61b395ea",
+            "scan_id": "3edb8219-75a7-4791-8f86-d5ca112b771a",
+            "queue_id": "0f3639ee-899f-4ad1-9e71-f40514c937ef",
+            "scan_motors": ["samx"],
+            "num_points": 11,
+            "positions": [
+                [-10.0],
+                [-8.0],
+                [-6.0],
+                [-4.0],
+                [-2.0],
+                [0.0],
+                [2.0],
+                [4.0],
+                [6.0],
+                [8.0],
+                [10.0],
+            ],
+            "file_path": "./data/test_file",
+            "scan_name": "mock_line_scan",
+            "scan_type": "step",
+            "scan_number": 0,
+            "dataset_number": 0,
+            "exp_time": 0,
+            "frames_per_trigger": 1,
+            "settling_time": 0,
+            "readout_time": 0,
+            "scan_report_devices": ["samx"],
+            "monitor_sync": "bec",
+            "scan_parameters": {
+                "exp_time": 0,
+                "frames_per_trigger": 1,
+                "settling_time": 0,
+                "readout_time": 0,
+                "optim_trajectory": None,
+                "return_to_start": True,
+                "relative": True,
+                "system_config": {"file_suffix": None, "file_directory": None},
+            },
+            "request_inputs": {
+                "arg_bundle": ["samx", -10, 10],
+                "inputs": {},
+                "kwargs": {
+                    "steps": 11,
+                    "relative": True,
+                    "system_config": {"file_suffix": None, "file_directory": None},
+                },
+            },
+            "scan_msgs": [
+                "metadata={'file_suffix': None, 'file_directory': None, 'user_metadata': {}, 'RID': 'a1d86f61-191c-4460-bcd6-f33c61b395ea'} scan_type='mock_line_scan' parameter={'args': {'samx': [-10, 10]}, 'kwargs': {'steps': 11, 'relative': True, 'system_config': {'file_suffix': None, 'file_directory': None}}} queue='primary'"
+            ],
+            "args": {"samx": [-10, 10]},
+            "kwargs": {
+                "steps": 11,
+                "relative": True,
+                "system_config": {"file_suffix": None, "file_directory": None},
+            },
+        },
+        timestamp=1737100681.694211,
+    )
