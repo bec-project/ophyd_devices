@@ -109,7 +109,7 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         FYI: No data is written to disk in the simulation, but upon each trigger it
         is published to the device_monitor endpoint in REDIS.
         """
-        self.file_path = self.file_utils.get_file_path(
+        self.file_path = self.file_utils.get_full_path(
             scan_status_msg=self.scan_info.msg, name=self.name
         )
         self.frames.set(

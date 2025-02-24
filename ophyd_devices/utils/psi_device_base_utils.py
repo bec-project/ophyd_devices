@@ -7,12 +7,12 @@ import uuid
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from bec_lib.file_utils import get_full_file_path
+from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
-from ophyd import Device, DeviceStatus, StatusBase
+from ophyd import Device, DeviceStatus
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import ScanStatusMessage
 else:
     # TODO: put back normal import when Pydantic gets faster
@@ -180,7 +180,7 @@ class TaskHandler:
 class FileHandler:
     """Utility class for file operations."""
 
-    def get_file_path(
+    def get_full_path(
         self, scan_status_msg: ScanStatusMessage, name: str, create_dir: bool = True
     ) -> str:
         """Get the file path.
@@ -190,4 +190,4 @@ class FileHandler:
             name: The name of the file.
             create_dir: Whether to create the directory.
         """
-        return get_full_file_path(scan_status_msg=scan_status_msg, name=name, create_dir=create_dir)
+        return get_full_path(scan_status_msg=scan_status_msg, name=name, create_dir=create_dir)

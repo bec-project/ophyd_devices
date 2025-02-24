@@ -40,10 +40,10 @@ class PSIDeviceBase(Device):
         super().__init__(name=name, **kwargs)
         self._stopped = False
         self.task_handler = TaskHandler(parent=self)
+        self.file_utils = FileHandler()
         if scan_info is None:
             scan_info = get_mock_scan_info()
         self.scan_info = scan_info
-        self.file_utils = FileHandler()
         self.on_init()
 
     ########################################
