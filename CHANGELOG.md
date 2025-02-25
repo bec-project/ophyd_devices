@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.15.0 (2025-02-25)
+
+### Features
+
+- **psi_device_base**: Add psi_device_base
+  ([`ac4f0c5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ac4f0c5af7c58927c6b1725934ef98cb400d4b3f))
+
+### Refactoring
+
+- Cleanup
+  ([`b75207b`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b75207b7c0955c4d11e9694b8c19698f5b2d89ca))
+
+### Testing
+
+- **psi-device-base-utils**: Add tests for task handler
+  ([`8ed3f37`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8ed3f37b1400165313a0df04e3f11176837913b3))
+
+
 ## v1.14.1 (2025-02-21)
 
 ### Bug Fixes
