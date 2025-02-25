@@ -697,7 +697,7 @@ def test_async_mon_on_trigger(async_monitor):
 
 def test_async_mon_send_data_to_bec(async_monitor):
     """Test the _send_data_to_bec method of SimMonitorAsync."""
-    async_monitor.scan_info = get_mock_scan_info()
+    async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
     async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [0, 0]})
     with mock.patch.object(async_monitor.connector, "xadd") as mock_xadd:
         async_monitor._send_data_to_bec()
@@ -747,7 +747,7 @@ def test_waveform(waveform):
     # Now also test the async readback
     mock_connector = waveform.connector = mock.MagicMock()
     mock_run_subs = waveform._run_subs = mock.MagicMock()
-    waveform.scan_info = get_mock_scan_info()
+    waveform.scan_info = get_mock_scan_info(device=waveform)
     waveform.scan_info.msg.scan_id = "test"
     status = waveform.trigger()
     timer = 0

@@ -1,12 +1,12 @@
 """ Utilities to mock and test devices."""
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from unittest import mock
 
 from bec_lib.devicemanager import ScanInfo
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
+from ophyd import Device
 
 if TYPE_CHECKING:
     from bec_lib.messages import ScanStatusMessage
@@ -273,19 +273,27 @@ class MockPV:
         return data["value"] if data is not None else None
 
 
-def get_mock_scan_info():
+def get_mock_scan_info(device: Device | None) -> ScanInfo:
     """
     Get a mock scan info object.
     """
-    return ScanInfo(msg=fake_scan_status_msg())
+    return ScanInfo(msg=fake_scan_status_msg(device=device))
 
 
-def fake_scan_status_msg():
+def fake_scan_status_msg(device: Device | None = None) -> ScanStatusMessage:
     """
     Create a fake scan status message.
+
+    Args:
+        device: The device creating the fake scan status message.
+
     """
+    if device is None:
+        device = Device(name="mock_device")
     logger.warning(
-        ("Device is not connected to a Redis server. Fetching mocked ScanStatusMessage.")
+        (
+            f"Device {device.name} is not connected to a Redis server. Fetching mocked ScanStatusMessage."
+        )
     )
     return ScanStatusMessage(
         metadata={},
