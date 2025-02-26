@@ -130,12 +130,10 @@ class SimWaveform(Device):
 
     def _send_async_update(self):
         """Send the async update to BEC."""
-        metadata = self.scan_info.msg.metadata
         async_update_type = self.async_update.get()
         if async_update_type not in ["extend", "append"]:
             raise ValueError(f"Invalid async_update type: {async_update_type}")
-        metadata.update({"async_update": async_update_type})
-
+        metadata = {"async_update": async_update_type}
         msg = messages.DeviceMessage(
             signals={self.waveform.name: {"value": self.waveform.get(), "timestamp": time.time()}},
             metadata=metadata,
