@@ -176,13 +176,10 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
 
     def _send_data_to_bec(self) -> None:
         """Sends bundled data to BEC"""
-        if self.scan_info.msg is None:
-            return
-        metadata = self.scan_info.msg.metadata
-        metadata.update({"async_update": self.async_update.get()})
+        metadata = {"async_update": self.async_update.get()}
 
         msg = messages.DeviceMessage(
-            signals={self.readback.name: self.data_buffer}, metadata=self.scan_info.msg.metadata
+            signals={self.readback.name: self.data_buffer}, metadata=metadata
         )
         self.connector.xadd(
             MessageEndpoints.device_async_readback(
