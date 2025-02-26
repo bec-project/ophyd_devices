@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.15.1 (2025-02-26)
+
+### Bug Fixes
+
+- Remove metadata updates on ScanStatusMessage
+  ([`0659ec0`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0659ec01d16a826e5479328fe35f8fabffcf495f))
+
+
 ## v1.15.0 (2025-02-25)
 
 ### Features
