@@ -42,7 +42,7 @@ class PSIDeviceBase(Device):
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
         if scan_info is None:
-            scan_info = get_mock_scan_info()
+            scan_info = get_mock_scan_info(device=self)
         self.scan_info = scan_info
         self.on_init()
 
