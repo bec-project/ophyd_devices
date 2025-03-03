@@ -703,7 +703,7 @@ def test_async_mon_send_data_to_bec(async_monitor):
         async_monitor._send_data_to_bec()
         dev_msg = messages.DeviceMessage(
             signals={async_monitor.readback.name: async_monitor.data_buffer},
-            metadata={"async_update": async_monitor.async_update.get()},
+            metadata={"async_update": {"type": "add", "max_shape": [None]}},
         )
 
         call = [
