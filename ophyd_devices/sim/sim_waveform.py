@@ -133,7 +133,13 @@ class SimWaveform(Device):
         async_update_type = self.async_update.get()
         if async_update_type not in ["extend", "append"]:
             raise ValueError(f"Invalid async_update type: {async_update_type}")
-        metadata = {"async_update": async_update_type}
+
+        waveform_shape = self.waveform_shape.get()
+        if async_update_type == "append":
+            metadata = {"async_update": {"type": "add", "max_shape": [None, waveform_shape]}}
+        else:
+            metadata = {"async_update": {"type": "add", "max_shape": [None]}}
+
         msg = messages.DeviceMessage(
             signals={self.waveform.name: {"value": self.waveform.get(), "timestamp": time.time()}},
             metadata=metadata,

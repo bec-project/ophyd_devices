@@ -176,7 +176,14 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
 
     def _send_data_to_bec(self) -> None:
         """Sends bundled data to BEC"""
-        metadata = {"async_update": self.async_update.get()}
+        async_update = self.async_update.get()
+        if async_update not in ["extend", "append"]:
+            raise ValueError(f"Invalid async_update value for device {self.name}: {async_update}")
+
+        if async_update == "extend":
+            metadata = {"async_update": {"type": "add", "max_shape": [None]}}
+        elif async_update == "append":
+            metadata = {"async_update": {"type": "add", "max_shape": [None, None]}}
 
         msg = messages.DeviceMessage(
             signals={self.readback.name: self.data_buffer}, metadata=metadata
