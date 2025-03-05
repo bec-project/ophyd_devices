@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.15.2 (2025-03-05)
+
+### Bug Fixes
+
+- **sim**: Moved SimWaveform and SimMonitor to new async update structure
+  ([`63eff57`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/63eff57ec441b19428d53d6ba6301d996d487edb))
+
+### Refactoring
+
+- Improve logging if fake scan msg is created
+  ([`75f3280`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/75f32800f80aa0803d44261cbf150cf473ea6b94))
+
+
 ## v1.15.1 (2025-02-26)
 
 ### Bug Fixes
