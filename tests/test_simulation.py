@@ -549,7 +549,7 @@ def test_stage_camera_proxy_image_shape(
     test_shape = (102, 77)
     camera.image_shape.set(test_shape).wait()
     proxy.stage()
-    image = camera.image.get()
+    image: np.ndarray = camera.image.get()
     assert image.shape == (*reversed(test_shape), 3)
 
 
@@ -595,6 +595,11 @@ def test_cam_stage_h5writer(camera):
 
 def test_cam_complete(camera):
     """Test the complete method of SimCamera."""
+    finished_event = threading.Event()
+
+    def finished_cb():
+        finished_event.set()
+
     with mock.patch.object(camera, "h5_writer") as mock_h5_writer:
         status = camera.complete()
         status_wait(status)
@@ -603,7 +608,8 @@ def test_cam_complete(camera):
         assert mock_h5_writer.on_complete.call_count == 0
         camera.write_to_disk.put(True)
         status = camera.complete()
-        status_wait(status)
+        status.add_callback(finished_cb)
+        finished_event.wait()
         assert mock_h5_writer.on_complete.call_count == 1
 
 
