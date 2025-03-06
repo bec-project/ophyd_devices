@@ -131,10 +131,11 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
     def on_complete(self) -> StatusBase:
         """Complete the motion of the simulated device."""
 
+        if not self.write_to_disk.get():
+            return None
+
         def complete_cam():
             """Complete the camera acquisition."""
-            if self.write_to_disk.get():
-                self.h5_writer.on_complete()
             self._run_subs(
                 sub_type=self.SUB_FILE_EVENT,
                 file_path=self.file_path,
