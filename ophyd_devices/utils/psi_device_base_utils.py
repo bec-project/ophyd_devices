@@ -59,7 +59,7 @@ class TaskStatus(DeviceStatus):
         self._state = TaskState(value)
 
     @property
-    def task_id(self) -> bool:
+    def task_id(self) -> str:
         """Get the task ID"""
         return self._task_id
 

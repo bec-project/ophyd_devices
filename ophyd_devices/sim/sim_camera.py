@@ -136,6 +136,7 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
 
         def complete_cam():
             """Complete the camera acquisition."""
+            self.h5_writer.on_complete()
             self._run_subs(
                 sub_type=self.SUB_FILE_EVENT,
                 file_path=self.file_path,
