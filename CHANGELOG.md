@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.15.3 (2025-03-06)
+
+### Bug Fixes
+
+- Fix sim camera complete call, improve typhints for psi device base
+  ([`8cdcfe7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/8cdcfe7a44658f1d2cb44966e600f2450d4bc652))
+
+### Testing
+
+- Fix and improve tests camera on complete
+  ([`0ed2920`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0ed29209e41836211246a9304f20f420346b9b31))
+
+
 ## v1.15.2 (2025-03-05)
 
 ### Bug Fixes
