@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 from bec_lib import bec_logger
-from ophyd import Kind, Signal
+from ophyd import DeviceStatus, Kind, Signal
 from ophyd.utils import ReadOnlyError
 
 from ophyd_devices.utils.bec_device_base import BECDeviceBase
@@ -87,9 +87,17 @@ class SetableSignal(Signal):
 
         Core function for signal.
         """
+        self.check_value(value)
         self._update_sim_state(value)
         self._value = value
         self._run_subs(sub_type=self.SUB_VALUE, value=value)
+
+    def set(self, value):
+        """Set method"""
+        self.put(value)
+        status = DeviceStatus(self)
+        status.set_finished()
+        return status
 
     def describe(self):
         """Describe the readback signal.

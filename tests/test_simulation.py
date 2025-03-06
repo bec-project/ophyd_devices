@@ -1,4 +1,4 @@
-""" This module contains tests for the simulation devices in ophyd_devices """
+"""This module contains tests for the simulation devices in ophyd_devices"""
 
 # pylint: disable: all
 import os
@@ -765,3 +765,70 @@ def test_waveform(waveform):
     assert status.done is True
     assert mock_connector.xadd.call_count == 1
     assert mock_run_subs.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "mode, mock_data, expected_calls",
+    [
+        (
+            "add",
+            np.zeros(5),
+            [{"sub_type": "device_monitor_1d", "value": np.zeros(5)}, {"value": np.zeros(5)}],
+        )
+    ],
+)
+def test_waveform_update_modes(waveform, mode, mock_data, expected_calls):
+    """Test the add and add_slice update modes of the SimWaveform class"""
+    waveform.sim.select_model("GaussianModel")
+    waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
+    with pytest.raises(ValueError):
+        waveform.async_update.put("invalid_mode")
+    # Use add mode
+    waveform.async_update.put(mode)
+    with (
+        mock.patch.object(waveform, "_run_subs") as mock_run_subs,
+        mock.patch.object(waveform, "_send_async_update") as mock_send_async_update,
+        mock.patch.object(waveform.waveform, "get", return_value=mock_data),
+    ):
+
+        status = waveform.trigger()
+        status_wait(status, timeout=10)  # Raise if times out
+        assert status.done is True
+        # Run subs
+        assert mock_run_subs.call_args[1]["sub_type"] == expected_calls[0]["sub_type"]
+        assert np.array_equal(mock_run_subs.call_args[1]["value"], expected_calls[0]["value"])
+        # Send async update
+        assert np.array_equal(
+            mock_send_async_update.call_args[1]["value"], expected_calls[1]["value"]
+        )
+
+
+@pytest.mark.parametrize(
+    "mode, index, expected_md",
+    [
+        (
+            "add_slice",
+            0,
+            {"async_update": {"type": "add_slice", "index": 0, "max_shape": [None, 100]}},
+        ),
+        ("add_slice", None, {"async_update": {"type": "add", "max_shape": [None, 100]}}),
+        ("add", 0, {"async_update": {"type": "add", "max_shape": [None]}}),
+    ],
+)
+def test_waveform_send_async_update(waveform, mode, index, expected_md):
+    """Test the send_async_update method of SimWaveform."""
+    max_shape = expected_md["async_update"]["max_shape"]
+    if len(max_shape) > 1:
+        wv_shape = max_shape[1]
+    else:
+        wv_shape = 100
+    waveform.waveform_shape.put(wv_shape)
+    waveform.async_update.put(mode)
+    waveform.scan_info = get_mock_scan_info(device=waveform)
+    value = 0
+    with mock.patch.object(waveform.connector, "xadd") as mock_xadd:
+        waveform._send_async_update(index=index, value=value)
+        # Check here that metadata is properly set
+        args, kwargs = mock_xadd.call_args
+        msg = args[1]["data"]
+        assert msg.metadata == expected_md
