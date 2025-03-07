@@ -1,4 +1,4 @@
-""" Simulated 2D camera device"""
+"""Simulated 2D camera device"""
 
 import numpy as np
 from bec_lib.logger import bec_logger
@@ -114,9 +114,9 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         )
         self.frames.set(
             self.scan_info.msg.num_points * self.scan_info.msg.scan_parameters["frames_per_trigger"]
-        )
-        self.exp_time.set(self.scan_info.msg.scan_parameters["exp_time"])
-        self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"])
+        ).wait()
+        self.exp_time.set(self.scan_info.msg.scan_parameters["exp_time"]).wait()
+        self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"]).wait()
         if self.write_to_disk.get():
             self.h5_writer.on_stage(file_path=self.file_path, h5_entry="/entry/data/data")
             # pylint: disable=protected-access
