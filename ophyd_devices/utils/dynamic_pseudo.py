@@ -11,6 +11,9 @@ from ophyd.ophydobj import Kind
 
 logger = bec_logger.logger
 
+# Readout precision for ComputedSignal
+PRECISION = 3
+
 
 def rgetattr(obj, attr, *args):
     """See https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-objects"""
@@ -35,6 +38,7 @@ class ComputedSignal(SignalRO):
         name,
         value=0,
         timestamp=None,
+        precision=PRECISION,
         device_manager=None,
         parent=None,
         labels=None,
@@ -58,6 +62,7 @@ class ComputedSignal(SignalRO):
             cl=cl,
             attr_name=attr_name,
         )
+        self._precision = precision
         self._device_manager = device_manager
         self._input_signals = []
         self._signal_subs = []
@@ -137,6 +142,11 @@ class ComputedSignal(SignalRO):
             else:
                 signals.append(signal)
         self._input_signals = signals
+
+    @property
+    def precision(self):
+        """The precision of the computed value"""
+        return self._precision
 
     def get(self):
         if self._compute_method:
