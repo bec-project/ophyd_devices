@@ -30,37 +30,121 @@ __all__ = [
 
 
 class CamBase(_CamBase):
+    """
+    Base class for all camera drivers.
+    """
+
     pool_max_buffers = None
 
 
 class FileBase(_FileBase):
+    """
+    File saving parameters.
+
+    It is not meant to be used directly, but rather through inheritance by camera drivers
+    with file saving support, e.g. PilatusDetectorCam and SLSDetectorCam
+    """
+
     file_number_sync = None
     file_number_write = None
 
 
 class Andor3DetectorCam(CamBase, _Andor3DetectorCam):
+    """
+    ADAndor3 driver, https://github.com/areaDetector/ADAndor3
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(Andor3DetectorCam, 'cam1:')
+
+    """
+
     gate_mode = ADCpt(EpicsSignalWithRBV, "GateMode")
     insertion_delay = ADCpt(EpicsSignalWithRBV, "InsertionDelay")
     mcp_gain = ADCpt(EpicsSignalWithRBV, "MCPGain")
     mcp_intelligate = ADCpt(EpicsSignalWithRBV, "MCPIntelligate")
 
 
-class EigerDetectorCam(CamBase, _EigerDetectorCam): ...
+class EigerDetectorCam(CamBase, _EigerDetectorCam):
+    """
+    ADEiger driver, https://github.com/areaDetector/ADEiger
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(EigerDetectorCam, 'cam1:')
+
+    """
 
 
-class PilatusDetectorCam(CamBase, _PilatusDetectorCam): ...
+class PilatusDetectorCam(CamBase, FileBase, _PilatusDetectorCam):
+    """
+    ADPilatus driver, https://github.com/areaDetector/ADPilatus
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(PilatusDetectorCam, 'cam1:')
+
+    """
 
 
-class ProsilicaDetectorCam(CamBase, _ProsilicaDetectorCam): ...
+class ProsilicaDetectorCam(CamBase, _ProsilicaDetectorCam):
+    """
+    ADProsilica driver, https://github.com/areaDetector/ADProsilica
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(ProsilicaDetectorCam, 'cam1:')
+
+    """
 
 
-class SimDetectorCam(CamBase, _SimDetectorCam): ...
+class SimDetectorCam(CamBase, _SimDetectorCam):
+    """
+    ADSimDetector driver, https://github.com/areaDetector/ADSimDetector
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(SimDetectorCam, 'cam1:')
+
+    """
 
 
-class URLDetectorCam(CamBase, _URLDetectorCam): ...
+class URLDetectorCam(CamBase, _URLDetectorCam):
+    """
+    ADURL driver, https://github.com/areaDetector/ADURL
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(AravisDetectorCam, 'cam1:')
+
+    """
 
 
 class GenICam(CamBase):
+    """
+    ADGenICam driver, https://github.com/areaDetector/ADGenICam
+
+    It is the base class for GenICam drivers and not meant to be used directly.
+    """
+
     frame_rate = ADCpt(EpicsSignalWithRBV, "FrameRate")
     frame_rate_enable = ADCpt(EpicsSignalWithRBV, "FrameRateEnable")
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
@@ -73,18 +157,54 @@ class GenICam(CamBase):
 
 
 class AravisDetectorCam(GenICam):
+    """
+    ADAravis driver, https://github.com/areaDetector/ADAravis
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(AravisDetectorCam, 'cam1:')
+
+    """
+
     ar_convert_pixel_format = ADCpt(EpicsSignalWithRBV, "ARConvertPixelFormat")
     ar_shift_dir = ADCpt(EpicsSignalWithRBV, "ARShiftDir")
     ar_shift_bits = ADCpt(EpicsSignalWithRBV, "ARShiftBits")
 
 
 class VimbaDetectorCam(GenICam):
+    """
+    ADVimba driver, https://github.com/areaDetector/ADVimba
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(VimbaDetectorCam, 'cam1:')
+
+    """
+
     time_stamp_mode = ADCpt(EpicsSignalWithRBV, "TimeStampMode")
     unique_id_mode = ADCpt(EpicsSignalWithRBV, "UniqueIdMode")
     convert_pixel_format = ADCpt(EpicsSignalWithRBV, "ConvertPixelFormat")
 
 
 class PylonDetectorCam(GenICam):
+    """
+    ADPylon driver, https://github.com/areaDetector/ADPylon
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(PylonDetectorCam, 'cam1:')
+
+    """
+
     time_stamp_mode = ADCpt(EpicsSignalWithRBV, "TimeStampMode")
     unique_id_mode = ADCpt(EpicsSignalWithRBV, "UniqueIdMode")
     convert_pixel_format = ADCpt(EpicsSignalWithRBV, "ConvertPixelFormat")
@@ -93,6 +213,18 @@ class PylonDetectorCam(GenICam):
 
 
 class SLSDetectorCam(CamBase, FileBase):
+    """
+    slsDetector driver, https://github.com/paulscherrerinstitute/slsDetector
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(SLSDetectorCam, 'cam1:')
+
+    """
+
     detector_type = ADCpt(EpicsSignalRO, "DetectorType_RBV")
     setting = ADCpt(EpicsSignalWithRBV, "Setting")
     delay_time = ADCpt(EpicsSignalWithRBV, "DelayTime")
