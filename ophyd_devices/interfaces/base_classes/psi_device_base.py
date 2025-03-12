@@ -4,11 +4,18 @@ Base class for all PSI ophyd device integration to ensure consistent configurati
 
 from __future__ import annotations
 
+import time
+from typing import Any, Callable
+
 from bec_lib.devicemanager import ScanInfo
 from ophyd import Device, DeviceStatus, Staged, StatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+
+
+class DeviceStoppedError(Exception):
+    """Exception raised when a device is stopped"""
 
 
 class PSIDeviceBase(Device):
@@ -128,8 +135,44 @@ class PSIDeviceBase(Device):
             success (bool): True if the action was successful, False otherwise.
         """
         self.on_stop()
+        self.stopped = True  # Set stopped flag to True, in case a custom stop method listens to stopped property
         super().stop(success=success)
-        self.stopped = True
+
+    ########################################
+    # Utility Method to wait for signals   #
+    ########################################
+
+    def wait_for_condition(
+        self,
+        condition: Callable[[], bool],
+        timeout: float,
+        check_stopped: bool = False,
+        interval: float = 0.05,
+    ) -> bool:
+        """
+        Utility method to easily wait for signals or methods to reach an expected state.
+
+        Args:
+            condition (Callable): function that returns True if the condition is met, False otherwise
+            timeout (float): timeout in seconds
+            check_stopped (bool): True if stopped flag should be checked
+            interval (float): interval in seconds
+
+        Returns:
+            bool: True if all signals are in the desired state, False if timeout is reached
+
+        Example:
+            >>> self.wait_for_condition(condition=my_condition, timeout=5, interval=0.05, check_stopped=True)
+        """
+
+        start_time = time.time()
+        while time.time() < start_time + timeout:
+            if condition() is True:
+                return True
+            if check_stopped is True and self.stopped is True:
+                raise DeviceStoppedError(f"Device {self.name} has been stopped")
+            time.sleep(interval)
+        return False
 
     ########################################
     #  Beamline Specific Implementations   #
