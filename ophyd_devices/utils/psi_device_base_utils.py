@@ -1,4 +1,4 @@
-""" Utility handler to run tasks (function, conditions) in an asynchronous fashion."""
+"""Utility handler to run tasks (function, conditions) in an asynchronous fashion."""
 
 import ctypes
 import threading
@@ -73,17 +73,25 @@ class TaskHandler:
         self._parent = parent
         self._lock = threading.RLock()
 
-    def submit_task(self, task: Callable, run: bool = True) -> TaskStatus:
+    def submit_task(
+        self,
+        task: Callable,
+        task_args: tuple | None = None,
+        task_kwargs: dict | None = None,
+        run: bool = True,
+    ) -> TaskStatus:
         """Submit a task to the task handler.
 
         Args:
             task: The task to run.
             run: Whether to run the task immediately.
         """
+        task_args = task_args if task_args else ()
+        task_kwargs = task_kwargs if task_kwargs else {}
         task_status = TaskStatus(device=self._parent)
         thread = threading.Thread(
             target=self._wrap_task,
-            args=(task, task_status),
+            args=(task, task_args, task_kwargs, task_status),
             name=f"task {task_status.task_id}",
             daemon=True,
         )
@@ -102,13 +110,15 @@ class TaskHandler:
         if thread.is_alive():
             logger.warning(f"Task with ID {task_status.task_id} is already running.")
             return
-        thread.start()
         task_status.state = TaskState.RUNNING
+        thread.start()
 
-    def _wrap_task(self, task: Callable, task_status: TaskStatus):
+    def _wrap_task(
+        self, task: Callable, task_args: tuple, task_kwargs: dict, task_status: TaskStatus
+    ):
         """Wrap the task in a function"""
         try:
-            task()
+            task(*task_args, **task_kwargs)
         except TimeoutError as exc:
             content = traceback.format_exc()
             logger.warning(
