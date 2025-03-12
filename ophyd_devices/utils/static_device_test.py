@@ -5,8 +5,8 @@ import traceback
 from io import TextIOWrapper
 
 import ophyd
+from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.bec_yaml_loader import yaml_load
-from bec_lib.scibec_validator import SciBecValidator
 
 from ophyd_devices.utils.bec_device_base import BECDevice
 
@@ -186,16 +186,15 @@ class StaticDeviceTest:
 
     def validate_schema(self, name: str, conf: dict) -> None:
         """
-        Validate the device config against the BEC DB schema
+        Validate the device config against the BEC device model
 
         Args:
             name(str): name of the device
             conf(dict): device config
         """
         try:
-            validator = SciBecValidator()
             db_config = self._translate_to_db_config(name, conf)
-            validator.validate_device(db_config)
+            DeviceModel(**db_config)
             return 0
         except Exception as e:
             self.print_and_write(f"ERROR: {name} is not valid: {e}")
