@@ -23,3 +23,5 @@ from .utils.bec_signals import *
 from .utils.dynamic_pseudo import ComputedSignal
 from .utils.psi_device_base_utils import *
 from .utils.static_device_test import launch
+
+from .devices.psi_motor import EpicsMotorMR, EpicsMotorEC

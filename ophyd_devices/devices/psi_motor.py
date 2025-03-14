@@ -50,9 +50,7 @@ class EpicsMotorMR(EpicsMotor):
         # Warn if EPIC motorRecord claims an error (it's not easy to reset)
         status = self.motor_status.get()
         if status:
-            self.log.warning(
-                f"EPICS MotorRecord is in alarm state {status}, ophyd will raise"
-            )
+            self.log.warning(f"EPICS MotorRecord is in alarm state {status}, ophyd will raise")
         # Warn if trying to move beyond an active limit
         # NOTE: VME limit switches active only in the direction of travel (or disconnected)
         # NOTE: SoftMotor limits are not propagated at all
@@ -83,7 +81,7 @@ class EpicsMotorEC(EpicsMotorMR):
     USER_ACCESS = ["reset"]
     motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
     motor_enable = Component(
-        EpicsSignalRO,
+        EpicsSignal,
         "-EnaCmd-RB",
         write_pv="-EnaCmd",
         put_complete=True,
@@ -132,13 +130,12 @@ class EpicsMotorEC(EpicsMotorMR):
 
         Common error causes:
         -------------------------
-        - MAX_POSITION_LAG_EXCEEDED : The PID tuning is wrong, tolerance is too
-                low,  acceleration is too high, scaling is off, or the motor
-                lacks torque.
-        - MAX_VELOCITY_EXCEEDED : PID is wrong or the motor is sticking-slipping
-        - BOTH_LIMITS_ACTIVE : The motors are probably not connected
-        - HW_ERROR : Tricky one, usually the drive power supply is cut due to
-                fuse or safety, might need to push physical buttons.
+        - MAX_POSITION_LAG_EXCEEDED : The PID tuning is wrong, tolerance is too low, acceleration
+                is too high, scaling is off, or the motor lacks torque.
+        - MAX_VELOCITY_EXCEEDED : PID is wrong or the motor is sticking-slipping.
+        - BOTH_LIMITS_ACTIVE : The motors are probably not connected.
+        - HW_ERROR : Tricky one, usually the drive power supply is cut due to fuse or safety. You
+                might need to push physical buttons.
         """
         # Reset the error
         self.error_reset.set(1, settle_time=0.2).wait()
