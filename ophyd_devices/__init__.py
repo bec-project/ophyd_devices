@@ -20,3 +20,5 @@ from .devices.softpositioner import SoftPositioner
 from .utils.bec_device_base import BECDeviceBase
 from .utils.dynamic_pseudo import ComputedSignal
 from .utils.static_device_test import launch
+
+from .devices.psi_motor import EpicsMotorMR, EpicsMotorEC
