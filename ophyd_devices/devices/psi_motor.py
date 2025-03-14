@@ -1,11 +1,9 @@
-""" Extension class for EpicsMotor
+"""Extension class for EpicsMotor
 
 This module extends the basic EpicsMotor with additional functionality. It
 exposes additional parameters of the EPICS MotorRecord and provides a more
 detailed interface for motors using the new ECMC-based motion systems at PSI.
 """
-
-import warnings
 
 from ophyd import Component, EpicsMotor, EpicsSignal, EpicsSignalRO, Kind
 from ophyd.status import DeviceStatus, MoveStatus
@@ -47,22 +45,23 @@ class EpicsMotorMR(EpicsMotor):
         This could get it deadlock if it was previously explicitly stopped.
         """
         # Reset SPMG before move
-        spmg = self.motor_mode.get()
-        if spmg != SpmgStates.GO:
+        if self.motor_mode.get() != SpmgStates.GO:
             self.motor_mode.set(SpmgStates.GO).wait()
         # Warn if EPIC motorRecord claims an error (it's not easy to reset)
         status = self.motor_status.get()
         if status:
-            warnings.warn(
-                f"EPICS MotorRecord is in alarm state {status}, ophyd will raise", RuntimeWarning
+            self.log.warning(
+                f"EPICS MotorRecord is in alarm state {status}, ophyd will raise"
             )
-        # Warni if trying to move beyond an active limit
-        # if self.high_limit_switch and position > self.position:
-        #     warnings.warn("Attempting to move above active HLS", RuntimeWarning)
-        # if self.low_limit_switch and position < self.position:
-        #     warnings.warn("Attempting to move below active LLS", RuntimeWarning)
+        # Warn if trying to move beyond an active limit
+        # NOTE: VME limit switches active only in the direction of travel (or disconnected)
+        # NOTE: SoftMotor limits are not propagated at all
+        if self.high_limit_switch.get(use_monitor=False) and position > self.position:
+            self.log.warning("Attempting to move above active HLS")
+        if self.low_limit_switch.get(use_monitor=False) and position < self.position:
+            self.log.warning("Attempting to move below active LLS")
 
-        # EpicsMotor might raise
+        # EpicsMotor might raise if MR is in alarm
         try:
             status = super().move(position, wait, **kwargs)
             return status
@@ -84,7 +83,12 @@ class EpicsMotorEC(EpicsMotorMR):
     USER_ACCESS = ["reset"]
     motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
     motor_enable = Component(
-        EpicsSignal, "-EnaCmd-RB", write_pv="-EnaCmd", auto_monitor=True, kind=Kind.normal
+        EpicsSignalRO,
+        "-EnaCmd-RB",
+        write_pv="-EnaCmd",
+        put_complete=True,
+        auto_monitor=True,
+        kind=Kind.normal,
     )
     homed = Component(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
     velocity_readback = Component(EpicsSignalRO, "-VelAct", auto_monitor=True, kind=Kind.normal)
@@ -111,6 +115,12 @@ class EpicsMotorEC(EpicsMotorMR):
         error = self.error.get()
         if error:
             raise RuntimeError(f"Motor is in error state with message: '{self.error_msg.get()}'")
+
+        # Warn if trying to move beyond an active limit
+        if self.high_interlock.get(use_monitor=False) and position > self.position:
+            self.log.warning("Attempting to move above active HLS or Ilock")
+        if self.high_interlock.get(use_monitor=False) and position < self.position:
+            self.log.warning("Attempting to move below active LLS or Ilock")
 
         return super().move(position, wait, **kwargs)
 
