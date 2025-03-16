@@ -102,8 +102,9 @@ class ComputedSignal(SignalRO):
         method = method.replace(function_name, "user_compute_method")
         self._compute_method_str = method
         # pylint: disable=exec-used
-        exec(method)
-        self._compute_method = locals()["user_compute_method"]
+        out = {}
+        exec(method, out)
+        self._compute_method = out["user_compute_method"]
 
     @property
     def input_signals(self):
