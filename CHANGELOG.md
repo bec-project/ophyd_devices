@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.15.4 (2025-03-18)
+
+### Bug Fixes
+
+- **dynamic_pseudo**: Fix exec for py313
+  ([`74695dc`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/74695dcb0a13ff7e3e4f402715363e47e14fe0f0))
+
+### Build System
+
+- Min bec dependency is 3.13 due to ScanInfo
+  ([`91465fb`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/91465fbc38db60efbf92b00b26f3501737ba50ed))
+
+### Documentation
+
+- Update device list
+  ([`761498f`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/761498f51d0b8176341443ab213ff2cdec398cc7))
+
+
 ## v1.15.3 (2025-03-06)
 
 ### Bug Fixes
