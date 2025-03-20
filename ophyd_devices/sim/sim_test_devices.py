@@ -7,11 +7,17 @@ from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, OphydObject, PositionerBase, Staged
+from ophyd import Device, DeviceStatus, Kind, OphydObject, PositionerBase, Staged
 
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import SetableSignal
+from ophyd_devices.utils.bec_signals import (
+    DynamicSignal,
+    FileEventSignal,
+    PreviewSignal,
+    ProgressSignal,
+)
 
 logger = bec_logger.logger
 
@@ -311,3 +317,127 @@ class SimCameraWithStageStatus(SimCamera):
         thread = threading.Thread(target=_unstage_device, args=(self, status), daemon=True)
         thread.start()
         return status
+
+
+class SimCameraWithPSIComponents(SimCamera):
+    """Test Device for PSIComponents"""
+
+    preview_2d = Cpt(PreviewSignal, ndim=2, doc="2D preview signal", num_rot90=2, transpose=True)
+    preview_1d = Cpt(PreviewSignal, ndim=1, doc="1D preview signal")
+    file_event = Cpt(FileEventSignal, doc="File event signal")
+    progress = Cpt(ProgressSignal, doc="Progress signal")
+    dynamic_signal = Cpt(
+        DynamicSignal, doc="Dynamic signals", signal_names=["preview_2d", "preview_1d"]
+    )
+    # TODO Handling of AsyncComponents is postponed, issue #104 is created
+
+    # Define signals for the async components
+    # signal_dict = {
+    #     "signal1": {"kind": Kind.hinted, "doc": "Signal 1"},
+    #     "signal2": {"kind": Kind.normal, "doc": "Signal 2"},
+    #     "signal3": {"kind": Kind.config, "doc": "Signal 3"},
+    #     "signal4": {"kind": Kind.omitted, "doc": "Signal 4"},
+    # }
+
+    # async_1d = Async1DComponent(doc="Async 1D signal", signal_def=signal_dict)
+    # async_2d = Async2DComponent(doc="Async 2D signal", signal_def=signal_dict)
+
+    def __init__(self, name: str, scan_info=None, device_manager=None, **kwargs):
+        super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
+        self._triggers_received = 0
+
+    def on_stage(self):
+        """Stage device"""
+        self.file_path = self.file_utils.get_full_path(
+            scan_status_msg=self.scan_info.msg, name=self.name
+        )
+        self.frames.set(
+            self.scan_info.msg.num_points * self.scan_info.msg.scan_parameters["frames_per_trigger"]
+        ).wait()
+        self.exp_time.set(self.scan_info.msg.scan_parameters["exp_time"]).wait()
+        self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"]).wait()
+        # Always emit a file event
+        msg = messages.FileMessage(
+            file_path=self.file_path, done=False, successful=False, device_name=self.name
+        )
+        self.file_event.put(file_path=self.file_path, done=False, successful=False)
+        self.file_event.set(msg).wait()
+        self._triggers_received = 0
+
+    def on_trigger(self):
+        """Trigger device"""
+        self._triggers_received += 1
+
+        def trigger_cam():
+            for _ in range(self.burst.get()):
+                data = self.image.get()
+                self.preview_2d.put(data)
+                # sum array in one dimension
+                self.preview_1d.put(np.sum(data, 1))
+                self.dynamic_signal.put(
+                    {"preview_2d": {"value": data}, "preview_1d": {"value": np.sum(data, 1)}}
+                )
+                progress = {
+                    "value": self._triggers_received,
+                    "max_value": self.scan_info.msg.num_points,
+                    "done": (self._triggers_received == self.scan_info.msg.num_points),
+                }
+                progress = messages.ProgressMessage(**progress)
+                self.progress.put(progress)
+                self._set_async_signal()
+
+        status = self.task_handler.submit_task(trigger_cam)
+        return status
+
+    def _set_async_signal(self, update_all: bool = False):
+        """Set the async signal values.
+
+        Args:
+            update_all (bool): If True, update all signals. If False, update only hinted and normal signals.
+        """
+        # pylint: disable=protected-access
+        for sig in self.async_1d._signals.values():
+            if update_all is True:
+                sig.put(np.random.random())
+                continue
+            if sig.kind in [Kind.hinted, Kind.normal]:
+                sig.put(np.random.random())
+        for sig in self.async_2d._signals.values():
+            if update_all is True:
+                sig.put(np.random.random())
+                continue
+            if sig.kind in [Kind.hinted, Kind.normal]:
+                sig.put(np.random.random())
+
+    def on_unstage(self):
+        """Unstage device"""
+        self._triggers_received = 0
+
+    def on_complete(self):
+        """Complete device"""
+
+        def complete_cam():
+            """Complete the camera acquisition."""
+            msg = messages.FileMessage(
+                file_path=self.file_path if self.file_path else "",
+                done=True,
+                successful=True,
+                device_name=self.name,
+            )
+            self.file_event.set(msg).wait()
+            progress = {
+                "value": self._triggers_received,
+                "max_value": self.scan_info.msg.num_points,
+                "done": True,
+            }
+            progress = messages.ProgressMessage(**progress)
+            self.progress.set(progress).wait()
+            self._set_async_signal(update_all=True)
+
+        status = self.task_handler.submit_task(complete_cam)
+        return status
+
+
+if __name__ == "__main__":
+    cam = SimCameraWithPSIComponents(name="cam")
+    cam.read()

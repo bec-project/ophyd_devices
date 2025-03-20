@@ -4,7 +4,6 @@
 import os
 import threading
 import time
-from types import SimpleNamespace
 from unittest import mock
 
 import h5py
@@ -32,10 +31,15 @@ from ophyd_devices.sim.sim_frameworks.stage_camera_proxy import StageCameraProxy
 from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
+from ophyd_devices.sim.sim_test_devices import SimCameraWithPSIComponents
 from ophyd_devices.sim.sim_utils import H5Writer, LinearTrajectory
 from ophyd_devices.sim.sim_waveform import SimWaveform
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.bec_device_base import BECDevice, BECDeviceBase
+
+# pylint: disable=protected-access
+# pylint: disable=no-member
+# pylint: disable=too-many-arguments
 
 
 @pytest.fixture(scope="function")
@@ -832,3 +836,47 @@ def test_waveform_send_async_update(waveform, mode, index, expected_md):
         args, kwargs = mock_xadd.call_args
         msg = args[1]["data"]
         assert msg.metadata == expected_md
+
+
+#####################################
+### Test PSiComponent test device ###
+#####################################
+
+
+@pytest.fixture
+def test_device():
+    dev = SimCameraWithPSIComponents(name="test_device")
+    yield dev
+
+
+def test_simulation_sim_camera_with_psi_component(test_device):
+    """Test the simulation test device with PSI components."""
+    assert test_device.name == "test_device"
+    assert all(
+        element in test_device._signals
+        for element in [
+            "preview_2d",
+            "preview_1d",
+            "file_event",
+            "progress",
+            "dynamic_signal",
+            # "async_1d",
+            # "async_2d",
+        ]
+    )
+    # No signals are shown when read is called on the device
+    assert test_device.read() == {}
+    ### Commented out because the async signals are not implemented yet, cf. issue #104
+
+    # Hinted and normal signals
+    # assert list(test_device.async_1d.read().keys()) == [
+    #     "test_device_async_1d_signal1",
+    #     "test_device_async_1d_signal2",
+    # ]
+    # assert list(test_device.async_2d.read().keys()) == [
+    #     "test_device_async_2d_signal1",
+    #     "test_device_async_2d_signal2",
+    # ]
+    # # Config signals
+    # assert "test_device_async_1d_signal3" in test_device.async_1d.read_configuration()
+    # assert "test_device_async_2d_signal3" in test_device.async_2d.read_configuration()
