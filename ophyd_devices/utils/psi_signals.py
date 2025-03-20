@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Type
 
 import numpy as np
 from bec_lib.utils.import_utils import lazy_import_from
-from ophyd import DeviceStatus, Kind, Signal
+from ophyd import DeviceStatus, Kind, OphydObject, Signal
 from pydantic import ValidationError
 from typeguard import typechecked
 
@@ -33,8 +33,8 @@ class BECMessageSignal(Signal):
 
     def __init__(
         self,
-        *,
         name: str,
+        *,
         bec_message_type: Type[messages.BECMessage],
         value: messages.BECMessage | dict | None = None,
         kind: Kind | str = Kind.omitted,
@@ -537,58 +537,6 @@ class DynamicSignal(BECMessageSignal):
         Args:
             value (dict | DeviceMessage)                : The dynamic device data.
             metadata (dict | None)                      : Additional metadata.
-        """
-        self.put(value, metadata=metadata, **kwargs)
-        status = DeviceStatus(device=self)
-        status.set_finished()
-        return status
-
-
-class AsyncSignal(BECMessageSignal):
-    """Signal to emit data from an async device."""
-
-    def __init__(
-        self,
-        *,
-        name: str,
-        value: messages.DeviceMessage | dict | None = None,
-        kind: Kind | str = Kind.normal,
-        **kwargs,
-    ):
-        """Create a new DynamicSignal object."""
-        super().__init__(
-            name=name, value=value, bec_message_type=messages.DeviceMessage, kind=kind, **kwargs
-        )
-
-    def put(
-        self, value: messages.DeviceMessage | dict, *, metadata: dict | None = None, **kwargs
-    ) -> None:
-        """
-        Put method for AsyncSignal. If value is a DeviceMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMessage.
-
-        Args:
-            value (messages.DeviceMessage | dict)   : The device signal data.
-            metadata (dict | None)                  : Additional metadata.
-        """
-        if isinstance(value, messages.DeviceMessage):
-            return super().put(value, **kwargs)
-        try:
-            msg = messages.DeviceMessage(signals=value, metadata=metadata)
-        except ValidationError as exc:
-            raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
-        super().put(msg, **kwargs)
-
-    def set(
-        self, value: messages.DeviceMessage | dict, *, metadata: dict | None = None, **kwargs
-    ) -> None:
-        """
-        Set method for AsyncSignal. If value is a DeviceMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMessage.
-
-        Args:
-            value (messages.DeviceMessage | dict)   : The device signal data.
-            metadata (dict | None)                  : Additional metadata.
         """
         self.put(value, metadata=metadata, **kwargs)
         status = DeviceStatus(device=self)

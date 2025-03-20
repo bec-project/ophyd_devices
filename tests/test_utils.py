@@ -1,9 +1,20 @@
 import threading
 import time
 
+import numpy as np
 import pytest
-from ophyd import Device
+from bec_lib import messages
+from ophyd import Device, EpicsSignal, Kind, Signal
 
+from ophyd_devices.utils.psi_components import (
+    Async1DComponent,
+    Async2DComponent,
+    DynamicSignalComponent,
+    FileEventComponent,
+    Preview1DComponent,
+    Preview2DComponent,
+    ProgressComponent,
+)
 from ophyd_devices.utils.psi_device_base_utils import (
     FileHandler,
     TaskHandler,
@@ -11,6 +22,21 @@ from ophyd_devices.utils.psi_device_base_utils import (
     TaskState,
     TaskStatus,
 )
+from ophyd_devices.utils.psi_signals import (
+    BECMessageSignal,
+    DynamicSignal,
+    FileEventSignal,
+    Preview1DSignal,
+    Preview2DSignal,
+    ProgressSignal,
+)
+
+# pylint: disable=protected-access
+# pylint: disable=redefined-outer-name
+
+##########################################
+#########  Test Task Handler  ############
+##########################################
 
 
 @pytest.fixture
@@ -180,3 +206,346 @@ def test_utils_task_handler_shutdown(task_handler):
     assert status1.state == TaskState.KILLED
     assert status2.state == TaskState.KILLED
     assert status1.exception().__class__ == TaskKilledError
+
+
+##########################################
+#########  Test PSI cusomt signals  ######
+##########################################
+
+
+def test_utils_bec_message_signal():
+    """Test BECMessageSignal"""
+    dev = Device(name="device")
+    signal = BECMessageSignal(
+        name="bec_message_signal",
+        bec_message_type=messages.GUIInstructionMessage,
+        value=None,
+        parent=dev,
+    )
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.GUIInstructionMessage
+    assert signal._readback is None
+    assert signal.name == "bec_message_signal"
+    assert signal.describe() == {
+        "bec_message_signal": {
+            "source": "SIM:bec_message_signal",
+            "dtype": "GUIInstructionMessage",
+            "shape": [],
+        }
+    }
+    # Put works with Message
+    msg = messages.GUIInstructionMessage(action="image", parameter={"gui_id": "test"})
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # set works with dict, should call put
+    msg_dict = {"action": "image", "parameter": {"gui_id": "test"}}
+    status = signal.set(msg_dict)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put("wrong_type")
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_dynamic_signal():
+    """Test DynamicSignal"""
+    dev = Device(name="device")
+    signal = DynamicSignal(
+        name="dynamic_signal", signal_names=["sig1", "sig2"], value=None, parent=dev
+    )
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DeviceMessage
+    assert signal._readback is None
+    assert signal.name == "dynamic_signal"
+    assert signal.signal_names == ["sig1", "sig2"]
+    assert signal.describe() == {
+        "dynamic_signal": {"source": "SIM:dynamic_signal", "dtype": "DeviceMessage", "shape": []}
+    }
+
+    # Put works with Message
+    msg_dict = {"sig1": {"value": 1}, "sig2": {"value": 2}}
+    msg = messages.DeviceMessage(signals=msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Set works with dict
+    status = signal.set(msg_dict)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put("wrong_type")
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_file_event_signal():
+    """Test FileEventSignal"""
+    dev = Device(name="device")
+    signal = FileEventSignal(name="file_event_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.FileMessage
+    assert signal._readback is None
+    assert signal.name == "file_event_signal"
+    assert signal.describe() == {
+        "file_event_signal": {
+            "source": "SIM:file_event_signal",
+            "dtype": "FileMessage",
+            "shape": [],
+        }
+    }
+    # Test put works with FileMessage
+    msg_dict = {"file_path": "/path/to/another/file.txt", "done": False, "successful": True}
+    msg = messages.FileMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test set with kwargs, should call put
+    status = signal.set(file_path="/path/to/another/file.txt", done=False, successful=True)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Test put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_preview_1d_signal():
+    """Test Preview1DSignal"""
+    dev = Device(name="device")
+    signal = Preview1DSignal(name="preview_1d_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DeviceMonitor1DMessage
+    assert signal._readback is None
+    assert signal.name == "preview_1d_signal"
+    assert signal.describe() == {
+        "preview_1d_signal": {
+            "source": "SIM:preview_1d_signal",
+            "dtype": "DeviceMonitor1DMessage",
+            "shape": [],
+        }
+    }
+    # Put works with Message
+    msg_dict = {"device": dev.name, "data": np.array([1, 2, 3])}
+    msg = messages.DeviceMonitor1DMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    status = signal.set(msg_dict["data"])
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    signal.put(msg_dict["data"])
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_preview_2d_signal():
+    """Test Preview2DSignal"""
+    dev = Device(name="device")
+    signal = Preview2DSignal(name="preview_2d_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DeviceMonitor2DMessage
+    assert signal._readback is None
+    assert signal.name == "preview_2d_signal"
+    assert signal.describe() == {
+        "preview_2d_signal": {
+            "source": "SIM:preview_2d_signal",
+            "dtype": "DeviceMonitor2DMessage",
+            "shape": [],
+        }
+    }
+    # Put works with Message
+    msg_dict = {"device": dev.name, "data": np.array([[1, 2, 3], [4, 5, 6]])}
+    msg = messages.DeviceMonitor2DMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    status = signal.set(msg_dict["data"])
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    signal.put(msg_dict["data"])
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_progress_signal():
+    """Test ProgressSignal"""
+    dev = Device(name="device")
+    signal = ProgressSignal(name="progress_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.ProgressMessage
+    assert signal._readback is None
+    assert signal.name == "progress_signal"
+    assert signal.describe() == {
+        "progress_signal": {
+            "source": "SIM:progress_signal",
+            "dtype": "ProgressMessage",
+            "shape": [],
+        }
+    }
+    # Put works with Message
+    msg = messages.ProgressMessage(value=1, max_value=10, done=False)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put works with dict
+    msg_dict = {"value": 1, "max_value": 10, "done": False}
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Works with kwargs
+    status = signal.set(value=1, max_value=10, done=False)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+#############################################
+#########  Test PSI cusomt components  ######
+#############################################
+
+
+def test_utils_psi_components_simple():
+    """Test ProgressComponent"""
+    components = [FileEventComponent, Preview1DComponent, Preview2DComponent, ProgressComponent]
+    init_kwargs = [
+        {"name": "file_event", "docs": "my_file_event_docs"},
+        {"name": "preview1d", "docs": "my_preview1d_docs"},
+        {"name": "preview2d", "docs": "my_preview2d_docs"},
+        {"name": "progress", "docs": "my_progress_docs"},
+    ]
+    for cpt, _kwargs in zip(components, init_kwargs):
+        component = cpt(**_kwargs)
+        assert component.kwargs == _kwargs
+        if cpt == Preview1DComponent:
+            assert component.ndim == 1
+        if cpt == Preview2DComponent:
+            assert component.ndim == 2
+
+
+def test_utils_psi_components_dynamic():
+    """Test DynamicSignalComponent"""
+    init_kwargs = {
+        "name": "dynamic_signal",
+        "docs": "my_dynamic_docs",
+        "signal_names": ["sig1", "sig2"],
+    }
+    component = DynamicSignalComponent(**init_kwargs)
+    assert component.kwargs == init_kwargs
+    assert component.signal_names == ["sig1", "sig2"]
+
+    def _get_signal_names():
+        return ["sig1", "sig2"]
+
+    init_kwargs["signal_names"] = _get_signal_names
+    component = DynamicSignalComponent(**init_kwargs)
+    assert component.kwargs == init_kwargs
+    assert component.signal_names == ["sig1", "sig2"]
+
+
+def test_utils_psi_component_async():
+    """Test Async1DComponent and Async2DComponent"""
+    dev = Device(name="device")
+    signal_def = {
+        "signal1": {"suffix": None, "kind": Kind.normal, "doc": "doc1"},
+        "signal2": {
+            "suffix": "pv_prefix",
+            "kind": Kind.normal,
+            "doc": "doc2",
+            "signal_class": EpicsSignal,
+        },
+    }
+    init_kwargs = {"doc": "my_async1d_docs", "signal_def": signal_def}
+    component = Async1DComponent(**init_kwargs)
+    assert component.defn == {
+        "signal1": (Signal, None, {"kind": Kind.normal, "doc": "doc1"}),
+        "signal2": (EpicsSignal, "pv_prefix", {"kind": Kind.normal, "doc": "doc2"}),
+    }
+    assert component.ndim == 1
+
+    signal_def = {
+        "signal1": {
+            "suffix": "test",  # suffix should be removed for signal_class: Signal
+            "kind": Kind.normal,
+            "doc": "doc1",
+        },
+        "signal2": {
+            "suffix": "pv_prefix",
+            "kind": Kind.normal,
+            "doc": "doc2",
+            "signal_class": EpicsSignal,
+        },
+    }
+    init_kwargs = {"doc": "my_async2d_docs", "signal_def": signal_def}
+    component = Async2DComponent(**init_kwargs)
+    assert component.defn == {
+        "signal1": (Signal, None, {"kind": Kind.normal, "doc": "doc1"}),
+        "signal2": (EpicsSignal, "pv_prefix", {"kind": Kind.normal, "doc": "doc2"}),
+    }
+    assert component.ndim == 2
+
+    # EpicsSignal, but no suffix
+    signal_def = {"signal1": {"kind": Kind.normal, "doc": "doc1", "signal_class": EpicsSignal}}
+    init_kwargs = {"doc": "my_async2d_docs", "signal_def": signal_def}
