@@ -180,6 +180,7 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
         if async_update not in ["extend", "append"]:
             raise ValueError(f"Invalid async_update value for device {self.name}: {async_update}")
 
+        metadata = None
         if async_update == "extend":
             metadata = {"async_update": {"type": "add", "max_shape": [None]}}
         elif async_update == "append":
