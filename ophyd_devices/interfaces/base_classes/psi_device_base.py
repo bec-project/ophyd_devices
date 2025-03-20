@@ -36,7 +36,7 @@ class PSIDeviceBase(Device):
     SUB_DEVICE_MONITOR_2D = "device_monitor_2d"
     _default_sub = SUB_VALUE
 
-    def __init__(self, name: str, scan_info: ScanInfo | None = None, **kwargs):  # type: ignore
+    def __init__(self, *, name: str, prefix: str = "", scan_info: ScanInfo | None = None, **kwargs):  # type: ignore
         """
         Initialize the PSI Device Base class.
 
@@ -44,7 +44,7 @@ class PSIDeviceBase(Device):
             name (str) : Name of the device
             scan_info (ScanInfo): The scan info to use.
         """
-        super().__init__(name=name, **kwargs)
+        super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
