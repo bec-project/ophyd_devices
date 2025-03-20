@@ -1,9 +1,18 @@
 import threading
 import time
 
+import numpy as np
 import pytest
+from bec_lib import messages
 from ophyd import Device
 
+from ophyd_devices.utils.bec_signals import (
+    BECMessageSignal,
+    DynamicSignal,
+    FileEventSignal,
+    PreviewSignal,
+    ProgressSignal,
+)
 from ophyd_devices.utils.psi_device_base_utils import (
     FileHandler,
     TaskHandler,
@@ -11,6 +20,13 @@ from ophyd_devices.utils.psi_device_base_utils import (
     TaskState,
     TaskStatus,
 )
+
+# pylint: disable=protected-access
+# pylint: disable=redefined-outer-name
+
+##########################################
+#########  Test Task Handler  ############
+##########################################
 
 
 @pytest.fixture
@@ -180,3 +196,273 @@ def test_utils_task_handler_shutdown(task_handler):
     assert status1.state == TaskState.KILLED
     assert status2.state == TaskState.KILLED
     assert status1.exception().__class__ == TaskKilledError
+
+
+##########################################
+#########  Test PSI cusomt signals  ######
+##########################################
+
+
+def test_utils_bec_message_signal():
+    """Test BECMessageSignal"""
+    dev = Device(name="device")
+    signal = BECMessageSignal(
+        name="bec_message_signal",
+        bec_message_type=messages.GUIInstructionMessage,
+        value=None,
+        parent=dev,
+    )
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.GUIInstructionMessage
+    assert signal._readback is None
+    assert signal.name == "bec_message_signal"
+    assert signal.describe() == {
+        "bec_message_signal": {
+            "source": "BECMessageSignal:bec_message_signal",
+            "dtype": "GUIInstructionMessage",
+            "shape": [],
+            "signal_metadata": {},
+        }
+    }
+    # Put works with Message
+    msg = messages.GUIInstructionMessage(action="image", parameter={"gui_id": "test"})
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # set works with dict, should call put
+    msg_dict = {"action": "image", "parameter": {"gui_id": "test"}}
+    status = signal.set(msg_dict)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put("wrong_type")
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_dynamic_signal():
+    """Test DynamicSignal"""
+    dev = Device(name="device")
+    signal = DynamicSignal(
+        name="dynamic_signal", signal_names=["sig1", "sig2"], value=None, parent=dev
+    )
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DeviceMessage
+    assert signal._readback is None
+    assert signal.name == "dynamic_signal"
+    assert signal.signal_names == ["sig1", "sig2"]
+    assert signal.describe() == {
+        "dynamic_signal": {
+            "source": "BECMessageSignal:dynamic_signal",
+            "dtype": "DeviceMessage",
+            "shape": [],
+            "signal_metadata": {},
+        }
+    }
+
+    # Put works with Message
+    msg_dict = {"sig1": {"value": 1}, "sig2": {"value": 2}}
+    msg = messages.DeviceMessage(signals=msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Set works with dict
+    status = signal.set(msg_dict)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put("wrong_type")
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_file_event_signal():
+    """Test FileEventSignal"""
+    dev = Device(name="device")
+    signal = FileEventSignal(name="file_event_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.FileMessage
+    assert signal._readback is None
+    assert signal.name == "file_event_signal"
+    assert signal.describe() == {
+        "file_event_signal": {
+            "source": "BECMessageSignal:file_event_signal",
+            "dtype": "FileMessage",
+            "shape": [],
+            "signal_metadata": {},
+        }
+    }
+    # Test put works with FileMessage
+    msg_dict = {"file_path": "/path/to/another/file.txt", "done": False, "successful": True}
+    msg = messages.FileMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test set with kwargs, should call put
+    status = signal.set(file_path="/path/to/another/file.txt", done=False, successful=True)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Test put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Test put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_preview_1d_signal():
+    """Test Preview1DSignal"""
+    dev = Device(name="device")
+    signal = PreviewSignal(name="preview_1d_signal", ndim=1, value=None, parent=dev)
+    assert signal.signal_metadata.get("ndim") == 1
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DevicePreviewMessage
+    assert signal._readback is None
+    assert signal.name == "preview_1d_signal"
+    assert signal.describe() == {
+        "preview_1d_signal": {
+            "source": "BECMessageSignal:preview_1d_signal",
+            "dtype": "DevicePreviewMessage",
+            "shape": [],
+            "signal_metadata": {"ndim": 1, "num_rot90": 0, "transpose": False},
+        }
+    }
+    # Put works with Message
+    msg_dict = {"device": dev.name, "data": np.array([1, 2, 3]), "signal": "preview_1d_signal"}
+    msg = messages.DevicePreviewMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    status = signal.set(msg_dict["data"])
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    signal.put(msg_dict["data"])
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_preview_2d_signal():
+    """Test Preview2DSignal"""
+    dev = Device(name="device")
+    signal = PreviewSignal(name="preview_2d_signal", ndim=2, value=None, parent=dev)
+    assert signal.signal_metadata.get("ndim") == 2
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.DevicePreviewMessage
+    assert signal._readback is None
+    assert signal.name == "preview_2d_signal"
+    assert signal.describe() == {
+        "preview_2d_signal": {
+            "source": "BECMessageSignal:preview_2d_signal",
+            "dtype": "DevicePreviewMessage",
+            "shape": [],
+            "signal_metadata": {"ndim": 2, "num_rot90": 0, "transpose": False},
+        }
+    }
+    # Put works with Message
+    msg_dict = {
+        "device": dev.name,
+        "data": np.array([[1, 2, 3], [4, 5, 6]]),
+        "signal": "preview_2d_signal",
+    }
+    msg = messages.DevicePreviewMessage(**msg_dict)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with dict
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    status = signal.set(msg_dict["data"])
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put works with value
+    signal.put(msg_dict["data"])
+    reading = signal.read()
+    assert reading[signal.name]["value"].model_dump(exclude="timestamp") == msg.model_dump(
+        exclude="timestamp"
+    )
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_progress_signal():
+    """Test ProgressSignal"""
+    dev = Device(name="device")
+    signal = ProgressSignal(name="progress_signal", value=None, parent=dev)
+    assert signal.parent == dev
+    assert signal._bec_message_type == messages.ProgressMessage
+    assert signal._readback is None
+    assert signal.name == "progress_signal"
+    assert signal.describe() == {
+        "progress_signal": {
+            "source": "BECMessageSignal:progress_signal",
+            "dtype": "ProgressMessage",
+            "shape": [],
+            "signal_metadata": {},
+        }
+    }
+    # Put works with Message
+    msg = messages.ProgressMessage(value=1, max_value=10, done=False)
+    signal.put(msg)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put works with dict
+    msg_dict = {"value": 1, "max_value": 10, "done": False}
+    signal.put(msg_dict)
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Works with kwargs
+    status = signal.set(value=1, max_value=10, done=False)
+    assert status.done is True
+    reading = signal.read()
+    assert reading[signal.name]["value"] == msg
+    # Put fails with wrong type
+    with pytest.raises(ValueError):
+        signal.put(1)
+    # Put fails with wrong dict
+    with pytest.raises(ValueError):
+        signal.put({"wrong_key": "wrong_value"})
