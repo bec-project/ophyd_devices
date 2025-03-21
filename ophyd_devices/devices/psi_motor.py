@@ -79,6 +79,9 @@ class EpicsMotorEC(EpicsMotorMR):
     """
 
     USER_ACCESS = ["reset"]
+
+    motor_done_move = Component(EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal)
+
     motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
     motor_enable = Component(
         EpicsSignal,
