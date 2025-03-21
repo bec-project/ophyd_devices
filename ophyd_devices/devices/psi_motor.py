@@ -30,6 +30,7 @@ class EpicsMotorMR(EpicsMotor):
     """
 
     tolerated_alarm = AlarmSeverity.INVALID
+    motor_done_move = Component(EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal)
 
     motor_deadband = Component(EpicsSignalRO, ".RDBD", auto_monitor=True, kind=Kind.config)
     motor_mode = Component(
@@ -79,9 +80,6 @@ class EpicsMotorEC(EpicsMotorMR):
     """
 
     USER_ACCESS = ["reset"]
-
-    motor_done_move = Component(EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal)
-
     motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
     motor_enable = Component(
         EpicsSignal,
