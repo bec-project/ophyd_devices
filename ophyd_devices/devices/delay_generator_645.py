@@ -1,4 +1,4 @@
-""" Module for integrating the Stanford Research DG645 Delay Generator"""
+"""Module for integrating the Stanford Research DG645 Delay Generator"""
 
 import enum
 import time
@@ -287,7 +287,7 @@ class DelayGenerator(Device):
         """Disable burst mode"""
         self.burstMode.put(0)
 
-    def set_channels(self, signal: str, value: Any, channels: list = None) -> None:
+    def set_channels(self, signal: str, value: Any | list[Any], channels: list = None) -> None:
         """
         Utility method to set signals (width, delay, amplitude, offset, polarity)
         on single of multiple channels T0, AB, CD, EF, GH.
@@ -301,15 +301,22 @@ class DelayGenerator(Device):
         """
         if not channels:
             channels = self.all_channels
-        for chname in channels:
+        if not isinstance(value, list):
+            value = [value] * len(channels)
+        if len(value) != len(channels):
+            raise DelayGeneratorError(
+                f"Value must be either single value, or list with values of length {len(channels)}, provided: {value}"
+            )
+
+        for chname, val in zip(channels, value):
             channel = getattr(self, chname, None)
             if not channel:
                 continue
             if signal in channel.component_names:
-                getattr(channel, signal).set(value)
+                getattr(channel, signal).set(val).wait()
                 continue
             if "io" in channel.component_names and signal in channel.io.component_names:
-                getattr(channel.io, signal).set(value)
+                getattr(channel.io, signal).set(val).wait()
 
     def check_if_ddg_okay(self, raise_on_error: bool = False) -> None:
         """
