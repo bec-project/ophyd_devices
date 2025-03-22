@@ -87,7 +87,7 @@ class PSIDeviceBase(Device):
         self.stopped = False
         super_staged = super().stage()
         status = self.on_stage()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, DeviceStatus):
+        if isinstance(status, StatusBase):
             return status
         return super_staged
 
@@ -95,7 +95,7 @@ class PSIDeviceBase(Device):
         """Unstage the device."""
         super_unstage = super().unstage()
         status = self.on_unstage()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, DeviceStatus):
+        if isinstance(status, StatusBase):
             return status
         return super_unstage
 
