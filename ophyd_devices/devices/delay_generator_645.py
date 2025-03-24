@@ -313,10 +313,13 @@ class DelayGenerator(Device):
             if not channel:
                 continue
             if signal in channel.component_names:
-                getattr(channel, signal).set(val).wait()
+                getattr(channel, signal).set(val)
                 continue
             if "io" in channel.component_names and signal in channel.io.component_names:
-                getattr(channel.io, signal).set(val).wait()
+                getattr(channel.io, signal).set(val)
+        self.check_if_ddg_okay(
+            raise_on_error=True
+        )  # Check that DDG did not return an error, raise immediately if it did
 
     def check_if_ddg_okay(self, raise_on_error: bool = False) -> None:
         """
