@@ -16,9 +16,8 @@ from .sim.sim_signals import ReadOnlySignal
 from .sim.sim_waveform import SimWaveform
 
 SynSignalRO = ReadOnlySignal
+from .devices.psi_motor import EpicsMotor, EpicsMotorEC
 from .devices.softpositioner import SoftPositioner
 from .utils.bec_device_base import BECDeviceBase
 from .utils.dynamic_pseudo import ComputedSignal
 from .utils.static_device_test import launch
-
-from .devices.psi_motor import EpicsMotorMR, EpicsMotorEC
