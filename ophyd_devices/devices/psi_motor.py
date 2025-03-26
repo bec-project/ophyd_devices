@@ -5,9 +5,10 @@ exposes additional parameters of the EPICS MotorRecord and provides a more
 detailed interface for motors using the new ECMC-based motion systems at PSI.
 """
 
-from ophyd import Component, EpicsMotor, EpicsSignal, EpicsSignalRO, Kind
-from ophyd.status import DeviceStatus, MoveStatus
-from ophyd.utils.errors import UnknownStatusFailure
+from ophyd import Component as Cpt
+from ophyd import EpicsMotor as OphydEpicsMotor
+from ophyd import EpicsSignal, EpicsSignalRO, Kind
+from ophyd.status import MoveStatus
 from ophyd.utils.epics_pvs import AlarmSeverity
 
 
@@ -21,7 +22,7 @@ class SpmgStates:
     GO = 3
 
 
-class EpicsMotorMR(EpicsMotor):
+class EpicsMotor(OphydEpicsMotor):
     """Extended EPICS Motor class
 
     Special motor class that exposes additional motor record functionality.
@@ -30,14 +31,12 @@ class EpicsMotorMR(EpicsMotor):
     """
 
     tolerated_alarm = AlarmSeverity.INVALID
-    motor_done_move = Component(EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal)
+    motor_done_move = Cpt(EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal)
 
-    motor_deadband = Component(EpicsSignalRO, ".RDBD", auto_monitor=True, kind=Kind.config)
-    motor_mode = Component(
-        EpicsSignal, ".SPMG", auto_monitor=True, put_complete=True, kind=Kind.omitted
-    )
-    motor_status = Component(EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted)
-    motor_enable = Component(EpicsSignal, ".CNEN", auto_monitor=True, kind=Kind.omitted)
+    motor_deadband = Cpt(EpicsSignalRO, ".RDBD", auto_monitor=True, kind=Kind.config)
+    motor_mode = Cpt(EpicsSignal, ".SPMG", auto_monitor=True, put_complete=True, kind=Kind.omitted)
+    motor_status = Cpt(EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted)
+    motor_enable = Cpt(EpicsSignal, ".CNEN", auto_monitor=True, kind=Kind.omitted)
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
@@ -60,18 +59,10 @@ class EpicsMotorMR(EpicsMotor):
         if self.low_limit_switch.get(use_monitor=False) and position < self.position:
             self.log.warning("Attempting to move below active LLS")
 
-        # EpicsMotor might raise if MR is in alarm
-        try:
-            status = super().move(position, wait, **kwargs)
-            return status
-        except UnknownStatusFailure:
-            status = DeviceStatus(self)
-            status.set_finished()
-            # return status
-            raise
+        return super().move(position, wait, **kwargs)
 
 
-class EpicsMotorEC(EpicsMotorMR):
+class EpicsMotorEC(EpicsMotor):
     """Detailed ECMC EPICS motor class
 
     Special motor class to provide additional functionality  for ECMC based motors.
@@ -80,8 +71,8 @@ class EpicsMotorEC(EpicsMotorMR):
     """
 
     USER_ACCESS = ["reset"]
-    motor_enable_readback = Component(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
-    motor_enable = Component(
+    motor_enable_readback = Cpt(EpicsSignalRO, "-EnaAct", auto_monitor=True, kind=Kind.normal)
+    motor_enable = Cpt(
         EpicsSignal,
         "-EnaCmd-RB",
         write_pv="-EnaCmd",
@@ -89,18 +80,18 @@ class EpicsMotorEC(EpicsMotorMR):
         auto_monitor=True,
         kind=Kind.normal,
     )
-    homed = Component(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
-    velocity_readback = Component(EpicsSignalRO, "-VelAct", auto_monitor=True, kind=Kind.normal)
-    position_readback = Component(EpicsSignalRO, "-PosAct", auto_monitor=True, kind=Kind.normal)
-    position_error = Component(EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal)
+    homed = Cpt(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
+    velocity_readback = Cpt(EpicsSignalRO, "-VelAct", auto_monitor=True, kind=Kind.normal)
+    position_readback = Cpt(EpicsSignalRO, "-PosAct", auto_monitor=True, kind=Kind.normal)
+    position_error = Cpt(EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal)
     # Virtual motor and temperature limits are interlocks
-    high_interlock = Component(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
-    low_interlock = Component(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.normal)
+    high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
+    low_interlock = Cpt(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.normal)
 
-    # ecmc_status = Component(EpicsSignalRO, "-Status", auto_monitor=True, kind=Kind.normal)
-    error = Component(EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.normal)
-    error_msg = Component(EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.normal)
-    error_reset = Component(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
+    # ecmc_status = Cpt(EpicsSignalRO, "-Status", auto_monitor=True, kind=Kind.normal)
+    error = Cpt(EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.normal)
+    error_msg = Cpt(EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.normal)
+    error_reset = Cpt(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
