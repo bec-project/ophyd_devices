@@ -13,6 +13,9 @@ from ophyd_devices.sim.sim_utils import H5Writer
 logger = bec_logger.logger
 
 
+# a comment to be removed
+
+
 class SimCameraControl(Device):
     """SimCamera Control layer"""
 
