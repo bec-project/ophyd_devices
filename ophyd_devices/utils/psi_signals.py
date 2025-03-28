@@ -299,35 +299,37 @@ class FileEventSignal(BECMessageSignal):
         return status
 
 
-class Preview1DSignal(BECMessageSignal):
-    """Signal to emit 1D preview data."""
+class PreviewSignal(BECMessageSignal):
+    """Signal to emit preview data."""
 
-    def __init__(
-        self, *, name: str, value: messages.DeviceMonitor1DMessage | dict | None = None, **kwargs
-    ):
+    def __init__(self, *, name: str, ndim: Literal[1, 2], value: dict | None = None, **kwargs):
         """
         Create a new FileEventSignal object.
 
         Args:
             name (str) : The name of the signal.
-            value (DeviceMonitor1DMessage | dict | None) : The initial value of the signal. Defaults to None.
+            ndim (Literal[1, 2]) : The number of dimensions.
+            value (DeviceMonitorMessage | dict | None) : The initial value of the signal. Defaults to None.
         """
-        kwargs.pop("kind", None)  # Ignore kind if specified
+        kwargs.pop("kind", None)
+        self._ndim = ndim
+        if self._ndim == 2:
+            self._bec_message_type = messages.DeviceMonitor2DMessage
+        elif self._ndim == 1:
+            self._bec_message_type = messages.DeviceMonitor1DMessage
+        else:
+            raise ValueError(f"Invalid ndim {self._ndim} for PreviewSignal {name}")
         super().__init__(
             name=name,
             value=value,
-            bec_message_type=messages.DeviceMonitor1DMessage,
+            bec_message_type=self._bec_message_type,
             kind=Kind.omitted,
             **kwargs,
         )
 
     # pylint: disable=signature-differs
     def put(
-        self,
-        value: list | np.ndarray | messages.DeviceMonitor1DMessage | dict,
-        *,
-        metadata: dict | None = None,
-        **kwargs,
+        self, value: list | np.ndarray | dict, *, metadata: dict | None = None, **kwargs
     ) -> None:
         """
         Put method for Preview1DSignal.
@@ -336,109 +338,33 @@ class Preview1DSignal(BECMessageSignal):
         if value is a dict, it will be converted to a DeviceMonitor1DMessage.
 
         Args:
-            value (list | np.ndarray | messages.DeviceMonitor1DMessage)    : The preview data. Must be 1D
-            metadata (dict | None)      : Additional metadata.
+            value (list | np.ndarray | dict | self._bec_message_type)    : The preview data. Must be 1D.
+            metadata (dict | None)      : Additional metadata. If dict or self._bec_message_type is passed, it will be ignored.
         """
-        if isinstance(value, (messages.DeviceMonitor1DMessage, dict)):
+        if isinstance(value, (self._bec_message_type, dict)):
             return super().put(value, **kwargs)
         device = self.parent.name
         if isinstance(value, list):
             value = np.array(value)
         try:
-            msg = messages.DeviceMonitor1DMessage(data=value, device=device, metadata=metadata)
+            msg = self._bec_message_type(data=value, device=device, metadata=metadata)
         except ValidationError as exc:
             raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
         super().put(msg, **kwargs)
 
+    # pylint: disable=signature-differs
     def set(
-        self,
-        value: list | np.ndarray | messages.DeviceMonitor1DMessage | dict,
-        *,
-        metadata: dict | None = None,
-        **kwargs,
+        self, value: list | np.ndarray | dict, *, metadata: dict | None = None, **kwargs
     ) -> None:
         """
-        Set method for Preview1DSignal.
+        Put method for Preview1DSignal.
 
         If value is a DeviceMonitor1DMessage, it will be directly set,
         if value is a dict, it will be converted to a DeviceMonitor1DMessage.
 
         Args:
-            value (list | np.ndarray | messages.DeviceMonitor1DMessage)    : The preview data. Must be 1D
-            metadata (dict | None)      : Additional metadata.
-        """
-        self.put(value=value, metadata=metadata, **kwargs)
-        status = DeviceStatus(device=self)
-        status.set_finished()
-        return status
-
-
-class Preview2DSignal(BECMessageSignal):
-    """Signal to emit 2D preview data"""
-
-    def __init__(
-        self, *, name: str, value: messages.DeviceMonitor2DMessage | dict | None = None, **kwargs
-    ):
-        """
-        Create a new FileEventSignal object.
-
-        Args:
-            name (str) : The name of the signal.
-            value (DeviceMonitor2DMessage | dict | None) : The initial value of the signal. Defaults to None.
-        """
-        kwargs.pop("kind", None)  # Ignore kind if specified
-        super().__init__(
-            name=name,
-            value=value,
-            bec_message_type=messages.DeviceMonitor2DMessage,
-            kind=Kind.omitted,
-            **kwargs,
-        )
-
-    def put(
-        self,
-        value: list | np.ndarray | messages.DeviceMonitor2DMessage,
-        *,
-        metadata: dict | None = None,
-        **kwargs,
-    ) -> None:
-        """
-        Put method for Preview2DSignal.
-
-        If value is a DeviceMonitor2DMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMonitor2DMessage.
-
-        Args:
-            value (list | np.ndarray | messages.DeviceMonitor2DMessage)   : The preview data. Must be 2D
-            metadata (dict | None)                                        : Additional metadata.
-        """
-        if isinstance(value, messages.DeviceMonitor2DMessage) or isinstance(value, dict):
-            return super().put(value, **kwargs)
-        device = self.parent.name
-        if isinstance(value, list):
-            value = np.array(value)
-        try:
-            msg = messages.DeviceMonitor2DMessage(data=value, device=device, metadata=metadata)
-        except ValidationError as exc:
-            raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
-        super().put(msg, **kwargs)
-
-    def set(
-        self,
-        value: list | np.ndarray | messages.DeviceMonitor2DMessage,
-        *,
-        metadata: dict | None = None,
-        **kwargs,
-    ) -> None:
-        """
-        Set method for Preview2DSignal.
-
-        If value is a DeviceMonitor2DMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMonitor2DMessage.
-
-        Args:
-            value (list | np.ndarray | messages.DeviceMonitor2DMessage)   : The preview data. Must be 2D
-            metadata (dict | None)      : Additional metadata.
+            value (list | np.ndarray | dict | self._bec_message_type)    : The preview data. Must be 1D.
+            metadata (dict | None)      : Additional metadata. If dict or self._bec_message_type is passed, it will be ignored.
         """
         self.put(value=value, metadata=metadata, **kwargs)
         status = DeviceStatus(device=self)

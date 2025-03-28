@@ -11,8 +11,7 @@ from ophyd_devices.utils.psi_components import (
     Async2DComponent,
     DynamicSignalComponent,
     FileEventComponent,
-    Preview1DComponent,
-    Preview2DComponent,
+    PreviewComponent,
     ProgressComponent,
 )
 from ophyd_devices.utils.psi_device_base_utils import (
@@ -26,8 +25,7 @@ from ophyd_devices.utils.psi_signals import (
     BECMessageSignal,
     DynamicSignal,
     FileEventSignal,
-    Preview1DSignal,
-    Preview2DSignal,
+    PreviewSignal,
     ProgressSignal,
 )
 
@@ -327,7 +325,8 @@ def test_utils_file_event_signal():
 def test_utils_preview_1d_signal():
     """Test Preview1DSignal"""
     dev = Device(name="device")
-    signal = Preview1DSignal(name="preview_1d_signal", value=None, parent=dev)
+    signal = PreviewSignal(name="preview_1d_signal", ndim=1, value=None, parent=dev)
+    assert signal._ndim == 1
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DeviceMonitor1DMessage
     assert signal._readback is None
@@ -377,7 +376,8 @@ def test_utils_preview_1d_signal():
 def test_utils_preview_2d_signal():
     """Test Preview2DSignal"""
     dev = Device(name="device")
-    signal = Preview2DSignal(name="preview_2d_signal", value=None, parent=dev)
+    signal = PreviewSignal(name="preview_2d_signal", ndim=2, value=None, parent=dev)
+    assert signal._ndim == 2
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DeviceMonitor2DMessage
     assert signal._readback is None
@@ -469,19 +469,19 @@ def test_utils_progress_signal():
 
 def test_utils_psi_components_simple():
     """Test ProgressComponent"""
-    components = [FileEventComponent, Preview1DComponent, Preview2DComponent, ProgressComponent]
+    components = [FileEventComponent, PreviewComponent, PreviewComponent, ProgressComponent]
     init_kwargs = [
         {"name": "file_event", "docs": "my_file_event_docs"},
-        {"name": "preview1d", "docs": "my_preview1d_docs"},
-        {"name": "preview2d", "docs": "my_preview2d_docs"},
+        {"name": "preview1d", "ndim": 1, "docs": "my_preview1d_docs"},
+        {"name": "preview2d", "ndim": 2, "docs": "my_preview2d_docs"},
         {"name": "progress", "docs": "my_progress_docs"},
     ]
     for cpt, _kwargs in zip(components, init_kwargs):
         component = cpt(**_kwargs)
         assert component.kwargs == _kwargs
-        if cpt == Preview1DComponent:
+        if cpt == PreviewComponent and component.kwargs["name"] == "preview1d":
             assert component.ndim == 1
-        if cpt == Preview2DComponent:
+        if cpt == PreviewComponent and component.kwargs["name"] == "preview2d":
             assert component.ndim == 2
 
 

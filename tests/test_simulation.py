@@ -528,7 +528,7 @@ def test_proxy_config_and_props_stay_in_sync(h5proxy_fixture: tuple[H5ImageRepla
 
 
 def test_stage_camera_proxy_image_moves_with_samx_and_samy(
-    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner]
+    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner],
 ):
     """Test camera stage proxy to compute readback from readback of positioner samx and samy"""
     proxy, camera, samx, samy = stage_camera_proxy_fixture
@@ -546,7 +546,7 @@ def test_stage_camera_proxy_image_moves_with_samx_and_samy(
 
 
 def test_stage_camera_proxy_image_shape(
-    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner]
+    stage_camera_proxy_fixture: tuple[StageCameraProxy, SimCamera, SimPositioner, SimPositioner],
 ):
     """Make sure that the produced image has the same shape as the detector being proxied"""
     proxy, camera, samx, samy = stage_camera_proxy_fixture

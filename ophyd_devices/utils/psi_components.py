@@ -10,8 +10,7 @@ from typeguard import typechecked
 from ophyd_devices.utils.psi_signals import (
     DynamicSignal,
     FileEventSignal,
-    Preview1DSignal,
-    Preview2DSignal,
+    PreviewSignal,
     ProgressSignal,
 )
 
@@ -49,39 +48,20 @@ class FileEventComponent(Component):
         super().__init__(signal_class, *args, doc=doc, **kwargs)
 
 
-class Preview1DComponent(Component):
-    """Component for 1D preview signals."""
+class PreviewComponent(Component):
+    """Component for preview signals."""
 
-    def __init__(self, *args, doc: str | None = None, **kwargs):
+    def __init__(self, *args, ndim: Literal[1, 2], doc: str | None = None, **kwargs):
         """
-        Create a new Preview1DComponent object.
+        Create a new PreviewComponent object.
 
         Args:
+            ndim (Literal[1, 2])      : The number of dimensions.
             doc (str | None) : The documentation string.
         """
-        signal_class = Preview1DSignal
-        self._ndim = 1
-        super().__init__(signal_class, *args, doc=doc, **kwargs)
-
-    @property
-    def ndim(self):
-        """Return the number of dimensions."""
-        return self._ndim
-
-
-class Preview2DComponent(Component):
-    """Component for 2D preview signals."""
-
-    def __init__(self, *args, doc: str | None = None, **kwargs):
-        """
-        Create a new Preview2DComponent object.
-
-        Args:
-            doc (str | None) : The documentation string.
-        """
-        signal_class = Preview2DSignal
-        self._ndim = 2
-        super().__init__(signal_class, *args, doc=doc, **kwargs)
+        signal_class = PreviewSignal
+        self._ndim = ndim
+        super().__init__(signal_class, *args, ndim=self._ndim, doc=doc, **kwargs)
 
     @property
     def ndim(self):

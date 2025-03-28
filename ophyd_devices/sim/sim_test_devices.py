@@ -17,8 +17,7 @@ from ophyd_devices.utils.psi_components import (
     Async2DComponent,
     DynamicSignalComponent,
     FileEventComponent,
-    Preview1DComponent,
-    Preview2DComponent,
+    PreviewComponent,
     ProgressComponent,
     ProgressSignal,
 )
@@ -26,8 +25,7 @@ from ophyd_devices.utils.psi_signals import (
     BECMessageSignal,
     DynamicSignal,
     FileEventSignal,
-    Preview1DSignal,
-    Preview2DSignal,
+    PreviewSignal,
     ProgressSignal,
 )
 
@@ -334,8 +332,8 @@ class SimCameraWithStageStatus(SimCamera):
 class SimCameraWithPSIComponents(SimCamera):
     """Test Device for PSIComponents"""
 
-    preview_2d: Preview2DSignal = Preview2DComponent(name="preview_2d", doc="2D preview signal")
-    preview_1d: Preview1DSignal = Preview1DComponent(doc="1D preview signal")
+    preview_2d: PreviewSignal = PreviewComponent(ndim=2, doc="2D preview signal")
+    preview_1d: PreviewSignal = PreviewComponent(ndim=1, doc="1D preview signal")
     file_event: FileEventSignal = FileEventComponent(doc="File event signal")
     progress: ProgressSignal = ProgressComponent(doc="Progress signal")
     dynamic_signal: DynamicSignal = DynamicSignalComponent(
