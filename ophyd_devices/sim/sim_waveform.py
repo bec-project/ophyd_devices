@@ -60,7 +60,7 @@ class SimWaveform(Device):
         name="waveform",
         value=np.empty(SHAPE, dtype=BIT_DEPTH),
         compute_readback=True,
-        kind=Kind.normal,
+        kind=Kind.hinted,
     )
     # Can be extend or append
     async_update = Cpt(SetableSignal, value="append", kind=Kind.config)

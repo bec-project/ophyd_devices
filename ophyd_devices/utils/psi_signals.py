@@ -413,7 +413,7 @@ class DynamicSignal(BECMessageSignal):
 
     def put(
         self,
-        value: messages.DeviceMessage | dict[str, dict[Literal["value"], Any]],
+        value: messages.DeviceMessage | dict[str, dict[Literal["value", "timestamp"], Any]],
         *,
         metadata: dict | None = None,
         **kwargs,
