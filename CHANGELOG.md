@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.16.0 (2025-04-07)
+
+### Features
+
+- **sim_waveform**: Added option to emit data with add_slice
+  ([`21746e5`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/21746e5445f32cfd41e6cca80cae5acc45c808ec))
+
+### Refactoring
+
+- Update schema validation to use BEC device model
+  ([`7797e40`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/7797e4003b1e0fb3b9acd33aa937c80405febbd8))
+
+- **psi_device_base**: Add method to wait for a condition to PSIDeviceBase
+  ([`1fd4fc7`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/1fd4fc7f21a70804c2b8956b6c636278ea54f2dc))
+
+
 ## v1.15.4 (2025-03-18)
 
 ### Bug Fixes
