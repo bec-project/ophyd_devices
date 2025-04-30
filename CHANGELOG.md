@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.16.1 (2025-04-30)
+
+### Bug Fixes
+
+- Add prefix to signature of PSIDeviceBase
+  ([`ab63839`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/ab6383959f1eb45efd4fff52332ebc1442a01c78))
+
+
 ## v1.16.0 (2025-04-07)
 
 ### Features
