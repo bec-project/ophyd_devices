@@ -1,4 +1,4 @@
-""" Utility class linked to BEC"""
+"""Utility class linked to BEC"""
 
 import time
 

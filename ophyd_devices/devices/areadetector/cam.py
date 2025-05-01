@@ -1,5 +1,4 @@
-"""AreaDetector Devices
-"""
+"""AreaDetector Devices"""
 
 # isort: skip_file
 from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV

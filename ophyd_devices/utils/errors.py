@@ -1,4 +1,4 @@
-"""Module for ophyd_devices specific errors. """
+"""Module for ophyd_devices specific errors."""
 
 
 class DeviceStopError(Exception):

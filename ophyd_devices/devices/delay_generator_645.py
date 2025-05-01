@@ -1,4 +1,4 @@
-""" Module for integrating the Stanford Research DG645 Delay Generator"""
+"""Module for integrating the Stanford Research DG645 Delay Generator"""
 
 import enum
 import time

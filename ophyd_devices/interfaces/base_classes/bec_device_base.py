@@ -1,6 +1,6 @@
 """
 This module contains the base class for custom device integrations at PSI.
-Please check the device section in BEC's developer documentation 
+Please check the device section in BEC's developer documentation
 (https://bec.readthedocs.io/en/latest/) for more information about device integration.
 """
 

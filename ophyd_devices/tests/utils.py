@@ -1,4 +1,4 @@
-""" Utilities to mock and test devices."""
+"""Utilities to mock and test devices."""
 
 from typing import TYPE_CHECKING
 from unittest import mock

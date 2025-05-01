@@ -1,4 +1,4 @@
-""" Module for simulated positioner devices. """
+"""Module for simulated positioner devices."""
 
 import threading
 import time as ttime

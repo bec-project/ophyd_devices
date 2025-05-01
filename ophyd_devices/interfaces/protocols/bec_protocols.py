@@ -1,8 +1,8 @@
-""" This module provides a range of protocols that describe the expected 
+"""This module provides a range of protocols that describe the expected
 interface for different types of devices.
 
-The protocols below can be used as teamplates for functionality to be implemeted 
-by different type of devices. They further facilitate runtime checks on devices 
+The protocols below can be used as teamplates for functionality to be implemeted
+by different type of devices. They further facilitate runtime checks on devices
 and provide a minimum set of properties required for a device to be loadable by BEC.
 
 The protocols are:
@@ -13,7 +13,7 @@ The protocols are:
 - BECPositionerProtocol: Protocol for positioners.
 - BECFlyerProtocol: Protocol with for flyers.
 
-Keep in mind, that a device of type flyer should generally also implement the BECDeviceProtocol 
+Keep in mind, that a device of type flyer should generally also implement the BECDeviceProtocol
 with the functionality needed for scans. In addition, flyers also implement the BECFlyerProtocol.
 Similarly, positioners should also implement the BECDeviceProtocol and BECPositionerProtocol.
 
