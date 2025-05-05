@@ -82,9 +82,16 @@ class SimWaveform(Device):
     burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
 
     waveform_shape = Cpt(SetableSignal, name="waveform_shape", value=SHAPE, kind=Kind.config)
-    waveform = Cpt(
+    waveform_1 = Cpt(
         ReadOnlySignal,
-        name="waveform",
+        name="waveform_1",
+        value=np.empty(SHAPE, dtype=BIT_DEPTH),
+        compute_readback=True,
+        kind=Kind.hinted,
+    )
+    waveform_2 = Cpt(
+        ReadOnlySignal,
+        name="waveform_2",
         value=np.empty(SHAPE, dtype=BIT_DEPTH),
         compute_readback=True,
         kind=Kind.hinted,
@@ -124,6 +131,7 @@ class SimWaveform(Device):
         if self.sim_init:
             self.sim.set_init(self.sim_init)
         self._slice_index = 0
+        self.signals = [self.waveform_1, self.waveform_2]
 
     @property
     def delay_slice_update(self) -> bool:
@@ -154,7 +162,7 @@ class SimWaveform(Device):
             try:
                 for _ in range(self.burst.get()):
                     # values of the Waveform
-                    values = self.waveform.get()
+                    values = [signal.get() for signal in self.signals]
                     # add_slice option
                     if self.async_update.get() == "add_slice":
                         size = self.slice_size.get()
@@ -224,7 +232,10 @@ class SimWaveform(Device):
             )
 
         msg = messages.DeviceMessage(
-            signals={self.waveform.name: {"value": value, "timestamp": time.time()}},
+            signals={
+                self.waveform_1.name: {"value": value[0], "timestamp": time.time()},
+                self.waveform_2.name: {"value": value[1], "timestamp": time.time()},
+            },
             metadata=metadata,
         )
         # Send the message to BEC

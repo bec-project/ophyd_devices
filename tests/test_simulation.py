@@ -741,15 +741,15 @@ def test_waveform(waveform):
     """Test the SimWaveform class"""
     waveform.sim.select_model("GaussianModel")
     waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
-    data = waveform.waveform.get()
+    data = waveform.waveform_1.get()
     assert isinstance(data, np.ndarray)
     assert data.shape == waveform.SHAPE
     assert np.isclose(np.argmax(data), 500, atol=5)
     waveform.waveform_shape.put(50)
-    data = waveform.waveform.get()
+    data = waveform.waveform_1.get()
     for model in waveform.sim.get_all_sim_models():
         waveform.sim.select_model(model)
-        waveform.waveform.get()
+        waveform.waveform_1.get()
     # Now also test the async readback
     mock_connector = waveform.connector = mock.MagicMock()
     mock_run_subs = waveform._run_subs = mock.MagicMock()
@@ -788,7 +788,7 @@ def test_waveform_update_modes(waveform, mode, mock_data, expected_calls):
     with (
         mock.patch.object(waveform, "_run_subs") as mock_run_subs,
         mock.patch.object(waveform, "_send_async_update") as mock_send_async_update,
-        mock.patch.object(waveform.waveform, "get", return_value=mock_data),
+        mock.patch.object(waveform.waveform_1, "get", return_value=mock_data),
     ):
 
         status = waveform.trigger()
