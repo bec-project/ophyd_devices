@@ -20,11 +20,11 @@ jobs:
 
       - name: Clone and install dependencies
         run: |
-          if [[ "$PROJECT_PATH" != "bec/ophyd_devices" ]]; then
-            echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"
-            test -d ophyd_devices || git clone --branch "$CHILD_PIPELINE_BRANCH" https://gitlab.psi.ch/bec/ophyd_devices.git
-            cd ophyd_devices
-          fi
+          # if [[ "$PROJECT_PATH" != "bec/ophyd_devices" ]]; then
+          #   echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"
+          #   test -d ophyd_devices || git clone --branch "$CHILD_PIPELINE_BRANCH" https://gitlab.psi.ch/bec/ophyd_devices.git
+          #   cd ophyd_devices
+          # fi
 
           pip install -e .[dev]
           git clone --branch "$BEC_CORE_BRANCH" https://gitlab.psi.ch/bec/bec.git
