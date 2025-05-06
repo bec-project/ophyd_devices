@@ -1,0 +1,31 @@
+name: Run Pytest with Coverage
+on: [workflow_call]
+
+jobs:
+
+
+  device-config-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev]
+
+      - name: Device Config Tests
+        run: |
+          ophyd_test --config ./ophyd_devices/configs/ --output ./config_tests
+
+      # - name: Upload Device Config Test Results
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: device-config-test-results
+      #     path: ./config_tests

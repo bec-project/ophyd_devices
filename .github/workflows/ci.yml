@@ -1,0 +1,13 @@
+name: Full CI
+on: [push]
+
+jobs:
+  formatter:
+    uses: ./.github/workflows/formatter.yml
+
+  pytest:
+    uses: ./.github/workflows/ophyd_tests.yml
+
+  device-config-test:
+    uses: ./.github/workflows/device_config_test.yml
+  

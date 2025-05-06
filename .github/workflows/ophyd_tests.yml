@@ -1,0 +1,47 @@
+name: Run Pytest with Coverage
+on: [workflow_call]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    env:
+      CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
+      BEC_CORE_BRANCH: main        # Set the branch you want for bec
+      PROJECT_PATH: ${{ github.repository }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Clone and install dependencies
+        run: |
+          # if [[ "$PROJECT_PATH" != "bec/ophyd_devices" ]]; then
+          #   echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of Ophyd Devices \033[0;m"
+          #   test -d ophyd_devices || git clone --branch "$CHILD_PIPELINE_BRANCH" https://gitlab.psi.ch/bec/ophyd_devices.git
+          #   cd ophyd_devices
+          # fi
+
+          pip install -e .[dev]
+          git clone --branch "$BEC_CORE_BRANCH" https://gitlab.psi.ch/bec/bec.git
+          pip install -e ./bec/bec_lib[dev]
+          pip install -e ./bec/bec_server[dev]
+
+      - name: Run Pytest with Coverage
+        run: |
+          pip install coverage pytest pytest-random-order
+          coverage run --source=./ophyd_devices --omit=*/ophyd_devices/tests/* -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
+          coverage report
+          coverage xml
+
+    #   - name: Upload Coverage Report and Test Results
+    #     uses: actions/upload-artifact@v3
+    #     with:
+    #       name: test-artifacts
+    #       path: |
+    #         report.xml
+    #         coverage.xml
