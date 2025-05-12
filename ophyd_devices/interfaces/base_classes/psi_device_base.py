@@ -4,6 +4,7 @@ Base class for all PSI ophyd device integration to ensure consistent configurati
 
 from __future__ import annotations
 
+import inspect
 import time
 from typing import Any, Callable
 
@@ -44,6 +45,12 @@ class PSIDeviceBase(Device):
             name (str) : Name of the device
             scan_info (ScanInfo): The scan info to use.
         """
+        # Make sure device_manager is not passed to super().__init__ if not specified
+        # This is to avoid issues with ophyd.OphydObject.__init__ when the parent is ophyd.Device
+        # and the device_manager is passed to it. This will cause a TypeError.
+        sig = inspect.signature(super().__init__)
+        if "device_manager" not in sig.parameters:
+            kwargs.pop("device_manager", None)
         super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
         self.task_handler = TaskHandler(parent=self)
@@ -87,7 +94,7 @@ class PSIDeviceBase(Device):
         self.stopped = False
         super_staged = super().stage()
         status = self.on_stage()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, DeviceStatus):
+        if isinstance(status, StatusBase):
             return status
         return super_staged
 
@@ -95,7 +102,7 @@ class PSIDeviceBase(Device):
         """Unstage the device."""
         super_unstage = super().unstage()
         status = self.on_unstage()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, DeviceStatus):
+        if isinstance(status, StatusBase):
             return status
         return super_unstage
 
