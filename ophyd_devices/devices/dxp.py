@@ -35,16 +35,55 @@ An example usage for a 4-element FalconX system. ::
 
 """
 
+from collections import OrderedDict
+
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignal, EpicsSignalRO, Kind
 from ophyd.areadetector import ADBase
 from ophyd.areadetector import ADComponent as ADCpt
 from ophyd.areadetector import EpicsSignalWithRBV
-from ophyd.mca import EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
+from ophyd.device import DynamicDeviceComponent as DCpt
+from ophyd.mca import ROI, EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
 from ophyd.mca import EpicsDXPMultiElementSystem as _EpicsDXPMultiElementSystem
 from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
 
 __all__ = ("EpicsMCARecord", "EpicsDXP", "EpicsDXPFalcon", "Falcon", "Mercury", "xMAP")
+
+# pylint: disable=protected-access
+
+
+class ROIFalcon(ROI):
+    """ROI for FalconX DXP system with proper Kind settings."""
+
+    # normal Components
+    count = Cpt(EpicsSignalRO, "", lazy=True, kind=Kind.normal)
+    net_count = Cpt(EpicsSignalRO, "N", lazy=True, kind=Kind.normal)
+
+    preset_count = Cpt(EpicsSignal, "P", lazy=True, kind=Kind.config)
+    bkgnd_chans = Cpt(EpicsSignal, "BG", lazy=True, kind=Kind.config)
+    # Config components
+    label = Cpt(EpicsSignal, "NM", lazy=True, kind=Kind.config)
+    is_preset = Cpt(EpicsSignal, "IP", lazy=True, kind=Kind.config)
+    hi_chan = Cpt(EpicsSignal, "HI", lazy=True, kind=Kind.config)
+    lo_chan = Cpt(EpicsSignal, "LO", lazy=True, kind=Kind.config)
+
+
+def add_rois(range_, **kwargs):
+    """Add ROIs to the EpicsMCARecord."""
+    defn = OrderedDict()
+
+    for roi in range_:
+        if not (0 <= roi < 32):
+            raise ValueError("roi must be in the set [0,31]")
+
+        attr = f"roi{roi}"
+        defn[attr] = (ROIFalcon, f".R{roi}", kwargs)
+
+    return defn
+
+
+# predefined nunmber of ROIs per EpicsMCARecord
+ROI_RANGE = range(0, 8)
 
 
 class EpicsMCARecord(_EpicsMCARecord):
@@ -55,6 +94,9 @@ class EpicsMCARecord(_EpicsMCARecord):
     cals = Cpt(EpicsSignal, ".CALS", kind=Kind.config)
     calq = Cpt(EpicsSignal, ".CALQ", kind=Kind.config)
     tth = Cpt(EpicsSignal, ".TTH", kind=Kind.config)
+
+    elapsed_real_time = Cpt(EpicsSignalRO, ".ERTM", kind=Kind.normal, auto_monitor=True)
+    rois = DCpt(add_rois(ROI_RANGE, kind=Kind.normal), kind=Kind.normal)
 
 
 class EpicsDXPFalcon(Device):
@@ -83,8 +125,8 @@ class EpicsDXPFalcon(Device):
     elapsed_trigger_live = Cpt(EpicsSignalRO, "ElapsedTriggerLiveTime", lazy=True)
     triggers = Cpt(EpicsSignalRO, "Triggers", lazy=True)
     events = Cpt(EpicsSignalRO, "Events", lazy=True)
-    input_count_rate = Cpt(EpicsSignalRO, "InputCountRate", lazy=True)
-    output_count_rate = Cpt(EpicsSignalRO, "OutputCountRate", lazy=True)
+    input_count_rate = Cpt(EpicsSignalRO, "InputCountRate", kind=Kind.normal, auto_monitor=True)
+    output_count_rate = Cpt(EpicsSignalRO, "OutputCountRate", kind=Kind.normal, auto_monitor=True)
 
     # Mapping
     current_pixel = Cpt(EpicsSignal, "CurrentPixel")
@@ -168,6 +210,34 @@ class EpicsDxpFalconMapping(EpicsDXPMapping):
 class Falcon(EpicsDXPFalconMultiElementSystem, EpicsDxpFalconMapping, ADBase):
     """Falcon base device"""
 
+    _default_read_attrs = (
+        ADBase._default_read_attrs
+        + (
+            EpicsDXPFalconMultiElementSystem._default_read_attrs
+            if EpicsDXPFalconMultiElementSystem._default_read_attrs
+            else ()
+        )
+        + (
+            EpicsDxpFalconMapping._default_read_attrs
+            if EpicsDxpFalconMapping._default_read_attrs
+            else ()
+        )
+        + ("port_name",)
+    )
+    _default_configuration_attrs = (
+        ADBase._default_configuration_attrs
+        + (
+            EpicsDXPFalconMultiElementSystem._default_configuration_attrs
+            if EpicsDXPFalconMultiElementSystem._default_configuration_attrs
+            else ()
+        )
+        + (
+            EpicsDxpFalconMapping._default_configuration_attrs
+            if EpicsDxpFalconMapping._default_configuration_attrs
+            else ()
+        )
+    )
+
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
 
@@ -190,12 +260,42 @@ class EpicsDXPMultiElementSystem(_EpicsDXPMultiElementSystem):
 class Mercury(EpicsDXPMultiElementSystem, ADBase):
     """Mercury base device"""
 
+    _default_read_attrs = ADBase._default_read_attrs + (
+        EpicsDXPMultiElementSystem._default_read_attrs
+        if EpicsDXPMultiElementSystem._default_read_attrs
+        else () + ("port_name",)
+    )
+    _default_configuration_attrs = ADBase._default_configuration_attrs + (
+        EpicsDXPMultiElementSystem._default_configuration_attrs
+        if EpicsDXPMultiElementSystem._default_configuration_attrs
+        else ()
+    )
+
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
 
 
 class xMAP(EpicsDXPMultiElementSystem, EpicsDXPMapping, ADBase):
     """xMAP base device"""
+
+    _default_read_attrs = ADBase._default_read_attrs + (
+        EpicsDXPMultiElementSystem._default_read_attrs
+        if EpicsDXPMultiElementSystem._default_read_attrs
+        else (
+            () + EpicsDXPMapping._default_read_attrs
+            if EpicsDXPMapping._default_read_attrs
+            else () + ("port_name",)
+        )
+    )
+    _default_configuration_attrs = ADBase._default_configuration_attrs + (
+        EpicsDXPMultiElementSystem._default_configuration_attrs
+        if EpicsDXPMultiElementSystem._default_configuration_attrs
+        else (
+            () + EpicsDXPMapping._default_configuration_attrs
+            if EpicsDXPMapping._default_configuration_attrs
+            else ()
+        )
+    )
 
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
