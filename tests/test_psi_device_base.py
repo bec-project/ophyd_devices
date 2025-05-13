@@ -7,6 +7,7 @@ from ophyd import Device
 from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
+from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 
 # pylint: disable=redefined-outer-name
@@ -18,17 +19,24 @@ class SimPositionerDevice(PSIDeviceBase, SimPositioner):
 
 
 class SimDevice(PSIDeviceBase, Device):
-    """Test Device with ohyd.Device as base class"""
+    """Simulated Device with PSI Device Base"""
+
+
+@pytest.fixture
+def device_positioner():
+    """Fixture for Device"""
+    yield SimPositionerDevice(name="device")
 
 
 @pytest.fixture
 def device():
     """Fixture for Device"""
-    yield SimPositionerDevice(name="device")
+    yield SimDevice(name="device", prefix="test:")
 
 
-def test_psi_device_base_wait_for_signals(device):
+def test_psi_device_base_wait_for_signals(device_positioner):
     """Test wait_for_signals method"""
+    device: SimPositionerDevice = device_positioner
     device.motor_is_moving.set(1).wait()
 
     def check_motor_is_moving():
@@ -67,8 +75,9 @@ def test_psi_device_base_init_with_device_manager():
     dm = mock.MagicMock()
     device = SimPositionerDevice(name="device", device_manager=dm)
     assert device.device_manager is dm
-    device2 = SimDevice(name="device2", device_manager=dm)
-    assert getattr(device2, "device_manager", None) is None
+    # device_manager should b passed to SimCamera through PSIDeviceBase
+    device_2 = SimCamera(name="device", device_manager=dm)
+    assert device_2.device_manager is dm
 
 
 def test_on_stage_hook(device):

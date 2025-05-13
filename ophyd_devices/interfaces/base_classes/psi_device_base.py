@@ -6,13 +6,15 @@ from __future__ import annotations
 
 import inspect
 import time
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Callable
 
-from bec_lib.devicemanager import ScanInfo
 from ophyd import Device, DeviceStatus, Staged, StatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
 
 
 class DeviceStoppedError(Exception):
@@ -37,7 +39,15 @@ class PSIDeviceBase(Device):
     SUB_DEVICE_MONITOR_2D = "device_monitor_2d"
     _default_sub = SUB_VALUE
 
-    def __init__(self, *, name: str, prefix: str = "", scan_info: ScanInfo | None = None, **kwargs):  # type: ignore
+    def __init__(
+        self,
+        *,
+        name: str,
+        prefix: str = "",
+        scan_info: ScanInfo | None = None,
+        device_manager: DeviceManagerBase | None = None,
+        **kwargs,
+    ):
         """
         Initialize the PSI Device Base class.
 
@@ -49,9 +59,10 @@ class PSIDeviceBase(Device):
         # This is to avoid issues with ophyd.OphydObject.__init__ when the parent is ophyd.Device
         # and the device_manager is passed to it. This will cause a TypeError.
         sig = inspect.signature(super().__init__)
-        if "device_manager" not in sig.parameters:
-            kwargs.pop("device_manager", None)
-        super().__init__(prefix=prefix, name=name, **kwargs)
+        if "device_manager" in sig.parameters:
+            super().__init__(device_manager=device_manager, prefix=prefix, name=name, **kwargs)
+        else:
+            super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
