@@ -10,6 +10,16 @@ An example usage for a 4-element FalconX system. ::
     from ophyd_devices.devices.areadetector.plugins import HDF5Plugin_V35 as HDF5Plugin
 
     class FalconX4(Falcon):
+
+        # Attributes needed to be set for the ADBase class
+        # Otherwise, ADBase will overwrite read_attrs and configuration_attrs
+        # and as a result a .read() will return an empty dictionary
+        # This is a shortcoming of the ADBase class and has to be fixed
+        # on the highest level of the class hierarchy, one may also include specific signals of the Falcon
+        # in the read_attrs and configuration_attrs, i.e. elapsed_real_time, elapsed_live_time, etc.
+        _default_read_attrs = ("dxp1", "dxp2", "dxp3", "dxp4", "mca1", "mca2", "mca3", "mca4", "hdf")
+        _default_configuration_attrs = ("dxp1", "dxp2", "dxp3", "dxp4", "mca1", "mca2", "mca3", "mca4", "hdf")
+
         # DXP parameters
         dxp1 = Cpt(EpicsDXPFalcon, "dxp1:")
         dxp2 = Cpt(EpicsDXPFalcon, "dxp2:")
@@ -52,7 +62,7 @@ __all__ = ("EpicsMCARecord", "EpicsDXP", "EpicsDXPFalcon", "Falcon", "Mercury", 
 # pylint: disable=protected-access
 
 
-class ROIFalcon(ROI):
+class PSIROI(ROI):
     """ROI for FalconX DXP system with proper Kind settings."""
 
     # normal Components
@@ -77,7 +87,7 @@ def add_rois(range_, **kwargs):
             raise ValueError("roi must be in the set [0,31]")
 
         attr = f"roi{roi}"
-        defn[attr] = (ROIFalcon, f".R{roi}", kwargs)
+        defn[attr] = (PSIROI, f".R{roi}", kwargs)
 
     return defn
 
@@ -210,34 +220,6 @@ class EpicsDxpFalconMapping(EpicsDXPMapping):
 class Falcon(EpicsDXPFalconMultiElementSystem, EpicsDxpFalconMapping, ADBase):
     """Falcon base device"""
 
-    _default_read_attrs = (
-        ADBase._default_read_attrs
-        + (
-            EpicsDXPFalconMultiElementSystem._default_read_attrs
-            if EpicsDXPFalconMultiElementSystem._default_read_attrs
-            else ()
-        )
-        + (
-            EpicsDxpFalconMapping._default_read_attrs
-            if EpicsDxpFalconMapping._default_read_attrs
-            else ()
-        )
-        + ("port_name",)
-    )
-    _default_configuration_attrs = (
-        ADBase._default_configuration_attrs
-        + (
-            EpicsDXPFalconMultiElementSystem._default_configuration_attrs
-            if EpicsDXPFalconMultiElementSystem._default_configuration_attrs
-            else ()
-        )
-        + (
-            EpicsDxpFalconMapping._default_configuration_attrs
-            if EpicsDxpFalconMapping._default_configuration_attrs
-            else ()
-        )
-    )
-
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
 
@@ -260,42 +242,12 @@ class EpicsDXPMultiElementSystem(_EpicsDXPMultiElementSystem):
 class Mercury(EpicsDXPMultiElementSystem, ADBase):
     """Mercury base device"""
 
-    _default_read_attrs = ADBase._default_read_attrs + (
-        EpicsDXPMultiElementSystem._default_read_attrs
-        if EpicsDXPMultiElementSystem._default_read_attrs
-        else () + ("port_name",)
-    )
-    _default_configuration_attrs = ADBase._default_configuration_attrs + (
-        EpicsDXPMultiElementSystem._default_configuration_attrs
-        if EpicsDXPMultiElementSystem._default_configuration_attrs
-        else ()
-    )
-
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)
 
 
 class xMAP(EpicsDXPMultiElementSystem, EpicsDXPMapping, ADBase):
     """xMAP base device"""
-
-    _default_read_attrs = ADBase._default_read_attrs + (
-        EpicsDXPMultiElementSystem._default_read_attrs
-        if EpicsDXPMultiElementSystem._default_read_attrs
-        else (
-            () + EpicsDXPMapping._default_read_attrs
-            if EpicsDXPMapping._default_read_attrs
-            else () + ("port_name",)
-        )
-    )
-    _default_configuration_attrs = ADBase._default_configuration_attrs + (
-        EpicsDXPMultiElementSystem._default_configuration_attrs
-        if EpicsDXPMultiElementSystem._default_configuration_attrs
-        else (
-            () + EpicsDXPMapping._default_configuration_attrs
-            if EpicsDXPMapping._default_configuration_attrs
-            else ()
-        )
-    )
 
     # attribute required by ADBase
     port_name = ADCpt(EpicsSignalRO, "Asyn.PORT", string=True)

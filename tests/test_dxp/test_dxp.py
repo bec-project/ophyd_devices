@@ -86,9 +86,6 @@ def test_falcon(mock_falcon):
     assert isinstance(mock_falcon, EpicsDxpFalconMapping)
     assert isinstance(mock_falcon, ADBase)
 
-    assert mock_falcon.read_attrs == ["port_name"]
-    assert mock_falcon.configuration_attrs == []
-
     assert mock_falcon.hints == {"fields": []}
 
     assert mock_falcon.mca1.rois.roi0.read_attrs == ["count", "net_count"]
@@ -111,9 +108,6 @@ def test_xmap(mock_xmap):
     assert isinstance(mock_xmap, EpicsDXPMultiElementSystem)
     assert isinstance(mock_xmap, ADBase)
 
-    assert mock_xmap.read_attrs == ["port_name"]
-    assert mock_xmap.configuration_attrs == []
-
 
 def test_mercury(mock_mercury):
     """Test the Mercury device."""
@@ -124,6 +118,3 @@ def test_mercury(mock_mercury):
     assert isinstance(mock_mercury, EpicsDXPMultiElementSystem)
     # assert isinstance(mock_mercury, EpicsDXPMapping) # Not sure why this fails
     assert isinstance(mock_mercury, ADBase)
-
-    assert mock_mercury.read_attrs == ["port_name"]
-    assert mock_mercury.configuration_attrs == []
