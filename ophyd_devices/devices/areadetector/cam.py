@@ -273,6 +273,7 @@ class ASItpxCam(CamBase):
             cam = Cpt(ASItpxCam, 'cam1:')
 
     """
+
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
     trigger_polarity = ADCpt(EpicsSignalWithRBV, "TriggerPolarity")
     trigger_delay = ADCpt(EpicsSignalWithRBV, "TriggerDelay")
