@@ -259,3 +259,36 @@ class SLSDetectorCam(CamBase, FileBase):
     # Moench
     json_frame_mode = ADCpt(EpicsSignalWithRBV, "JsonFrameMode")
     json_detector_mode = ADCpt(EpicsSignalWithRBV, "JsonDetectorMode")
+
+
+class ASItpxCam(CamBase):
+    """
+    ASI Timepix detector driver, https://github.com/paulscherrerinstitute/ADASItpx
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(ASItpxCam, 'cam1:')
+
+    """
+    trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
+    trigger_polarity = ADCpt(EpicsSignalWithRBV, "TriggerPolarity")
+    trigger_delay = ADCpt(EpicsSignalWithRBV, "TriggerDelay")
+    exposure_mode = ADCpt(EpicsSignalWithRBV, "ExposureMode")
+    trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
+
+    raw_enable = ADCpt(EpicsSignalWithRBV, "RawEnable")
+    raw_file_path = ADCpt(EpicsSignalWithRBV, "RawFilePath")
+    raw_file_template = ADCpt(EpicsSignalWithRBV, "RawFileTemplate")
+
+    # pixel mode for the 2D image
+    pixel_mode = ADCpt(EpicsSignalWithRBV, "PixelMode")
+
+    image_enable = ADCpt(EpicsSignalWithRBV, "ImageEnable")
+    image_file_path = ADCpt(EpicsSignalWithRBV, "ImageFilePath")
+    image_file_template = ADCpt(EpicsSignalWithRBV, "ImageFileTemplate")
+
+    preview_enable = ADCpt(EpicsSignalWithRBV, "PreviewEnable")
+    preview_period = ADCpt(EpicsSignalWithRBV, "PreviewPeriod")
