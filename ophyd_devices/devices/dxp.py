@@ -69,7 +69,7 @@ class ROI(_ROI):
     # normal Components
     count = Cpt(EpicsSignalRO, "", lazy=True, kind=Kind.normal)
     net_count = Cpt(EpicsSignalRO, "N", lazy=True, kind=Kind.normal)
-    
+
     # Config components
     preset_count = Cpt(EpicsSignal, "P", lazy=True, kind=Kind.config)
     bkgnd_chans = Cpt(EpicsSignal, "BG", lazy=True, kind=Kind.config)
