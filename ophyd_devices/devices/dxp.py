@@ -53,7 +53,8 @@ from ophyd.areadetector import ADBase
 from ophyd.areadetector import ADComponent as ADCpt
 from ophyd.areadetector import EpicsSignalWithRBV
 from ophyd.device import DynamicDeviceComponent as DCpt
-from ophyd.mca import ROI, EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
+from ophyd.mca import ROI as _ROI
+from ophyd.mca import EpicsDXP, EpicsDXPBaseSystem, EpicsDXPMapping
 from ophyd.mca import EpicsDXPMultiElementSystem as _EpicsDXPMultiElementSystem
 from ophyd.mca import EpicsMCARecord as _EpicsMCARecord
 
@@ -62,16 +63,16 @@ __all__ = ("EpicsMCARecord", "EpicsDXP", "EpicsDXPFalcon", "Falcon", "Mercury", 
 # pylint: disable=protected-access
 
 
-class PSIROI(ROI):
-    """ROI for FalconX DXP system with proper Kind settings."""
+class ROI(_ROI):
+    """ROI for DXP system with proper Kind settings."""
 
     # normal Components
     count = Cpt(EpicsSignalRO, "", lazy=True, kind=Kind.normal)
     net_count = Cpt(EpicsSignalRO, "N", lazy=True, kind=Kind.normal)
-
+    
+    # Config components
     preset_count = Cpt(EpicsSignal, "P", lazy=True, kind=Kind.config)
     bkgnd_chans = Cpt(EpicsSignal, "BG", lazy=True, kind=Kind.config)
-    # Config components
     label = Cpt(EpicsSignal, "NM", lazy=True, kind=Kind.config)
     is_preset = Cpt(EpicsSignal, "IP", lazy=True, kind=Kind.config)
     hi_chan = Cpt(EpicsSignal, "HI", lazy=True, kind=Kind.config)
@@ -87,7 +88,7 @@ def add_rois(range_, **kwargs):
             raise ValueError("roi must be in the set [0,31]")
 
         attr = f"roi{roi}"
-        defn[attr] = (PSIROI, f".R{roi}", kwargs)
+        defn[attr] = (ROI, f".R{roi}", kwargs)
 
     return defn
 
