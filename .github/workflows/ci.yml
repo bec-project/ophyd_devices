@@ -1,0 +1,44 @@
+name: Full CI
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      BEC_CORE_BRANCH:
+        description: 'Branch of BEC Core to install'
+        required: false
+        type: string
+      OPHYD_DEVICES_BRANCH:
+        description: 'Branch of Ophyd Devices to install'
+        required: false
+        type: string
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check_pr_status:
+    uses: ./.github/workflows/check_pr.yml
+
+  formatter:
+    needs: check_pr_status
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: ./.github/workflows/formatter.yml
+
+  unit-test:
+    needs: [check_pr_status, formatter]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: ./.github/workflows/pytest.yml
+    with:
+      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || github.head_ref || github.sha}}
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  unit-test-matrix:
+    needs: [check_pr_status, formatter]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: ./.github/workflows/pytest-matrix.yml
+    with:
+      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || github.head_ref || github.sha}}
