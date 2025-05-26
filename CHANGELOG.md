@@ -1,6 +1,51 @@
 # CHANGELOG
 
 
+## v1.17.0 (2025-05-26)
+
+### Chores
+
+- **formatter**: Upgrade to black v25
+  ([`673be87`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/673be87a2d449b4860adaf921679b68574e431c6))
+
+### Continuous Integration
+
+- Add github actions
+  ([`a458d69`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a458d6942d45356cf2dfdc32fb1dfb74c271fdf1))
+
+### Documentation
+
+- Update device list
+  ([`4625dee`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/4625dee50bee9211b8fa8af0470ba38f40c6ded4))
+
+- Update device list
+  ([`b69f229`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/b69f229da5a52ac18ea247387bf7db4d2a70b16c))
+
+### Features
+
+- **areadetector**: Add ADASItpx device
+  ([`bb60ed1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/bb60ed1cef86bffa810ebb49f5f8aac2b75e073c))
+
+### Refactoring
+
+- **dxp**: Refactor dxp integration, support rois with proper kinds in EpicsMCARecord
+  ([`f6e3bf3`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/f6e3bf36ce7476e78bfefdafc4663815fd74db42))
+
+- **dxp**: Remove _default_read_attrs from base integration
+  ([`19a1d84`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/19a1d84186f21d4f2eeae0a7afed5d07d542e4af))
+
+- **psi-device-base**: Add device_manager to signature
+  ([`a44b07c`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a44b07c5da063c5186dbb6522d2d7efa3b9da635))
+
+- **psi-device-base**: Remove device_manager from kwargs, improve Status return on stage/unstage
+  ([`a7bffb8`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/a7bffb8e3ad631eb84c33f3a9e26ef57e0137726))
+
+### Testing
+
+- **psi-device-base**: Enhance PSIDeviceBase tests with additional user method hooks
+  ([`0cb64d1`](https://gitlab.psi.ch/bec/ophyd_devices/-/commit/0cb64d1ea86464451009d43efbbd572dc03e44ce))
+
+
 ## v1.16.1 (2025-04-30)
 
 ### Bug Fixes
