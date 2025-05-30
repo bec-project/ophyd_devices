@@ -335,7 +335,7 @@ def test_utils_preview_1d_signal():
             "source": "BECMessageSignal:preview_1d_signal",
             "dtype": "DevicePreviewMessage",
             "shape": [],
-            "signal_metadata": {"ndim": 1, "num_rot90": 0, "transpose": False},
+            "signal_metadata": {"ndim": 1, "num_rotation_90": 0, "transpose": False},
         }
     }
     # Put works with Message
@@ -387,7 +387,7 @@ def test_utils_preview_2d_signal():
             "source": "BECMessageSignal:preview_2d_signal",
             "dtype": "DevicePreviewMessage",
             "shape": [],
-            "signal_metadata": {"ndim": 2, "num_rot90": 0, "transpose": False},
+            "signal_metadata": {"ndim": 2, "num_rotation_90": 0, "transpose": False},
         }
     }
     # Put works with Message
