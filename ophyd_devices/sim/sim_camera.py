@@ -9,6 +9,7 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
+from ophyd_devices.utils.bec_signals import PreviewSignal
 
 logger = bec_logger.logger
 
@@ -38,6 +39,7 @@ class SimCameraControl(Device):
         compute_readback=True,
         kind=Kind.omitted,
     )
+    preview = Cpt(PreviewSignal, name="preview", ndim=2)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
     def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
@@ -92,6 +94,7 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
             for _ in range(self.burst.get()):
                 data = self.image.get()
                 # pylint: disable=protected-access
+                self.preview.put(data)
                 self._run_subs(sub_type=self.SUB_MONITOR, value=data)
                 if self.write_to_disk.get():
                     self.h5_writer.receive_data(data)
