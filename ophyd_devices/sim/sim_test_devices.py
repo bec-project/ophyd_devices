@@ -322,7 +322,9 @@ class SimCameraWithStageStatus(SimCamera):
 class SimCameraWithPSIComponents(SimCamera):
     """Test Device for PSIComponents"""
 
-    preview_2d = Cpt(PreviewSignal, ndim=2, doc="2D preview signal", num_rot90=2, transpose=True)
+    preview_2d = Cpt(
+        PreviewSignal, ndim=2, doc="2D preview signal", num_rotation_90=2, transpose=True
+    )
     preview_1d = Cpt(PreviewSignal, ndim=1, doc="1D preview signal")
     file_event = Cpt(FileEventSignal, doc="File event signal")
     progress = Cpt(ProgressSignal, doc="Progress signal")
