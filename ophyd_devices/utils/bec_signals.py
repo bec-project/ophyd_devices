@@ -347,10 +347,10 @@ class PreviewSignal(BECMessageSignal):
         **kwargs,
     ) -> None:
         """
-        Put method for Preview1DSignal.
+        Put method for PreviewSignal.
 
-        If value is a DeviceMonitor1DMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMonitor1DMessage.
+        If value is a DevicePreviewMessage, it will be directly set,
+        if value is a dict, it will be converted to a DevicePreviewMessage.
 
         Args:
             value (list | np.ndarray | dict | self._bec_message_type): The preview data. Must be 1D.
@@ -378,10 +378,10 @@ class PreviewSignal(BECMessageSignal):
         self, value: list | np.ndarray | dict, *, metadata: dict | None = None, **kwargs
     ) -> DeviceStatus:
         """
-        Put method for Preview1DSignal.
+        Put method for PreviewSignal.
 
-        If value is a DeviceMonitor1DMessage, it will be directly set,
-        if value is a dict, it will be converted to a DeviceMonitor1DMessage.
+        If value is a DevicePreviewMessage, it will be directly set,
+        if value is a dict, it will be converted to a DevicePreviewMessage.
 
         Args:
             value (list | np.ndarray | dict | self._bec_message_type)    : The preview data. Must be 1D.
