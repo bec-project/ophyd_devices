@@ -17,6 +17,7 @@ from typeguard import typechecked
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
+from ophyd_devices.utils.bec_signals import AsyncSignal
 from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
@@ -89,6 +90,7 @@ class SimWaveform(Device):
         compute_readback=True,
         kind=Kind.hinted,
     )
+    data = Cpt(AsyncSignal, name="data", ndim=1)
     # Can be extend or append
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
     slice_size = Cpt(SetableSignal, value=100, dtype=np.int32, kind=Kind.config)
