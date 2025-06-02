@@ -221,7 +221,17 @@ def test_utils_bec_message_signal():
             "source": "BECMessageSignal:bec_message_signal",
             "dtype": "GUIInstructionMessage",
             "shape": [],
-            "signal_metadata": {},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": True,
+                "ndim": 0,
+                "scope": "scan",
+                "role": "main",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("bec_message_signal", 5)],
+                "signal_metadata": None,
+            },
         }
     }
     # Put works with Message
@@ -246,20 +256,28 @@ def test_utils_bec_message_signal():
 def test_utils_dynamic_signal():
     """Test DynamicSignal"""
     dev = Device(name="device")
-    signal = DynamicSignal(
-        name="dynamic_signal", signal_names=["sig1", "sig2"], value=None, parent=dev
-    )
+    signal = DynamicSignal(name="dynamic_signal", signals=["sig1", "sig2"], value=None, parent=dev)
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DeviceMessage
     assert signal._readback is None
     assert signal.name == "dynamic_signal"
-    assert signal.signal_names == ["sig1", "sig2"]
+    assert signal.signals == [("sig1", 1), ("sig2", 1)]
     assert signal.describe() == {
         "dynamic_signal": {
             "source": "BECMessageSignal:dynamic_signal",
             "dtype": "DeviceMessage",
             "shape": [],
-            "signal_metadata": {},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": True,
+                "ndim": 1,
+                "scope": "scan",
+                "role": "main",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("sig1", 1), ("sig2", 1)],
+                "signal_metadata": None,
+            },
         }
     }
 
@@ -295,9 +313,20 @@ def test_utils_file_event_signal():
             "source": "BECMessageSignal:file_event_signal",
             "dtype": "FileMessage",
             "shape": [],
-            "signal_metadata": {},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": False,
+                "ndim": 0,
+                "scope": "scan",
+                "role": "file event",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("file_event_signal", 5)],
+                "signal_metadata": None,
+            },
         }
     }
+
     # Test put works with FileMessage
     msg_dict = {"file_path": "/path/to/another/file.txt", "done": False, "successful": True}
     msg = messages.FileMessage(**msg_dict)
@@ -325,7 +354,7 @@ def test_utils_preview_1d_signal():
     """Test Preview1DSignal"""
     dev = Device(name="device")
     signal = PreviewSignal(name="preview_1d_signal", ndim=1, value=None, parent=dev)
-    assert signal.signal_metadata.get("ndim") == 1
+    assert signal.ndim == 1
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DevicePreviewMessage
     assert signal._readback is None
@@ -335,7 +364,17 @@ def test_utils_preview_1d_signal():
             "source": "BECMessageSignal:preview_1d_signal",
             "dtype": "DevicePreviewMessage",
             "shape": [],
-            "signal_metadata": {"ndim": 1, "num_rotation_90": 0, "transpose": False},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": False,
+                "ndim": 1,
+                "scope": "scan",
+                "role": "preview",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("preview_1d_signal", 5)],
+                "signal_metadata": {"num_rotation_90": 0, "transpose": False},
+            },
         }
     }
     # Put works with Message
@@ -377,7 +416,7 @@ def test_utils_preview_2d_signal():
     """Test Preview2DSignal"""
     dev = Device(name="device")
     signal = PreviewSignal(name="preview_2d_signal", ndim=2, value=None, parent=dev)
-    assert signal.signal_metadata.get("ndim") == 2
+    assert signal.ndim == 2
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DevicePreviewMessage
     assert signal._readback is None
@@ -387,7 +426,17 @@ def test_utils_preview_2d_signal():
             "source": "BECMessageSignal:preview_2d_signal",
             "dtype": "DevicePreviewMessage",
             "shape": [],
-            "signal_metadata": {"ndim": 2, "num_rotation_90": 0, "transpose": False},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": False,
+                "ndim": 2,
+                "scope": "scan",
+                "role": "preview",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("preview_2d_signal", 5)],
+                "signal_metadata": {"num_rotation_90": 0, "transpose": False},
+            },
         }
     }
     # Put works with Message
@@ -442,7 +491,17 @@ def test_utils_progress_signal():
             "source": "BECMessageSignal:progress_signal",
             "dtype": "ProgressMessage",
             "shape": [],
-            "signal_metadata": {},
+            "signal_info": {
+                "data_type": "raw",
+                "saved": False,
+                "ndim": 0,
+                "scope": "scan",
+                "role": "progress",
+                "enabled": True,
+                "rpc_access": False,
+                "signals": [("progress_signal", 5)],
+                "signal_metadata": None,
+            },
         }
     }
     # Put works with Message

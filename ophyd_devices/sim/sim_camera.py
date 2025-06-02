@@ -39,7 +39,7 @@ class SimCameraControl(Device):
         compute_readback=True,
         kind=Kind.omitted,
     )
-    preview = Cpt(PreviewSignal, name="preview", ndim=2)
+    preview = Cpt(PreviewSignal, name="preview", ndim=2, num_rotation_90=0)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
     def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
