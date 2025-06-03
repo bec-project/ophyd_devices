@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.20.0 (2025-06-03)
+
+### Continuous Integration
+
+- Add issue sync to bec project
+  ([`e47472d`](https://github.com/bec-project/ophyd_devices/commit/e47472d8861c6e7242a416235280da522532d036))
+
+### Features
+
+- Restructure bec signals
+  ([`585fbbb`](https://github.com/bec-project/ophyd_devices/commit/585fbbbb71deddf7921ef0932236699ef08316e6))
+
+- **waveform**: Add bec signal to waveform simulation
+  ([`b02485c`](https://github.com/bec-project/ophyd_devices/commit/b02485c4611a3a2e4cb7cb3e80142f2be907a7be))
+
+
 ## v1.19.0 (2025-05-30)
 
 ### Bug Fixes
