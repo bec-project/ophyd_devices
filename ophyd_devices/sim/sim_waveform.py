@@ -90,7 +90,7 @@ class SimWaveform(Device):
         compute_readback=True,
         kind=Kind.hinted,
     )
-    data = Cpt(AsyncSignal, name="data", ndim=1)
+    data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
     # Can be extend or append
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
     slice_size = Cpt(SetableSignal, value=100, dtype=np.int32, kind=Kind.config)
@@ -132,13 +132,13 @@ class SimWaveform(Device):
         """Delay updates in-between slices specified by waveform_shape and slice_size."""
         return self._delay_slice_update
 
-    @typechecked
     @delay_slice_update.setter
+    @typechecked
     def delay_slice_update(self, value: bool) -> None:
         self._delay_slice_update = value
 
     @property
-    def registered_proxies(self) -> None:
+    def registered_proxies(self) -> dict[str, Any]:
         """Dictionary of registered signal_names and proxies."""
         return self._registered_proxies
 
@@ -229,6 +229,11 @@ class SimWaveform(Device):
             signals={self.waveform.name: {"value": value, "timestamp": time.time()}},
             metadata=metadata,
         )
+
+        self.data.put(
+            {self.data.name: {"value": value, "timestamp": time.time()}}, metadata=metadata
+        )
+
         # Send the message to BEC
         self.connector.xadd(
             MessageEndpoints.device_async_readback(
