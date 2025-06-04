@@ -13,6 +13,7 @@ from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import SetableSignal
 from ophyd_devices.utils.bec_signals import (
+    AsyncSignal,
     DynamicSignal,
     FileEventSignal,
     PreviewSignal,
@@ -331,6 +332,7 @@ class SimCameraWithPSIComponents(SimCamera):
     dynamic_signal = Cpt(
         DynamicSignal, doc="Dynamic signals", signals=["dyn_signal1", "dyn_signal2"]
     )
+    async_signal = Cpt(AsyncSignal, name="async_signal", ndim=1, doc="Async signal", max_size=1000)
     # TODO Handling of AsyncComponents is postponed, issue #104 is created
 
     # Define signals for the async components
