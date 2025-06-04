@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.21.0 (2025-06-04)
+
+### Bug Fixes
+
+- **bec_signals**: Fix validation of async signals
+  ([`b76acfe`](https://github.com/bec-project/ophyd_devices/commit/b76acfebb46398c398ec41786f8a38b7544e4aba))
+
+### Features
+
+- Add async signal to test device
+  ([`0ed4b8d`](https://github.com/bec-project/ophyd_devices/commit/0ed4b8dea13ed26441c83d074df1eca79f34ac7c))
+
+
 ## v1.20.0 (2025-06-03)
 
 ### Continuous Integration
