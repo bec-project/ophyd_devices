@@ -282,7 +282,7 @@ def test_utils_dynamic_signal():
     }
 
     # Put works with Message
-    msg_dict = {"sig1": {"value": 1}, "sig2": {"value": 2}}
+    msg_dict = {"dynamic_signal_sig1": {"value": 1}, "dynamic_signal_sig2": {"value": 2}}
     msg = messages.DeviceMessage(signals=msg_dict)
     signal.put(msg)
     reading = signal.read()

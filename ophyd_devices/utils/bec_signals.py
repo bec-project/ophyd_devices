@@ -695,7 +695,13 @@ class DynamicSignal(BECMessageSignal):
 
     def _check_signals(self, msg: messages.DeviceMessage) -> None:
         """Check if all signals are valid."""
-        available_signals = [name for name, _ in self.signals]
+        if len(self.signals) == 1:
+            if self.name not in msg.signals:
+                raise ValueError(
+                    f"Signal {self.name} not found in message {list(msg.signals.keys())}"
+                )
+            return
+        available_signals = [f"{self.name}_{name}" for name, _ in self.signals]
         if self.strict_signal_validation:
             if set(msg.signals.keys()) != set(available_signals):
                 raise ValueError(
@@ -744,6 +750,7 @@ class AsyncSignal(DynamicSignal):
         *,
         name: str,
         ndim: Literal[0, 1, 2],
+        max_size: int,
         value: messages.DeviceMessage | dict | None = None,
         async_update: dict | None = None,
         **kwargs,
@@ -753,7 +760,10 @@ class AsyncSignal(DynamicSignal):
 
         Args:
             name (str): The name of the signal.
+            ndim (Literal[0, 1, 2]): The number of dimensions of the signal(s).
+            max_size (int): The maximum size of the signal buffer.
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
+            async_update (dict | None): Additional metadata for asynchronous updates. Defaults to None.
         """
         kwargs.pop("kind", None)  # Ignore kind if specified
         super().__init__(
@@ -766,5 +776,6 @@ class AsyncSignal(DynamicSignal):
             value=value,
             bec_message_type=messages.DeviceMessage,
             async_update=async_update,
+            signal_metadata={"max_size": max_size},
             **kwargs,
         )
