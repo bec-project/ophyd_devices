@@ -89,6 +89,15 @@ def test_on_stage_hook(device):
         mock_on_stage.assert_called_once()
 
 
+def test_on_destroy_hook(device):
+    """Test on destroy hook"""
+    assert device.destroyed is False
+    with mock.patch.object(device, "on_destroy") as mock_on_destroy:
+        device.destroy()
+        mock_on_destroy.assert_called_once()
+        assert device.destroyed is True
+
+
 def test_on_unstage_hook(device):
     """Test user method hooks"""
     with mock.patch.object(device, "on_unstage") as mock_on_unstage:
