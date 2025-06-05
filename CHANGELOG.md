@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.21.1 (2025-06-05)
+
+### Bug Fixes
+
+- **psi-device-base**: Add on_destroy hook to psi-device-base
+  ([`b328f06`](https://github.com/bec-project/ophyd_devices/commit/b328f064f2aa860e5a96a3c1a94a6bf43f80e2bf))
+
+### Testing
+
+- Add ttest for on_destroy hook
+  ([`b4316a0`](https://github.com/bec-project/ophyd_devices/commit/b4316a07de9267c64964e7d7ea602e5d56e03bdf))
+
+
 ## v1.21.0 (2025-06-04)
 
 ### Bug Fixes
