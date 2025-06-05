@@ -156,6 +156,11 @@ class PSIDeviceBase(Device):
         self.stopped = True  # Set stopped flag to True, in case a custom stop method listens to stopped property
         super().stop(success=success)
 
+    def destroy(self):
+        """Destroy the device."""
+        self.on_destroy()  # Call the on_destroy method
+        return super().destroy()
+
     ########################################
     # Utility Method to wait for signals   #
     ########################################
@@ -234,3 +239,6 @@ class PSIDeviceBase(Device):
 
     def on_stop(self) -> None:
         """Called when the device is stopped."""
+
+    def on_destroy(self) -> None:
+        """Called when the device is destroyed. Cleanup resources here."""
