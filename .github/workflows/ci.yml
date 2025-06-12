@@ -42,3 +42,11 @@ jobs:
     with:
       BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
       OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || github.head_ref || github.sha}}
+
+  child-repos:
+    needs: [check_pr_status, formatter]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: ./.github/workflows/child_repos.yml
+    with:
+      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || github.head_ref || github.sha}}
