@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.2 (2025-06-13)
+
+### Bug Fixes
+
+- Restrict pyepics version until ophyd is fixed
+  ([`4dedd43`](https://github.com/bec-project/ophyd_devices/commit/4dedd431d5a288f00694e90449af8df1a1520fde))
+
+
 ## v1.21.1 (2025-06-05)
 
 ### Bug Fixes
