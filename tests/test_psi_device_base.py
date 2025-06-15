@@ -1,5 +1,7 @@
 """Module for testing the PSIDeviceBase class."""
 
+import threading
+import time
 from unittest import mock
 
 import pytest
@@ -146,3 +148,31 @@ def test_on_stop_hook(device):
     with mock.patch.object(device, "on_stop") as mock_on_stop:
         device.stop()
         mock_on_stop.assert_called_once()
+
+
+def test_stoppable_status(device):
+    """Test stoppable status"""
+    status = StatusBase()
+    device.cancel_on_stop(status)
+    device.stop()
+    assert status.done is True
+    assert status.success is False
+
+
+def test_stoppable_status_not_done(device):
+    """Test stoppable status not done"""
+
+    def stop_after_delay():
+        time.sleep(5)
+        device.stop()
+
+    status = StatusBase()
+    device.cancel_on_stop(status)
+    thread = threading.Thread(target=stop_after_delay)
+    thread.start()
+
+    with pytest.raises(DeviceStoppedError, match="Device device has been stopped"):
+        status.wait()
+
+    assert status.done is True
+    assert status.success is False
