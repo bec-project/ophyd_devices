@@ -155,7 +155,7 @@ class TaskHandler:
             task_status.set_finished()
         finally:
             with self._lock:
-                self._tasks.pop(task_status.task_id)
+                self._tasks.pop(task_status.task_id, None)
 
     def kill_task(self, task_status: TaskStatus) -> None:
         """Kill the thread
@@ -171,7 +171,7 @@ class TaskHandler:
             res = set_async_exc(ident, exc)
             if res == 0:
                 raise ValueError("Invalid thread ID")
-            elif res > 1:
+            if res > 1:
                 set_async_exc(ident, None)
                 logger.warning(f"Exception raise while kille Thread {ident}; return value: {res}")
         except Exception as e:  # pylint: disable=broad-except
