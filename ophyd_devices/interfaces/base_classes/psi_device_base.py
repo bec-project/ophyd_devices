@@ -58,6 +58,7 @@ class PSIDeviceBase(Device):
         # Make sure device_manager is not passed to super().__init__ if not specified
         # This is to avoid issues with ophyd.OphydObject.__init__ when the parent is ophyd.Device
         # and the device_manager is passed to it. This will cause a TypeError.
+        self.device_manager = device_manager
         sig = inspect.signature(super().__init__)
         if "device_manager" in sig.parameters:
             super().__init__(device_manager=device_manager, prefix=prefix, name=name, **kwargs)
