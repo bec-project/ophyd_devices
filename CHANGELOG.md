@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.22.0 (2025-06-16)
+
+### Bug Fixes
+
+- **device base**: Shut down task handler on destroy
+  ([`3a086ee`](https://github.com/bec-project/ophyd_devices/commit/3a086eee5176ccf5a1b737ceb2a873ca36503f58))
+
+### Features
+
+- **psi device base**: Stoppable status objects
+  ([`cb7f7ba`](https://github.com/bec-project/ophyd_devices/commit/cb7f7ba932b372b60827b24f4e1e0234cd64026b))
+
+
 ## v1.21.2 (2025-06-13)
 
 ### Bug Fixes
