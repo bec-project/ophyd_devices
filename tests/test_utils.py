@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pytest
 from bec_lib import messages
-from ophyd import Device
+from ophyd import Device, Signal
 
 from ophyd_devices.utils.bec_signals import (
     BECMessageSignal,
@@ -14,7 +14,9 @@ from ophyd_devices.utils.bec_signals import (
     ProgressSignal,
 )
 from ophyd_devices.utils.psi_device_base_utils import (
+    CompareStatus,
     FileHandler,
+    TargetStatus,
     TaskHandler,
     TaskKilledError,
     TaskState,
@@ -525,3 +527,44 @@ def test_utils_progress_signal():
     # Put fails with wrong dict
     with pytest.raises(ValueError):
         signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_target_status():
+    """Test TargetStatus"""
+    sig = Signal(name="test_signal", value=0)
+    status = TargetStatus(signal=sig, values=[1, 2, 3])
+    assert status.done is False
+    sig.put(1)
+    assert status.done is False
+    sig.put(2)
+    assert status.done is False
+    sig.put(3)
+    assert status.done is True
+
+
+def test_utils_compare_status():
+    """Test CompareStatus"""
+    sig = Signal(name="test_signal", value=0)
+    status = CompareStatus(signal=sig, value=5, operation="==")
+    assert status.done is False
+    sig.put(1)
+    assert status.done is False
+    sig.put(5)
+    assert status.done is True
+
+    sig.put(5)
+    # Test with different operations
+    status = CompareStatus(signal=sig, value=5, operation="!=")
+    assert status.done is False
+    sig.put(5)
+    assert status.done is False
+    sig.put(6)
+    assert status.done is True
+
+    sig.put(0)
+    status = CompareStatus(signal=sig, value=5, operation=">")
+    assert status.done is False
+    sig.put(5)
+    assert status.done is False
+    sig.put(10)
+    assert status.done is True
