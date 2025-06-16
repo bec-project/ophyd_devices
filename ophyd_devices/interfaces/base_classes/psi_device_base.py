@@ -164,6 +164,7 @@ class PSIDeviceBase(Device):
         """Destroy the device."""
         self.on_destroy()  # Call the on_destroy method
         self._stop_stoppable_status_objects()
+        self.task_handler.shutdown()
         return super().destroy()
 
     ########################################
