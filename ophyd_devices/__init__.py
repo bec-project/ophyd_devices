@@ -17,6 +17,7 @@ from .sim.sim_waveform import SimWaveform
 
 SynSignalRO = ReadOnlySignal
 from .devices.softpositioner import SoftPositioner
+from .interfaces.base_classes.psi_device_base import PSIDeviceBase
 from .utils.bec_device_base import BECDeviceBase
 from .utils.bec_signals import *
 from .utils.dynamic_pseudo import ComputedSignal
