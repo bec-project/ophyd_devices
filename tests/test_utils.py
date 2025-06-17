@@ -634,3 +634,56 @@ def test_transition_status():
     assert status.done is True
     assert status.success is True
     assert status.exception() is None
+
+
+def test_transition_status_strings():
+    """Test TransitionStatus with string values"""
+    sig = Signal(name="test_signal", value="a")
+
+    # Test strict=True, without intermediate transitions
+    sig.put("a")
+    status = TransitionStatus(signal=sig, transitions=["b", "c", "d"], strict=True)
+
+    assert status.done is False
+    sig.put("b")
+    assert status.done is False
+    sig.put("c")
+    assert status.done is False
+    sig.put("d")
+    assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
+
+    # Test strict=True with additional intermediate transition
+
+    sig.put("a")
+    status = TransitionStatus(signal=sig, transitions=["b", "c", "d"], strict=True)
+
+    assert status.done is False
+    sig.put("b")  # first transition
+    sig.put("e")
+    sig.put("b")
+    sig.put("c")  # transision
+    assert status.done is False
+    sig.put("f")
+    sig.put("b")
+    sig.put("c")
+    sig.put("d")  # transision
+    assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
+
+    # Test strict=False, with intermediate transitions
+    sig.put("a")
+    status = TransitionStatus(signal=sig, transitions=["b", "c", "d"], strict=False)
+
+    assert status.done is False
+    sig.put("b")  # entering first transition
+    sig.put("d")
+    sig.put("c")  # transision
+    assert status.done is False
+    sig.put("e")
+    sig.put("c")
+    sig.put("d")  # last transition
+    assert status.done is True
+    assert status.success is True
