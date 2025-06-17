@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.22.1 (2025-06-17)
+
+### Bug Fixes
+
+- **dxp**: Fix multiple signals marked as trigger_signals for dxp Falcon, but ophyd only supports 1
+  trigger signal
+  ([`fb58ed5`](https://github.com/bec-project/ophyd_devices/commit/fb58ed50d51c10d2af8ce52139e9630af6cb611b))
+
+### Testing
+
+- **xmap**: Add test for xmap triggering
+  ([`000b32d`](https://github.com/bec-project/ophyd_devices/commit/000b32d6a95042d2d8f0a83f66da38d99929380f))
+
+
 ## v1.22.0 (2025-06-16)
 
 ### Bug Fixes
