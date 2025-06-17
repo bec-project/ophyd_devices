@@ -16,11 +16,11 @@ from ophyd_devices.utils.bec_signals import (
 from ophyd_devices.utils.psi_device_base_utils import (
     CompareStatus,
     FileHandler,
-    TargetStatus,
     TaskHandler,
     TaskKilledError,
     TaskState,
     TaskStatus,
+    TransitionStatus,
 )
 
 # pylint: disable=protected-access
@@ -529,20 +529,7 @@ def test_utils_progress_signal():
         signal.put({"wrong_key": "wrong_value"})
 
 
-def test_utils_target_status():
-    """Test TargetStatus"""
-    sig = Signal(name="test_signal", value=0)
-    status = TargetStatus(signal=sig, values=[1, 2, 3])
-    assert status.done is False
-    sig.put(1)
-    assert status.done is False
-    sig.put(2)
-    assert status.done is False
-    sig.put(3)
-    assert status.done is True
-
-
-def test_utils_compare_status():
+def test_utils_compare_status_number():
     """Test CompareStatus"""
     sig = Signal(name="test_signal", value=0)
     status = CompareStatus(signal=sig, value=5, operation="==")
@@ -560,6 +547,8 @@ def test_utils_compare_status():
     assert status.done is False
     sig.put(6)
     assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
 
     sig.put(0)
     status = CompareStatus(signal=sig, value=5, operation=">")
@@ -568,3 +557,80 @@ def test_utils_compare_status():
     assert status.done is False
     sig.put(10)
     assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
+
+
+def test_compare_status_string():
+    """Test CompareStatus with string values"""
+    sig = Signal(name="test_signal", value="test")
+    status = CompareStatus(signal=sig, value="test", operation="==")
+    assert status.done is False
+    sig.put("test1")
+    assert status.done is False
+    sig.put("test")
+    assert status.done is True
+
+    sig.put("test")
+    # Test with different operations
+    status = CompareStatus(signal=sig, value="test", operation="!=")
+    assert status.done is False
+    sig.put("test")
+    assert status.done is False
+    sig.put("test1")
+    assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
+
+    # Test with greater than operation
+    # Raises ValueError for strings
+    sig.put("a")
+    with pytest.raises(ValueError):
+        status = CompareStatus(signal=sig, value="b", operation=">")
+
+
+def test_transition_status():
+    """Test TransitionStatus"""
+    sig = Signal(name="test_signal", value=0)
+
+    # Test strict=True, without intermediate transitions
+    sig.put(0)
+    status = TransitionStatus(signal=sig, transitions=[1, 2, 3], strict=True)
+
+    assert status.done is False
+    sig.put(1)
+    assert status.done is False
+    sig.put(2)
+    assert status.done is False
+    sig.put(3)
+    assert status.done is True
+    assert status.success is True
+    assert status.exception() is None
+
+    # Test strict=True, ra
+    sig.put(1)
+    status = TransitionStatus(signal=sig, transitions=[1, 2, 3], strict=True, raise_states=[4])
+    assert status.done is False
+    sig.put(4)
+    with pytest.raises(ValueError):
+        status.wait()
+
+    assert status.done is True
+    assert status.success is False
+    assert isinstance(status.exception(), ValueError)
+
+    # Test strict=False, with intermediate transitions
+    sig.put(0)
+    status = TransitionStatus(signal=sig, transitions=[1, 2, 3], strict=False)
+
+    assert status.done is False
+    sig.put(1)  # entering first transition
+    sig.put(3)
+    sig.put(2)  # transision
+    assert status.done is False
+    sig.put(4)
+    sig.put(2)
+    sig.put(3)  # last transition
+    assert status.done is True
+    assert status.success is True
+    assert status.exception() is None

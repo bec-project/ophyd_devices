@@ -20,5 +20,5 @@ from .devices.softpositioner import SoftPositioner
 from .utils.bec_device_base import BECDeviceBase
 from .utils.bec_signals import *
 from .utils.dynamic_pseudo import ComputedSignal
-from .utils.psi_device_base_utils import CompareStatus, TargetStatus
+from .utils.psi_device_base_utils import *
 from .utils.static_device_test import launch
