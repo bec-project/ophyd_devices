@@ -99,6 +99,18 @@ def test_falcon(mock_falcon):
     ]
 
 
+def test_falcon_trigger(mock_falcon):
+    """Test the Falcon device trigger method."""
+    mock_falcon: TestFalcon
+    mock_falcon.erase_start.put(0)
+    assert mock_falcon.erase_start.get() == 0
+    status = mock_falcon.trigger()
+    # Tagged trigger value, should be set to 1 when trigger is called
+    assert mock_falcon.erase_start.get() == 1
+    assert status.success is True
+    assert status.done is True
+
+
 def test_xmap(mock_xmap):
     """Test the xMAP device."""
     # Test the default values
