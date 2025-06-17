@@ -158,7 +158,7 @@ class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
     # Acquisition control
     erase_all = Cpt(EpicsSignal, "EraseAll")
     erase_start = Cpt(EpicsSignal, "EraseStart", put_complete=True, trigger_value=1)
-    start_all = Cpt(EpicsSignal, "StartAll", put_complete=True, trigger_value=1)
+    start_all = Cpt(EpicsSignal, "StartAll", put_complete=True)
     stop_all = Cpt(EpicsSignal, "StopAll")
 
     # Status
@@ -231,7 +231,7 @@ class EpicsDXPMultiElementSystem(_EpicsDXPMultiElementSystem):
     # Override some action signals, so calling `set`` method
     # returns a waitable Status object. Otherwise the Status object is immediately done.
     erase_start = Cpt(EpicsSignal, "EraseStart", put_complete=True, trigger_value=1)
-    start_all = Cpt(EpicsSignal, "StartAll", put_complete=True, trigger_value=1)
+    start_all = Cpt(EpicsSignal, "StartAll", put_complete=True)
 
     # mca.EpicsDXPMultiElementSystem maps the EPICS records under wrong names, i.e.
     # copy_adcp_ercent_rule, copy_roic_hannel and copy_roie_nergy
