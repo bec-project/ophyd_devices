@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.23.0 (2025-06-17)
+
+### Features
+
+- Add custom status, CompareStatus and TargetStatus for easier signal value comparison
+  ([`d092b8b`](https://github.com/bec-project/ophyd_devices/commit/d092b8b51afb8b8f4aad5f98e8b6372bed546cce))
+
+### Refactoring
+
+- Refactored compare and transition state
+  ([`20eb5dd`](https://github.com/bec-project/ophyd_devices/commit/20eb5dd83fd5e6774e035f89cb9fad0f6aa368c6))
+
+- **psi-signals**: Import bec signals on top level of ophyd_devices
+  ([`21251c3`](https://github.com/bec-project/ophyd_devices/commit/21251c3afed3233ba0c96486577a6b853cd16de3))
+
+- **transition-status**: Update docstrings, add test for string transition status
+  ([`7e92b6c`](https://github.com/bec-project/ophyd_devices/commit/7e92b6c63e18046e690363206a1851428e8b547a))
+
+
 ## v1.22.1 (2025-06-17)
 
 ### Bug Fixes
