@@ -48,19 +48,19 @@ OP_MAP = {
 
 class CompareStatus(SubscriptionStatus):
     """
-    Status class to compare a value from a device signal with a target value.
-    The value can be a float, int, or string. If the value is a string,
-    the operation must be either '==' or '!='. For numeric (float or int) values,
-    the operation can be any of the standard comparison operators.
+    Status class to compare a signal value against a given value.
+    The comparison is done using the specified operation, which can be one of
+    '==', '!=', '<', '<=', '>', '>='. If the value is a string, only '==' and '!=' are allowed.
+    The status is finished when the comparison is true.
 
     Args:
         signal: The device signal to compare.
-        value: The target value to compare against.
-        operation: The comparison operation to use. Defaults to '=='.
+        value: The value to compare against.
+        operation: The operation to use for comparison. Defaults to '=='.
         event_type: The type of event to trigger on comparison. Defaults to None (default sub).
         timeout: The timeout for the status. Defaults to None (indefinite).
         settle_time: The time to wait for the signal to settle before comparison. Defaults to 0.
-        run: Whether to run the status immediately or not. Defaults to True.
+        run: Whether to run the status callback on creation or not. Defaults to True.
     """
 
     def __init__(
@@ -102,25 +102,21 @@ class CompareStatus(SubscriptionStatus):
 
 class TransitionStatus(SubscriptionStatus):
     """
-    Status class to compare a list of transitions.
-    The transitions can be a list of float, int, or string values.
-    The transitions are checked in order, and the status is finished when all transitions
-    have been matched in sequence. The keyword argument `strict` determines whether
-    the transitions must match exactly in order, or if intermediate transitions are allowed.
-    For the first value, the strict check is not applied, meaning that the sequence starts once
-    the first transition is matched.
+    Status class to monitor transitions of a signal value through a list of specified transitions.
+    The status is finished when all transitions have been observed in order. The keyword argument
+    `strict` determines whether the transitions must occur in strict order or not.
+    If `raise_states` is provided, the status will raise an exception if the signal value matches
+    any of the values in `raise_states`.
 
     Args:
-        signal: The device signal to compare.
-        transitions: A list of transitions to compare against.
-        strict: Whether to enforce strict matching of transitions. Defaults to True.
-        run: Whether to run the status immediately or not. Defaults to True.
-        event_type: The type of event to trigger on comparison. Defaults to None (default sub).
+        signal: The device signal to monitor.
+        transitions: A list of values to transition through.
+        strict: Whether the transitions must occur in strict order. Defaults to True.
+        raise_states: A list of values that will raise an exception if encountered. Defaults to None.
+        run: Whether to run the status callback on creation or not. Defaults to True.
+        event_type: The type of event to trigger on transition. Defaults to None (default sub).
         timeout: The timeout for the status. Defaults to None (indefinite).
         settle_time: The time to wait for the signal to settle before comparison. Defaults to 0.
-
-    Raises:
-        ValueError: If the transitions do not match the expected sequence. and strict is True.
     """
 
     def __init__(
