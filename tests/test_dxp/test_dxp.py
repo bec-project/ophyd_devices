@@ -130,3 +130,15 @@ def test_mercury(mock_mercury):
     assert isinstance(mock_mercury, EpicsDXPMultiElementSystem)
     # assert isinstance(mock_mercury, EpicsDXPMapping) # Not sure why this fails
     assert isinstance(mock_mercury, ADBase)
+
+
+def test_xmap_trigger(mock_xmap):
+    """Test the xMAP device trigger method."""
+    mock_xmap: xMAP
+    mock_xmap.erase_start.put(0)
+    assert mock_xmap.erase_start.get() == 0
+    status = mock_xmap.trigger()
+    # Tagged trigger value, should be set to 1 when trigger is called
+    assert mock_xmap.erase_start.get() == 1
+    assert status.success is True
+    assert status.done is True
