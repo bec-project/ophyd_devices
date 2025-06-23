@@ -2,9 +2,9 @@
 Module for undulator control
 """
 
+from ophyd import EpicsSignal, EpicsSignalRO, PVPositioner
 from ophyd.device import Component as Cpt
 from ophyd.status import MoveStatus
-from ophyd import EpicsSignal, EpicsSignalRO, PVPositioner
 
 
 class UndulatorGap(PVPositioner):
