@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.24.0 (2025-06-24)
+
+### Bug Fixes
+
+- Formatter
+  ([`b02c2d2`](https://github.com/bec-project/ophyd_devices/commit/b02c2d243ea50ba2fde9ca53fdb591aa1d457086))
+
+### Features
+
+- Undulator gap control
+  ([`3405e04`](https://github.com/bec-project/ophyd_devices/commit/3405e043b1bc21406c69b0dbb4eddc3db7d3bea3))
+
+### Testing
+
+- **undulator**: Add test for deadband logic
+  ([`0c3c72f`](https://github.com/bec-project/ophyd_devices/commit/0c3c72fb4bf0e450135c5eddaca9a6b0203d25c7))
+
+
 ## v1.23.0 (2025-06-17)
 
 ### Features
