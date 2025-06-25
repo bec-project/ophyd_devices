@@ -229,13 +229,20 @@ class MockPV:
     ):
         """MOCK PV, put function"""
         self.mock_data = value
-        if callback is not None:
-            callback()
+        for cb, kw in self.callbacks.values():
+            if callable(cb):
+                cb(value, **kw)
 
     # pylint: disable=unused-argument
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
         """Add callback"""
-        return mock.MagicMock()
+        if index is None:
+            index = len(self.callbacks)
+        if index in self.callbacks:
+            index = len(self.callbacks)
+        if callback is not None:
+            self.callbacks[index] = (callback, kw)
+        return index
 
     # pylint: disable=unused-argument
     def get_with_metadata(

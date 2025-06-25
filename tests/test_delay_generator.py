@@ -73,3 +73,32 @@ def test_check_if_ddg_okay(mock_ddg):
     mock_ddg.status._read_pv.mock_data = "STATUS NOT OK"
     with pytest.raises(DelayGeneratorError):
         mock_ddg.check_if_ddg_okay()
+
+
+def test_subscribe_signal(mock_ddg):
+    """Test that MockPV allows subscription to signals."""
+    arg_buffer = []
+    kwargs_buffer = []
+
+    def cb(*args, **kwargs):
+        arg_buffer.append(args)
+        kwargs_buffer.append(kwargs)
+
+    mock_ddg: DelayGenerator
+    mock_ddg.burstMode.put(0)
+    mock_ddg.burstMode._read_changed(0)
+    assert mock_ddg.burstMode.get() == 0
+    mock_ddg.burstMode.subscribe(callback=cb, run=False)
+
+    assert len(arg_buffer) == 0
+    assert len(kwargs_buffer) == 0
+    mock_ddg.burstMode.put(1)
+    assert len(arg_buffer) == 1
+    kwargs = kwargs_buffer[0]
+    assert len(kwargs_buffer) == 1
+    assert kwargs["old_value"] == 0
+    assert kwargs["value"] == 1
+    assert kwargs["timestamp"] == mock.ANY
+    assert kwargs["sub_type"] == "value"
+    assert kwargs["obj"].name == "ddg_burstMode"
+    assert isinstance(kwargs["obj"], ophyd.EpicsSignal)
