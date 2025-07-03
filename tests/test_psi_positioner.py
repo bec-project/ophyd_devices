@@ -51,8 +51,8 @@ def test_override_suffixes_warns_on_nonimplemented(ophyd_logger):
     )
 
 
-@pytest.fixture(scope="function")
-def mock_psi_positioner() -> PSISimplePositioner:
+@pytest.fixture()
+def mock_psi_positioner():
     name = "positioner"
     prefix = "SIM:MOTOR"
     with patch.object(ophyd, "cl") as mock_cl:
@@ -117,3 +117,46 @@ def test_psi_positioner_soft_limits():
     assert isinstance(device.high_limit_travel, Signal)
     assert device.low_limit_travel.get() == -1.5
     assert device.high_limit_travel.get() == 1.5
+
+
+class ReadbackPositioner(PSISimplePositionerBase):
+    user_readback = Cpt(FakeEpicsSignalRO, "R")
+    user_setpoint = Cpt(FakeEpicsSignal, "S")
+
+
+@pytest.fixture()
+def mock_readback_positioner():
+    name = "positioner"
+    prefix = "SIM:MOTOR"
+    with patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        dev = ReadbackPositioner(name=name, prefix=prefix, deadband=0.0013)
+        patch_dual_pvs(dev)
+        dev._set_position(0)
+        yield dev
+
+
+@pytest.mark.parametrize(
+    "setpoint,move_positions,completes",
+    [
+        (5, [2, 4, 5], True),
+        (-5, [-2, -4, -4.9986], False),
+        (-5, [-2, -4, -4.9988], True),
+        (2, [2], True),
+        (2, [0.2, 0.3, 0.4, 0.5], False),
+    ],
+)
+def test_done_move_based_on_readback(mock_readback_positioner, setpoint, move_positions, completes):
+    mock_readback_positioner.wait_for_connection()
+    st = mock_readback_positioner.move(setpoint, wait=False)
+    final_pos = move_positions.pop()
+    assert mock_readback_positioner.user_setpoint.get() == setpoint
+    assert not st.done
+
+    for pos in move_positions:
+        mock_readback_positioner.user_readback.sim_put(pos)
+        assert not st.done
+
+    mock_readback_positioner.user_readback.sim_put(final_pos)
+    assert st.done == completes
