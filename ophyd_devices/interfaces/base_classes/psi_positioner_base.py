@@ -5,7 +5,7 @@ from ophyd import Component as Cpt
 from ophyd import Device
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
-from ophyd.signal import EpicsSignalBase
+from ophyd.signal import EpicsSignalBase, Signal
 from ophyd.status import MoveStatus
 from ophyd.status import wait as status_wait
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
@@ -290,8 +290,8 @@ class PSIPositionerBase(PSISimplePositionerBase):
     motor_is_moving = _OPTIONAL_SIGNAL
     high_limit_switch = _OPTIONAL_SIGNAL
     low_limit_switch = _OPTIONAL_SIGNAL
-    high_limit_travel = _OPTIONAL_SIGNAL
-    low_limit_travel = _OPTIONAL_SIGNAL
+    high_limit_travel: Signal | _SignalSentinel = _OPTIONAL_SIGNAL
+    low_limit_travel: Signal | _SignalSentinel = _OPTIONAL_SIGNAL
     direction_of_travel = _OPTIONAL_SIGNAL
 
     # commands
@@ -323,3 +323,11 @@ class PSIPositionerBase(PSISimplePositionerBase):
             child_name_separator=child_name_separator,
             **kwargs,
         )
+        if self.limits is not None:
+            for sig, lim in (
+                (self.low_limit_travel, self.limits[0]),
+                (self.high_limit_travel, self.limits[1]),
+            ):
+                # If the limit signals are defined as soft signals, propagate the limits there
+                if sig is not _OPTIONAL_SIGNAL and type(sig) is Signal:
+                    sig.put(lim)
