@@ -273,6 +273,12 @@ class ASItpxCam(CamBase):
             cam = Cpt(ASItpxCam, 'cam1:')
 
     """
+    tdc1_enable = ADCpt(EpicsSignalWithRBV, "TDC1Enable")
+    tdc1_edge = ADCpt(EpicsSignalWithRBV, "TDC1Edge")
+    tdc1_output = ADCpt(EpicsSignalWithRBV, "TDC1Output")
+    tdc2_enable = ADCpt(EpicsSignalWithRBV, "TDC2Enable")
+    tdc2_edge = ADCpt(EpicsSignalWithRBV, "TDC2Edge")
+    tdc2_output = ADCpt(EpicsSignalWithRBV, "TDC2Output")
 
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
     trigger_polarity = ADCpt(EpicsSignalWithRBV, "TriggerPolarity")
@@ -281,15 +287,15 @@ class ASItpxCam(CamBase):
     trigger_software = ADCpt(EpicsSignal, "TriggerSoftware")
 
     raw_enable = ADCpt(EpicsSignalWithRBV, "RawEnable")
-    raw_file_path = ADCpt(EpicsSignalWithRBV, "RawFilePath")
-    raw_file_template = ADCpt(EpicsSignalWithRBV, "RawFileTemplate")
+    raw_file_path = ADCpt(EpicsSignalWithRBV, "RawFilePath", string=True)
+    raw_file_template = ADCpt(EpicsSignalWithRBV, "RawFileTemplate", string=True)
 
     # pixel mode for the 2D image
     pixel_mode = ADCpt(EpicsSignalWithRBV, "PixelMode")
 
     image_enable = ADCpt(EpicsSignalWithRBV, "ImageEnable")
-    image_file_path = ADCpt(EpicsSignalWithRBV, "ImageFilePath")
-    image_file_template = ADCpt(EpicsSignalWithRBV, "ImageFileTemplate")
+    image_file_path = ADCpt(EpicsSignalWithRBV, "ImageFilePath", string=True)
+    image_file_template = ADCpt(EpicsSignalWithRBV, "ImageFileTemplate", string=True)
 
     preview_enable = ADCpt(EpicsSignalWithRBV, "PreviewEnable")
     preview_period = ADCpt(EpicsSignalWithRBV, "PreviewPeriod")
