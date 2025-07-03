@@ -273,6 +273,7 @@ class ASItpxCam(CamBase):
             cam = Cpt(ASItpxCam, 'cam1:')
 
     """
+
     tdc1_enable = ADCpt(EpicsSignalWithRBV, "TDC1Enable")
     tdc1_edge = ADCpt(EpicsSignalWithRBV, "TDC1Edge")
     tdc1_output = ADCpt(EpicsSignalWithRBV, "TDC1Output")
