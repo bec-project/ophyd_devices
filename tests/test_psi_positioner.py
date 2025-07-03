@@ -4,7 +4,7 @@ from unittest.mock import ANY, MagicMock, patch
 import ophyd
 import pytest
 from ophyd.device import Component as Cpt
-from ophyd.signal import EpicsSignal
+from ophyd.signal import EpicsSignal, Kind, Signal
 from ophyd.sim import FakeEpicsSignal, FakeEpicsSignalRO
 
 from ophyd_devices.devices.simple_positioner import PSISimplePositioner
@@ -31,6 +31,24 @@ def test_cannot_isntantiate_without_required_signals():
 
     dev = PSITestPositionerWithSignal("", name="")
     assert dev.user_setpoint.get() == 0
+
+
+def test_override_suffixes():
+    pos = PSISimplePositioner(
+        name="name",
+        prefix="prefix:",
+        override_suffixes={"user_readback": "RDB", "motor_done_move": "DONE"},
+    )
+    assert pos.user_readback._read_pvname == "prefix:RDB"
+    assert pos.motor_done_move._read_pvname == "prefix:DONE"
+
+
+@patch("ophyd.ophydobj.LoggerAdapter")
+def test_override_suffixes_warns_on_nonimplemented(ophyd_logger):
+    _ = PSISimplePositioner(name="name", prefix="prefix:", override_suffixes={"motor_stop": "STOP"})
+    ophyd_logger().warning.assert_called_with(
+        "<class 'ophyd_devices.devices.simple_positioner.PSISimplePositioner'> does not implement overridden signal motor_stop"
+    )
 
 
 @pytest.fixture(scope="function")
@@ -83,3 +101,19 @@ def test_status_completed_when_req_done_sub_runs(mock_psi_positioner: PSISimpleP
     assert not st.done
     mock_psi_positioner._run_subs(sub_type=mock_psi_positioner._SUB_REQ_DONE)
     assert st.done
+
+
+def test_psi_positioner_soft_limits():
+    class PsiTestPosWSoftLimits(PSIPositionerBase):
+        user_setpoint: EpicsSignal = Cpt(FakeEpicsSignal, ".VAL", limits=True, auto_monitor=True)
+        user_readback = Cpt(FakeEpicsSignalRO, ".RBV", kind="hinted", auto_monitor=True)
+        motor_done_move = Cpt(FakeEpicsSignalRO, ".DMOV", auto_monitor=True)
+
+        low_limit_travel = Cpt(Signal, value=0, kind=Kind.omitted)
+        high_limit_travel = Cpt(Signal, value=0, kind=Kind.omitted)
+
+    device = PsiTestPosWSoftLimits(name="name", prefix="", limits=[-1.5, 1.5])
+    assert isinstance(device.low_limit_travel, Signal)
+    assert isinstance(device.high_limit_travel, Signal)
+    assert device.low_limit_travel.get() == -1.5
+    assert device.high_limit_travel.get() == 1.5
