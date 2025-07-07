@@ -1,5 +1,7 @@
 """Utilities to mock and test devices."""
 
+import threading
+from time import sleep
 from typing import TYPE_CHECKING
 from unittest import mock
 
@@ -183,6 +185,7 @@ class MockPV:
 
         self.callbacks = {}
         self._put_complete = None
+        self._put_complete_event: threading.Event | None = None
         self._monref = None  # holder of data returned from create_subscription
         self._monref_mask = None
         self._conn_started = False
@@ -228,9 +231,22 @@ class MockPV:
         self, value, wait=False, timeout=None, use_complete=False, callback=None, callback_data=None
     ):
         """MOCK PV, put function"""
+
+        def put_complete():
+            while True:
+                if self._put_complete_event.is_set():
+                    self._put_complete_event.clear()
+                    callback()
+                    break
+                sleep(0.2)
+
         self.mock_data = value
+
         if callback is not None:
-            callback()
+            if not self._put_complete_event:
+                callback()
+            else:
+                threading.Thread(target=put_complete, daemon=True).start()
 
     # pylint: disable=unused-argument
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):

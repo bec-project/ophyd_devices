@@ -29,6 +29,8 @@ class OptionalSignalNotSpecified(PSIPositionerException): ...
 
 
 class SimplePositionerSignals(TypedDict, total=False):
+    """The list of all the signals in the PSISimplePositionerBase"""
+
     user_readback: str
     user_setpoint: str
     motor_done_move: str
@@ -40,6 +42,9 @@ _SIMPLE_SIGNAL_NAMES = SimplePositionerSignals.__optional_keys__
 
 
 class PositionerSignals(SimplePositionerSignals, total=False):
+    """The list of all the signals in the PSIPositionerBase. See that class for
+    documentation of signal functionality."""
+
     user_offset: str
     user_offset_dir: str
     offset_freeze_switch: str
@@ -82,6 +87,7 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         name,
         limits: list[float] | tuple[float, ...] | None = None,
         deadband: float | None = None,
+        use_put_completion: bool | None = None,
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
@@ -93,8 +99,9 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
 
         Args:
             name (str): (required) the name of the device
-            limits (list | tuple | None): If given, a length-2 sequence within the range of which movemnt is allowed.
+            limits (list | tuple | None): If given, a length-2 sequence within the range of which movement is allowed.
             deadband (float | None): If given, set a soft deadband of this absolute value, within which positioner moves will return immediately. If the positioner has no motor_done_move signal, you must provide this.
+            use_put_completion (bool | None): If given, use put completion on the setpoint signal to resolve the move status.
             override_suffixes (dict[str, str]): a dictionary of signal_name: pv_suffix which will replace the values in the signal classvar.
         """
         super().__init__(
@@ -111,6 +118,8 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         else:
             self._limits = None
         self._deadband = deadband
+        if use_put_completion is not None:
+            self.use_put_complete = use_put_completion
         self._egu = kwargs.get("egu") or ""
 
         if (missing := self._remaining_defaults(_REQUIRED_SIGNAL)) != set():
@@ -181,7 +190,12 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
     def _setup_move(self, position):
         """Move and do not wait until motion is complete (asynchronous)"""
         self.log.debug(f"{self.name}.user_setpoint = {position}")
-        self.user_setpoint.put(position, wait=True)
+        if not self.use_put_complete:
+            self.user_setpoint.put(position, wait=True)
+        else:
+            self.user_setpoint.put(
+                position, wait=False, callback=lambda *_: self._done_moving(success=True)
+            )
 
     def move(self, position, wait=True, timeout=None, moved_cb=None):
         """Move to a specified position, optionally waiting for motion to
@@ -245,6 +259,8 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
             self._run_subs(sub_type=self.SUB_START, timestamp=timestamp, value=value, **kwargs)
 
         if self.motor_done_move is _OPTIONAL_SIGNAL:
+            # if there is no motor_done_move, we came here from self._pos_changed with a value
+            # based on whether whe are within the deadband
             if not self._moving:
                 # we got a position update within the deadband of the setpoint, close out move statuses.
                 self._run_subs(
@@ -281,6 +297,10 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         else:
             return self.user_setpoint.limits
 
+    @property
+    def egu(self):
+        return self._egu
+
     def _repr_info(self):
         yield from super()._repr_info()
 
@@ -299,8 +319,10 @@ class PSIPositionerBase(PSISimplePositionerBase):
     SIGNAL_NAMES = _SIGNAL_NAMES
 
     # calibration dial <-> user
+    # https://epics.anl.gov/bcda/synApps/motor/motorRecord.html#Fields_calib
     user_offset = _OPTIONAL_SIGNAL
     user_offset_dir = _OPTIONAL_SIGNAL
+    # Fix the difference between the user and dial positions
     offset_freeze_switch = _OPTIONAL_SIGNAL
     set_use_switch = _OPTIONAL_SIGNAL
 
@@ -353,3 +375,9 @@ class PSIPositionerBase(PSISimplePositionerBase):
                 # If the limit signals are defined as soft signals, propagate the limits there
                 if sig is not _OPTIONAL_SIGNAL and type(sig) is Signal:
                     sig.put(lim)
+
+    @property
+    def egu(self):
+        if self.motor_egu is not _OPTIONAL_SIGNAL:
+            return self.motor_egu.get()
+        return self._egu
