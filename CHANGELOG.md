@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v1.25.0 (2025-07-08)
+
+### Continuous Integration
+
+- Add bec pipeline to ophyd_devices
+  ([`be3efc8`](https://github.com/bec-project/ophyd_devices/commit/be3efc8ce0624e446c8a3f30c902fd36be86b8c8))
+
+- **plugin-repo**: Run workflow for plugin repositories
+  ([`295a5e0`](https://github.com/bec-project/ophyd_devices/commit/295a5e0d97ff1a9f5d1569e08f844dce81687ce2))
+
+### Features
+
+- **#118**: Add a flexible positioner class
+  ([`af35c1e`](https://github.com/bec-project/ophyd_devices/commit/af35c1ef1d4f5a543c3ec57ed3e7a795867872dd))
+
+- **#118**: Forward soft limits to soft signals
+  ([`a2d8c49`](https://github.com/bec-project/ophyd_devices/commit/a2d8c4932d025c94fb5a025224420588f3915472))
+
+- **#118**: Resolve from put completion + test
+  ([`1b18663`](https://github.com/bec-project/ophyd_devices/commit/1b18663df60fffc066e1e1b4fc3a8d79ee172838))
+
+- **#118**: Resolve move status from readback val
+  ([`8d37c77`](https://github.com/bec-project/ophyd_devices/commit/8d37c77ee88d858223d69a6661fc9d9cc6b1b13f))
+
+
 ## v1.24.0 (2025-06-24)
 
 ### Bug Fixes
