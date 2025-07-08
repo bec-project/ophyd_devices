@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.26.0 (2025-07-08)
+
+### Bug Fixes
+
+- Formatter
+  ([`e5a0bb4`](https://github.com/bec-project/ophyd_devices/commit/e5a0bb41782fe33d11d6e899ed47d0eb3c710007))
+
+### Features
+
+- Update to current ADASItpx driver 1.1
+  ([`ab123ef`](https://github.com/bec-project/ophyd_devices/commit/ab123efe973584195156b78a58751b92bfa60148))
+
+
 ## v1.25.0 (2025-07-08)
 
 ### Continuous Integration
