@@ -133,15 +133,13 @@ class EpicsMotorEC(EpicsMotor):
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
 
-        Note that the default EpicsMotor only supports the 'GO' movement mode.
-        This could get it deadlock if it was previously explicitly stopped.
-        In addition to parent method, this also checks the ECMC error status
-        before moving.
+        Check ECMC error and interlocks. They may get cleared by the move command. If not, exception
+        will be raised.
         """
         # Check ECMC error status before move
         error = self.error.get()
         if error:
-            raise RuntimeError(f"Motor is in error state with message: '{self.error_msg.get()}'")
+            self.log.warning(f"Motor is in error state with message: '{self.error_msg.get()}'")
 
         # Warn if trying to move beyond an active limit
         if self.high_interlock.get(use_monitor=False) and position > self.position:
