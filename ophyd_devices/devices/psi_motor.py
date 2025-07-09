@@ -30,9 +30,6 @@ class EpicsMotor(OphydEpicsMotor):
     """
 
     tolerated_alarm = AlarmSeverity.INVALID
-    motor_done_move = Cpt(
-        EpicsSignalRO, ".DMOV", auto_monitor=True, kind=Kind.normal, docs="Done moving to value"
-    )
 
     motor_deadband = Cpt(
         EpicsSignal, ".RDBD", auto_monitor=True, kind=Kind.config, docs="Retry Deadband (EGU)"
