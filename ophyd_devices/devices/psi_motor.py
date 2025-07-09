@@ -32,7 +32,7 @@ class EpicsMotor(OphydEpicsMotor):
     tolerated_alarm = AlarmSeverity.INVALID
 
     motor_deadband = Cpt(
-        EpicsSignal, ".RDBD", auto_monitor=True, kind=Kind.config, docs="Retry Deadband (EGU)"
+        EpicsSignal, ".RDBD", auto_monitor=True, kind=Kind.config, doc="Retry Deadband (EGU)"
     )
     motor_mode = Cpt(
         EpicsSignal,
@@ -40,17 +40,17 @@ class EpicsMotor(OphydEpicsMotor):
         auto_monitor=True,
         put_complete=True,
         kind=Kind.omitted,
-        docs="SPMG mode. Either Stop(0), Pause(1), Move(2) or Go(3).",
+        doc="SPMG mode. Either Stop(0), Pause(1), Move(2) or Go(3).",
     )
     motor_status = Cpt(
-        EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted, docs="Alarm status"
+        EpicsSignal, ".STAT", auto_monitor=True, kind=Kind.omitted, doc="Alarm status"
     )
     motor_enable = Cpt(
         EpicsSignal,
         ".CNEN",
         auto_monitor=True,
         kind=Kind.omitted,
-        docs="Enable control. Either 0 (disabled) or 1 (enabled).",
+        doc="Enable control. Either 0 (disabled) or 1 (enabled).",
     )
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
@@ -91,7 +91,7 @@ class EpicsMotorEC(EpicsMotor):
         "-EnaAct",
         auto_monitor=True,
         kind=Kind.normal,
-        docs="[ECMC] Reflects whether the axis is enabled in the hardware level.",
+        doc="[ECMC] Reflects whether the axis is enabled in the hardware level.",
     )
     motor_enable = Cpt(
         EpicsSignal,
@@ -100,7 +100,7 @@ class EpicsMotorEC(EpicsMotor):
         put_complete=True,
         auto_monitor=True,
         kind=Kind.normal,
-        docs="[ECMC] Send enable/disable command to hardware.",
+        doc="[ECMC] Send enable/disable command to hardware.",
     )
     homed = Cpt(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
     velocity_readback = Cpt(
@@ -108,17 +108,17 @@ class EpicsMotorEC(EpicsMotor):
         "-VelAct",
         auto_monitor=True,
         kind=Kind.normal,
-        docs="[ECMC] Velocity readback",
+        doc="[ECMC] Velocity readback",
     )
     position_readback = Cpt(
         EpicsSignalRO,
         "-PosAct",
         auto_monitor=True,
         kind=Kind.normal,
-        docs="[ECMC] Position readback",
+        doc="[ECMC] Position readback",
     )
     position_error = Cpt(
-        EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal, docs="[ECMC] Position error"
+        EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal, doc="[ECMC] Position error"
     )
     # Virtual motor and temperature limits are interlocks
     high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
@@ -126,7 +126,7 @@ class EpicsMotorEC(EpicsMotor):
 
     error = Cpt(EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.normal)
     error_msg = Cpt(
-        EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.normal, docs="[ECMC] Error message"
+        EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.normal, doc="[ECMC] Error message"
     )
     error_reset = Cpt(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
 
