@@ -49,6 +49,14 @@ def test_instant_completion_within_deadband(
 
 def test_undulator_raises_when_disabled(mock_undulator):
     mock_undulator.select_control._read_pv.mock_data = 0
-    with pytest.raises(Exception) as e:
+    with pytest.raises(PermissionError) as e:
         mock_undulator.move(5)
     assert e.match("Undulator is operator controlled!")
+
+
+def test_undulator_stop_call(mock_undulator):
+    mock_undulator.select_control._read_pv.mock_data = 1
+    mock_undulator.stop()
+    mock_undulator.select_control._read_pv.mock_data = 0
+    with pytest.raises(PermissionError) as e:
+        mock_undulator.stop()
