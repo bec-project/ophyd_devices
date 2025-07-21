@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.26.1 (2025-07-21)
+
+### Bug Fixes
+
+- **undulator**: Add check for operator control for stop_signal
+  ([`9eb1dea`](https://github.com/bec-project/ophyd_devices/commit/9eb1dea8eaf390ba317c245b4de4379593e7fff0))
+
+
 ## v1.26.0 (2025-07-08)
 
 ### Bug Fixes
