@@ -6,6 +6,7 @@ import time as ttime
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+from math import copysign, isinf, isnan
 
 import numpy as np
 from bec_lib import bec_logger
@@ -70,6 +71,14 @@ DEFAULT_PARAMS_HOT_PIXEL = {
     "hot_pixel_types": [HotPixelType.FLUCTUATING, HotPixelType.CONSTANT, HotPixelType.FLUCTUATING],
     "hot_pixel_values": np.array([1e3, 1e4, 1e3]),
 }
+
+
+def _safeint(val: float) -> int:
+    if isnan(val):
+        return 0
+    if isinf(val):
+        return int(copysign(2_147_483_647, val))
+    return int(val)
 
 
 class SimulatedDataBase(ABC):
@@ -429,7 +438,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
         else:
             motor_pos = 0
         method = self._model
-        value = int(method.eval(params=self._model_params, x=motor_pos))
+        value = _safeint(method.eval(params=self._model_params, x=motor_pos))
         return self._add_noise(value, self.params["noise"], self.params["noise_multiplier"])
 
     def _add_noise(self, v: int, noise: NoiseType, noise_multiplier: float) -> int:
