@@ -24,6 +24,7 @@ from ophyd_devices.interfaces.protocols.bec_protocols import (
     BECSignalProtocol,
 )
 from ophyd_devices.sim.sim_camera import SimCamera
+from ophyd_devices.sim.sim_data import _safeint
 from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks.h5_image_replay_proxy import H5ImageReplayProxy
 from ophyd_devices.sim.sim_frameworks.slit_proxy import SlitProxy
@@ -233,7 +234,7 @@ def test_monitor_readback(monitor, center):
         elif "center" in monitor.sim.params:
             monitor.sim.params["center"] = center
         assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
-        expected_value = monitor.sim._model.eval(monitor.sim._model_params, x=motor_pos)
+        expected_value = _safeint(monitor.sim._model.eval(monitor.sim._model_params, x=motor_pos))
         print(expected_value, monitor.read()[monitor.name]["value"])
         tolerance = (
             monitor.sim.params["noise_multipler"] + 1
