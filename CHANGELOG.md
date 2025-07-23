@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.26.2 (2025-07-23)
+
+### Bug Fixes
+
+- Make SimulatedDataMonitor robust to inf/nan
+  ([`d2659bf`](https://github.com/bec-project/ophyd_devices/commit/d2659bf0b18cf8baa5cab350dcd11da76f4ea0c1))
+
+
 ## v1.26.1 (2025-07-21)
 
 ### Bug Fixes
