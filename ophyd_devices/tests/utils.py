@@ -2,7 +2,7 @@
 
 import threading
 from time import sleep
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from unittest import mock
 
 from bec_lib.devicemanager import ScanInfo
@@ -174,7 +174,7 @@ class MockPV:
         self._args["access"] = "unknown"
         self._args["status"] = 0
         self.connection_callbacks = []
-        self.mock_data = 0
+        self._mock_data = 0
 
         if connection_callback is not None:
             self.connection_callbacks = [connection_callback]
@@ -183,7 +183,7 @@ class MockPV:
         if access_callback is not None:
             self.access_callbacks = [access_callback]
 
-        self.callbacks = {}
+        self.callbacks: dict[int, tuple[Callable, dict]] = {}
         self._put_complete = None
         self._put_complete_event: threading.Event | None = None
         self._monref = None  # holder of data returned from create_subscription
@@ -204,6 +204,20 @@ class MockPV:
             conn_cb(pvname=pvname, conn=True, pv=self)
         for acc_cb in self.access_callbacks:
             acc_cb(True, True, pv=self)
+
+    @property
+    def mock_data(self):
+        """Get mock data"""
+        return self._mock_data
+
+    @mock_data.setter
+    def mock_data(self, value):
+        """Set mock data"""
+        old_value = self._mock_data
+
+        self._mock_data = value
+        for callback, kw in self.callbacks.values():
+            callback(value=value, old_value=old_value, obj=self, **kw)
 
     # pylint disable: unused-argument
     def wait_for_connection(self, timeout=None):
@@ -251,7 +265,15 @@ class MockPV:
     # pylint: disable=unused-argument
     def add_callback(self, callback=None, index=None, run_now=False, with_ctrlvars=True, **kw):
         """Add callback"""
-        return mock.MagicMock()
+        if callback is None:
+            logger.warning("Callback is None, cannot add callback")
+            return
+        if index is None:
+            index = len(self.callbacks)
+        self.callbacks[index] = (callback, kw)
+        if run_now:
+            callback(value=self.mock_data, old_value=self.mock_data, obj=self, **kw)
+        return index
 
     # pylint: disable=unused-argument
     def get_with_metadata(
@@ -266,6 +288,7 @@ class MockPV:
         as_namespace=False,
     ):
         """Get MOCKPV data together with metadata"""
+
         return {"value": self.mock_data}
 
     def get(

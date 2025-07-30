@@ -1,11 +1,14 @@
 import threading
 import time
+from unittest import mock
 
 import numpy as np
+import ophyd
 import pytest
 from bec_lib import messages
-from ophyd import Device, Signal
+from ophyd import Device, EpicsSignalRO, Signal
 
+from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
 from ophyd_devices.utils.bec_signals import (
     BECMessageSignal,
     DynamicSignal,
@@ -29,6 +32,17 @@ from ophyd_devices.utils.psi_device_base_utils import (
 ##########################################
 #########  Test Task Handler  ############
 ##########################################
+
+
+@pytest.fixture(scope="function")
+def mock_epics_signal_ro():
+    name = "epics_signal_ro"
+    read_pv = "TEST:EPICS_SIGNAL_RO"
+    with mock.patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        dev = EpicsSignalRO(name=name, read_pv=read_pv)
+        yield dev
 
 
 @pytest.fixture
@@ -687,3 +701,45 @@ def test_transition_status_strings():
     sig.put("d")  # last transition
     assert status.done is True
     assert status.success is True
+
+
+def test_compare_status_with_mock_pv(mock_epics_signal_ro):
+    """Test CompareStatus with EpicsSignalRO, this tests callbacks on EpicsSignals"""
+
+    signal = mock_epics_signal_ro
+    status = CompareStatus(signal=signal, value=5, operation="==")
+    assert status.done is False
+    signal._read_pv.mock_data = 1
+    assert status.done is False
+    signal._read_pv.mock_data = 5
+    status.wait(timeout=1)
+    assert status.done is True
+    assert status.success is True
+
+
+@pytest.mark.parametrize(
+    "transitions, expected_done, expected_success",
+    [
+        ([1, 2, 3], True, True),  # Transitions completed successfully
+        ([1, 3, 2], True, False),  # Transitions completed with an error
+        ([5, 4, 2, 1, 2, 3], True, True),  # Transitions completed successfully
+    ],
+)
+def test_transition_status_with_mock_pv(
+    mock_epics_signal_ro, transitions, expected_done, expected_success
+):
+    """Test TransitionStatus with EpicsSignalRO, this tests callbacks on EpicsSignals"""
+    # Starts immediately with 1
+    signal = mock_epics_signal_ro
+    signal._read_pv.mock_data = 1
+    status = TransitionStatus(signal=signal, transitions=[1, 2, 3], strict=False)
+    assert status.done is False
+    # Does not have to wait
+    signal._read_pv.mock_data = 3
+    signal._read_pv.mock_data = 2
+    signal._read_pv.mock_data = 3
+    status.wait(timeout=1)
+    assert status.done is True
+    assert status.success is True
+    # Test with various transitions
+    status = TransitionStatus(signal=signal, transitions=transitions, strict=True)
