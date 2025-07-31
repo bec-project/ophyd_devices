@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.26.3 (2025-07-31)
+
+### Bug Fixes
+
+- **mock-pv**: Add callbacks to mock_pv
+  ([`1a78129`](https://github.com/bec-project/ophyd_devices/commit/1a7812992adfe49ba734dbccb00456d9eba2c009))
+
+### Testing
+
+- Fix test for TransitionStatus
+  ([`e27182d`](https://github.com/bec-project/ophyd_devices/commit/e27182d9baf2a0e95bed2c37b21cc8a3251fda8c))
+
+
 ## v1.26.2 (2025-07-23)
 
 ### Bug Fixes
