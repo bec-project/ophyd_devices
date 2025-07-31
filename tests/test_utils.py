@@ -7,6 +7,7 @@ import ophyd
 import pytest
 from bec_lib import messages
 from ophyd import Device, EpicsSignalRO, Signal
+from ophyd.status import WaitTimeoutError
 
 from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
 from ophyd_devices.utils.bec_signals import (
@@ -721,7 +722,7 @@ def test_compare_status_with_mock_pv(mock_epics_signal_ro):
     "transitions, expected_done, expected_success",
     [
         ([1, 2, 3], True, True),  # Transitions completed successfully
-        ([1, 3, 2], True, False),  # Transitions completed with an error
+        ([1, 3, 2], False, False),  # Transitions completed with an error
         ([5, 4, 2, 1, 2, 3], True, True),  # Transitions completed successfully
     ],
 )
@@ -742,4 +743,15 @@ def test_transition_status_with_mock_pv(
     assert status.done is True
     assert status.success is True
     # Test with various transitions
-    status = TransitionStatus(signal=signal, transitions=transitions, strict=True)
+    status = TransitionStatus(signal=signal, transitions=[1, 2, 3], strict=True)
+    for transition in transitions:
+        signal._read_pv.mock_data = transition
+    if expected_done:
+        status.wait(timeout=1)
+        assert status.done is True
+        assert status.success is expected_success
+    else:
+        with pytest.raises(WaitTimeoutError):
+            status.wait(timeout=1)
+        assert status.done is False
+        assert status.success is False
