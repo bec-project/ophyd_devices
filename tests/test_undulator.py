@@ -56,7 +56,11 @@ def test_undulator_raises_when_disabled(mock_undulator):
 
 def test_undulator_stop_call(mock_undulator):
     mock_undulator.select_control._read_pv.mock_data = 1
+    mock_undulator.stop_signal.put(0)
     mock_undulator.stop()
+    assert mock_undulator.stop_signal.get() == 1
+    mock_undulator.stop_signal.put(0)
     mock_undulator.select_control._read_pv.mock_data = 0
-    with pytest.raises(PermissionError) as e:
-        mock_undulator.stop()
+    # Error should just be logged, not raised.
+    mock_undulator.stop()
+    assert mock_undulator.stop_signal.get() == 0
