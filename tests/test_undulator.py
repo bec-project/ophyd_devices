@@ -52,11 +52,17 @@ def test_undulator_raises_when_disabled(mock_undulator):
     with pytest.raises(PermissionError) as e:
         mock_undulator.move(5)
     assert e.match("Undulator is operator controlled!")
+    with pytest.raises(PermissionError) as e:
+        mock_undulator.setpoint.put(5)
+    assert e.match("Undulator is operator controlled!")
 
 
 def test_undulator_stop_call(mock_undulator):
     mock_undulator.select_control._read_pv.mock_data = 1
+    mock_undulator.stop_signal._read_pv.mock_data = 0
     mock_undulator.stop()
+    assert mock_undulator.stop_signal.get() == 1
+    mock_undulator.stop_signal._read_pv.mock_data = 0
     mock_undulator.select_control._read_pv.mock_data = 0
-    with pytest.raises(PermissionError) as e:
-        mock_undulator.stop()
+    mock_undulator.stop()
+    assert mock_undulator.stop_signal.get() == 0

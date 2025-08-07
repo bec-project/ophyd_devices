@@ -24,7 +24,7 @@ class UNDULATORCONTROL(int, enum.Enum):
     BEAMLINE = 1
 
 
-class UndulatorEpicsSignal(EpicsSignal):
+class UndulatorSetointSignal(EpicsSignal):
     """
     SLS Undulator setpoint control
     """
@@ -45,9 +45,43 @@ class UndulatorEpicsSignal(EpicsSignal):
         If the undulator is operator controlled, it will not move.
         """
         if self.parent.select_control.get() == UNDULATORCONTROL.OPERATOR.value:
-            raise PermissionError(
+            raise PermissionError("Undulator is operator controlled!")
+        return super().put(
+            value,
+            force=force,
+            connection_timeout=connection_timeout,
+            callback=callback,
+            use_complete=use_complete,
+            timeout=timeout,
+            **kwargs,
+        )
+
+
+class UndulatorStopSignal(EpicsSignal):
+    """
+    SLS Undulator setpoint control
+    """
+
+    def put(
+        self,
+        value,
+        force=False,
+        connection_timeout=DEFAULT_CONNECTION_TIMEOUT,
+        callback=None,
+        use_complete=None,
+        timeout=DEFAULT_WRITE_TIMEOUT,
+        **kwargs,
+    ):
+        """
+        Put a value to the setpoint PV.
+
+        If the undulator is operator controlled, it will not move.
+        """
+        if self.parent.select_control.get() == UNDULATORCONTROL.OPERATOR.value:
+            logger.error(
                 f"Cannot use put for signal {self.name}; Undulator is operator controlled!"
             )
+            return None
         return super().put(
             value,
             force=force,
@@ -64,10 +98,10 @@ class UndulatorGap(PVPositioner):
     SLS Undulator gap control
     """
 
-    setpoint = Cpt(UndulatorEpicsSignal, suffix="GAP-SP")
-    readback = Cpt(EpicsSignal, suffix="GAP-RBV", kind="hinted", auto_monitor=True)
+    setpoint = Cpt(UndulatorSetointSignal, suffix="GAP-SP")
+    readback = Cpt(EpicsSignalRO, suffix="GAP-RBV", kind="hinted", auto_monitor=True)
 
-    stop_signal = Cpt(UndulatorEpicsSignal, suffix="STOP")
+    stop_signal = Cpt(UndulatorStopSignal, suffix="STOP")
     done = Cpt(EpicsSignalRO, suffix="DONE", auto_monitor=True)
 
     select_control = Cpt(EpicsSignalRO, suffix="SCTRL", auto_monitor=True)
