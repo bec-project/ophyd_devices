@@ -22,7 +22,9 @@ class SpmgStates:
 
 
 class EpicsMotor(OphydEpicsMotor):
-    """Extended EPICS Motor class
+    """
+    Extended EPICS Motor class for PSI motors.
+
 
     Special motor class that exposes additional motor record functionality.
     It extends EpicsMotor base class to provide some simple status checks
@@ -32,7 +34,7 @@ class EpicsMotor(OphydEpicsMotor):
     tolerated_alarm = AlarmSeverity.INVALID
 
     motor_deadband = Cpt(
-        EpicsSignal, ".RDBD", auto_monitor=True, kind=Kind.config, doc="Retry Deadband (EGU)"
+        EpicsSignal, ".RDBD", auto_monitor=True, kind=Kind.omitted, doc="Retry Deadband (EGU)"
     )
     motor_mode = Cpt(
         EpicsSignal,
@@ -77,6 +79,34 @@ class EpicsMotor(OphydEpicsMotor):
         return super().move(position, wait, **kwargs)
 
 
+class TravelLimitsECMC(EpicsSignal):
+    """
+    Custom EpicsSignal for ECMC travel limits.
+    """
+
+    def put(self, value, use_complete: bool = True, **kwargs):
+        """
+        Override put method to handle travel limits.
+
+        This method allows setting the travel limits for the ECMC motor.
+        It ensures that the value is within the acceptable range before
+        sending it to the EPICS server.
+        """
+        # Get first the current value
+        old_value = self.get()
+        if not use_complete:
+            use_complete = True
+            self.log.warning(f"Overruling use_complete for {self.pvname} to True")
+        # Set the value with put_complete
+        super().put(value, use_complete=use_complete, **kwargs)
+        # Now check if the PLC layer accepted the value change
+        new_value = self.get(auto_monitor=False)
+        if new_value != value:
+            raise ValueError(
+                f"Failed to set travel limit: {value}. Update was rejected by PLC. Limit remains {new_value}."
+            )
+
+
 class EpicsMotorEC(EpicsMotor):
     """Detailed ECMC EPICS motor class
 
@@ -90,7 +120,7 @@ class EpicsMotorEC(EpicsMotor):
         EpicsSignalRO,
         "-EnaAct",
         auto_monitor=True,
-        kind=Kind.normal,
+        kind=Kind.config,
         doc="[ECMC] Reflects whether the axis is enabled in the hardware level.",
     )
     motor_enable = Cpt(
@@ -99,15 +129,17 @@ class EpicsMotorEC(EpicsMotor):
         write_pv="-EnaCmd",
         put_complete=True,
         auto_monitor=True,
-        kind=Kind.normal,
+        kind=Kind.omitted,
         doc="[ECMC] Send enable/disable command to hardware.",
     )
-    homed = Cpt(EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.normal)
+    homed = Cpt(
+        EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Homed status"
+    )
     velocity_readback = Cpt(
         EpicsSignalRO,
         "-VelAct",
         auto_monitor=True,
-        kind=Kind.normal,
+        kind=Kind.config,  # I would think this depends on the beamline? normal or config
         doc="[ECMC] Velocity readback",
     )
     position_readback = Cpt(
@@ -121,14 +153,18 @@ class EpicsMotorEC(EpicsMotor):
         EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal, doc="[ECMC] Position error"
     )
     # Virtual motor and temperature limits are interlocks
-    high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.normal)
-    low_interlock = Cpt(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.normal)
+    high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.omitted)
+    low_interlock = Cpt(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.omitted)
 
-    error = Cpt(EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.normal)
+    error = Cpt(
+        EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Error ID"
+    )
     error_msg = Cpt(
-        EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.normal, doc="[ECMC] Error message"
+        EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Error message"
     )
     error_reset = Cpt(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
+    high_limit_travel = Cpt(TravelLimitsECMC, ".HLM", kind="omitted", auto_monitor=True)
+    low_limit_travel = Cpt(TravelLimitsECMC, ".LLM", kind="omitted", auto_monitor=True)
 
     def move(self, position, wait=True, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
@@ -167,5 +203,9 @@ class EpicsMotorEC(EpicsMotor):
         # Reset the error
         self.error_reset.set(1, settle_time=0.2).wait()
         # Check if it disappeared
-        if self.error.get():
-            raise RuntimeError(f"Failed to reset axis, still in error: '{self.error_msg.get()}'")
+        error = self.error.get(auto_monitor=False)
+        if error:
+            error_msg = self.error_msg.get(auto_monitor=False)
+            raise RuntimeError(
+                f"Failed to reset axis, still in error with id: '{error}, msg: {error_msg}'"
+            )
