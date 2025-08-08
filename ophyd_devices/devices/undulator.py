@@ -77,9 +77,6 @@ class UndulatorStopSignal(EpicsSignal):
         If the undulator is operator controlled, it will not move.
         """
         if self.parent.select_control.get() == UNDULATORCONTROL.OPERATOR.value:
-            logger.error(
-                f"Cannot use put for signal {self.name}; Undulator is operator controlled!"
-            )
             return None
         return super().put(
             value,

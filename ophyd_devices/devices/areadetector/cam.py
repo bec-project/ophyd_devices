@@ -274,6 +274,10 @@ class ASItpxCam(CamBase):
 
     """
 
+    acquire = ADCpt(EpicsSignal, "Acquire")
+    acquire_busy = ADCpt(EpicsSignalRO, "AcquireBusy")
+    detector_state = ADCpt(EpicsSignalRO, "DetectorState_RBV")
+
     tdc1_enable = ADCpt(EpicsSignalWithRBV, "TDC1Enable")
     tdc1_edge = ADCpt(EpicsSignalWithRBV, "TDC1Edge")
     tdc1_output = ADCpt(EpicsSignalWithRBV, "TDC1Output")
@@ -282,6 +286,7 @@ class ASItpxCam(CamBase):
     tdc2_output = ADCpt(EpicsSignalWithRBV, "TDC2Output")
 
     trigger_source = ADCpt(EpicsSignalWithRBV, "TriggerSource")
+    trigger_mode = ADCpt(EpicsSignalWithRBV, "TriggerMode")
     trigger_polarity = ADCpt(EpicsSignalWithRBV, "TriggerPolarity")
     trigger_delay = ADCpt(EpicsSignalWithRBV, "TriggerDelay")
     exposure_mode = ADCpt(EpicsSignalWithRBV, "ExposureMode")
