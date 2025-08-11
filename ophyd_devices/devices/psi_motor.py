@@ -55,7 +55,7 @@ class EpicsMotor(OphydEpicsMotor):
         doc="Enable control. Either 0 (disabled) or 1 (enabled).",
     )
 
-    def move(self, position, wait=True, **kwargs) -> MoveStatus:
+    def move(self, position, wait=False, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
 
         Note that the default EpicsMotor only supports the 'GO' movement mode.
@@ -63,7 +63,7 @@ class EpicsMotor(OphydEpicsMotor):
         """
         # Reset SPMG before move
         if self.motor_mode.get() != SpmgStates.GO:
-            self.motor_mode.set(SpmgStates.GO).wait()
+            self.motor_mode.set(SpmgStates.GO).wait(timeout=5)
         # Warn if EPIC motorRecord claims an error (it's not easy to reset)
         status = self.motor_status.get()
         if status:
@@ -166,7 +166,7 @@ class EpicsMotorEC(EpicsMotor):
     high_limit_travel = Cpt(TravelLimitsECMC, ".HLM", kind="omitted", auto_monitor=True)
     low_limit_travel = Cpt(TravelLimitsECMC, ".LLM", kind="omitted", auto_monitor=True)
 
-    def move(self, position, wait=True, **kwargs) -> MoveStatus:
+    def move(self, position, wait=False, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
 
         Check ECMC error and interlocks. They may get cleared by the move command. If not, exception
@@ -180,7 +180,7 @@ class EpicsMotorEC(EpicsMotor):
         # Warn if trying to move beyond an active limit
         if self.high_interlock.get(use_monitor=False) and position > self.position:
             self.log.warning("Attempting to move above active HLS or Ilock")
-        if self.high_interlock.get(use_monitor=False) and position < self.position:
+        if self.low_interlock.get(use_monitor=False) and position < self.position:
             self.log.warning("Attempting to move below active LLS or Ilock")
 
         return super().move(position, wait, **kwargs)
