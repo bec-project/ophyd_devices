@@ -9,6 +9,7 @@ from bec_lib.devicemanager import ScanInfo
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from ophyd import Device
+from ophyd.utils.epics_pvs import AlarmSeverity, AlarmStatus
 
 if TYPE_CHECKING:
     from bec_lib.messages import ScanStatusMessage
@@ -239,6 +240,27 @@ class MockPV:
             callback(pvname, md)
 
         get_metadata_thread(pvname=self.pvname)
+
+    def set_severity(self, severity: AlarmSeverity):
+        """Set severity for the mock PV"""
+        self._args["severity"] = severity
+
+    def set_alarm_status(self, status: AlarmStatus):
+        """Set alarm status for the mock PV"""
+        self._args["status"] = status
+
+    def get_ctrlvars(self, timeout=5, warn=True):
+        "get control values for variable"
+        return self._args
+
+    def get_timevars(self, timeout=5, warn=True):
+        "get time values for variable"
+        kwds = {
+            "status": self._args["status"],
+            "severity": self._args["severity"],
+            "timestamp": self._args["timestamp"],
+        }
+        return kwds
 
     # pylint disable: unused-argument
     def put(
