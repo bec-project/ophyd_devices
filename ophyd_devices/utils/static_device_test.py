@@ -3,6 +3,7 @@ import copy
 import os
 import traceback
 from io import TextIOWrapper
+from unittest import mock
 
 import ophyd
 from bec_lib.atlas_models import Device as DeviceModel
@@ -23,14 +24,26 @@ class StaticDeviceAnalysisError(Exception):
 class StaticDeviceTest:
     """Class to perform tests on an ophyd device config file."""
 
-    def __init__(self, config: str, output_file: TextIOWrapper) -> None:
+    def __init__(
+        self,
+        output_file: TextIOWrapper,
+        config_file: str | None = None,
+        config_dict: dict[str, dict] | None = None,
+    ) -> None:
         """
         Args:
             config(str): path to the config file
+            config_dict(dict): device configuration dictionary. Same formatting as in device_manager
             output_file(TextIOWrapper): file to write the output to
         """
-        self.config_file = config
-        self.config = self.read_config(config)
+        if config_file is not None:
+            self.config_file = config_file
+            self.config = self.read_config(config_file)
+        else:
+            if config_dict is None:
+                raise ValueError("Either config or config_dict must be provided.")
+            self.config = config_dict
+            self.config_file = ""
         self.file = output_file
 
     @staticmethod
@@ -268,6 +281,47 @@ class StaticDeviceTest:
         print(text)
         self.file.write(text + "\n")
 
+    def run_with_list_output(self, connect: bool = False) -> list[tuple[str, bool, str]]:
+        """
+        Run the tests and return a list of tuples with the device name, success status, and error message.
+
+        Returns:
+            list[tuple[str, bool, str]]: list of tuples with the device name, success status, and error message
+        """
+        if device_manager is None:
+            raise ImportError(
+                "bec-server is not installed. Please install it first with pip install bec-server."
+            )
+
+        print_and_write = []
+
+        def mock_print(text: str):
+            print_and_write.append(text)
+
+        results = []
+        with mock.patch.object(self, "print_and_write", side_effect=mock_print):
+            for name, conf in self.config.items():
+                return_val = 0
+                status = False
+                try:
+                    return_val += self.validate_schema(name, conf)
+                    return_val += self.check_device_classes(name, conf)
+                    if connect:
+                        return_val += self.connect_device(name, conf)
+                    self.validate_schema(name, conf)
+                    self.check_device_classes(name, conf)
+                    if device_manager is not None:
+                        self.connect_device(name, conf)
+
+                    if return_val == 0:
+                        status = True
+                except Exception as e:
+                    self.print_and_write(f"ERROR: {name} failed: {e}")
+                finally:
+                    results.append((name, status, "\n".join(print_and_write)))
+                    print_and_write.clear()
+        return results
+
 
 def launch() -> None:
     """launch the test"""
@@ -313,7 +367,7 @@ def launch() -> None:
         with open(
             os.path.join(clargs.output, f"report_{report_name}.txt"), "w", encoding="utf-8"
         ) as report_file:
-            device_config_test = StaticDeviceTest(file, output_file=report_file)
+            device_config_test = StaticDeviceTest(config_file=file, output_file=report_file)
             device_config_test.run(clargs.connect)
 
 
