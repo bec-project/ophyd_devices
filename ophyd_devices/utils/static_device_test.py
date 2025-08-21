@@ -2,6 +2,7 @@ import argparse
 import copy
 import os
 import traceback
+from collections import namedtuple
 from io import TextIOWrapper
 from unittest import mock
 
@@ -16,6 +17,8 @@ try:
 except ImportError:
     device_manager = None
 
+TestResult = namedtuple("TestResult", ["name", "success", "message"])
+
 
 class StaticDeviceAnalysisError(Exception):
     """Error class for static device analysis"""
@@ -26,11 +29,13 @@ class StaticDeviceTest:
 
     def __init__(
         self,
-        output_file: TextIOWrapper,
+        output_file: TextIOWrapper | None = None,
         config_file: str | None = None,
         config_dict: dict[str, dict] | None = None,
     ) -> None:
         """
+        Initialize the StaticDeviceTest class. Either output_file or config_dict must be provided.
+        Config_file will have precedence over config_dict.
         Args:
             config(str): path to the config file
             config_dict(dict): device configuration dictionary. Same formatting as in device_manager
@@ -279,9 +284,10 @@ class StaticDeviceTest:
             text(str): text to print and write
         """
         print(text)
-        self.file.write(text + "\n")
+        if self.file is not None:  # Write only if no output file is provided
+            self.file.write(text + "\n")
 
-    def run_with_list_output(self, connect: bool = False) -> list[tuple[str, bool, str]]:
+    def run_with_list_output(self, connect: bool = False) -> list[TestResult]:
         """
         Run the tests and return a list of tuples with the device name, success status, and error message.
 
@@ -315,10 +321,13 @@ class StaticDeviceTest:
 
                     if return_val == 0:
                         status = True
+                        self.print_and_write(f"{name} is OK")
                 except Exception as e:
                     self.print_and_write(f"ERROR: {name} failed: {e}")
                 finally:
-                    results.append((name, status, "\n".join(print_and_write)))
+                    results.append(
+                        TestResult(name=name, success=status, message="\n".join(print_and_write))
+                    )
                     print_and_write.clear()
         return results
 
