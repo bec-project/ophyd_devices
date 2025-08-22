@@ -364,7 +364,7 @@ class BECDeviceBase(Device):
         from bec_lib.bec_service import SERVICE_CONFIG
 
         if SERVICE_CONFIG:
-            self.service_cfg = SERVICE_CONFIG.config["service_config"]["file_writer"]
+            self.service_cfg = SERVICE_CONFIG.model.file_writer.model_dump()
             return
         self.service_cfg = {"base_path": os.path.abspath(".")}
 
