@@ -24,7 +24,7 @@ else:
 __all__ = [
     "CompareStatus",
     "TransitionStatus",
-    "AndStatus",
+    "AndStatusWithList",
     "DeviceStatus",
     "MoveStatus",
     "Status",
@@ -58,10 +58,10 @@ class AndStatusWithList(DeviceStatus):
     def __init__(
         self,
         device: Device,
-        status: StatusBase | DeviceStatus | list[StatusBase | DeviceStatus],
+        status_list: StatusBase | DeviceStatus | list[StatusBase | DeviceStatus],
         **kwargs,
     ):
-        self.all_statuses = status if isinstance(status, list) else [status]
+        self.all_statuses = status_list if isinstance(status_list, list) else [status_list]
         super().__init__(device=device, **kwargs)
         self._trace_attributes["all"] = [st._trace_attributes for st in self.all_statuses]
 
