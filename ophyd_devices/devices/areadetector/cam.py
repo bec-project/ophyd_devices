@@ -298,5 +298,8 @@ class ASItpxCam(CamBase):
     image_file_path = ADCpt(EpicsSignalWithRBV, "ImageFilePath", string=True)
     image_file_template = ADCpt(EpicsSignalWithRBV, "ImageFileTemplate", string=True)
 
-    preview_enable = ADCpt(EpicsSignalWithRBV, "PreviewEnable")
+    integration_mode = ADCpt(EpicsSignalWithRBV, "IntegrationMode")
+    integration_size = ADCpt(EpicsSignalWithRBV, "IntegrationSize")
+
+    data_source = ADCpt(EpicsSignalWithRBV, "DataSource")
     preview_period = ADCpt(EpicsSignalWithRBV, "PreviewPeriod")
