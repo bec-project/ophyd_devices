@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.26.5 (2025-09-10)
+
+### Bug Fixes
+
+- **undulator**: Fix setpoint and motor stop signal
+  ([`ccbf50d`](https://github.com/bec-project/ophyd_devices/commit/ccbf50d837c34f390a089d89365b645a74e6eb75))
+
+- **undulator**: Remove raise for operator controlled pvs, log instead and return None
+  ([`87e2268`](https://github.com/bec-project/ophyd_devices/commit/87e226804e7e65d88226410c2ee569c31a80aebc))
+
+### Refactoring
+
+- **asitpxcam**: Fix ASI Timepix integration, add relevant PVs.
+  ([`819b067`](https://github.com/bec-project/ophyd_devices/commit/819b067e170b35365e0dad39b10f603687eb0135))
+
+
 ## v1.26.4 (2025-09-10)
 
 ### Bug Fixes
