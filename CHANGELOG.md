@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.26.4 (2025-09-10)
+
+### Bug Fixes
+
+- **service config**: Fix service config retrieval for legacy class BECDeviceBase
+  ([`5f6caf5`](https://github.com/bec-project/ophyd_devices/commit/5f6caf5d4467d1c7b25190dc41a315e2f5bcc954))
+
+### Refactoring
+
+- Add run method which return list of tuple for test
+  ([`919fbe1`](https://github.com/bec-project/ophyd_devices/commit/919fbe1b15a12ae71678c6931494d43825c5ae99))
+
+- **static-decvice-test**: Add test for run_with_list_output
+  ([`9c9dcec`](https://github.com/bec-project/ophyd_devices/commit/9c9dcecc42785abbc5800590fd3e9ea2ef5c2158))
+
+
 ## v1.26.3 (2025-07-31)
 
 ### Bug Fixes
