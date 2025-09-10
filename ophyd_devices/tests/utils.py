@@ -30,6 +30,8 @@ def patch_dual_pvs(device):
             continue
         if walk.item._read_pv.pvname != walk.item._write_pv.pvname:
             walk.item._read_pv = walk.item._write_pv
+        if walk.item.pvname != walk.item.setpoint_pvname:
+            walk.item._setpoint_pvname = walk.item.pvname
 
 
 def patch_functions_required_for_connection(device):
@@ -288,7 +290,8 @@ class MockPV:
         as_namespace=False,
     ):
         """Get MOCKPV data together with metadata"""
-
+        if as_string:
+            return {"value": str(self.mock_data)}
         return {"value": self.mock_data}
 
     def get(

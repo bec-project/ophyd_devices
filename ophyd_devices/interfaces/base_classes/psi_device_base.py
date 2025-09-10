@@ -199,8 +199,9 @@ class PSIDeviceBase(Device):
         to be stopped when the device is stopped.
         """
         for status in self._stoppable_status_objects:
-            if not status.done:
-                status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
+            with status._lock:
+                if not status.done:
+                    status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
         self._clear_stoppable_status_objects()
 
     ########################################
