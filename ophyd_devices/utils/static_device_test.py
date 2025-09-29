@@ -312,13 +312,8 @@ class StaticDeviceTest:
                 try:
                     return_val += self.validate_schema(name, conf)
                     return_val += self.check_device_classes(name, conf)
-                    if connect:
+                    if device_manager is not None and connect:
                         return_val += self.connect_device(name, conf)
-                    self.validate_schema(name, conf)
-                    self.check_device_classes(name, conf)
-                    if device_manager is not None:
-                        self.connect_device(name, conf)
-
                     if return_val == 0:
                         status = True
                         self.print_and_write(f"{name} is OK")
