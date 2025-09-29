@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.26.6 (2025-09-29)
+
+### Bug Fixes
+
+- Ophyd test run with list
+  ([`ac3c23b`](https://github.com/bec-project/ophyd_devices/commit/ac3c23ba6044e757ce7c03c17aefc6449b2587a0))
+
+### Chores
+
+- Deprecate 3.10, add 3.13
+  ([`62fd9c7`](https://github.com/bec-project/ophyd_devices/commit/62fd9c7a10148b2b5919e02b7076a0871c407795))
+
+
 ## v1.26.5 (2025-09-10)
 
 ### Bug Fixes
