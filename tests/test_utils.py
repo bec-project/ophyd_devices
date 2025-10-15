@@ -8,9 +8,12 @@ import pytest
 from bec_lib import messages
 from ophyd import Device, EpicsSignalRO, Signal
 from ophyd.status import WaitTimeoutError
+from typeguard import TypeCheckError
 
 from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
 from ophyd_devices.utils.bec_signals import (
+    AsyncMultiSignal,
+    AsyncSignal,
     BECMessageSignal,
     DynamicSignal,
     FileEventSignal,
@@ -248,6 +251,7 @@ def test_utils_bec_message_signal():
                 "rpc_access": False,
                 "signals": [("bec_message_signal", 5)],
                 "signal_metadata": None,
+                "acquisition_group": None,
             },
         }
     }
@@ -294,27 +298,114 @@ def test_utils_dynamic_signal():
                 "rpc_access": False,
                 "signals": [("sig1", 1), ("sig2", 1)],
                 "signal_metadata": None,
+                "acquisition_group": None,
             },
         }
     }
 
     # Put works with Message
     msg_dict = {"dynamic_signal_sig1": {"value": 1}, "dynamic_signal_sig2": {"value": 2}}
-    msg = messages.DeviceMessage(signals=msg_dict)
+    with pytest.raises(ValueError):
+        # Missing metadata
+        signal.put(messages.DeviceMessage(signals=msg_dict))
+    metadata = {"async_update": {"type": "add"}}
+    msg = messages.DeviceMessage(signals=msg_dict, metadata=metadata)
     signal.put(msg)
     reading = signal.read()
     assert reading[signal.name]["value"] == msg
     # Set works with dict
-    status = signal.set(msg_dict)
+    status = signal.set(msg_dict, metadata=metadata)
     assert status.done is True
     reading = signal.read()
     assert reading[signal.name]["value"] == msg
     # Put fails with wrong type
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeCheckError):
         signal.put("wrong_type")
     # Put fails with wrong dict
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeCheckError):
         signal.put({"wrong_key": "wrong_value"})
+
+    # Set with acquisition group
+    signal.put(msg, acquisition_group="fly-scan")
+    reading = signal.read()
+    msg.metadata["acquisition_group"] = "fly-scan"
+    assert reading[signal.name]["value"] == msg
+
+
+def test_utils_dynamic_signal_with_defaults():
+    """Test DynamicSignal with async_update and acquisition group defaults"""
+    dev = Device(name="device")
+    signal = DynamicSignal(
+        name="dynamic_signal",
+        ndim=1,
+        signals=["sig1", "sig2"],
+        async_update={"type": "add", "max_shape": [None, 1000]},
+        acquisition_group="fly-scanning",
+        value=None,
+        parent=dev,
+    )
+    val = np.random.random(1000)
+    msg_dict = {"dynamic_signal_sig1": {"value": val}}
+    signal.put(msg_dict)
+    reading = signal.read()
+    reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
+    assert reading_value["signals"] == msg_dict
+    assert reading_value["metadata"]["async_update"] == {"type": "add", "max_shape": [None, 1000]}
+    assert reading_value["metadata"]["acquisition_group"] == "fly-scanning"
+
+    signal.put(msg_dict, acquisition_group="different-group")
+    reading = signal.read()
+    assert reading[signal.name]["value"].metadata["acquisition_group"] == "different-group"
+
+
+def test_utils_async_multi_signal():
+    """Test AsyncMultiSignal, which is a DynamicSignal with strict signal validation."""
+    device = Device(name="device")
+    signal = AsyncMultiSignal(
+        name="async_multi_signal",
+        ndim=1,
+        max_size=1000,
+        signals=["sig1", "sig2"],
+        async_update={"type": "add", "max_shape": [None, 1000]},
+        parent=device,
+    )
+    val = np.random.random(1000)
+    msg_dict = {"async_multi_signal_sig1": {"value": val}}
+    with pytest.raises(ValueError):
+        # Missing signal
+        signal.put(msg_dict)
+    msg_dict = {
+        "async_multi_signal_sig1": {"value": val},
+        "async_multi_signal_sig2": {"value": val},
+    }
+    signal.put(msg_dict)
+    reading = signal.read()
+    reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
+    assert reading_value["signals"] == msg_dict
+    assert reading_value["metadata"]["async_update"] == {"type": "add", "max_shape": [None, 1000]}
+
+
+def test_utils_async_signal():
+    device = Device(name="device")
+    signal = AsyncSignal(
+        name="async_signal",
+        ndim=1,
+        max_size=1000,
+        async_update={"type": "add", "max_shape": [None, 200]},
+        parent=device,
+    )
+    val = np.random.random(1000)
+    signal.put(
+        val, async_update={"type": "add_slice", "max_shape": [None, 1000]}, acquisition_group="scan"
+    )
+    reading = signal.read()
+    reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
+    assert np.array_equal(reading_value["signals"][signal.name]["value"], val)
+    assert reading_value["metadata"]["async_update"] == {
+        "type": "add_slice",
+        "max_shape": [None, 1000],
+    }
+    assert reading_value["metadata"]["acquisition_group"] == "scan"
 
 
 def test_utils_file_event_signal():
@@ -340,6 +431,7 @@ def test_utils_file_event_signal():
                 "rpc_access": False,
                 "signals": [("file_event_signal", 5)],
                 "signal_metadata": None,
+                "acquisition_group": None,
             },
         }
     }
@@ -391,6 +483,7 @@ def test_utils_preview_1d_signal():
                 "rpc_access": False,
                 "signals": [("preview_1d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
+                "acquisition_group": None,
             },
         }
     }
@@ -453,6 +546,7 @@ def test_utils_preview_2d_signal():
                 "rpc_access": False,
                 "signals": [("preview_2d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
+                "acquisition_group": None,
             },
         }
     }
@@ -518,6 +612,7 @@ def test_utils_progress_signal():
                 "rpc_access": False,
                 "signals": [("progress_signal", 5)],
                 "signal_metadata": None,
+                "acquisition_group": None,
             },
         }
     }
