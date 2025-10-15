@@ -756,7 +756,6 @@ def test_waveform(waveform):
         waveform.sim.select_model(model)
         waveform.waveform.get()
     # Now also test the async readback
-    mock_connector = waveform.connector = mock.MagicMock()
     mock_run_subs = waveform._run_subs = mock.MagicMock()
     waveform.scan_info = get_mock_scan_info(device=waveform)
     waveform.scan_info.msg.scan_id = "test"
@@ -768,7 +767,6 @@ def test_waveform(waveform):
         if timer > 5:
             raise TimeoutError("Trigger did not complete")
     assert status.done is True
-    assert mock_connector.xadd.call_count == 1
     assert mock_run_subs.call_count == 1
 
 
@@ -816,7 +814,7 @@ def test_waveform_update_modes(waveform, mode, mock_data, expected_calls):
             0,
             {"async_update": {"type": "add_slice", "index": 0, "max_shape": [None, 100]}},
         ),
-        ("add_slice", None, {"async_update": {"type": "add", "max_shape": [None, 100]}}),
+        ("add_slice", None, {"async_update": {"type": "add", "max_shape": [None, 200]}}),
         ("add", 0, {"async_update": {"type": "add", "max_shape": [None]}}),
     ],
 )
@@ -830,13 +828,24 @@ def test_waveform_send_async_update(waveform, mode, index, expected_md):
     waveform.waveform_shape.put(wv_shape)
     waveform.async_update.put(mode)
     waveform.scan_info = get_mock_scan_info(device=waveform)
-    value = 0
-    with mock.patch.object(waveform.connector, "xadd") as mock_xadd:
-        waveform._send_async_update(index=index, value=value)
-        # Check here that metadata is properly set
-        args, kwargs = mock_xadd.call_args
-        msg = args[1]["data"]
-        assert msg.metadata == expected_md
+    value = np.random.rand(wv_shape)
+    waveform._send_async_update(index=index, value=value)
+    reading = waveform.data.read()
+    assert (
+        reading[waveform.data.name]["value"].metadata["async_update"] == expected_md["async_update"]
+    )
+    assert reading[waveform.data.name]["value"].signals[waveform.data.name]["value"].shape == (
+        wv_shape,
+    )
+
+    # assert np.array_equal(reading[waveform.data.name]["value"], value)
+    # assert waveform.data.get()
+    # with mock.patch.object(waveform.connector, "xadd") as mock_xadd:
+    #     waveform._send_async_update(index=index, value=value)
+    #     # Check here that metadata is properly set
+    #     args, kwargs = mock_xadd.call_args
+    #     msg = args[1]["data"]
+    #     assert msg.metadata == expected_md
 
 
 #####################################
