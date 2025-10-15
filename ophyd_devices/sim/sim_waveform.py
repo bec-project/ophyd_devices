@@ -207,33 +207,25 @@ class SimWaveform(Device):
         waveform_shape = self.waveform_shape.get()
         if async_update_type == "add_slice":
             if index is not None:
-                metadata = {
-                    "async_update": {
-                        "type": "add_slice",
-                        "index": index,
-                        "max_shape": [None, waveform_shape],
-                    }
+                async_update = {
+                    "type": "add_slice",
+                    "index": index,
+                    "max_shape": [None, waveform_shape],
                 }
             else:
-                metadata = {"async_update": {"type": "add", "max_shape": [None, waveform_shape]}}
+                async_update = {"type": "add", "max_shape": [None, waveform_shape]}
         elif async_update_type == "add":
-            metadata = {"async_update": {"type": "add", "max_shape": [None]}}
+            async_update = {"type": "add", "max_shape": [None]}
         else:
-            # Again, this should never happen -> check_value,
-            # but just in case we raise an exception
             raise ValueError(
                 f"Invalid async_update type: {async_update_type} for device {self.name}"
             )
 
+        # TODO remove once BEC e2e test async data is updated to use AsyncSignal 'data'
         msg = messages.DeviceMessage(
             signals={self.waveform.name: {"value": value, "timestamp": time.time()}},
-            metadata=metadata,
+            metadata={"async_update": async_update},
         )
-
-        self.data.put(
-            {self.data.name: {"value": value, "timestamp": time.time()}}, metadata=metadata
-        )
-
         # Send the message to BEC
         self.connector.xadd(
             MessageEndpoints.device_async_readback(
@@ -242,6 +234,7 @@ class SimWaveform(Device):
             {"data": msg},
             expire=self._stream_ttl,
         )
+        self.data.put(value, async_update=async_update)
 
     def stage(self) -> list[object]:
         """Stage the camera for upcoming scan

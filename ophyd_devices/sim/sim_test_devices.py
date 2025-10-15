@@ -388,30 +388,12 @@ class SimCameraWithPSIComponents(SimCamera):
                 }
                 progress = messages.ProgressMessage(**progress)
                 self.progress.put(progress)
-                self._set_async_signal()
+                self.async_signal.put(
+                    np.sum(data, 1), async_update={"type": "add", "max_shape": [None]}
+                )
 
         status = self.task_handler.submit_task(trigger_cam)
         return status
-
-    def _set_async_signal(self, update_all: bool = False):
-        """Set the async signal values.
-
-        Args:
-            update_all (bool): If True, update all signals. If False, update only hinted and normal signals.
-        """
-        # pylint: disable=protected-access
-        for sig in self.async_1d._signals.values():
-            if update_all is True:
-                sig.put(np.random.random())
-                continue
-            if sig.kind in [Kind.hinted, Kind.normal]:
-                sig.put(np.random.random())
-        for sig in self.async_2d._signals.values():
-            if update_all is True:
-                sig.put(np.random.random())
-                continue
-            if sig.kind in [Kind.hinted, Kind.normal]:
-                sig.put(np.random.random())
 
     def on_unstage(self):
         """Unstage device"""
