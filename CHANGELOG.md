@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.27.0 (2025-10-15)
+
+### Bug Fixes
+
+- **psi device base**: Properly initialize device_manager var in PSIDeviceBase
+  ([`39705e6`](https://github.com/bec-project/ophyd_devices/commit/39705e69af9377c2e2986758ca2df16069f02d09))
+
+### Features
+
+- Add PSIDeviceBase import to the main module
+  ([`339fd1e`](https://github.com/bec-project/ophyd_devices/commit/339fd1e592e37621ccbc29d580ec390ce56c4129))
+
+
 ## v1.26.6 (2025-09-29)
 
 ### Bug Fixes
