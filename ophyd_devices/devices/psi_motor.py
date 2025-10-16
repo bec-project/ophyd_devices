@@ -21,6 +21,30 @@ class SpmgStates:
     GO = 3
 
 
+class EpicsSignalWithCheck(EpicsSignal):
+    """
+    Custom EpicsSignal with a value check on put.
+    """
+
+    def put(self, value, use_complete: bool = True, **kwargs):
+        """
+        Override put method to handle travel limits.
+
+        This method allows setting the travel limits for the ECMC motor.
+        It ensures that the value is within the acceptable range before
+        sending it to the EPICS server.
+        """
+        if not use_complete:
+            use_complete = True
+            self.log.warning(f"Overruling use_complete for {self.pvname} to True")
+        # Put the value with use_complete=True
+        super().put(value, use_complete=use_complete, **kwargs)
+        # Check if the value was accepted
+        new_value = self.get(auto_monitor=False)
+        if new_value != value:
+            raise ValueError(f"Failed to set signal {self.name} to value: {value}.")
+
+
 class EpicsMotor(OphydEpicsMotor):
     """
     Extended EPICS Motor class for PSI motors.
@@ -54,6 +78,8 @@ class EpicsMotor(OphydEpicsMotor):
         kind=Kind.omitted,
         doc="Enable control. Either 0 (disabled) or 1 (enabled).",
     )
+    high_limit_travel = Cpt(EpicsSignalWithCheck, ".HLM", kind=Kind.omitted, auto_monitor=True)
+    low_limit_travel = Cpt(EpicsSignalWithCheck, ".LLM", kind=Kind.omitted, auto_monitor=True)
 
     def move(self, position, wait=False, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
@@ -79,34 +105,6 @@ class EpicsMotor(OphydEpicsMotor):
         return super().move(position, wait, **kwargs)
 
 
-class TravelLimitsECMC(EpicsSignal):
-    """
-    Custom EpicsSignal for ECMC travel limits.
-    """
-
-    def put(self, value, use_complete: bool = True, **kwargs):
-        """
-        Override put method to handle travel limits.
-
-        This method allows setting the travel limits for the ECMC motor.
-        It ensures that the value is within the acceptable range before
-        sending it to the EPICS server.
-        """
-        # Get first the current value
-        old_value = self.get()
-        if not use_complete:
-            use_complete = True
-            self.log.warning(f"Overruling use_complete for {self.pvname} to True")
-        # Set the value with put_complete
-        super().put(value, use_complete=use_complete, **kwargs)
-        # Now check if the PLC layer accepted the value change
-        new_value = self.get(auto_monitor=False)
-        if new_value != value:
-            raise ValueError(
-                f"Failed to set travel limit: {value}. Update was rejected by PLC. Limit remains {new_value}."
-            )
-
-
 class EpicsMotorEC(EpicsMotor):
     """Detailed ECMC EPICS motor class
 
@@ -119,8 +117,7 @@ class EpicsMotorEC(EpicsMotor):
     motor_enable_readback = Cpt(
         EpicsSignalRO,
         "-EnaAct",
-        auto_monitor=True,
-        kind=Kind.config,
+        kind=Kind.omitted,
         doc="[ECMC] Reflects whether the axis is enabled in the hardware level.",
     )
     motor_enable = Cpt(
@@ -128,33 +125,20 @@ class EpicsMotorEC(EpicsMotor):
         "-EnaCmd-RB",
         write_pv="-EnaCmd",
         put_complete=True,
-        auto_monitor=True,
         kind=Kind.omitted,
         doc="[ECMC] Send enable/disable command to hardware.",
     )
-    homed = Cpt(
-        EpicsSignalRO, "-Homed", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Homed status"
-    )
+    homed = Cpt(EpicsSignalRO, "-Homed", kind=Kind.omitted, doc="[ECMC] Homed status")
     velocity_readback = Cpt(
-        EpicsSignalRO,
-        "-VelAct",
-        auto_monitor=True,
-        kind=Kind.config,  # I would think this depends on the beamline? normal or config
-        doc="[ECMC] Velocity readback",
+        EpicsSignalRO, "-VelAct", kind=Kind.omitted, doc="[ECMC] Velocity readback"
     )
-    position_readback = Cpt(
-        EpicsSignalRO,
-        "-PosAct",
-        auto_monitor=True,
-        kind=Kind.normal,
-        doc="[ECMC] Position readback",
+    position_readback_dial = Cpt(
+        EpicsSignalRO, "-PosAct", kind=Kind.omitted, doc="[ECMC] Position readback"
     )
-    position_error = Cpt(
-        EpicsSignalRO, "-PosErr", auto_monitor=True, kind=Kind.normal, doc="[ECMC] Position error"
-    )
+    position_error = Cpt(EpicsSignalRO, "-PosErr", kind=Kind.omitted, doc="[ECMC] Position error")
     # Virtual motor and temperature limits are interlocks
-    high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", auto_monitor=True, kind=Kind.omitted)
-    low_interlock = Cpt(EpicsSignalRO, "-SumIlockBwd", auto_monitor=True, kind=Kind.omitted)
+    high_interlock = Cpt(EpicsSignalRO, "-SumIlockFwd", kind=Kind.omitted)
+    low_interlock = Cpt(EpicsSignalRO, "-SumIlockBwd", kind=Kind.omitted)
 
     error = Cpt(
         EpicsSignalRO, "-ErrId", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Error ID"
@@ -163,8 +147,6 @@ class EpicsMotorEC(EpicsMotor):
         EpicsSignalRO, "-MsgTxt", auto_monitor=True, kind=Kind.omitted, doc="[ECMC] Error message"
     )
     error_reset = Cpt(EpicsSignal, "-ErrRst", put_complete=True, kind=Kind.omitted)
-    high_limit_travel = Cpt(TravelLimitsECMC, ".HLM", kind="omitted", auto_monitor=True)
-    low_limit_travel = Cpt(TravelLimitsECMC, ".LLM", kind="omitted", auto_monitor=True)
 
     def move(self, position, wait=False, **kwargs) -> MoveStatus:
         """Extended move function with a few sanity checks
