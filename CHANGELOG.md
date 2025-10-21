@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.28.0 (2025-10-21)
+
+### Bug Fixes
+
+- **psi-detector-base**: Add test for interface
+  ([`be539f3`](https://github.com/bec-project/ophyd_devices/commit/be539f3ca98725af158ae865d78e8042a020f192))
+
+### Features
+
+- Add device-config-templates to interfaces
+  ([`f96632f`](https://github.com/bec-project/ophyd_devices/commit/f96632f8b476f13d6a106e1d282664bc72c40db6))
+
+### Testing
+
+- **device-config-templates**: Add tests for device config template
+  ([`c6d3ece`](https://github.com/bec-project/ophyd_devices/commit/c6d3ecedcb80f9ff9b0b55730583a6637a1a7986))
+
+
 ## v1.27.0 (2025-10-15)
 
 ### Bug Fixes
