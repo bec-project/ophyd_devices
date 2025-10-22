@@ -158,7 +158,8 @@ class BECMessageSignal(Signal):
             out = []
             for signal in signals:
                 if isinstance(signal, str):
-                    out.append((signal, Kind.normal.value))
+                    kind = Kind.hinted.value if len(signals) == 1 else Kind.normal.value
+                    out.append((signal, kind))
                 elif isinstance(signal, tuple) and len(signal) == 2:
                     if isinstance(signal[1], Kind):
                         out.append((signal[0], signal[1].value))

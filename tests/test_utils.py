@@ -1,5 +1,6 @@
 import threading
 import time
+from functools import partial
 from unittest import mock
 
 import numpy as np
@@ -10,7 +11,7 @@ from ophyd import Device, EpicsSignalRO, Signal
 from ophyd.status import WaitTimeoutError
 from typeguard import TypeCheckError
 
-from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
+from ophyd_devices.tests.utils import MockPV
 from ophyd_devices.utils.bec_signals import (
     AsyncMultiSignal,
     AsyncSignal,
@@ -333,17 +334,23 @@ def test_utils_dynamic_signal():
 
 
 def test_utils_dynamic_signal_with_defaults():
-    """Test DynamicSignal with async_update and acquisition group defaults"""
+    """
+    Test DynamicSignal with async_update and acquisition group defaults. If only
+    one sub-signal is provided for the dynamic signal, the name of the sub-signal
+    will be used in the signals dict and a warning will be issued that the sub-signal
+    name is being ignored.
+    """
     dev = Device(name="device")
-    signal = DynamicSignal(
+    create_signal = partial(
+        DynamicSignal,
         name="dynamic_signal",
+        parent=dev,
         ndim=1,
-        signals=["sig1", "sig2"],
+        value=None,
         async_update={"type": "add", "max_shape": [None, 1000]},
         acquisition_group="fly-scanning",
-        value=None,
-        parent=dev,
     )
+    signal = create_signal(signals=["sig1", "sig2"])
     val = np.random.random(1000)
     msg_dict = {"dynamic_signal_sig1": {"value": val}}
     signal.put(msg_dict)
@@ -356,6 +363,11 @@ def test_utils_dynamic_signal_with_defaults():
     signal.put(msg_dict, acquisition_group="different-group")
     reading = signal.read()
     assert reading[signal.name]["value"].metadata["acquisition_group"] == "different-group"
+
+    # Test init variations for single signal
+    for signal in [["sig1"], "sig1", None]:
+        signal = create_signal(signals=signal)
+        assert signal.signals == [(signal.name, ophyd.Kind.hinted.value)]
 
 
 def test_utils_async_multi_signal():

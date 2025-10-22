@@ -838,15 +838,6 @@ def test_waveform_send_async_update(waveform, mode, index, expected_md):
         wv_shape,
     )
 
-    # assert np.array_equal(reading[waveform.data.name]["value"], value)
-    # assert waveform.data.get()
-    # with mock.patch.object(waveform.connector, "xadd") as mock_xadd:
-    #     waveform._send_async_update(index=index, value=value)
-    #     # Check here that metadata is properly set
-    #     args, kwargs = mock_xadd.call_args
-    #     msg = args[1]["data"]
-    #     assert msg.metadata == expected_md
-
 
 #####################################
 ### Test PSiComponent test device ###
@@ -864,29 +855,7 @@ def test_simulation_sim_camera_with_psi_component(test_device):
     assert test_device.name == "test_device"
     assert all(
         element in test_device._signals
-        for element in [
-            "preview_2d",
-            "preview_1d",
-            "file_event",
-            "progress",
-            "dynamic_signal",
-            # "async_1d",
-            # "async_2d",
-        ]
+        for element in ["preview_2d", "preview_1d", "file_event", "progress", "dynamic_signal"]
     )
     # No signals are shown when read is called on the device
     assert test_device.read() == {}
-    ### Commented out because the async signals are not implemented yet, cf. issue #104
-
-    # Hinted and normal signals
-    # assert list(test_device.async_1d.read().keys()) == [
-    #     "test_device_async_1d_signal1",
-    #     "test_device_async_1d_signal2",
-    # ]
-    # assert list(test_device.async_2d.read().keys()) == [
-    #     "test_device_async_2d_signal1",
-    #     "test_device_async_2d_signal2",
-    # ]
-    # # Config signals
-    # assert "test_device_async_1d_signal3" in test_device.async_1d.read_configuration()
-    # assert "test_device_async_2d_signal3" in test_device.async_2d.read_configuration()
