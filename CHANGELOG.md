@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v1.29.0 (2025-10-22)
+
+### Bug Fixes
+
+- **simulation**: Fix simulated devices
+  ([`051d665`](https://github.com/bec-project/ophyd_devices/commit/051d66549061633e1e938e6292cb8ee111757619))
+
+### Features
+
+- **bec-signals**: Add acquisition group to BECMessageSignal and SignalInfo
+  ([`9b51b22`](https://github.com/bec-project/ophyd_devices/commit/9b51b22671a6ff2b78576f75834c061d6835d8af))
+
+### Refactoring
+
+- **bec-signals**: Cleanup and fix logic for unify signal in BECMessageSignal
+  ([`5523ead`](https://github.com/bec-project/ophyd_devices/commit/5523ead87c09d3166044246998871c1bd7ec7b7a))
+
+- **bec-signals**: Refactor AsyncSignal to AsyncSignal and AsyncMultiSignal
+  ([`6d15ee5`](https://github.com/bec-project/ophyd_devices/commit/6d15ee50b87f616bda82b102383d1130f1d6a959))
+
+- **static-device-test**: Add option to force connect and timeout to ophyd device test
+  ([`297c5ee`](https://github.com/bec-project/ophyd_devices/commit/297c5eee38d3fe3bb04701ca9adcbc9dbe8ab5f7))
+
+
 ## v1.28.0 (2025-10-21)
 
 ### Bug Fixes
