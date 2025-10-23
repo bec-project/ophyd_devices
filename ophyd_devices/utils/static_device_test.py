@@ -17,7 +17,7 @@ try:
 except ImportError:
     device_manager = None
 
-TestResult = namedtuple("TestResult", ["name", "success", "message"])
+TestResult = namedtuple("TestResult", ["name", "success", "message", "config_is_valid"])
 
 
 class StaticDeviceAnalysisError(Exception):
@@ -328,9 +328,12 @@ class StaticDeviceTest:
             for name, conf in self.config.items():
                 return_val = 0
                 status = False
+                config_is_valid = False
                 try:
                     return_val += self.validate_schema(name, conf)
                     return_val += self.check_device_classes(name, conf)
+                    if return_val == 0:
+                        config_is_valid = True
                     if device_manager is not None and connect:
                         return_val += self.connect_device(
                             name,
@@ -345,7 +348,12 @@ class StaticDeviceTest:
                     self.print_and_write(f"ERROR: {name} failed: {e}")
                 finally:
                     results.append(
-                        TestResult(name=name, success=status, message="\n".join(print_and_write))
+                        TestResult(
+                            name=name,
+                            success=status,
+                            message="\n".join(print_and_write),
+                            config_is_valid=config_is_valid,
+                        )
                     )
                     print_and_write.clear()
         return results

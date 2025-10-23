@@ -4,7 +4,7 @@ from unittest import mock
 
 import bec_lib
 
-from ophyd_devices.utils.static_device_test import StaticDeviceTest, launch
+from ophyd_devices.utils.static_device_test import StaticDeviceTest, TestResult, launch
 
 
 def test_static_device_test():
@@ -42,3 +42,13 @@ def test_static_device_test_with_config_dict():
     assert ret[1].name == "wrong"
     assert ret[1].success is False
     assert isinstance(ret[1].message, str)
+
+
+def test_static_device_test_TestResults():
+    result = TestResult(
+        name="test_device", success=True, message="Device is OK", config_is_valid=True
+    )
+    assert result.name == "test_device"
+    assert result.success is True
+    assert result.message == "Device is OK"
+    assert result.config_is_valid is True
