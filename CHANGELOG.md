@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.1 (2025-10-23)
+
+### Bug Fixes
+
+- **static-device-test**: Add config_is_valid field to TestResult
+  ([`0b20b15`](https://github.com/bec-project/ophyd_devices/commit/0b20b15083d1c64781e7d763485c88af3d436872))
+
+
 ## v1.29.0 (2025-10-22)
 
 ### Bug Fixes
