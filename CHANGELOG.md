@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.2 (2025-11-04)
+
+### Bug Fixes
+
+- **bec_signals**: Update signal metadata when updating its components
+  ([`9bd333f`](https://github.com/bec-project/ophyd_devices/commit/9bd333fa780577b48acfc833cb0ee82f29ee08eb))
+
+
 ## v1.29.1 (2025-10-23)
 
 ### Bug Fixes
