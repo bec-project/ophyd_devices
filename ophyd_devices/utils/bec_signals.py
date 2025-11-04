@@ -129,7 +129,7 @@ class BECMessageSignal(Signal):
         self.enabled = enabled
         self.acquisition_group = acquisition_group
         self.signals = self._unify_signals(signals)
-        self.signal_metadata = signal_metadata
+        self.signal_metadata = signal_metadata or {}
         self._bec_message_type = bec_message_type
 
     def _unify_signals(
@@ -540,8 +540,6 @@ class PreviewSignal(BECMessageSignal):
             transpose (bool): Whether to transpose the data for visualization.
             value (DeviceMonitorMessage | dict | None): The initial value of the signal. Defaults to None.
         """
-        self.num_rotation_90 = num_rotation_90
-        self.transpose = transpose
         kwargs.pop("kind", None)
         super().__init__(
             name=name,
@@ -555,6 +553,24 @@ class PreviewSignal(BECMessageSignal):
             signal_metadata={"num_rotation_90": num_rotation_90, "transpose": transpose},
             **kwargs,
         )
+
+    @property
+    def num_rotation_90(self) -> Literal[0, 1, 2, 3]:
+        """Get the number of 90 degree counter-clockwise rotations applied to the data."""
+        return self.signal_metadata["num_rotation_90"]
+
+    @num_rotation_90.setter
+    def num_rotation_90(self, value: Literal[0, 1, 2, 3]) -> None:
+        self.signal_metadata["num_rotation_90"] = value
+
+    @property
+    def transpose(self) -> bool:
+        """Get whether the data is transposed."""
+        return self.signal_metadata["transpose"]
+
+    @transpose.setter
+    def transpose(self, value: bool) -> None:
+        self.signal_metadata["transpose"] = value
 
     def _process_data(self, value: np.ndarray) -> np.ndarray:
         if self.ndim == 1:
@@ -961,3 +977,12 @@ class AsyncSignal(DynamicSignal):
         status = DeviceStatus(device=self)
         status.set_finished()
         return status
+
+    @property
+    def max_size(self) -> int:
+        """Get the maximum size of the signal buffer."""
+        return self.signal_metadata["max_size"]
+
+    @max_size.setter
+    def max_size(self, value: int) -> None:
+        self.signal_metadata["max_size"] = value
