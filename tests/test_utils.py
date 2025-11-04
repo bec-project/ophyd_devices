@@ -251,7 +251,7 @@ def test_utils_bec_message_signal():
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("bec_message_signal", 5)],
-                "signal_metadata": None,
+                "signal_metadata": {},
                 "acquisition_group": None,
             },
         }
@@ -298,7 +298,7 @@ def test_utils_dynamic_signal():
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("sig1", 1), ("sig2", 1)],
-                "signal_metadata": None,
+                "signal_metadata": {},
                 "acquisition_group": None,
             },
         }
@@ -442,7 +442,7 @@ def test_utils_file_event_signal():
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("file_event_signal", 5)],
-                "signal_metadata": None,
+                "signal_metadata": {},
                 "acquisition_group": None,
             },
         }
@@ -623,7 +623,7 @@ def test_utils_progress_signal():
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("progress_signal", 5)],
-                "signal_metadata": None,
+                "signal_metadata": {},
                 "acquisition_group": None,
             },
         }
