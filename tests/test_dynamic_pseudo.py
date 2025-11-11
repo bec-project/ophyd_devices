@@ -12,21 +12,33 @@ def device_manager_with_devices():
     dm.add_device("a")
     dm.add_device("b")
     device_mock = mock.MagicMock()
-    device_mock.obj.readback.get.return_value = 20
     dm.devices["a"] = device_mock
     dm.devices["b"] = device_mock
 
     return dm
 
 
-def test_computed_signal(device_manager_with_devices):
+@pytest.mark.parametrize(
+    "compute_method_str",
+    [
+        "def test(a, b): return a.get() + b.get()",
+        "def   test(a,   b): return a.get() + b.get()",
+        "    def my_compute_method(a,b):\n        return a.get() + b.get()\n",
+    ],
+)
+def test_computed_signal(device_manager_with_devices, compute_method_str):
     signal = ComputedSignal(name="test", device_manager=device_manager_with_devices)
     assert signal.get() is None
 
-    signal.compute_method = "def test(a, b): return a.get() + b.get()"
-    signal.input_signals = ["a_readback", "b_readback"]
+    # Configure the mocks before setting input signals
+    device_manager_with_devices.devices["a"].readback.get.return_value = 20
+    device_manager_with_devices.devices["b"].readback.get.return_value = 20
+
+    signal.compute_method = compute_method_str
+    signal.input_signals = ["a.readback", "b.readback"]
+
     assert signal.get() == 40
 
     # pylint: disable=protected-access
     assert callable(signal._compute_method)
-    assert signal._compute_method_str == "def user_compute_method(a, b): return a.get() + b.get()"
+    assert signal._compute_method_str == compute_method_str.strip()
