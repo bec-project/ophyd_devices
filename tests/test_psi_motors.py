@@ -83,7 +83,7 @@ def test_epics_motor_move(mock_epics_motor):
     assert motor.user_readback.get() == 5
     assert motor.user_setpoint.get() == 5
 
-    # Now this should raise... in theory...
+    # Now this should raise...
     motor.user_readback._read_pv.set_severity(ophyd.utils.epics_pvs.AlarmSeverity.MAJOR)
     motor.user_readback._metadata["severity"] = ophyd.utils.epics_pvs.AlarmSeverity.MAJOR
     motor.user_readback._read_pv.set_alarm_status(ophyd.utils.epics_pvs.AlarmStatus.READ)
@@ -98,12 +98,10 @@ def test_epics_motor_move(mock_epics_motor):
     assert status.done is False
     motor.user_readback._read_pv.mock_data = 10
     motor.motor_done_move._read_pv.mock_data = 1
-    status.wait(timeout=5)
-    assert status.done is True
-
-    # But it only raises if we do the following
-    motor.tolerated_alarm = ophyd.utils.epics_pvs.AlarmSeverity.MINOR
-    status = motor.move(6)
+    with pytest.raises(RuntimeError):
+        status.wait(timeout=5)
+        assert status.done is True
+        assert isinstance(status.exception(), RuntimeError)
 
 
 def test_move_epics_motor_ec(mock_epics_motor_ec):
@@ -130,7 +128,7 @@ def test_move_epics_motor_ec(mock_epics_motor_ec):
         status.wait(timeout=5)
         assert status.done is True
 
-        # If error exists, this should log a warning, and PLC logic should try to remove it itself
+        # If error exists, this should raise a warning
         motor_ec.error._read_pv.mock_data = 1
         status = motor_ec.move(8)
         motor_ec.motor_done_move._read_pv.mock_data = 0
@@ -138,11 +136,12 @@ def test_move_epics_motor_ec(mock_epics_motor_ec):
         assert mock_log_warning.call_count == 1
         motor_ec.user_readback._read_pv.mock_data = 8
         motor_ec.motor_done_move._read_pv.mock_data = 1
-        status.wait(timeout=5)
-        assert status.done is True
-        motor_ec.error._read_pv.mock_data = 0
+        with pytest.raises(RuntimeError):
+            status.wait(timeout=5)
+            assert status.done is True
+            assert isinstance(status.exception(), RuntimeError)
 
-        # Attempting to move above active HLS should raise a warning
+        motor_ec.error._read_pv.mock_data = 0
         # Note: Position has to be > current position from 8 to 9...
         motor_ec.high_interlock._read_pv.mock_data = 1
         status = motor_ec.move(9)
