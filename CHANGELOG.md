@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v1.29.3 (2025-11-12)
+
+### Bug Fixes
+
+- **mock-pv**: Add get_ctrlvars to better test alarm state callbacks
+  ([`2bb37ba`](https://github.com/bec-project/ophyd_devices/commit/2bb37ba3954da9199f81253a791fa5ac66a3509c))
+
+### Documentation
+
+- **psi motor**: Add component docs
+  ([`fca4f31`](https://github.com/bec-project/ophyd_devices/commit/fca4f31fb02224f86a68d777e3ed53a6dc620274))
+
+### Refactoring
+
+- Renamed EpicsMotorMR to EpicsMotor
+  ([`6f0308b`](https://github.com/bec-project/ophyd_devices/commit/6f0308b7838c16342bfdffa4c13c05bb020ae1c6))
+
+- **psi-motor**: Cleanup and fix tests
+  ([`33aa4b6`](https://github.com/bec-project/ophyd_devices/commit/33aa4b6cca58d785ec37acf5578dfbfb6fe83b61))
+
+- **psi-motor**: Refactor custom check signal and signal kind attributes.
+  ([`3b6d5f3`](https://github.com/bec-project/ophyd_devices/commit/3b6d5f340fe47f8f2c64b3f6da82dadd09288cda))
+
+- **psi-motor**: Review signal kinds, add custom limit signal
+  ([`7bb6103`](https://github.com/bec-project/ophyd_devices/commit/7bb610394e4c255929be8695e009ffb2dccc9cca))
+
+### Testing
+
+- **psi-motor**: Cleanup integration, add tests for psi-motors.
+  ([`66fe9e2`](https://github.com/bec-project/ophyd_devices/commit/66fe9e217cb9d49178c4f829c5872f6686a66b1d))
+
+
 ## v1.29.2 (2025-11-04)
 
 ### Bug Fixes
