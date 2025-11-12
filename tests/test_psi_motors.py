@@ -165,3 +165,13 @@ def test_move_epics_motor_ec(mock_epics_motor_ec):
         status.wait(timeout=5)
         assert status.done is True
         motor_ec.low_interlock._read_pv.mock_data = 0
+
+
+def test_epics_motor_high_limit_switch_raises(mock_epics_motor):
+    """Test that moving beyond high limit switch raises an error."""
+    motor = mock_epics_motor
+    motor.user_setpoint._metadata["lower_ctrl_limit"] = -10
+    motor.user_setpoint._metadata["upper_ctrl_limit"] = 10
+    motor.high_limit_switch._read_pv.mock_data = 1  # Simulate high limit switch active
+    with pytest.raises(ophyd.utils.LimitError):
+        motor.move(15)
