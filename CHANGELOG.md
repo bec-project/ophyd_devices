@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.5 (2025-11-13)
+
+### Bug Fixes
+
+- Smarter strip for computed signal
+  ([`1241bcb`](https://github.com/bec-project/ophyd_devices/commit/1241bcb014ffed24eb0eb4ce1a937308ce147ff5))
+
+
 ## v1.29.4 (2025-11-13)
 
 ### Bug Fixes
