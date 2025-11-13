@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.30.0 (2025-11-13)
+
+### Build System
+
+- **bec**: Update min dependency to 3.74
+  ([`e78ec1c`](https://github.com/bec-project/ophyd_devices/commit/e78ec1c814eacb67c182460d14147509da331947))
+
+### Features
+
+- **bec signals**: Validate async updates
+  ([`c84a8c2`](https://github.com/bec-project/ophyd_devices/commit/c84a8c290268e676f3aaf170ad4fa325cffaefb2))
+
+
 ## v1.29.7 (2025-11-13)
 
 ### Bug Fixes
