@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.4 (2025-11-13)
+
+### Bug Fixes
+
+- **computed signal**: Fix various bugs in the computed signal
+  ([`d7fb4f5`](https://github.com/bec-project/ophyd_devices/commit/d7fb4f55e8eaeabc9a40a30189db4d7920884eea))
+
+
 ## v1.29.3 (2025-11-12)
 
 ### Bug Fixes
