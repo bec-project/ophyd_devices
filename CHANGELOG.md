@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.7 (2025-11-13)
+
+### Bug Fixes
+
+- **async signal tests**: Create messages with correct async update
+  ([`9a23557`](https://github.com/bec-project/ophyd_devices/commit/9a23557b9efb22064d4745f63cceb6e566ad03fb))
+
+
 ## v1.29.6 (2025-11-13)
 
 ### Bug Fixes
