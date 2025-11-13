@@ -735,6 +735,7 @@ class DynamicSignal(BECMessageSignal):
                     "Ignoring metadata, async_update and acquisition_group arguments when value is a DeviceMessage."
                 )
             self._check_signals(value)
+            self._check_async_update(value)
             return super().put(value, **kwargs)
         try:
             metadata = metadata or {}
@@ -751,7 +752,22 @@ class DynamicSignal(BECMessageSignal):
         except ValidationError as exc:
             raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
         self._check_signals(msg)
+        self._check_async_update(msg)
         return super().put(msg, **kwargs)
+
+    def _check_async_update(self, msg: messages.DeviceMessage) -> None:
+        """Check if async_update metadata is present."""
+        if "async_update" not in msg.metadata:
+            raise ValueError(
+                f"Async update must be provided for signal {self.name} of class {self.__class__.__name__}."
+            )
+        if not isinstance(msg.metadata["async_update"], dict):
+            raise ValueError(
+                f"Async update metadata must be a dict for signal {self.name} of class {self.__class__.__name__}."
+            )
+
+        # Validate async_update using DeviceAsyncUpdate model
+        messages.DeviceAsyncUpdate(**msg.metadata["async_update"])
 
     def _check_signals(self, msg: messages.DeviceMessage) -> None:
         """Check if all signals are valid, and if relevant metadata is also present."""
