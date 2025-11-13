@@ -309,7 +309,7 @@ def test_utils_dynamic_signal():
     with pytest.raises(ValueError):
         # Missing metadata
         signal.put(messages.DeviceMessage(signals=msg_dict))
-    metadata = {"async_update": {"type": "add"}}
+    metadata = {"async_update": {"type": "add", "max_shape": [None, 1000]}}
     msg = messages.DeviceMessage(signals=msg_dict, metadata=metadata)
     signal.put(msg)
     reading = signal.read()
@@ -408,7 +408,9 @@ def test_utils_async_signal():
     )
     val = np.random.random(1000)
     signal.put(
-        val, async_update={"type": "add_slice", "max_shape": [None, 1000]}, acquisition_group="scan"
+        val,
+        async_update={"type": "add_slice", "max_shape": [None, 1000], "index": 1},
+        acquisition_group="scan",
     )
     reading = signal.read()
     reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
@@ -416,6 +418,7 @@ def test_utils_async_signal():
     assert reading_value["metadata"]["async_update"] == {
         "type": "add_slice",
         "max_shape": [None, 1000],
+        "index": 1,
     }
     assert reading_value["metadata"]["acquisition_group"] == "scan"
 
