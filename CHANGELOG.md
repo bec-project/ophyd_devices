@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.6 (2025-11-13)
+
+### Bug Fixes
+
+- **bec signals**: Metadata cannot be None
+  ([`b0c5f9d`](https://github.com/bec-project/ophyd_devices/commit/b0c5f9d815e12c2c54f8943dc84f1186773c7f0c))
+
+
 ## v1.29.5 (2025-11-13)
 
 ### Bug Fixes
