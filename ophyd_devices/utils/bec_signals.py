@@ -324,7 +324,7 @@ class ProgressSignal(BECMessageSignal):
 
         try:
             msg = messages.ProgressMessage(
-                value=value, max_value=max_value, done=done, metadata=metadata
+                value=value, max_value=max_value, done=done, metadata=metadata or {}
             )
         except ValidationError as exc:
             raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
@@ -462,7 +462,7 @@ class FileEventSignal(BECMessageSignal):
                 device_name=device_name,
                 file_type=file_type,
                 hinted_h5_entries=hinted_h5_entries,
-                metadata=metadata,
+                metadata=metadata or {},
             )
         except ValidationError as exc:
             raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
@@ -624,7 +624,7 @@ class PreviewSignal(BECMessageSignal):
             value = self._process_data(value)
             try:
                 msg = messages.DevicePreviewMessage(
-                    data=value, device=device_name, signal=signal_name, metadata=metadata
+                    data=value, device=device_name, signal=signal_name, metadata=metadata or {}
                 )
             except ValidationError as exc:
                 raise ValueError(f"Error setting signal {self.name}: {exc}") from exc
