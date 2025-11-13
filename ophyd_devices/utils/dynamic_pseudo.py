@@ -3,6 +3,7 @@ This module provides a class for creating a pseudo signal that is computed from 
 """
 
 import ast
+import re
 from functools import reduce
 from typing import Callable
 
@@ -13,6 +14,15 @@ from ophyd import Signal, SignalRO
 from ophyd.ophydobj import Kind
 
 logger = bec_logger.logger
+
+_FIRST_DEF = re.compile(r"(^|\\n)\s*def", re.MULTILINE)
+
+
+def _smart_strip(method: str) -> str:
+    if (first_def := _FIRST_DEF.search(method)) is not None:
+        return method[first_def.span()[1] - 3 :]
+    else:
+        raise ValueError(f"No 'def' keyword found in function definition: {method}")
 
 
 def rgetattr(obj, attr, *args):
@@ -96,8 +106,7 @@ class ComputedSignal(SignalRO):
 
         """
         logger.info(f"Updating compute method for {self.name}.")
-        method = method.strip()
-
+        method = _smart_strip(method)
         # Parse and validate the function using AST
         try:
             tree = ast.parse(method)

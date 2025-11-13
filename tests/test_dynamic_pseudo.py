@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 from bec_server.device_server.tests.utils import DMMock
 
-from ophyd_devices.utils.dynamic_pseudo import ComputedSignal
+from ophyd_devices.utils.dynamic_pseudo import ComputedSignal, _smart_strip
 
 
 @pytest.fixture
@@ -24,6 +24,9 @@ def device_manager_with_devices():
         "def test(a, b): return a.get() + b.get()",
         "def   test(a,   b): return a.get() + b.get()",
         "    def my_compute_method(a,b):\n        return a.get() + b.get()\n",
+        "#comment goes here\n    def my_compute_method(a,b):\n        return a.get() + b.get()\n",
+        "#comment goes here\n\n\n    def my_compute_method(a,b):\n        return a.get() + b.get()\n",
+        "#comment goes here\n\n\n    def my_compute_method(a,b):\n#comment inside\n        return a.get() + b.get()\n",
     ],
 )
 def test_computed_signal(device_manager_with_devices, compute_method_str):
@@ -41,4 +44,4 @@ def test_computed_signal(device_manager_with_devices, compute_method_str):
 
     # pylint: disable=protected-access
     assert callable(signal._compute_method)
-    assert signal._compute_method_str == compute_method_str.strip()
+    assert signal._compute_method_str == _smart_strip(compute_method_str)
