@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.30.1 (2025-11-14)
+
+### Bug Fixes
+
+- Use streams to retrieve the username from redis
+  ([`21634d3`](https://github.com/bec-project/ophyd_devices/commit/21634d3bcb6b7a8a8ea4e0de26f85453ba78900f))
+
+
 ## v1.30.0 (2025-11-13)
 
 ### Build System
