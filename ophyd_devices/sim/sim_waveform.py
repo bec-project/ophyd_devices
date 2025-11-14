@@ -90,6 +90,7 @@ class SimWaveform(Device):
         compute_readback=True,
         kind=Kind.hinted,
     )
+    waveform_0d = Cpt(AsyncSignal, name="waveform_0d", ndim=0, max_size=1000, kind=Kind.hinted)
     data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
     # Can be extend or append
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
@@ -151,6 +152,9 @@ class SimWaveform(Device):
         Here, we also run a callback on SUB_MONITOR to send the image data the device_monitor endpoint in BEC.
         """
         status = DeviceStatus(self)
+        self.waveform_0d.put(
+            np.random.randint(0, 100), async_update={"type": "add", "max_shape": [None]}
+        )
 
         def acquire(status: DeviceStatus):
             try:
@@ -247,7 +251,6 @@ class SimWaveform(Device):
         is published to the device_monitor endpoint in REDIS.
         """
         if self._staged is Staged.yes:
-
             return super().stage()
         self.file_path.set(
             os.path.join(
