@@ -111,10 +111,10 @@ class BecScaninfoMixin:
         if self.sim_mode:
             return getpass.getuser()
 
-        msg = self.device_manager.connector.get(MessageEndpoints.account())
-        if msg:
-            return msg
-        return getpass.getuser()
+        msg = self.device_manager.connector.get_last(MessageEndpoints.account(), "data")
+        if msg is None:
+            return getpass.getuser()
+        return msg.value if isinstance(msg.value, str) else getpass.getuser()
 
     def load_scan_metadata(self) -> None:
         """Load scan metadata
