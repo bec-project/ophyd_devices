@@ -1,10 +1,12 @@
 """Utilities to mock and test devices."""
 
 import threading
+from contextlib import contextmanager
 from time import sleep
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Generator, TypeVar
 from unittest import mock
 
+import ophyd
 from bec_lib.devicemanager import ScanInfo
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
@@ -18,6 +20,29 @@ else:
     ScanStatusMessage = lazy_import_from("bec_lib.messages", ("ScanStatusMessage",))
 
 logger = bec_logger.logger
+
+T = TypeVar("T", bound=Device)
+
+
+@contextmanager
+def patched_device(device_type: type[T], *args, **kwargs) -> Generator[T, None, None]:
+    """Context manager to yield a patched ophyd device with certain initialisation args.
+    *args and **kwargs are passed directly through to the device constructor.
+
+    Example:
+        @pytest.fixture(scope="function")
+        def mock_ddg():
+            with patched_device(DelayGenerator, name="ddg", prefix="X12SA-CPCL-DDG3:") as ddg:
+                yield ddg
+
+    """
+    with mock.patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        device = device_type(*args, **kwargs)
+        patch_dual_pvs(device)
+        patch_functions_required_for_connection(device)
+        yield device
 
 
 def patch_dual_pvs(device):

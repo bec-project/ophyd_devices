@@ -3,42 +3,27 @@ PSI motor integration from the ophyd_devices.devices.psi_motor module."""
 
 from __future__ import annotations
 
-import threading
 from unittest import mock
 
 import ophyd
 import pytest
 
 from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, SpmgStates
-from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
+from ophyd_devices.tests.utils import patched_device
 
 
 @pytest.fixture(scope="function")
 def mock_epics_motor():
     """Fixture to create a mock EpicsMotor instance."""
-    name = "test_motor"
-    prefix = "SIM:MOTOR"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        motor = EpicsMotor(name=name, prefix=prefix)
-        motor.wait_for_connection()
-        patch_dual_pvs(motor)
+    with patched_device(EpicsMotor, name="test_motor", prefix="SIM:MOTOR") as motor:
         yield motor
 
 
 @pytest.fixture(scope="function")
 def mock_epics_motor_ec():
     """Fixture to create a mock EpicsMotorEC instance."""
-    name = "test_motor_ec"
-    prefix = "SIM:MOTOR:EC"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        motor_ec = EpicsMotorEC(name=name, prefix=prefix)
-        motor_ec.wait_for_connection()
-        patch_dual_pvs(motor_ec)
-        yield motor_ec
+    with patched_device(EpicsMotorEC, name="test_motor_ec", prefix="SIM:MOTOR:EC") as motor:
+        yield motor
 
 
 def test_epics_motor_limits_raise(mock_epics_motor):

@@ -1,7 +1,3 @@
-import threading
-from unittest import mock
-
-import ophyd
 import pytest
 
 from ophyd_devices.devices.delay_generator_645 import (
@@ -9,23 +5,12 @@ from ophyd_devices.devices.delay_generator_645 import (
     DelayGeneratorError,
     TriggerSource,
 )
-from ophyd_devices.tests.utils import (
-    MockPV,
-    patch_dual_pvs,
-    patch_functions_required_for_connection,
-)
+from ophyd_devices.tests.utils import patched_device
 
 
 @pytest.fixture(scope="function")
 def mock_ddg():
-    name = "ddg"
-    prefix = "X12SA-CPCL-DDG3:"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        ddg = DelayGenerator(name=name, prefix=prefix)
-        patch_functions_required_for_connection(ddg)
-        patch_dual_pvs(ddg)
+    with patched_device(DelayGenerator, name="ddg", prefix="X12SA-CPCL-DDG3:") as ddg:
         yield ddg
 
 

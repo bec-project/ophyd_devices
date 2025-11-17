@@ -3,10 +3,6 @@ Test module for DXP integration, i.e. Falcon, XMAP and Mercury detectors.
 This also includes EpicsMCARecord for data recording of multichannel analyzers.
 """
 
-import threading
-from unittest import mock
-
-import ophyd
 import pytest
 from ophyd import Component as Cpt
 
@@ -21,7 +17,7 @@ from ophyd_devices.devices.dxp import (
     Mercury,
     xMAP,
 )
-from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
+from ophyd_devices.tests.utils import patched_device
 
 # from ophyd.mca import EpicsDXPMapping
 
@@ -40,46 +36,27 @@ class TestFalcon(Falcon):
 @pytest.fixture(scope="function")
 def mock_falcon():
     """Fixture to create a mock Falcon device for testing."""
-    name = "mca"
-    prefix = "test_falcon"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        ddg = TestFalcon(name=name, prefix=prefix)
-        patch_dual_pvs(ddg)
-        yield ddg
+    with patched_device(TestFalcon, name="mca", prefix="test_falcon") as falc:
+        yield falc
 
 
 @pytest.fixture(scope="function")
 def mock_xmap():
     """Fixture to create a mock xMAP device for testing."""
-    name = "mca"
-    prefix = "test_xmap"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        ddg = xMAP(name=name, prefix=prefix)
-        patch_dual_pvs(ddg)
-        yield ddg
+    with patched_device(xMAP, name="mca", prefix="test_xmap") as xmap:
+        yield xmap
 
 
 @pytest.fixture(scope="function")
 def mock_mercury():
     """Fixture to create a mock Mercury device for testing."""
-    name = "mca"
-    prefix = "test_mercury"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        ddg = Mercury(name=name, prefix=prefix)
-        patch_dual_pvs(ddg)
-        yield ddg
+    with patched_device(Mercury, name="mca", prefix="test_mercury") as merc:
+        yield merc
 
 
-def test_falcon(mock_falcon):
+def test_falcon(mock_falcon: TestFalcon):
     """Test the Falcon device."""
     # Test the default values
-    mock_falcon: TestFalcon
     assert mock_falcon.name == "mca"
     assert mock_falcon.prefix == "test_falcon"
     assert isinstance(mock_falcon, EpicsDXPFalconMultiElementSystem)
@@ -99,9 +76,8 @@ def test_falcon(mock_falcon):
     ]
 
 
-def test_falcon_trigger(mock_falcon):
+def test_falcon_trigger(mock_falcon: TestFalcon):
     """Test the Falcon device trigger method."""
-    mock_falcon: TestFalcon
     mock_falcon.erase_start.put(0)
     assert mock_falcon.erase_start.get() == 0
     status = mock_falcon.trigger()
@@ -111,20 +87,18 @@ def test_falcon_trigger(mock_falcon):
     assert status.done is True
 
 
-def test_xmap(mock_xmap):
+def test_xmap(mock_xmap: xMAP):
     """Test the xMAP device."""
     # Test the default values
-    mock_xmap: xMAP
     assert mock_xmap.name == "mca"
     assert mock_xmap.prefix == "test_xmap"
     assert isinstance(mock_xmap, EpicsDXPMultiElementSystem)
     assert isinstance(mock_xmap, ADBase)
 
 
-def test_mercury(mock_mercury):
+def test_mercury(mock_mercury: Mercury):
     """Test the Mercury device."""
     # Test the default values
-    mock_mercury: Mercury
     assert mock_mercury.name == "mca"
     assert mock_mercury.prefix == "test_mercury"
     assert isinstance(mock_mercury, EpicsDXPMultiElementSystem)
@@ -132,9 +106,8 @@ def test_mercury(mock_mercury):
     assert isinstance(mock_mercury, ADBase)
 
 
-def test_xmap_trigger(mock_xmap):
+def test_xmap_trigger(mock_xmap: xMAP):
     """Test the xMAP device trigger method."""
-    mock_xmap: xMAP
     mock_xmap.erase_start.put(0)
     assert mock_xmap.erase_start.get() == 0
     status = mock_xmap.trigger()

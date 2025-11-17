@@ -1,23 +1,15 @@
-import threading
 from unittest import mock
 
-import ophyd
 import pytest
 
 from ophyd_devices.devices.undulator import UndulatorGap
-from ophyd_devices.tests.utils import MockPV, patch_dual_pvs
+from ophyd_devices.tests.utils import patched_device
 
 
 @pytest.fixture(scope="function")
 def mock_undulator():
-    name = "undulator"
-    prefix = "TEST:UNDULATOR"
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        dev = UndulatorGap(name=name, prefix=prefix)
-        patch_dual_pvs(dev)
-        yield dev
+    with patched_device(UndulatorGap, name="undulator", prefix="TEST:UNDULATOR") as und:
+        yield und
 
 
 @pytest.mark.parametrize(
