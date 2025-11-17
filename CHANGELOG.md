@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.30.2 (2025-11-17)
+
+### Bug Fixes
+
+- **waveform_sim**: Added signal to emit 0D data
+  ([`454550b`](https://github.com/bec-project/ophyd_devices/commit/454550b82cc4e21c6d06d3275e080a1228b08d68))
+
+
 ## v1.30.1 (2025-11-14)
 
 ### Bug Fixes
