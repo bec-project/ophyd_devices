@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.30.3 (2025-11-19)
+
+### Bug Fixes
+
+- Improve device mocking for tests
+  ([`eceab99`](https://github.com/bec-project/ophyd_devices/commit/eceab997b82b248328bf5192010916f3e2905988))
+
+
 ## v1.30.2 (2025-11-17)
 
 ### Bug Fixes
