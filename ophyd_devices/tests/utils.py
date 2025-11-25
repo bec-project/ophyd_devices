@@ -81,7 +81,7 @@ class SocketMock:
         self.sock = None
         self.open()
 
-    def connect(self):
+    def connect(self, timeout: int = 10):
         """Mock connect method"""
         print(f"connecting to {self.host} port {self.port}")
 
@@ -113,7 +113,7 @@ class SocketMock:
         """Mock receive method"""
         return self._recv(buffer_length=buffer_length)
 
-    def open(self):
+    def open(self, timeout: int = 10):
         """Mock open method"""
         self._initialize_socket()
         self.is_open = True

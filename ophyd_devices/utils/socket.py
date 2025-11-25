@@ -173,18 +173,23 @@ class SocketSignal(abc.ABC, Signal):
 class SocketIO:
     """SocketIO helper class for TCP IP connections"""
 
-    def __init__(self, host, port, max_retry=10):
+    def __init__(self, host: str, port: int, socket_timeout: int = 2):
         self.host = host
         self.port = port
         self.is_open = False
-        self.max_retry = max_retry
+        self.socket_timeout = socket_timeout
         self._initialize_socket()
 
-    def connect(self):
-        print(f"connecting to {self.host} port {self.port}")
-        # self.sock.create_connection((host, port))
-        retry_count = 0
-        while True:
+    def connect(self, timeout: int = 10):
+        """
+        Establish socket connection to host:port within timeout period
+
+        Args:
+            timeout (int): Time in seconds to wait for connection
+        """
+        logger.info(f"Connecting to {self.host}:{self.port}")
+        start_time = time.time()
+        while time.time() - start_time < timeout:
             try:
                 if self.sock is None:
                     self._initialize_socket()
@@ -192,10 +197,12 @@ class SocketIO:
                 break
             except Exception as exc:
                 self.sock = None
-                time.sleep(2)
-                retry_count += 1
-                if retry_count > self.max_retry:
-                    raise exc
+                logger.warning(f"Connection failed, retrying after 0.2 seconds... {exc}")
+                time.sleep(1)
+        else:
+            raise ConnectionError(
+                f"Could not connect to {self.host}:{self.port} within {time.time()-start_time} seconds"
+            )
 
     def _put(self, msg_bytes):
         logger.debug(f"put message: {msg_bytes}")
@@ -208,7 +215,7 @@ class SocketIO:
 
     def _initialize_socket(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(5)
+        self.sock.settimeout(self.socket_timeout)
 
     def put(self, msg):
         return self._put(msg)
@@ -216,8 +223,14 @@ class SocketIO:
     def receive(self, buffer_length=1024):
         return self._recv(buffer_length=buffer_length)
 
-    def open(self):
-        self.connect()
+    def open(self, timeout: int = 10):
+        """ "
+        Open the socket connection to the host:port
+
+        Args:
+            timeout (int): Time in seconds to wait for connection
+        """
+        self.connect(timeout=timeout)
         self.is_open = True
 
     def close(self):
@@ -235,7 +248,7 @@ class SocketMock:
         self.is_open = False
         # self.open()
 
-    def connect(self):
+    def connect(self, timeout: int = 10):
         print(f"connecting to {self.host} port {self.port}")
 
     def _put(self, msg_bytes):
@@ -261,7 +274,7 @@ class SocketMock:
     def receive(self, buffer_length=1024):
         return self._recv(buffer_length=buffer_length)
 
-    def open(self):
+    def open(self, timeout: int = 10):
         self._initialize_socket()
         self.is_open = True
 

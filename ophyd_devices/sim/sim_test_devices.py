@@ -130,7 +130,7 @@ class SimDeviceWithStatusStageUnstage(Device):
 
 
 class SynController(OphydObject):
-    def on(self):
+    def on(self, timeout: int = 10):
         pass
 
     def off(self):
