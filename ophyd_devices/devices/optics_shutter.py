@@ -21,6 +21,8 @@ def _is_state(state: int | str):
     def _cb(*, old_value, value, **kwargs):
         return value == state
 
+    return _cb
+
 
 class Shutter(PSIDeviceBase):
     """A generic optics shutter device, for IOCs with the format '[BEAMLINE]-EH1-PSYS:SH-[A/B]-'
@@ -39,6 +41,9 @@ class Shutter(PSIDeviceBase):
 
     Example usage:
         shutter = Shutter(name="shutter", prefix="X10SA-EH1-PSYS:SH-A-")
+        if shutter.enabled == ShutterEnabled.ENABLED:
+            st = shutter.open()
+            st.wait()
 
     """
 
