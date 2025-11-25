@@ -1,4 +1,7 @@
 import socket
+from unittest import mock
+
+import pytest
 
 from ophyd_devices.utils.socket import SocketIO
 
@@ -60,6 +63,21 @@ def test_open():
     assert socketio.is_open == True
     assert socketio.sock.host == socketio.host
     assert socketio.sock.port == socketio.port
+
+
+def test_socket_open_with_timeout():
+    dsocket = DummySocket()
+    socketio = SocketIO("localhost", 8080)
+    socketio.sock = dsocket
+    with mock.patch.object(dsocket, "connect") as mock_connect:
+        socketio.open(timeout=0.1)
+        mock_connect.assert_called_once()
+        mock_connect.reset_mock()
+        # There is a 1s sleep in the retry loop, mock_connect should be called only once
+        mock_connect.side_effect = Exception("Connection failed")
+        with pytest.raises(ConnectionError):
+            socketio.open(timeout=0.4)
+            mock_connect.assert_called_once()
 
 
 def test_close():
