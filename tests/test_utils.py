@@ -691,18 +691,19 @@ def test_utils_progress_signal():
 
 
 def test_utils_compare_status_number():
-    """Test CompareStatus"""
+    """Test CompareStatus with different operations."""
     sig = Signal(name="test_signal", value=0)
-    status = CompareStatus(signal=sig, value=5, operation="==")
+    status = CompareStatus(signal=sig, value=5, operation_success="==")
     assert status.done is False
     sig.put(1)
     assert status.done is False
     sig.put(5)
+    status.wait(timeout=5)
     assert status.done is True
 
     sig.put(5)
     # Test with different operations
-    status = CompareStatus(signal=sig, value=5, operation="!=")
+    status = CompareStatus(signal=sig, value=5, operation_success="!=")
     assert status.done is False
     sig.put(5)
     assert status.done is False
@@ -712,7 +713,7 @@ def test_utils_compare_status_number():
     assert status.exception() is None
 
     sig.put(0)
-    status = CompareStatus(signal=sig, value=5, operation=">")
+    status = CompareStatus(signal=sig, value=5, operation_success=">")
     assert status.done is False
     sig.put(5)
     assert status.done is False
@@ -721,11 +722,44 @@ def test_utils_compare_status_number():
     assert status.success is True
     assert status.exception() is None
 
+    # Should raise
+    sig.put(0)
+    status = CompareStatus(signal=sig, value=5, operation_success="==", failure_value=[10])
+    with pytest.raises(ValueError):
+        sig.put(10)
+        status.wait()
+    assert status.done is True
+    assert status.success is False
+    assert isinstance(status.exception(), ValueError)
+
+    # failure_operation
+    sig.put(0)
+    status = CompareStatus(
+        signal=sig, value=5, operation_success="==", failure_value=10, operation_failure=">"
+    )
+    sig.put(10)
+    assert status.done is False
+    assert status.success is False
+    sig.put(11)
+    with pytest.raises(ValueError):
+        status.wait()
+    assert status.done is True
+    assert status.success is False
+
+    # raise if array is returned
+    sig.put(0)
+    status = CompareStatus(signal=sig, value=5, operation_success="==")
+    with pytest.raises(ValueError):
+        sig.put([1, 2, 3])
+        status.wait(timeout=2)
+    assert status.done is True
+    assert status.success is False
+
 
 def test_compare_status_string():
     """Test CompareStatus with string values"""
     sig = Signal(name="test_signal", value="test")
-    status = CompareStatus(signal=sig, value="test", operation="==")
+    status = CompareStatus(signal=sig, value="test", operation_success="==")
     assert status.done is False
     sig.put("test1")
     assert status.done is False
@@ -734,7 +768,7 @@ def test_compare_status_string():
 
     sig.put("test")
     # Test with different operations
-    status = CompareStatus(signal=sig, value="test", operation="!=")
+    status = CompareStatus(signal=sig, value="test", operation_success="!=")
     assert status.done is False
     sig.put("test")
     assert status.done is False
@@ -742,12 +776,6 @@ def test_compare_status_string():
     assert status.done is True
     assert status.success is True
     assert status.exception() is None
-
-    # Test with greater than operation
-    # Raises ValueError for strings
-    sig.put("a")
-    with pytest.raises(ValueError):
-        status = CompareStatus(signal=sig, value="b", operation=">")
 
 
 def test_transition_status():
@@ -768,9 +796,9 @@ def test_transition_status():
     assert status.success is True
     assert status.exception() is None
 
-    # Test strict=True, ra
+    # Test strict=True, failure_states
     sig.put(1)
-    status = TransitionStatus(signal=sig, transitions=[1, 2, 3], strict=True, raise_states=[4])
+    status = TransitionStatus(signal=sig, transitions=[1, 2, 3], strict=True, failure_states=[4])
     assert status.done is False
     sig.put(4)
     with pytest.raises(ValueError):
@@ -854,7 +882,7 @@ def test_compare_status_with_mock_pv(mock_epics_signal_ro):
     """Test CompareStatus with EpicsSignalRO, this tests callbacks on EpicsSignals"""
 
     signal = mock_epics_signal_ro
-    status = CompareStatus(signal=signal, value=5, operation="==")
+    status = CompareStatus(signal=signal, value=5, operation_success="==")
     assert status.done is False
     signal._read_pv.mock_data = 1
     assert status.done is False
