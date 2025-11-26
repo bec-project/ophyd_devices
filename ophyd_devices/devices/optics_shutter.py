@@ -4,6 +4,7 @@ from ophyd import Component as Cpt
 from ophyd import EpicsSignal, EpicsSignalRO, Kind
 from ophyd.status import SubscriptionStatus
 
+from ophyd_devices import CompareStatus
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 
 
@@ -15,13 +16,6 @@ class ShutterOpenState(IntEnum):
 class ShutterEnabled(IntEnum):
     ENABLED = 1
     DISABLED = 0
-
-
-def _is_state(state: int | str):
-    def _cb(*, old_value, value, **kwargs):
-        return value == state
-
-    return _cb
 
 
 class Shutter(PSIDeviceBase):
@@ -47,11 +41,13 @@ class Shutter(PSIDeviceBase):
 
     """
 
-    is_open = Cpt(EpicsSignalRO, "OPEN", kind=Kind.hinted)
+    USER_ACCESS = ["open", "close", "status", "enabled"]
+
+    is_open = Cpt(EpicsSignalRO, "OPEN", kind=Kind.config, auto_monitor=True)
     is_closed = Cpt(EpicsSignalRO, "CLOSE", kind=Kind.omitted)
-    is_enabled = Cpt(EpicsSignalRO, "ENABLE")
-    is_ok = Cpt(EpicsSignalRO, "OK")
-    alarm = Cpt(EpicsSignalRO, "ALARM")
+    is_enabled = Cpt(EpicsSignalRO, "ENABLE", kind=Kind.config, auto_monitor=True)
+    is_ok = Cpt(EpicsSignalRO, "OK", kind=Kind.omitted, auto_monitor=True)
+    alarm = Cpt(EpicsSignalRO, "ALARM", kind=Kind.omitted, auto_monitor=True)
     set_open = Cpt(EpicsSignal, "OPEN-SET", kind=Kind.omitted)
     set_closed = Cpt(EpicsSignal, "CLOSE-SET", kind=Kind.omitted)
 
@@ -66,7 +62,7 @@ class Shutter(PSIDeviceBase):
         """
         self._check_enabled()
         self.set_open.put(1)
-        return SubscriptionStatus(self.is_open, _is_state(ShutterOpenState.OPEN))
+        return CompareStatus(self.is_open, ShutterOpenState.OPEN)
 
     def close(self):
         """Close the shutter.
@@ -75,7 +71,7 @@ class Shutter(PSIDeviceBase):
         """
         self._check_enabled()
         self.set_closed.put(1)
-        return SubscriptionStatus(self.is_open, _is_state(ShutterOpenState.CLOSED))
+        return CompareStatus(self.is_open, ShutterOpenState.CLOSED)
 
     def status(self) -> ShutterOpenState:
         return ShutterOpenState(self.is_open.get())
