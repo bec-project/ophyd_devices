@@ -900,6 +900,19 @@ def test_compare_status_with_mock_pv(mock_epics_signal_ro):
     assert status.success is True
 
 
+def test_compare_status_raises_on_failed_comparison(mock_epics_signal_ro):
+    """Test CompareStatus raises on failed comparison with EpicsSignalRO"""
+
+    signal = mock_epics_signal_ro
+    status = CompareStatus(
+        signal=signal, value=5, operation_success="==", failure_value=[np.array([10])]
+    )
+    assert status.done is False
+    signal._read_pv.mock_data = 1
+    with pytest.raises(Exception):
+        status.wait(timeout=5)
+
+
 @pytest.mark.parametrize(
     "transitions, expected_done, expected_success",
     [
@@ -946,6 +959,7 @@ def test_patched_status_objects():
     st = StatusBase()
     st2 = StatusBase()
     and_st = st & st2
+    assert st in and_st
     assert isinstance(and_st, AndStatus)
     st.set_exception(ValueError("test error"))
     with pytest.raises(ValueError):

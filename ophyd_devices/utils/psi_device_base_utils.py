@@ -6,7 +6,7 @@ import threading
 import traceback
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Callable, Literal
 
 from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
@@ -16,7 +16,6 @@ from ophyd.status import DeviceStatus as _DeviceStatus
 from ophyd.status import MoveStatus as _MoveStatus
 from ophyd.status import Status as _Status
 from ophyd.status import StatusBase as _StatusBase
-from ophyd.status import SubscriptionStatus as _SubscriptionStatus
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import ScanStatusMessage
@@ -170,8 +169,9 @@ class SubscriptionStatus(StatusBase):
         try:
             success = self.callback(*args, **kwargs)
         except Exception as e:
-            self.log.error(e)
-            raise
+            logger.error(f"Error in SubscriptionStatus callback: {e}")
+            self.set_exception(e)
+            return
         if success:
             self.set_finished()
 
@@ -221,7 +221,7 @@ class CompareStatus(SubscriptionStatus):
         event_type=None,
     ):
         if isinstance(value, str):
-            if operation_success not in ("==", "!=") and operation_failure not in ("==", "!="):
+            if operation_success not in ("==", "!=") or operation_failure not in ("==", "!="):
                 raise ValueError(
                     f"Invalid operation_success: {operation_success} for string comparison. Must be '==' or '!='."
                 )
@@ -238,7 +238,7 @@ class CompareStatus(SubscriptionStatus):
             self._failure_values = []
         elif isinstance(failure_value, (float, int, str)):
             self._failure_values = [failure_value]
-        elif isinstance(failure_value, list):
+        elif isinstance(failure_value, (list, tuple)):
             self._failure_values = failure_value
         else:
             raise ValueError(
@@ -265,25 +265,18 @@ class CompareStatus(SubscriptionStatus):
         """
         try:
             if isinstance(value, list):
-                self.set_exception(
-                    ValueError(f"List values are not supported. Received value: {value}")
-                )
-                return False
+                raise ValueError(f"List values are not supported. Received value: {value}")
             if any(
                 self.op_map[self._operation_failure](value, failure_value)
                 for failure_value in self._failure_values
             ):
-                self.set_exception(
-                    ValueError(
-                        f"CompareStatus for signal {self._signal.name} "
-                        f"did not reach the desired state {self._operation_success} {self._value}. "
-                        f"But instead reached {value}, which is in list of failure values: {self._failure_values}"
-                    )
+                raise ValueError(
+                    f"CompareStatus for signal {self._signal.name} "
+                    f"did not reach the desired state {self._operation_success} {self._value}. "
+                    f"But instead reached {value}, which is in list of failure values: {self._failure_values}"
                 )
-                return False
             return self.op_map[self._operation_success](value, self._value)
         except Exception as e:
-            # Catch any exception if the value comparison fails, e.g. value is numpy array
             logger.error(f"Error in CompareStatus callback: {e}")
             self.set_exception(e)
             return False
@@ -360,13 +353,10 @@ class TransitionStatus(SubscriptionStatus):
         """
         try:
             if value in self._failure_states:
-                self.set_exception(
-                    ValueError(
-                        f"Transition Status for {self._signal.name} resulted in a value: {value}. "
-                        f"marked to raise {self._failure_states}. Expected transitions: {self._transitions}."
-                    )
+                raise ValueError(
+                    f"Transition Status for {self._signal.name} resulted in a value: {value}. "
+                    f"marked to raise {self._failure_states}. Expected transitions: {self._transitions}."
                 )
-                return False
             if self._index == 0:
                 if value == self._transitions[0]:
                     self._index += 1
