@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v1.31.0 (2025-11-28)
+
+### Bug Fixes
+
+- Improvements from review
+  ([`ad1b042`](https://github.com/bec-project/ophyd_devices/commit/ad1b042f2ee74874659433c9eaa03a90c308cccf))
+
+### Continuous Integration
+
+- Update coverage settings
+  ([`288096b`](https://github.com/bec-project/ophyd_devices/commit/288096b8ffc4ba94cba8b9ddae2191e4ece943a9))
+
+### Features
+
+- Add shutter class
+  ([`366c871`](https://github.com/bec-project/ophyd_devices/commit/366c871db6c21e15d3b366a0c227185e7a01b865))
+
+### Refactoring
+
+- **shutter**: Refactor signal structure of shutter device
+  ([`77eaca1`](https://github.com/bec-project/ophyd_devices/commit/77eaca174e4e2c68500362b267da0ebca3d38013))
+
+
 ## v1.30.3 (2025-11-19)
 
 ### Bug Fixes
