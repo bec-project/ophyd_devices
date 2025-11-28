@@ -7,6 +7,7 @@ import numpy as np
 import ophyd
 import pytest
 from bec_lib import messages
+from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignalRO, Signal
 from ophyd.status import WaitTimeoutError
 from typeguard import TypeCheckError
@@ -273,6 +274,41 @@ def test_utils_bec_message_signal():
     # Put fails with wrong dict
     with pytest.raises(ValueError):
         signal.put({"wrong_key": "wrong_value"})
+
+
+@pytest.mark.parametrize(
+    "input_msg, output_msg",
+    [
+        (
+            messages.DeviceMessage(
+                signals={"sig1": {"value": 1}, "sig2": {"value": 2}}, metadata={"info": "test"}
+            ),
+            messages.DeviceMessage(
+                signals={"device_data_sig1": {"value": 1}, "device_data_sig2": {"value": 2}},
+                metadata={"info": "test"},
+            ),
+        ),
+        (
+            messages.DeviceMessage(
+                signals={"device_data_sig1": {"value": 1}, "device_data_sig2": {"value": 2}},
+                metadata={"info": "test"},
+            ),
+            messages.DeviceMessage(
+                signals={"device_data_sig1": {"value": 1}, "device_data_sig2": {"value": 2}},
+                metadata={"info": "test"},
+            ),
+        ),
+    ],
+)
+def test_utils_signal_normalization(input_msg, output_msg):
+    """Test signal normalization utility in BECMessageSignal"""
+
+    class DeviceWithSignal(Device):
+        data = Cpt(AsyncMultiSignal, name="data", signals=["sig1", "sig2"], ndim=0, max_size=1000)
+
+    dev = DeviceWithSignal(name="device")
+    dev.data._normalize_signals(input_msg)
+    assert input_msg == output_msg
 
 
 def test_utils_dynamic_signal():

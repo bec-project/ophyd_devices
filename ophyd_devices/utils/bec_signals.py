@@ -777,6 +777,7 @@ class DynamicSignal(BECMessageSignal):
                     f"Signal {self.name} not found in message {list(msg.signals.keys())}"
                 )
             return
+        self._normalize_signals(msg)
         available_signals = [f"{self.name}_{signal_name}" for signal_name, _ in self.signals]
         if self.strict_signal_validation:
             if set(msg.signals.keys()) != set(available_signals):
@@ -797,6 +798,28 @@ class DynamicSignal(BECMessageSignal):
             )
         # Add here validation for async update
         # TODO #629 Issue in BEC: Validate async_update --> bec_lib
+
+    def _normalize_signals(self, msg: messages.DeviceMessage) -> None:
+        """
+        Normalize signal names in the message to include the group name as prefix.
+        For a device 'samx' and signal component 'mysignal' with sub-signals 'a', 'b', 'c',
+        the expected signal names are either
+            'samx_mysignal_a', 'samx_mysignal_b', 'samx_mysignal_c'
+        or just
+            'a', 'b', 'c'
+        This method normalizes the latter case to the former.
+
+        Args:
+            msg (DeviceMessage): The device message to normalize.
+        """
+        prefix = f"{self.name}_"
+        normalized_signals = {}
+        for signal_name, data in msg.signals.items():
+            if signal_name.startswith(prefix):
+                normalized_signals[signal_name] = data
+            else:
+                normalized_signals[f"{prefix}{signal_name}"] = data
+        msg.signals = normalized_signals
 
     def set(
         self,
