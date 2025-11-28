@@ -965,11 +965,16 @@ def test_patched_status_objects():
     with pytest.raises(ValueError):
         and_st.wait(timeout=10)
 
-    # DeviceStatus & StatusBase
+    # DeviceStatus & Status
     dev = Device(name="device")
     dev_status = DeviceStatus(device=dev)
+
+    st = Status()
+    and_st = st and dev_status
     assert dev_status.device == dev
     dev_status.set_exception(RuntimeError("device error"))
+    with pytest.raises(RuntimeError):
+        and_st.wait(timeout=10)
 
     # Combine DeviceStatus with StatusBase and form AndStatus
     st = StatusBase(obj=dev)
