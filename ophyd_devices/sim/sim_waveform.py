@@ -17,7 +17,7 @@ from typeguard import typechecked
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
-from ophyd_devices.utils.bec_signals import AsyncSignal
+from ophyd_devices.utils.bec_signals import AsyncMultiSignal, AsyncSignal, ProgressSignal
 from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
@@ -94,6 +94,10 @@ class SimWaveform(Device):
     data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
     # Can be extend or append
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
+    progress = Cpt(ProgressSignal, name="progress")
+    async_multi_data = Cpt(
+        AsyncMultiSignal, name="async_multi_data", signals=["data1", "data2"], ndim=1, max_size=1000
+    )
     slice_size = Cpt(SetableSignal, value=100, dtype=np.int32, kind=Kind.config)
 
     def __init__(
@@ -122,6 +126,7 @@ class SimWaveform(Device):
         self.stopped = False
         self._staged = Staged.no
         self._trigger_thread = None
+        self._trigger_received = 0
         self.scan_info = scan_info
         self._delay_slice_update = False
         if self.sim_init:
@@ -197,6 +202,12 @@ class SimWaveform(Device):
 
         self._trigger_thread = threading.Thread(target=acquire, args=(status,), daemon=True)
         self._trigger_thread.start()
+        self._trigger_received += 1
+        self.progress.put(
+            value=self._trigger_received,
+            max_value=self.frames.get(),
+            done=self.frames.get() == self._trigger_received,
+        )
         return status
 
     def _send_async_update(self, value: Any, index: int | None = None) -> None:
@@ -239,6 +250,9 @@ class SimWaveform(Device):
             expire=self._stream_ttl,
         )
         self.data.put(value, async_update=async_update)
+        self.async_multi_data.put(
+            {"data1": {"value": value}, "data2": {"value": value}}, async_update=async_update
+        )
 
     def stage(self) -> list[object]:
         """Stage the camera for upcoming scan
@@ -264,6 +278,7 @@ class SimWaveform(Device):
         self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"])
         self.stopped = False
         self._slice_index = 0
+        self._trigger_received = 0
         logger.warning(f"Staged {self.name}, scan_id : {self.scan_info.msg.scan_id}")
         return super().stage()
 
