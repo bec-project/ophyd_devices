@@ -137,6 +137,8 @@ class MockPV:
 
     """
 
+    DEFAULT_VALUE = 0
+
     _fmtsca = "<PV '%(pvname)s', count=%(count)i, type=%(typefull)s, access=%(access)s>"
     _fmtarr = "<PV '%(pvname)s', count=%(count)i/%(nelm)i, type=%(typefull)s, access=%(access)s>"
     _fields = (
@@ -200,7 +202,7 @@ class MockPV:
         self._args["access"] = "unknown"
         self._args["status"] = 0
         self.connection_callbacks = []
-        self._mock_data = 0
+        self._mock_data = self.DEFAULT_VALUE
 
         if connection_callback is not None:
             self.connection_callbacks = [connection_callback]
