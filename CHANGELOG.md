@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.32.0 (2025-11-30)
+
+### Features
+
+- **signal**: Add signal normalization method and corresponding tests
+  ([`609010d`](https://github.com/bec-project/ophyd_devices/commit/609010d6825e0b6c46cd7a60abfa30235b393962))
+
+- **sim_waveform**: Add progress and async multi data signals to SimWaveform
+  ([`616010a`](https://github.com/bec-project/ophyd_devices/commit/616010a0e9e4c634d3f1b307121da13ec7175acc))
+
+
 ## v1.31.0 (2025-11-28)
 
 ### Bug Fixes
