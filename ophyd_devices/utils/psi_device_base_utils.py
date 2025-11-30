@@ -75,12 +75,17 @@ class AndStatus(StatusBase):
     If any of the two Status objects fails, the combined status will fail
     with the exception of the first Status to fail.
 
-    Parameters
-    ----------
-    left: StatusBase
-        The left-hand Status object
-    right: StatusBase
-        The right-hand Status object
+    Args:
+        left (StatusBase): Left status object.
+        right (StatusBase): Right status object.
+
+    Examples:
+        >>> status1 = StatusBase(device1)
+        >>> status2 = StatusBase(device2)
+        >>> status3 = StatusBase(device3)
+        >>> combined_status = AndStatus(status1, status2)
+        >>> combined_status = status1 & status2
+        >>> combined_status = status1 & status2 & status3
     """
 
     def __init__(self, left, right, **kwargs):

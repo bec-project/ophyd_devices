@@ -970,7 +970,7 @@ def test_patched_status_objects():
     dev_status = DeviceStatus(device=dev)
 
     st = Status()
-    and_st = st and dev_status
+    and_st = st & dev_status
     assert dev_status.device == dev
     dev_status.set_exception(RuntimeError("device error"))
     with pytest.raises(RuntimeError):
