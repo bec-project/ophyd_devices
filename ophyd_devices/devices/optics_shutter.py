@@ -4,7 +4,7 @@ Module for the optics shutter device at PSI beamlines.
 Example config:
 shutter:
     description: Optics Shutter A
-    deviceClass: ophyd_devices.optics_shutter.Shutter
+    deviceClass: ophyd_devices.optics_shutter.OpticsShutter
     deviceConfig: {prefix: 'X10SA-EH1-PSYS:SH-A-'}
     enabled: true
     onFailure: retry
@@ -80,7 +80,7 @@ class ShutterOpenSignal(Signal):
         return CompareStatus(self.parent.epics_control.is_open, value)
 
 
-class Shutter(Device):
+class OpticsShutter(Device):
     """A shutter device with shutter open signal, and sub-device with full control PVs of the Epics implementation."""
 
     set_open = Cpt(
@@ -92,7 +92,7 @@ class Shutter(Device):
     is_open = Cpt(
         EpicsSignalRO,
         "OPEN",
-        kind=Kind.config,
+        kind=Kind.normal,
         auto_monitor=True,
         doc="Readback of the shutter open state. 0 (CLOSED) or 1 (OPEN).",
     )
@@ -102,6 +102,6 @@ class Shutter(Device):
 if __name__ == "__main__":
     prefix = "X10SA-EH1-PSYS:SH-A-"
     print(f"Testing shutter device with prefix {prefix}")
-    shutter = Shutter(name="shutter", prefix=prefix)
+    shutter = OpticsShutter(name="shutter", prefix=prefix)
     shutter.wait_for_connection()
     print(shutter.read())
