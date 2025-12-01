@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.32.1 (2025-12-01)
+
+### Bug Fixes
+
+- **shutter**: Rename class, refactor is_open to be kind normal
+  ([`86436c5`](https://github.com/bec-project/ophyd_devices/commit/86436c59865628aba6afbf8947a901bf653b50ad))
+
+
 ## v1.32.0 (2025-11-30)
 
 ### Features
