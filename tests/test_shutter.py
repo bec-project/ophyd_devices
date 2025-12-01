@@ -1,12 +1,12 @@
 import pytest
 
-from ophyd_devices.devices.optics_shutter import Shutter, ShutterEnabled, ShutterOpenState
+from ophyd_devices.devices.optics_shutter import OpticsShutter, ShutterEnabled, ShutterOpenState
 from ophyd_devices.tests.utils import patched_device
 
 
 @pytest.fixture(scope="function")
 def mock_shutter():
-    with patched_device(Shutter, name="shutter", prefix="X10SA-EH1-PSYS:SH-A-") as shutter:
+    with patched_device(OpticsShutter, name="shutter", prefix="X10SA-EH1-PSYS:SH-A-") as shutter:
         yield shutter
 
 
