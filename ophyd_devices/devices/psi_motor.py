@@ -14,6 +14,8 @@ from ophyd.status import MoveStatus
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 from ophyd.utils.errors import UnknownStatusFailure
 
+from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+
 
 class SpmgStates:
     """Enum for the EPICS MotorRecord's SPMG state"""
@@ -210,6 +212,45 @@ class EpicsMotor(OphydEpicsMotor):
             self.stop()
             raise
         return status
+
+
+class EpicsUserMotorVME(PSIDeviceBase, EpicsMotor):
+    """
+    EpicsMotor for VME based user motors. It includes additional checks for DISA and DISP.
+
+    """
+
+    motor_resolution = Cpt(EpicsSignal, ".MRES", kind="config", auto_monitor=True)
+    base_velocity = Cpt(EpicsSignal, ".VBAS", kind="config", auto_monitor=True)
+    backlash_distance = Cpt(EpicsSignal, ".BDST", kind="config", auto_monitor=True)
+
+    _ioc_enable = Cpt(EpicsSignal, "_able", kind=Kind.omitted, string=True, auto_monitor=True)
+
+    def wait_for_connection(self, all_signals=False, timeout: float | None = None) -> None:
+        """
+        Wait for connection with an additional check first if the IOC is enabled.
+        """
+        if self._ioc_enable.get(use_monitor=False) != "Enable":
+            self._ioc_enable.put("Enable")
+        hl_switch = self.high_limit_switch.get(use_monitor=False)
+        ll_switch = self.low_limit_switch.get(use_monitor=False)
+        if hl_switch == 1 and ll_switch == 1:
+            raise RuntimeError(
+                f"Both limit switches are active for device {self.name}."
+                f"This often indicates that the motor is disconnected! Please double-check your hardware!"
+            )
+        return super().wait_for_connection(all_signals, timeout)
+
+    def on_connected(self):
+        self._ioc_enable.subscribe(self._ioc_enable_changed, run=False)
+
+    def _ioc_enable_changed(self, value, **kwargs):
+        """Callback for IOC enable signal changes"""
+        if self.device_manager is None:
+            return  # no device manager assigned
+        if self.name not in self.device_manager.devices:
+            return  # device not loaded in device_manager
+        self.device_manager.devices[self.name].enabled = value == "Enable"
 
 
 class EpicsMotorEC(EpicsMotor):

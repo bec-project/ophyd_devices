@@ -3,13 +3,15 @@ PSI motor integration from the ophyd_devices.devices.psi_motor module."""
 
 from __future__ import annotations
 
+import threading
 from unittest import mock
 
 import ophyd
 import pytest
 
-from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, SpmgStates
-from ophyd_devices.tests.utils import patched_device
+from ophyd_devices.devices.epics_motor_ex import EpicsMotorEx
+from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotors, SpmgStates
+from ophyd_devices.tests.utils import MockPV, patched_device
 
 
 @pytest.fixture(scope="function")
@@ -160,3 +162,17 @@ def test_epics_motor_high_limit_switch_raises(mock_epics_motor):
     motor.high_limit_switch._read_pv.mock_data = 1  # Simulate high limit switch active
     with pytest.raises(ophyd.utils.LimitError):
         motor.move(15)
+
+
+def test_epics_vme_user_motor():
+    """Test extended VME based user motor implementation EpicsUserMotors."""
+    with mock.patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        device = EpicsUserMotors(name="test_motor_ex", prefix="SIM:MOTOR:EX")
+        # Should raise
+        with pytest.raises(RuntimeError):
+            device.wait_for_connection(all_signals=True)
+        # Should not raise
+        device._ioc_enable._read_pv.mock_data = "Enable"
+        device.wait_for_connection(all_signals=True)
