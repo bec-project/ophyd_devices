@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v1.32.2 (2025-12-05)
+
+### Bug Fixes
+
+- **bec-status**: Refactor CompareStatus and TransitionStatus
+  ([`58d4a51`](https://github.com/bec-project/ophyd_devices/commit/58d4a5141f896959a6962f6d4b282643138b1ef8))
+
+- **MockPv**: Add configurable default value for mock pv
+  ([`56fc45b`](https://github.com/bec-project/ophyd_devices/commit/56fc45b58ae977e63b8cd99a2787c6c7e5461cd2))
+
+- **status**: Add wrappers for ophyd status objects to improve error handling
+  ([`b918f18`](https://github.com/bec-project/ophyd_devices/commit/b918f1851ca8be9294b01f0191070f6bd86ba431))
+
+- **transition-status**: Improve transition status called with no transitions
+  ([`57ff405`](https://github.com/bec-project/ophyd_devices/commit/57ff40566b0c9c6d55a0ffa10ece7ccf7ee32cc1))
+
+### Refactoring
+
+- **status**: Cleanup, remove error in test using 'and' instead of &
+  ([`6b758eb`](https://github.com/bec-project/ophyd_devices/commit/6b758eb8943ef80519c4016765b2dd64c48a1b18))
+
+- **status**: Improve logic to set exceptions to allow to catch the error traceback
+  ([`13d6582`](https://github.com/bec-project/ophyd_devices/commit/13d658241afaf2db499e5b4b56d526a5adb1776f))
+
+
 ## v1.32.1 (2025-12-01)
 
 ### Bug Fixes
