@@ -105,7 +105,7 @@ class Controller(OphydObject):
             self._initialize()
             self._initialized = True
             self.sock = None
-            self.dm = device_manager
+            self.device_manager = device_manager
             self._socket_cls = socket_cls
             self._socket_host = socket_host
             self._socket_port = socket_port
@@ -170,12 +170,12 @@ class Controller(OphydObject):
             device_name (str): Name of the device
             enabled (bool): Set device to read-only or writable
         """
-        if device_name not in self.dm.devices:
+        if device_name not in self.device_manager.devices:
             logger.warning(
                 f"Device {device_name} is not available on the device manager, cannot be set to read-only: {not enabled}."
             )
             return
-        self.dm.devices[device_name].read_only = not enabled
+        self.device_manager.devices[device_name].read_only = not enabled
 
     def set_device_enable(self, device_name: str, enabled: bool) -> None:
         """
@@ -185,17 +185,19 @@ class Controller(OphydObject):
             device_name (str): Name of the device
             enabled (bool): Enable or disable the device
         """
-        if device_name not in self.dm.devices:
+        if device_name not in self.device_manager.devices:
             logger.warning(
                 f"Device {device_name} is not available on the device manager, cannot be set to enabled: {enabled}."
             )
             return
-        self.dm.devices[device_name].enabled = enabled
+        self.device_manager.devices[device_name].enabled = enabled
         if enabled:
             self.on()
         else:
             all_disabled = all(
-                not self.dm.devices[axis.name].enabled for axis in self._axis if axis is not None
+                not self.device_manager.devices[axis.name].enabled
+                for axis in self._axis
+                if axis is not None
             )
             if all_disabled:
                 self.off()
@@ -265,7 +267,7 @@ class Controller(OphydObject):
                 f"Axis {axis_Id_numeric} exceeds the available number of axes ({self._axes_per_controller})"
             )
 
-    def on(self, timeout: int = 20) -> None:
+    def on(self, timeout: int = 10) -> None:
         """
         Open a new socket connection to the controller
 
