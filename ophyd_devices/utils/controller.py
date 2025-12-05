@@ -179,8 +179,7 @@ class Controller(OphydObject):
 
     def set_device_enable(self, device_name: str, enabled: bool) -> None:
         """
-        Enable/disable a device for write access.
-        If the device is not configured, a warning is logged.
+        Enable/disable a device. If the device is not configured, a warning is logged.
 
         Args:
             device_name (str): Name of the device
@@ -266,7 +265,7 @@ class Controller(OphydObject):
                 f"Axis {axis_Id_numeric} exceeds the available number of axes ({self._axes_per_controller})"
             )
 
-    def on(self, timeout: int = 10) -> None:
+    def on(self, timeout: int = 20) -> None:
         """
         Open a new socket connection to the controller
 
