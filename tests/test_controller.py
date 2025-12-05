@@ -47,7 +47,7 @@ def test_controller_with_multiple_axes(dm_with_devices):
     controller = Controller(
         socket_cls=socket_cls, socket_host="dummy", socket_port=123, device_manager=dm_with_devices
     )
-    with mock.patch.object(controller.dm, "config_helper") as mock_config_helper:
+    with mock.patch.object(controller.device_manager, "config_helper") as mock_config_helper:
         # Disable samx, samy first
         dm_with_devices.devices.get("samx").enabled = False
         dm_with_devices.devices.get("samy").enabled = False
