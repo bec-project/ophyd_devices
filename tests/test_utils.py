@@ -20,7 +20,8 @@ from ophyd_devices import (
     StatusBase,
     SubscriptionStatus,
 )
-from ophyd_devices.tests.utils import MockPV
+from ophyd_devices.devices.psi_motor import EpicsMotor
+from ophyd_devices.tests.utils import MockPV, patched_device
 from ophyd_devices.utils.bec_signals import (
     AsyncMultiSignal,
     AsyncSignal,
@@ -75,6 +76,17 @@ def device():
 def task_handler(device):
     """Fixture for TaskHandler"""
     yield TaskHandler(parent=device)
+
+
+@pytest.fixture(scope="function")
+def mock_device_with_initial_value():
+    with patched_device(EpicsMotor, _mock_pv_initial_value=2, name="motor") as mtr:
+        yield mtr
+
+
+def test_mock_device_initial_value(mock_device_with_initial_value: EpicsMotor):
+    mtr = mock_device_with_initial_value
+    assert mtr.velocity.get() == 2
 
 
 def test_utils_file_handler_has_full_path(file_handler):
