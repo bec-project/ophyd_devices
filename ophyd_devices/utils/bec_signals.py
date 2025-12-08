@@ -20,7 +20,14 @@ logger = bec_logger.logger
 # pylint: disable=signature-differs
 
 
-__all__ = ["ProgressSignal", "FileEventSignal", "PreviewSignal", "DynamicSignal", "AsyncSignal"]
+__all__ = [
+    "ProgressSignal",
+    "FileEventSignal",
+    "PreviewSignal",
+    "DynamicSignal",
+    "AsyncSignal",
+    "AsyncMultiSignal",
+]
 
 
 class SignalInfo(BaseModel):
