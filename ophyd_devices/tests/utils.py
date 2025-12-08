@@ -2,6 +2,7 @@
 
 import threading
 from contextlib import contextmanager
+from functools import partial
 from time import sleep
 from typing import TYPE_CHECKING, Callable, Generator, TypeVar
 from unittest import mock
@@ -25,7 +26,9 @@ T = TypeVar("T", bound=Device)
 
 
 @contextmanager
-def patched_device(device_type: type[T], *args, **kwargs) -> Generator[T, None, None]:
+def patched_device(
+    device_type: type[T], *args, _mock_pv_initial_value=0, **kwargs
+) -> Generator[T, None, None]:
     """Context manager to yield a patched ophyd device with certain initialisation args.
     *args and **kwargs are passed directly through to the device constructor.
 
@@ -37,7 +40,7 @@ def patched_device(device_type: type[T], *args, **kwargs) -> Generator[T, None, 
 
     """
     with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
+        mock_cl.get_pv = partial(MockPV, _mock_pv_initial_value=_mock_pv_initial_value)
         mock_cl.thread_class = threading.Thread
         device = device_type(*args, **kwargs)
         patch_dual_pvs(device)
@@ -137,8 +140,6 @@ class MockPV:
 
     """
 
-    DEFAULT_VALUE = 0
-
     _fmtsca = "<PV '%(pvname)s', count=%(count)i, type=%(typefull)s, access=%(access)s>"
     _fmtarr = "<PV '%(pvname)s', count=%(count)i/%(nelm)i, type=%(typefull)s, access=%(access)s>"
     _fields = (
@@ -173,6 +174,8 @@ class MockPV:
     def __init__(
         self,
         pvname,
+        *,
+        _mock_pv_initial_value=0,
         callback=None,
         form="time",
         verbose=False,
@@ -202,7 +205,7 @@ class MockPV:
         self._args["access"] = "unknown"
         self._args["status"] = 0
         self.connection_callbacks = []
-        self._mock_data = self.DEFAULT_VALUE
+        self._mock_data = _mock_pv_initial_value
 
         if connection_callback is not None:
             self.connection_callbacks = [connection_callback]
