@@ -163,15 +163,37 @@ def test_epics_motor_high_limit_switch_raises(mock_epics_motor):
         motor.move(15)
 
 
-def test_epics_vme_user_motor():
+@pytest.fixture(scope="function")
+def motor():
+    with patched_device(EpicsUserMotorVME, _mock_pv_initial_value=2, name="motor") as mtr:
+        yield mtr
+
+
+def test_epics_vme_user_motor(motor: EpicsUserMotorVME):
     """Test extended VME based user motor implementation EpicsUserMotors."""
-    with mock.patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        device = EpicsUserMotorVME(name="test_motor_ex", prefix="SIM:MOTOR:EX")
-        # Should raise
-        with pytest.raises(RuntimeError):
-            device.wait_for_connection(all_signals=True)
-        # Should not raise
-        device._ioc_enable._read_pv.mock_data = "Enable"
-        device.wait_for_connection(all_signals=True)
+
+    motor._ioc_enable._read_pv.mock_data = "Disable"
+    # Should enable the motor
+    motor.wait_for_connection(all_signals=True)
+    assert motor._ioc_enable.get() == "Enable"
+
+    # If high limit and low limit are both active, should raise error
+    motor.high_limit_switch._read_pv.mock_data = 1
+    motor.low_limit_switch._read_pv.mock_data = 1
+    with pytest.raises(RuntimeError):
+        motor.wait_for_connection(all_signals=True)
+
+    # Test subscription on _ioc_enable_changes
+    motor.device_manager = mock.MagicMock()
+    device_mock = mock.MagicMock()
+
+    class DeviceMock:
+        enabled = True
+
+    device_cls = DeviceMock()
+    motor.device_manager.devices = {motor.name: device_cls}
+    motor.on_connected()
+
+    # Change Enable to Disable
+    motor._ioc_enable.put("Disable")
+    assert device_cls.enabled is False

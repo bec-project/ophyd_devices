@@ -29,6 +29,7 @@ from ophyd_devices.utils.psi_device_base_utils import (
     DeviceStatus,
     FileHandler,
     MoveStatus,
+    Status,
     StatusBase,
     SubscriptionStatus,
     TaskHandler,
