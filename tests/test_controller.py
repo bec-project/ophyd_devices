@@ -11,14 +11,15 @@ def test_controller_off(dm_with_devices):
         device_manager=dm_with_devices,
     )
     controller.on()
-    with mock.patch.object(controller.sock, "close") as mock_close:
-        controller.off()
-        assert controller.sock is None
-        assert controller.connected is False
-        mock_close.assert_called_once()
+    with mock.patch.object(controller.device_manager, "config_helper") as mock_config_helper:
+        with mock.patch.object(controller.sock, "close") as mock_close:
+            controller.off()
+            assert controller.sock is None
+            assert controller.connected is False
+            mock_close.assert_called_once()
 
-        # make sure it is indempotent
-        controller.off()
+            # make sure it is indempotent
+            controller.off()
     controller._reset_controller()
 
 
