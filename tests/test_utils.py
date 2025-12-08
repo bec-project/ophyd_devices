@@ -12,15 +12,8 @@ from ophyd import Device, EpicsSignalRO, Signal
 from ophyd.status import WaitTimeoutError
 from typeguard import TypeCheckError
 
-from ophyd_devices import (
-    AndStatus,
-    DeviceStatus,
-    MoveStatus,
-    Status,
-    StatusBase,
-    SubscriptionStatus,
-)
-from ophyd_devices.tests.utils import MockPV
+from ophyd_devices.devices.psi_motor import EpicsMotor
+from ophyd_devices.tests.utils import MockPV, patched_device
 from ophyd_devices.utils.bec_signals import (
     AsyncMultiSignal,
     AsyncSignal,
@@ -31,8 +24,13 @@ from ophyd_devices.utils.bec_signals import (
     ProgressSignal,
 )
 from ophyd_devices.utils.psi_device_base_utils import (
+    AndStatus,
     CompareStatus,
+    DeviceStatus,
     FileHandler,
+    MoveStatus,
+    StatusBase,
+    SubscriptionStatus,
     TaskHandler,
     TaskKilledError,
     TaskState,
@@ -1021,3 +1019,14 @@ def test_patched_status_objects():
             move_st.wait(timeout=10)
         assert move_st.done is True
         assert move_st.success is False
+
+
+@pytest.fixture(scope="function")
+def mock_device_with_initial_value():
+    with patched_device(EpicsMotor, _mock_pv_initial_value=2, name="motor") as mtr:
+        yield mtr
+
+
+def test_mock_device_initial_value(mock_device_with_initial_value: EpicsMotor):
+    mtr = mock_device_with_initial_value
+    assert mtr.velocity.get() == 2

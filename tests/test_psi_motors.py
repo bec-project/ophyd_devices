@@ -9,8 +9,7 @@ from unittest import mock
 import ophyd
 import pytest
 
-from ophyd_devices.devices.epics_motor_ex import EpicsMotorEx
-from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotors, SpmgStates
+from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME, SpmgStates
 from ophyd_devices.tests.utils import MockPV, patched_device
 
 
@@ -169,7 +168,7 @@ def test_epics_vme_user_motor():
     with mock.patch.object(ophyd, "cl") as mock_cl:
         mock_cl.get_pv = MockPV
         mock_cl.thread_class = threading.Thread
-        device = EpicsUserMotors(name="test_motor_ex", prefix="SIM:MOTOR:EX")
+        device = EpicsUserMotorVME(name="test_motor_ex", prefix="SIM:MOTOR:EX")
         # Should raise
         with pytest.raises(RuntimeError):
             device.wait_for_connection(all_signals=True)
