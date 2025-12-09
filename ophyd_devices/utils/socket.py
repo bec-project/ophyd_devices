@@ -187,7 +187,7 @@ class SocketIO:
         Args:
             timeout (int): Time in seconds to wait for connection
         """
-        logger.info(f"Connecting to {self.host}:{self.port}")
+        logger.info(f"Connecting to {self.host}:{self.port}.")
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
@@ -197,11 +197,14 @@ class SocketIO:
                 break
             except Exception as exc:
                 self.sock = None
-                logger.warning(f"Connection failed, retrying after 0.2 seconds... {exc}")
+                logger.warning(
+                    f"Connection to {self.host}:{self.port} failed after {time.time()-start_time:.2f} seconds"
+                    f" with exception: {exc}. Retrying after 1 second..."
+                )
                 time.sleep(1)
         else:
             raise ConnectionError(
-                f"Could not connect to {self.host}:{self.port} within {time.time()-start_time} seconds"
+                f"Could not connect to {self.host}:{self.port} within {time.time()-start_time:.2f} seconds"
             )
 
     def _put(self, msg_bytes):
@@ -224,7 +227,7 @@ class SocketIO:
         return self._recv(buffer_length=buffer_length)
 
     def open(self, timeout: int = 10):
-        """ "
+        """
         Open the socket connection to the host:port
 
         Args:
