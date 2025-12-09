@@ -200,7 +200,7 @@ class Controller(OphydObject):
                 if axis is not None
             )
             if all_disabled:
-                self.off()
+                self.off(update_config=False)
 
     def set_all_devices_enable(self, enabled: bool) -> None:
         """
@@ -281,14 +281,15 @@ class Controller(OphydObject):
         else:
             logger.info("The connection has already been established.")
 
-    def off(self) -> None:
+    def off(self, update_config: bool = True) -> None:
         """Close the socket connection to the controller"""
         if self.connected and self.sock is not None:
             self.sock.close()
             self.connected = False
             self.sock = None
-            # Disable all axes associated with this controller
-            self.set_all_devices_enable(False)
+            if update_config:
+                # Disable all axes associated with this controller
+                self.set_all_devices_enable(False)
         else:
             logger.info("The connection is already closed.")
 

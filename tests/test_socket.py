@@ -77,7 +77,7 @@ def test_socket_open_with_timeout():
         mock_connect.side_effect = Exception("Connection failed")
         with pytest.raises(ConnectionError):
             socketio.open(timeout=0.4)
-            mock_connect.assert_called_once()
+        mock_connect.assert_called_once()
 
 
 def test_close():
