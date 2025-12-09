@@ -177,12 +177,6 @@ def test_epics_vme_user_motor(motor: EpicsUserMotorVME):
     motor.wait_for_connection(all_signals=True)
     assert motor._ioc_enable.get() == "Enable"
 
-    # If high limit and low limit are both active, should raise error
-    motor.high_limit_switch._read_pv.mock_data = 1
-    motor.low_limit_switch._read_pv.mock_data = 1
-    with pytest.raises(RuntimeError):
-        motor.wait_for_connection(all_signals=True)
-
     # Test subscription on _ioc_enable_changes
     motor.device_manager = mock.MagicMock()
     device_mock = mock.MagicMock()

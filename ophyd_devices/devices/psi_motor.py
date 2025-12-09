@@ -232,13 +232,6 @@ class EpicsUserMotorVME(PSIDeviceBase, EpicsMotor):
         """
         if self._ioc_enable.get(use_monitor=False) != "Enable":
             self._ioc_enable.put("Enable")
-        hl_switch = self.high_limit_switch.get(use_monitor=False)
-        ll_switch = self.low_limit_switch.get(use_monitor=False)
-        if hl_switch == 1 and ll_switch == 1:
-            raise RuntimeError(
-                f"Both limit switches are active for device {self.name}."
-                f"This often indicates that the motor is disconnected! Please double-check your hardware!"
-            )
         return super().wait_for_connection(all_signals, timeout)
 
     def on_connected(self):
