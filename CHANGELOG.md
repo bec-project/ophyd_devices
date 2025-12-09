@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v1.32.3 (2025-12-09)
+
+### Bug Fixes
+
+- Deprecate epics_motor_ex
+  ([`36100ec`](https://github.com/bec-project/ophyd_devices/commit/36100ec1ead1257140f46dff2bc5cdcc7c1fc43c))
+
+- **bec-signals**: Add AsyncMultiSignal to __all__
+  ([`c4296b0`](https://github.com/bec-project/ophyd_devices/commit/c4296b03995d615781a48c168442c1063593364e))
+
+- **epics-motor-user-vme**: Remove high/low limit check in wait_for_connection as it's not reliable.
+  Tested at cSAXS
+  ([`b2d885c`](https://github.com/bec-project/ophyd_devices/commit/b2d885c6a633f142d1a7b4a4ed9d904d77a4a90e))
+
+- **psi-motor**: Add new user motor imlementation that checks if the IOC is enabled.
+  ([`71a9b3c`](https://github.com/bec-project/ophyd_devices/commit/71a9b3c1036de5f16930c9bf2cc6f594574eec55))
+
+### Testing
+
+- Add test for epicsmotorvme
+  ([`da154a0`](https://github.com/bec-project/ophyd_devices/commit/da154a05cf9b70b32d943934dd0c6406f8cb6586))
+
+- **MockPv**: Improve MockPV, allow start value to be set
+  ([`1b2eecc`](https://github.com/bec-project/ophyd_devices/commit/1b2eeccbb81b8f14833afeb7f2ed50945b4920ca))
+
+
 ## v1.32.2 (2025-12-05)
 
 ### Bug Fixes
