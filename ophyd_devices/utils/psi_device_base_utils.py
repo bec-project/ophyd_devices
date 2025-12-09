@@ -264,11 +264,12 @@ class CompareStatus(SubscriptionStatus):
             run=run,
         )
 
-    def _compare_callback(self, value: any, **kwargs) -> bool:
+    def _compare_callback(self, old_value: any, value: any, **kwargs) -> bool:
         """
         Callback for subscription status
 
         Args:
+            old_value (any): Previous value of the signal
             value (any): Current value of the signal
 
         Returns:
