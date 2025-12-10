@@ -249,6 +249,18 @@ class Controller(OphydObject):
         self._axis[axis_nr] = axis
 
     @axis_checked
+    def remove_axis(self, *, axis_nr: int) -> None:
+        """Remove the device instance assigned to a controller axis.
+
+        Args:
+            axis_nr (int): Controller axis number
+
+        """
+        self._axis[axis_nr] = None
+        if not any(self._axis):
+            self.off(update_config=False)
+
+    @axis_checked
     def get_axis(self, axis_nr: int) -> Device:
         """Get device instance for a specified controller axis.
 

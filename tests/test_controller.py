@@ -74,3 +74,29 @@ def test_controller_with_multiple_axes(dm_with_devices):
         assert controller.connected is False
         controller.set_device_enabled("samx", True)
         assert controller.connected is True
+
+
+def test_remove_axis_from_controller(dm_with_devices):
+    """Test removing an axis from a controller."""
+    socket_cls = mock.MagicMock()
+    Controller._controller_instances = {}
+    Controller._axes_per_controller = 2
+    controller = Controller(
+        socket_cls=socket_cls, socket_host="dummy", socket_port=123, device_manager=dm_with_devices
+    )
+    # Set axes on the controller
+    controller.set_axis(axis=dm_with_devices.devices["samx"], axis_nr=0)
+    controller.set_axis(axis=dm_with_devices.devices["samy"], axis_nr=1)
+    assert len(controller._axis) == 2
+    with mock.patch.object(controller, "off") as mock_off:
+        # Remove one axis
+        controller.remove_axis(axis_nr=0)
+        assert len([a for a in controller._axis if a is not None]) == 1
+        assert "samy" in [a.name for a in controller._axis if a is not None]
+        mock_off.assert_not_called()
+
+        # Remove the last axis, should disable the controller
+        controller.remove_axis(axis_nr=1)
+        assert len([a for a in controller._axis if a is not None]) == 0
+        assert controller.connected is False
+        mock_off.assert_called_once_with(update_config=False)
