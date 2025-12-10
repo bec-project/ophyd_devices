@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v1.32.4 (2025-12-10)
+
+### Bug Fixes
+
+- **conotroller**: Cleanup names
+  ([`e7e2b5e`](https://github.com/bec-project/ophyd_devices/commit/e7e2b5ed9742c23bac8637c80ca5895841529db6))
+
+- **controller**: Add configurable timeout, en/disable controller axes on on/off
+  ([`2fb64e9`](https://github.com/bec-project/ophyd_devices/commit/2fb64e995e417d5791295dfd1961cdfad2faa6c1))
+
+- **controller**: Cleanup and fix logic for enable/off dependency.
+  ([`ef9568c`](https://github.com/bec-project/ophyd_devices/commit/ef9568cb462c0faac422c7ebf85991117f734473))
+
+### Refactoring
+
+- **controller**: Increase timeout to 20s.
+  ([`80eaae6`](https://github.com/bec-project/ophyd_devices/commit/80eaae6c7c81d3bc12bb28cc549e75ae4131ad09))
+
+### Testing
+
+- **controller**: Mock config_helper for controller off test
+  ([`69bfabc`](https://github.com/bec-project/ophyd_devices/commit/69bfabce358fe48c0336a278795a740e2410c25e))
+
+
 ## v1.32.3 (2025-12-09)
 
 ### Bug Fixes
