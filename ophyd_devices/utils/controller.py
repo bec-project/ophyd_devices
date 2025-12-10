@@ -177,7 +177,7 @@ class Controller(OphydObject):
             return
         self.device_manager.devices[device_name].read_only = not enabled
 
-    def set_device_enable(self, device_name: str, enabled: bool) -> None:
+    def set_device_enabled(self, device_name: str, enabled: bool) -> None:
         """
         Enable/disable a device. If the device is not configured, a warning is logged.
 
@@ -202,7 +202,7 @@ class Controller(OphydObject):
             if all_disabled:
                 self.off(update_config=False)
 
-    def set_all_devices_enable(self, enabled: bool) -> None:
+    def set_all_devices_enabled(self, enabled: bool) -> None:
         """
         Enable or disable all devices registered for the controller.
 
@@ -213,7 +213,7 @@ class Controller(OphydObject):
             if axis is None:
                 logger.info("Axis is not assigned, skipping enabling/disabling.")
                 continue
-            self.set_device_enable(axis.name, enabled)
+            self.set_device_enabled(axis.name, enabled)
 
     def _initialize(self):
         self._connected = False
@@ -289,7 +289,7 @@ class Controller(OphydObject):
             self.sock = None
             if update_config:
                 # Disable all axes associated with this controller
-                self.set_all_devices_enable(False)
+                self.set_all_devices_enabled(False)
         else:
             logger.info("The connection is already closed.")
 
