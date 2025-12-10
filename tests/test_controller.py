@@ -60,17 +60,17 @@ def test_controller_with_multiple_axes(dm_with_devices):
         assert dm_with_devices.devices.get("samx").enabled is False
         assert dm_with_devices.devices.get("samy").enabled is False
         assert controller.connected is True
-        controller.set_all_devices_enable(True)
+        controller.set_all_devices_enabled(True)
         assert dm_with_devices.devices.get("samx").enabled is True
         assert dm_with_devices.devices.get("samy").enabled is True
         # Disable one axis after another, the last one should turn the controller off
-        controller.set_device_enable("samx", False)
+        controller.set_device_enabled("samx", False)
         assert controller.connected is True
         assert dm_with_devices.devices.get("samx").enabled is False
         assert dm_with_devices.devices.get("samy").enabled is True
-        controller.set_device_enable("samy", False)
+        controller.set_device_enabled("samy", False)
         assert dm_with_devices.devices.get("samy").enabled is False
         # Enabling one axis should turn the controller back on
         assert controller.connected is False
-        controller.set_device_enable("samx", True)
+        controller.set_device_enabled("samx", True)
         assert controller.connected is True
