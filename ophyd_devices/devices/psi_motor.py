@@ -7,6 +7,7 @@ detailed interface for motors using the new ECMC-based motion systems at PSI.
 
 import functools
 
+import numpy as np
 from ophyd import Component as Cpt
 from ophyd import EpicsMotor as OphydEpicsMotor
 from ophyd import EpicsSignal, EpicsSignalRO, Kind
@@ -46,7 +47,7 @@ class EpicsSignalWithCheck(EpicsSignal):
         super().put(value, use_complete=use_complete, **kwargs)
         # Check if the value was accepted
         new_value = self.get(auto_monitor=False)
-        if new_value != value:
+        if not np.isclose(value, new_value):
             raise ValueError(f"Failed to set signal {self.name} to value: {value}.")
 
 
