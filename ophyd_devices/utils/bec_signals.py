@@ -29,6 +29,9 @@ __all__ = [
     "AsyncMultiSignal",
 ]
 
+SupportedSignalTypes = (int, float, str, bool, list, np.ndarray)
+SupportedSignalTypesUnion = int | float | str | bool | list | np.ndarray
+
 
 class SignalInfo(BaseModel):
     """
@@ -716,7 +719,10 @@ class DynamicSignal(BECMessageSignal):
     @typechecked
     def put(
         self,
-        value: messages.DeviceMessage | dict[str, dict[Literal["value", "timestamp"], Any]],
+        value: (
+            messages.DeviceMessage
+            | dict[str, dict[Literal["value", "timestamp"], SupportedSignalTypesUnion]]
+        ),
         *,
         metadata: dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
@@ -754,6 +760,16 @@ class DynamicSignal(BECMessageSignal):
                 metadata["acquisition_group"] = acquisition_group
             elif self.acquisition_group is not None:
                 metadata["acquisition_group"] = self.acquisition_group
+
+            # verify that signal data is of supported type
+            for signal_name, signal_data in value.items():
+                if "value" not in signal_data:
+                    raise ValueError(f"Signal data for {signal_name} must contain 'value' key.")
+                if not isinstance(signal_data["value"], SupportedSignalTypes):
+                    raise ValueError(
+                        f"Signal data for {signal_name} must be of type {SupportedSignalTypes}, "
+                        f"got {type(signal_data['value']).__name__}."
+                    )
 
             msg = messages.DeviceMessage(signals=value, metadata=metadata)
         except ValidationError as exc:
@@ -973,7 +989,7 @@ class AsyncSignal(DynamicSignal):
 
     def put(
         self,
-        value: Any,
+        value: SupportedSignalTypesUnion,
         timestamp: float | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         acquisition_group: str | None = None,
@@ -998,7 +1014,7 @@ class AsyncSignal(DynamicSignal):
 
     def set(
         self,
-        value: Any,
+        value: SupportedSignalTypesUnion,
         timestamp: float | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         acquisition_group: str | None = None,
