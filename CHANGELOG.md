@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.32.5 (2025-12-15)
+
+### Bug Fixes
+
+- **psi-motor**: Adapt compare to np.isclose for EpicsSignalWithCheck
+  ([`e7f4ff7`](https://github.com/bec-project/ophyd_devices/commit/e7f4ff798a375fe78a7da45c6bdbf07313fc9f49))
+
+### Refactoring
+
+- Add export of EpicsUserMotorVME
+  ([`f45f1be`](https://github.com/bec-project/ophyd_devices/commit/f45f1be3be558f1ff43fe64c3f1d19b78ab74321))
+
+
 ## v1.32.4 (2025-12-10)
 
 ### Bug Fixes
