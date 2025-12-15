@@ -583,10 +583,18 @@ class PreviewSignal(BECMessageSignal):
         if self.ndim == 1:
             return value
 
+        if not isinstance(value, np.ndarray):
+            value = np.asarray(value)
+
         if self.num_rotation_90:
             value = np.rot90(value, k=self.num_rotation_90, axes=(0, 1))
         if self.transpose:
-            value = np.transpose(value)
+            if value.ndim == 2:
+                value = value.T
+            elif value.ndim == 3:
+                value = np.transpose(value, (1, 0, 2))
+            else:
+                value = np.transpose(value)
 
         return value
 
