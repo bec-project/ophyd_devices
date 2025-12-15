@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.32.6 (2025-12-15)
+
+### Bug Fixes
+
+- **controller**: Add method to remove axis from controller
+  ([`713fa1a`](https://github.com/bec-project/ophyd_devices/commit/713fa1a1b796c3e800980c33ffbf8deaac95446a))
+
+
 ## v1.32.5 (2025-12-15)
 
 ### Bug Fixes
