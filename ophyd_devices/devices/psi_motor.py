@@ -16,8 +16,8 @@ from ophyd.status import MoveStatus
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 from ophyd.utils.errors import UnknownStatusFailure
 
-from ophyd_devices import StatusBase
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+from ophyd_devices.utils.psi_device_base_utils import StatusBase
 
 
 class SpmgStates:
