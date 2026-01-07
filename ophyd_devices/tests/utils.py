@@ -27,10 +27,20 @@ T = TypeVar("T", bound=Device)
 
 @contextmanager
 def patched_device(
-    device_type: type[T], *args, _mock_pv_initial_value=0, **kwargs
+    device_type: type[T],
+    *args,
+    _mock_pv_initial_value=0,
+    mask_stage_sigs: bool = True,
+    mask_trigger_sigs: bool = True,
+    **kwargs,
 ) -> Generator[T, None, None]:
     """Context manager to yield a patched ophyd device with certain initialisation args.
-    *args and **kwargs are passed directly through to the device constructor.
+    *args and **kwargs are passed directly through to the device constructor. In addition,
+    stage and trigger signals will be patched to avoid side effects for PVs with enums and 'string' types
+    for which the MockPV patch fails to imitate the expected behaviour. The 'string=True' converts any set
+    value to a string, but then misses to properly handle enum types, where both the string and integer
+    representation are allowed. This leads to tests hanging indefinitely in a 'set' call if stage_sigs or trigger_signals
+    are defined. Most often this is the case for AreaDetector classes.
 
     Example:
         @pytest.fixture(scope="function")
@@ -45,6 +55,21 @@ def patched_device(
         device = device_type(*args, **kwargs)
         patch_dual_pvs(device)
         patch_functions_required_for_connection(device)
+
+        # NOTE Patch stage signals to avoid issues with enums and string types
+        # These enums cannot be known as they may depend on individual PV configurations
+        # Therefore we simply remove them for the purpose of testing
+        if mask_stage_sigs is True:
+            for _, sub_device in device.walk_subdevices(include_lazy=True):
+                sub_device.stage_sigs = {}  # Remove stage signals
+                if hasattr(sub_device, "_plugin_type") and hasattr(sub_device, "plugin_type"):
+                    # Patch plugin_type configured/misconfigure checks in AD plugins
+                    sub_device.plugin_type._read_pv.mock_data = sub_device._plugin_type
+
+        # NOTE Patch trigger signals for the same reason as stage_sigs
+        if mask_trigger_sigs is True:
+            for cpt_walk in device.walk_components():
+                cpt_walk.item.trigger_value = None  # Remove any trigger value indicators
         yield device
 
 
@@ -453,43 +478,45 @@ def fake_scan_status_msg(device: Device | None = None) -> ScanStatusMessage:
                 [8.0],
                 [10.0],
             ],
-            "file_path": "./data/test_file",
-            "scan_name": "mock_line_scan",
+            "scan_name": "line_scan",
             "scan_type": "step",
-            "scan_number": 0,
-            "dataset_number": 0,
-            "exp_time": 0,
+            "scan_number": 1,
+            "dataset_number": 1,
+            "exp_time": 0.5,
             "frames_per_trigger": 1,
             "settling_time": 0,
             "readout_time": 0,
             "scan_report_devices": ["samx"],
             "monitor_sync": "bec",
             "scan_parameters": {
-                "exp_time": 0,
+                "exp_time": 0.5,
                 "frames_per_trigger": 1,
                 "settling_time": 0,
                 "readout_time": 0,
                 "optim_trajectory": None,
-                "return_to_start": True,
-                "relative": True,
+                "return_to_start": False,
+                "relative": False,
                 "system_config": {"file_suffix": None, "file_directory": None},
             },
             "request_inputs": {
-                "arg_bundle": ["samx", -10, 10],
+                "arg_bundle": ["samx", -2, 2],
                 "inputs": {},
                 "kwargs": {
-                    "steps": 11,
-                    "relative": True,
+                    "steps": 10,
+                    "exp_time": 0.5,
+                    "relative": False,
                     "system_config": {"file_suffix": None, "file_directory": None},
                 },
             },
+            "file_components": ["/tmp/bec/data/S00000-00999/S00001/S00001", "h5"],
             "scan_msgs": [
-                "metadata={'file_suffix': None, 'file_directory': None, 'user_metadata': {}, 'RID': 'a1d86f61-191c-4460-bcd6-f33c61b395ea'} scan_type='mock_line_scan' parameter={'args': {'samx': [-10, 10]}, 'kwargs': {'steps': 11, 'relative': True, 'system_config': {'file_suffix': None, 'file_directory': None}}} queue='primary'"
+                "metadata={'file_suffix': None, 'file_directory': None, 'user_metadata': {}, 'RID': 'a87334b4-51f2-420e-8efd-fa8b1faba457'} scan_type='line_scan' parameter={'args': {'samx': [-2, 2]}, 'kwargs': {'steps': 10, 'exp_time': 0.5, 'relative': False, 'system_config': {'file_suffix': None, 'file_directory': None}}} queue='primary'"
             ],
-            "args": {"samx": [-10, 10]},
+            "args": {"samx": [-2, 2]},
             "kwargs": {
                 "steps": 11,
-                "relative": True,
+                "exp_time": 0.5,
+                "relative": False,
                 "system_config": {"file_suffix": None, "file_directory": None},
             },
         },
