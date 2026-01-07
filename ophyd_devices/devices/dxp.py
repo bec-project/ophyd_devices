@@ -209,6 +209,9 @@ class EpicsDXPFalconMultiElementSystem(EpicsDXPBaseSystem):
     max_input_count_rate = Cpt(EpicsSignal, "MaxInputCountRate")
     max_output_count_rate = Cpt(EpicsSignal, "MaxOutputCountRate")
 
+    # Pixel Per Run
+    pixels_per_run = Cpt(EpicsSignal, "PixelsPerRun")
+
 
 class EpicsDxpFalconMapping(EpicsDXPMapping):
     """Mapping mode parameters as defined in dxpMapping.template"""
