@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.32.7 (2026-01-07)
+
+### Bug Fixes
+
+- **dxp**: Add pixels_per_run signal to Falcon
+  ([`32e1602`](https://github.com/bec-project/ophyd_devices/commit/32e16028edfc05f5ea81fe4cf4d15d320fd70f66))
+
+- **utils**: Mask stage_sigs and trigger_signals to simplify testing of ADBase devices
+  ([`ba39ee0`](https://github.com/bec-project/ophyd_devices/commit/ba39ee029ee1a5346f238eab61f093e5e6fa93ed))
+
+
 ## v1.32.6 (2025-12-15)
 
 ### Bug Fixes
