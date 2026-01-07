@@ -36,21 +36,27 @@ class TestFalcon(Falcon):
 @pytest.fixture(scope="function")
 def mock_falcon():
     """Fixture to create a mock Falcon device for testing."""
-    with patched_device(TestFalcon, name="mca", prefix="test_falcon") as falc:
+    with patched_device(
+        TestFalcon, name="mca", prefix="test_falcon", mask_stage_sigs=False, mask_trigger_sigs=False
+    ) as falc:
         yield falc
 
 
 @pytest.fixture(scope="function")
 def mock_xmap():
     """Fixture to create a mock xMAP device for testing."""
-    with patched_device(xMAP, name="mca", prefix="test_xmap") as xmap:
+    with patched_device(
+        xMAP, name="mca", prefix="test_xmap", mask_stage_sigs=False, mask_trigger_sigs=False
+    ) as xmap:
         yield xmap
 
 
 @pytest.fixture(scope="function")
 def mock_mercury():
     """Fixture to create a mock Mercury device for testing."""
-    with patched_device(Mercury, name="mca", prefix="test_mercury") as merc:
+    with patched_device(
+        Mercury, name="mca", prefix="test_mercury", mask_stage_sigs=False, mask_trigger_sigs=False
+    ) as merc:
         yield merc
 
 
