@@ -3,7 +3,7 @@ import os
 from typing import Literal
 
 import requests
-from github import Github
+from github import Auth, Github
 from pydantic import BaseModel
 
 
@@ -24,7 +24,8 @@ class ProjectItemHandler:
 
     def __init__(self, gh_config: GHConfig):
         self.gh_config = gh_config
-        self.gh = Github(gh_config.token)
+        auth = Auth.Token(gh_config.token)
+        self.gh = Github(auth=auth)
         self.repo = self.gh.get_repo(f"{gh_config.organization}/{gh_config.repository}")
         self.project_node_id = self.get_project_node_id()
 
@@ -287,6 +288,89 @@ class ProjectItemHandler:
         edges = resp["data"]["repository"]["pullRequest"]["closingIssuesReferences"]["edges"]
         return [edge["node"] for edge in edges if edge.get("node")]
 
+    def sync_issue_status_with_pr(self, pr_number: int):
+        """
+        Sync the status of linked issues with the state of the pull request.
+        If the PR is merged, close linked issues and set status to "Done".
+        If the PR is closed without merging, set status to "Selected for Development" and remove assignees.
+        If the PR is open, set status to "In Development" (if draft) or "Ready For Review" (if not draft) and assign to PR assignees.
+
+
+        Args:
+            pr_number (int): The pull request number.
+        """
+        # Get PR info
+        pr = self.repo.get_pull(pr_number)
+
+        # Get the linked issues of the pull request
+        linked_issues = self.get_pull_request_linked_issues(pr_number=pr_number)
+        print(f"Linked issues: {linked_issues}")
+
+        # Get PR assignees, or use PR author if no assignees
+        pr_assignees = [assignee.login for assignee in pr.assignees]
+        if not pr_assignees:
+            pr_assignees = [pr.user.login]
+            print(f"No assignees on PR, using PR author: {pr_assignees}")
+        else:
+            print(f"PR assignees: {pr_assignees}")
+
+        # Fetch all GitHub issue objects upfront
+        gh_issues = {
+            issue["number"]: self.repo.get_issue(issue["number"]) for issue in linked_issues
+        }
+
+        # If the PR is merged, close all linked issues and set their status to "Done"
+        # GitHub only auto-closes issues when merging to the default branch,
+        # so we explicitly close them for all branches
+        if pr.merged:
+            print("PR is merged. Closing linked issues and setting status to 'Done'.")
+            for issue in linked_issues:
+                gh_issue = gh_issues[issue["number"]]
+                # Close the issue if it's still open
+                if gh_issue.state == "open":
+                    gh_issue.edit(state="closed")
+                    print(f"Closed issue #{issue['number']}")
+                else:
+                    print(f"Issue #{issue['number']} already closed")
+                # Set status to "Done"
+                self.set_issue_status(issue_number=issue["number"], status="Done")
+                print(f"Set issue #{issue['number']} status to 'Done'")
+        elif pr.state == "closed":
+            # PR was closed without merging - move linked issues back to "Selected for Development" and remove assignees
+            print(
+                "PR closed without merging. Setting linked issues status to 'Selected for Development' and removing assignees."
+            )
+            for issue in linked_issues:
+                gh_issue = gh_issues[issue["number"]]
+                # Remove all assignees
+                if gh_issue.assignees:
+                    try:
+                        gh_issue.remove_from_assignees(*gh_issue.assignees)
+                        print(f"Removed assignees from issue #{issue['number']}")
+                    except Exception as e:
+                        print(
+                            f"Warning: Could not remove assignees from issue #{issue['number']}: {e}"
+                        )
+                self.set_issue_status(
+                    issue_number=issue["number"], status="Selected for Development"
+                )
+                print(f"Set issue #{issue['number']} status to 'Selected for Development'")
+        else:
+            # For open PRs, set the appropriate status and assign to PR assignees
+            target_status = "In Development" if pr.draft else "Ready For Review"
+            print(f"Target status: {target_status}")
+            for issue in linked_issues:
+                gh_issue = gh_issues[issue["number"]]
+                # Assign issues to PR assignees if there are any
+                current_assignees = [assignee.login for assignee in gh_issue.assignees]
+                if set(current_assignees) != set(pr_assignees):
+                    try:
+                        gh_issue.edit(assignees=pr_assignees)
+                        print(f"Assigned issue #{issue['number']} to {pr_assignees}")
+                    except Exception as e:
+                        print(f"Warning: Could not assign issue #{issue['number']}: {e}")
+                self.set_issue_status(issue_number=issue["number"], status=target_status)
+
 
 def main():
     # GitHub settings
@@ -324,18 +408,7 @@ def main():
         headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
     )
     project_item_handler = ProjectItemHandler(gh_config=gh_config)
-
-    # Get PR info
-    pr = project_item_handler.repo.get_pull(pr_number)
-
-    # Get the linked issues of the pull request
-    linked_issues = project_item_handler.get_pull_request_linked_issues(pr_number=pr_number)
-    print(f"Linked issues: {linked_issues}")
-
-    target_status = "In Development" if pr.draft else "Ready For Review"
-    print(f"Target status: {target_status}")
-    for issue in linked_issues:
-        project_item_handler.set_issue_status(issue_number=issue["number"], status=target_status)
+    project_item_handler.sync_issue_status_with_pr(pr_number=pr_number)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,18 @@ name: Sync PR to Project
 
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, converted_to_draft, reopened, synchronize]
+    types:
+      [
+        opened,
+        assigned,
+        unassigned,
+        edited,
+        ready_for_review,
+        converted_to_draft,
+        reopened,
+        synchronize,
+        closed,
+      ]
 
 jobs:
   sync-project:
@@ -14,11 +25,11 @@ jobs:
       contents: read
 
     env:
-        PROJECT_NUMBER: 3 # BEC Project
-        ORG: 'bec-project'
-        REPO: 'ophyd_devices'
-        TOKEN: ${{ secrets.ADD_ISSUE_TO_PROJECT }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+      PROJECT_NUMBER: 3 # BEC Project
+      ORG: "bec-project"
+      REPO: "ophyd_devices"
+      TOKEN: ${{ secrets.ADD_ISSUE_TO_PROJECT }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Set up python environment
