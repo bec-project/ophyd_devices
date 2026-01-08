@@ -332,10 +332,40 @@ def main():
     linked_issues = project_item_handler.get_pull_request_linked_issues(pr_number=pr_number)
     print(f"Linked issues: {linked_issues}")
 
-    target_status = "In Development" if pr.draft else "Ready For Review"
-    print(f"Target status: {target_status}")
-    for issue in linked_issues:
-        project_item_handler.set_issue_status(issue_number=issue["number"], status=target_status)
+    # If the PR is merged, close all linked issues and set their status to "Done"
+    # GitHub only auto-closes issues when merging to the default branch,
+    # so we explicitly close them for all branches
+    if pr.merged:
+        print("PR is merged. Closing linked issues and setting status to 'Done'.")
+        for issue in linked_issues:
+            # Close the issue if it's still open
+            gh_issue = project_item_handler.repo.get_issue(issue["number"])
+            if gh_issue.state == "open":
+                gh_issue.edit(state="closed")
+                print(f"Closed issue #{issue['number']}")
+            else:
+                print(f"Issue #{issue['number']} already closed")
+            # Set status to "Done"
+            project_item_handler.set_issue_status(issue_number=issue["number"], status="Done")
+            print(f"Set issue #{issue['number']} status to 'Done'")
+    elif pr.state == "closed":
+        # PR was closed without merging - move issues back to backlog
+        print(
+            "PR closed without merging. Setting linked issues status to 'Selected for Development'."
+        )
+        for issue in linked_issues:
+            project_item_handler.set_issue_status(
+                issue_number=issue["number"], status="Selected for Development"
+            )
+            print(f"Set issue #{issue['number']} status to 'Selected for Development'")
+    else:
+        # For open PRs, set the appropriate status
+        target_status = "In Development" if pr.draft else "Ready For Review"
+        print(f"Target status: {target_status}")
+        for issue in linked_issues:
+            project_item_handler.set_issue_status(
+                issue_number=issue["number"], status=target_status
+            )
 
 
 if __name__ == "__main__":
