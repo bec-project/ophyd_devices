@@ -21,10 +21,11 @@ the correct layout is loaded. Utility methods to load/save layouts to/from files
 from/to the PandaBox hardware are provided in this class too.
 """
 
+from __future__ import annotations
+
 import os
 import threading
 import uuid
-from collections import defaultdict
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Callable, TypeAlias, Union
 
@@ -143,7 +144,7 @@ LITERAL_PANDA_COMMANDS: TypeAlias = Union[
     pbc.GetFieldInfo,
     pbc.GetPcapBitsLabels,
 ]
-LITERAL_PANDA_DATA: TypeAlias = Union[ReadyData, StartData, FrameData, EndData]
+LITERAL_PANDA_DATA: TypeAlias = Union[ReadyData, StartData, FrameData, EndData, Data]
 
 
 class PandaBox(PSIDeviceBase):
@@ -161,9 +162,9 @@ class PandaBox(PSIDeviceBase):
         *,
         name: str,
         host: str,
-        scan_info: "ScanInfo" | None = None,
-        device_manager: "DeviceManagerDS" | None = None,
-        kwargs,
+        scan_info: ScanInfo | None = None,
+        device_manager: DeviceManagerDS | None = None,
+        **kwargs,
     ) -> None:
         super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
         self.host = host
@@ -180,7 +181,7 @@ class PandaBox(PSIDeviceBase):
 
         # Thread to receive data from the PandaBox
         self.data_thread: threading.Thread = threading.Thread(
-            target=self._data_thread_loop, daemon=True
+            target=self._data_thread_loop, daemon=True, name=f"{self.name}_data_thread"
         )
         self.data_thread_kill_event = threading.Event()
         self.data_thread_run_event = threading.Event()
@@ -364,8 +365,8 @@ class PandaBox(PSIDeviceBase):
         # to ensure that we send the DISARM() command to the PandaBox to stop the acquisition cleanly. Multiple disarm
         # commands are safe to send, so we can always ensure that we disarm at the end of the readout loop. (TODO to check).
         """
-        with BlockingClient(self.host) as client:
-            try:
+        try:
+            with BlockingClient(self.host) as client:
                 for data in client.data(scaled=False):
                     if isinstance(data, ReadyData):
                         self._run_status_callbacks(PandaState.READY)
@@ -384,27 +385,27 @@ class PandaBox(PSIDeviceBase):
                         self._run_data_callbacks(data, PandaState.END.value)
                         break  # Exit data readout loop
 
-            finally:
-                # NOTE: This block ensures that we properly cleanup after a data acquisition,
-                # whether it completed successfully or was interrupted. This includes sending
-                # the DISARM() command to the PandaBox to stop any ongoing acquisition in case
-                # we exited the loop prematurely. It also clears the data_thread_run_event to block
-                # the data readout loop again, and runs the DISARMED status callbacks to notify
-                # any registered status objects that the PandaBox is now disarmed. DISARMED is the
-                # expected safe state of the data receiving loop from the PandaBox and was added
-                # in addition to the existing READY, START, FRAME, END events created from the existing
-                # PandaBox data messages.
+        finally:
+            # NOTE: This block ensures that we properly cleanup after a data acquisition,
+            # whether it completed successfully or was interrupted. This includes sending
+            # the DISARM() command to the PandaBox to stop any ongoing acquisition in case
+            # we exited the loop prematurely. It also clears the data_thread_run_event to block
+            # the data readout loop again, and runs the DISARMED status callbacks to notify
+            # any registered status objects that the PandaBox is now disarmed. DISARMED is the
+            # expected safe state of the data receiving loop from the PandaBox and was added
+            # in addition to the existing READY, START, FRAME, END events created from the existing
+            # PandaBox data messages.
 
-                client.send(self._disarm())  # Ensure we disarm at the end
+            self._disarm()  # Ensure we disarm at the end
 
-                self.data_thread_run_event.clear()  # Stop data readout loop
+            self.data_thread_run_event.clear()  # Stop data readout loop
 
-                self._run_status_callbacks(PandaState.DISARMED)  # Run DISARMED status callbacks
+            self._run_status_callbacks(PandaState.DISARMED)  # Run DISARMED status callbacks
 
-                # As DISARMED is not triggered by a data message, we manually run data callbacks for it here
-                # and run it with an empty Data() object following the base class for data message responses
-                # of the pandablocks library.
-                self._run_data_callbacks(Data(), PandaState.DISARMED.value)
+            # As DISARMED is not triggered by a data message, we manually run data callbacks for it here
+            # and run it with an empty Data() object following the base class for data message responses
+            # of the pandablocks library.
+            self._run_data_callbacks(Data(), PandaState.DISARMED.value)
 
     def _run_status_callbacks(self, event: PandaState) -> None:
         """
@@ -544,17 +545,20 @@ class PandaBox(PSIDeviceBase):
         """
         status = super().pre_scan()
         status_ready_data_received = StatusBase(obj=self)
+        self.cancel_on_stop(
+            status_ready_data_received
+        )  # Make sure we cancel if the scan is stopped
+        status_ready_data_received.add_callback(self._pre_scan_status_callback)
         self.add_status_callback(
             status=status_ready_data_received,
             success=[PandaState.READY],
             failure=[PandaState.FRAME, PandaState.END],
         )
-        status_ready_data_received.add_callback(self._pre_scan_status_callback)
+
         if status:
             ret_status = status_ready_data_received & status
         else:
             ret_status = status_ready_data_received
-        self.cancel_on_stop(ret_status)
         return ret_status
 
     def unstage(self) -> list[object] | StatusBase:
@@ -571,16 +575,18 @@ class PandaBox(PSIDeviceBase):
 
     def _get_signal_names_allowed_for_capture(self) -> list[str]:
         """Utility method to get a list of all signal keys that CAN BE CONFIGURED for capture on the PandaBox."""
-        ret = self.send_command(self.send_raw("*CAPTURE.*?"))
+        ret = self.send_raw("*CAPTURE.*?")
         # TODO check proper unpacking of returned keys
         return [key.split(" ")[0].strip("!") for key in ret if key.strip(".")]
 
     def _get_signal_names_configured_for_capture(self) -> list[str]:
         """Utility method to get a list of all signal keys thar ARE CURRENTLY CONFIGURED for capture on the PandaBox."""
-        ret = self.send_command(self.send_raw("*CAPTURE?"))
+        ret = self.send_raw("*CAPTURE?")
         return [key.split(" ")[0].strip("!") for key in ret if key.strip(".")]
 
-    def _compile_frame_data_to_dict(self, frame_data: FrameData) -> dict[str, Any]:
+    def _compile_frame_data_to_dict(
+        self, frame_data: FrameData, signal_name_key_mapping: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         """
         Compile the data from a FrameData object into a dictionary with expected OPHYD
         read format, e.g. signal {signal_name: {"value": [...]}}.
@@ -591,12 +597,20 @@ class PandaBox(PSIDeviceBase):
         Returns:
             dict[str, Any]: The compiled data in OPHYD read format.
         """
-        out = defaultdict(list)
+        if signal_name_key_mapping is None:
+            signal_name_key_mapping = {}
+        # Create output dict
+        out = {}
         data = frame_data.data
         keys = data.dtype.names
+        # Map keys if mapping is provided
+        mapped_key = [signal_name_key_mapping.get(key, key) for key in keys]
+        # Initialize lists for each key, consider adjusting names to match
+        for k in mapped_key:
+            out[k] = {"value": []}  # Timestamp?
         for entry in data:
-            for i, key in enumerate(keys):
-                out[key]["value"].append(entry[i])
+            for i, k in enumerate(mapped_key):
+                out[k]["value"].append(entry[i])  # Fill values from data
 
     def _pre_scan_status_callback(self, status: StatusBase):
         """
@@ -605,9 +619,8 @@ class PandaBox(PSIDeviceBase):
         Args:
             status (StatusBase): The status object to resolve when arming is complete.
         """
-        if not status.done:
+        if status.done and status.success:
             self._arm()
-            status.set_finished()
 
     def _send_command(self, command: LITERAL_PANDA_COMMANDS) -> Any:
         """Send a command to the PandaBox via the BlockingClient."""
