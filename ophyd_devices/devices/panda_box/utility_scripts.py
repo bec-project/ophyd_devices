@@ -11,7 +11,7 @@ Module with utility scripts to run on the PandaBox device.
 import argparse
 from pathlib import Path
 
-from ophyd_devices.devices.pandabox.pandabox import (
+from ophyd_devices.devices.panda_box.panda_box import (
     load_layout_from_file_to_panda,
     save_panda_layout_to_file,
 )
