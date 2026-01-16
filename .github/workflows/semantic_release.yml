@@ -9,8 +9,6 @@ on:
 permissions:
   contents: read
 
-
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -39,7 +37,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Setup | Force release branch to be at workflow sha
         run: |
@@ -49,9 +47,6 @@ jobs:
         # the upstream branch while this workflow was running. This is important
         # because we are committing a version change (--commit). You may omit this step
         # if you have 'commit: false' in your configuration.
-        #
-        # You may consider moving this to a repo script and call it from this step instead
-        # of writing it in-line.
         shell: bash
         run: |
           set +o pipefail
