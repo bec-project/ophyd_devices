@@ -32,6 +32,7 @@ class StaticDeviceTest:
         output_file: TextIOWrapper | None = None,
         config_file: str | None = None,
         config_dict: dict[str, dict] | None = None,
+        device_manager_ds: object | None = None,
     ) -> None:
         """
         Initialize the StaticDeviceTest class. Either output_file or config_dict must be provided.
@@ -50,6 +51,7 @@ class StaticDeviceTest:
             self.config = config_dict
             self.config_file = ""
         self.file = output_file
+        self.device_manager_ds = device_manager_ds
 
     @staticmethod
     def read_config(config) -> dict:
@@ -172,7 +174,7 @@ class StaticDeviceTest:
         try:
             conf_in = copy.deepcopy(conf)
             conf_in["name"] = name
-            obj, _ = device_manager.construct_device_obj(conf_in, None)
+            obj, _ = device_manager.construct_device_obj(conf_in, self.device_manager_ds)
 
             device_manager.connect_device(
                 obj, wait_for_all=True, timeout=timeout_per_device, force=force_connect
