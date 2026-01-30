@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.32.8 (2026-01-30)
+
+### Bug Fixes
+
+- **static-device-test**: Add device-manager as optional input to StaticDeviceTest
+  ([`9cb66b2`](https://github.com/bec-project/ophyd_devices/commit/9cb66b2db82cea5c39b60ea9868539a7d24550ea))
+
+### Continuous Integration
+
+- Use shared composit action for issue sync
+  ([`5480596`](https://github.com/bec-project/ophyd_devices/commit/5480596c60e07795f90da2c70ecae9ff7e51ae90))
+
+
 ## v1.32.7 (2026-01-07)
 
 ### Bug Fixes
