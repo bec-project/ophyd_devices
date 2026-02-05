@@ -219,6 +219,124 @@ class SynFlyerLamNI(Device, PositionerBase):
         flyer.start()
 
 
+class SimDeviceWithSignalDelay(Device):
+    """
+    Simulated device with a delay. Can be used to simulate a slow rampup after an initial delay.
+    One use case is to simulate a beam loss and its recovery over time.
+
+    Usage:
+    - Set the min_val and max_val to define the range of the rampup.
+    - Set the delay to define how long to wait before starting the rampup.
+    - Set the rampup_time to define how long the rampup should take from min_val to max_val.
+    - Trigger the rampup by setting the start signal to 1. The value signal will then update over time according to the defined delay and rampup_time.
+    """
+
+    start = Cpt(SetableSignal, value=0, kind=Kind.config)
+    min_val = Cpt(SetableSignal, value=0, kind=Kind.config)
+    max_val = Cpt(SetableSignal, value=10, kind=Kind.config)
+    delay = Cpt(SetableSignal, value=1.0, kind=Kind.config)  # Delay in seconds before rampup starts
+    rampup_time = Cpt(SetableSignal, value=5.0, kind=Kind.config)  # Total rampup time in seconds
+    value = Cpt(SetableSignal, value=0, kind=Kind.hinted)  # Current value signal
+
+    SUB_VALUE = "value"
+    _default_sub = SUB_VALUE
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._rampup_thread = None
+        self._stop_event = threading.Event()
+        self._running = False
+
+        # Subscribe to start signal changes
+        self.start.subscribe(self._on_start_changed)
+        self.value.subscribe(self._on_value_changed)
+
+    def _on_start_changed(self, value, **kwargs):
+        """Callback when start signal changes."""
+        if value == 1 and not self._running:
+            self._start_rampup()
+
+    def _on_value_changed(self, value, **kwargs):
+        self._run_subs(self.SUB_VALUE, value=value, **kwargs)
+
+    def _start_rampup(self):
+        """Start the rampup simulation in a background thread."""
+        if self._running:
+            return
+
+        self._stop_event.clear()
+        self._running = True
+        self._rampup_thread = threading.Thread(target=self._rampup_worker, daemon=True)
+        self._rampup_thread.start()
+
+        # Reset start signal to 0 after launching
+        self.start.put(0)
+
+    def _stop_rampup(self):
+        """Stop the rampup simulation."""
+        if not self._running:
+            return
+
+        self._stop_event.set()
+        if self._rampup_thread is not None:
+            self._rampup_thread.join(timeout=1.0)
+        self._running = False
+        self.value.put(self.min_val.get())
+
+    def _rampup_worker(self):
+        """Worker thread that handles delay and rampup."""
+        try:
+            min_value = self.min_val.get()
+            max_value = self.max_val.get()
+            delay_time = max(self.delay.get(), 0)  # Ensure non-negative delay
+            rampup_duration = max(self.rampup_time.get(), 0)  # Ensure non-negative rampup duration
+
+            if rampup_duration == 0:
+                # If the rampup duration is zero, set value to max immediately after delay
+                if self._stop_event.wait(timeout=delay_time):
+                    return  # Stopped during delay
+                self.value.put(max_value)
+                return
+
+            # Wait for delay period
+            if self._stop_event.wait(timeout=delay_time):
+                return  # Stopped during delay
+
+            # Set initial value to min_val
+            self.value.put(min_value)
+
+            # Rampup phase
+            start_time = ttime.time()
+            update_interval = 0.1  # Update every 100ms
+
+            while not self._stop_event.is_set():
+                elapsed = ttime.time() - start_time
+
+                if elapsed >= rampup_duration:
+                    # Rampup complete
+                    self.value.put(max_value)
+                    break
+
+                # Calculate current value based on linear interpolation
+                progress = elapsed / rampup_duration
+                current_value = min_value + (max_value - min_value) * progress
+                self.value.put(current_value)
+
+                # Wait for next update or stop signal
+                if self._stop_event.wait(timeout=update_interval):
+                    break
+
+        except Exception as exc:
+            logger.error(f"Error in rampup worker for {self.name}: {exc}")
+        finally:
+            self._running = False
+
+    def stop(self, success=False):
+        """Stop the device and any ongoing rampup."""
+        self._stop_rampup()
+        super().stop(success=success)
+
+
 class SimPositionerWithCommFailure(SimPositioner):
     fails = Cpt(SetableSignal, value=0)
 
@@ -517,5 +635,14 @@ class BECPseudoSignal(BECProcessedSignal):
 
 
 if __name__ == "__main__":
-    cam = SimCameraWithPSIComponents(name="cam")
-    cam.read()
+    ring = SimDeviceWithSignalDelay(name="ring")
+    ring.min_val.put(300)
+    ring.max_val.put(400)
+    ring.value.put(400)
+    ring.delay.put(5)
+    ring.rampup_time.put(20)
+    ring.subscribe(lambda *args, **kwargs: print(f"Value changed to {kwargs['value']}"))
+    ring.start.put(1)
+    while ring._running:
+        ttime.sleep(0.5)
+    print("Rampup complete")
