@@ -32,7 +32,7 @@ from ophyd_devices.sim.sim_frameworks.stage_camera_proxy import StageCameraProxy
 from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
-from ophyd_devices.sim.sim_test_devices import SimCameraWithPSIComponents
+from ophyd_devices.sim.sim_test_devices import SimCameraWithPSIComponents, SimDeviceWithSignalDelay
 from ophyd_devices.sim.sim_utils import H5Writer, LinearTrajectory
 from ophyd_devices.sim.sim_waveform import SimWaveform
 from ophyd_devices.tests.utils import get_mock_scan_info
@@ -158,6 +158,24 @@ def flyer(name="flyer"):
     yield fly
 
 
+@pytest.fixture(scope="function")
+def signal_delay_device(name="signal_delay_device"):
+    """Fixture for SimDeviceWithSignalDelay."""
+    dev = SimDeviceWithSignalDelay(name=name)
+    yield dev
+    dev.stop()
+
+
+def _wait_until(predicate, timeout=2.0, interval=0.01):
+    """Poll until a predicate becomes true."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if predicate():
+            return True
+        time.sleep(interval)
+    return predicate()
+
+
 def test_camera_with_sim_init():
     """Test to see if the sim init parameters are passed to the device"""
     dm = DMMock()
@@ -233,6 +251,55 @@ def test_init_async_monitor(async_monitor):
     """Test the __init__ method of SimMonitorAsync."""
     assert isinstance(async_monitor, SimMonitorAsync)
     assert isinstance(async_monitor, BECDeviceProtocol)
+
+
+def test_signal_delay_device_start_resets_trigger_and_reaches_max(signal_delay_device):
+    """Test that starting launches a ramp-up and resets the trigger signal."""
+    signal_delay_device.min_val.put(2)
+    signal_delay_device.max_val.put(7)
+    signal_delay_device.delay.put(0)
+    signal_delay_device.rampup_time.put(0)
+
+    signal_delay_device.start.put(1)
+
+    assert _wait_until(lambda: signal_delay_device.start.get() == 0)
+    assert _wait_until(lambda: signal_delay_device.value.get() == 7)
+    assert _wait_until(lambda: signal_delay_device._running is False)
+
+
+def test_signal_delay_device_stop_during_ramp_resets_to_min(signal_delay_device):
+    """Test that stopping an in-progress ramp-up resets the value to min_val."""
+    signal_delay_device.min_val.put(3)
+    signal_delay_device.max_val.put(9)
+    signal_delay_device.delay.put(0)
+    signal_delay_device.rampup_time.put(0.4)
+
+    signal_delay_device.start.put(1)
+
+    assert _wait_until(lambda: signal_delay_device._running is True)
+    assert _wait_until(lambda: signal_delay_device.value.get() > 3)
+
+    signal_delay_device.stop()
+
+    assert signal_delay_device._running is False
+    assert signal_delay_device.value.get() == 3
+
+
+def test_signal_delay_device_stop_after_completion_keeps_max(signal_delay_device):
+    """Test that stop() preserves the final value after ramp-up has completed."""
+    signal_delay_device.min_val.put(1)
+    signal_delay_device.max_val.put(5)
+    signal_delay_device.delay.put(0)
+    signal_delay_device.rampup_time.put(0)
+
+    signal_delay_device.start.put(1)
+
+    assert _wait_until(lambda: signal_delay_device.value.get() == 5)
+    assert _wait_until(lambda: signal_delay_device._running is False)
+
+    signal_delay_device.stop()
+
+    assert signal_delay_device.value.get() == 5
 
 
 @pytest.mark.parametrize("center", [-10, 0, 10])
