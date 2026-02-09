@@ -11,7 +11,7 @@ into the on_connected, stage, unstage, pre_scan, kickoff, complete methods as ne
 be aware that the on_connected method is wrapped in here and should therefore always call
 super().on_connected(). Child integrations should register data callbacks to handle incoming
 data from the PandaBox during acquisition, and set the respective data on their ophyd signals.
-The utility method _compile_frame_data_to_dict can be used to convert FrameData objects received
+The utility method convert_frame_data can be used to convert FrameData objects received
 to the expected signal dict format. Please be aware that naming conventions here map to the
 names of the blocks, and should be mapped to the beamline specific signal names in the child class.
 
@@ -31,11 +31,14 @@ from typing import TYPE_CHECKING, Any, Callable, TypeAlias, Union
 
 import pandablocks.commands as pbc
 from bec_lib import bec_logger
+from ophyd import Component as Cpt
+from ophyd import Staged
 from ophyd.status import WaitTimeoutError
 from pandablocks.blocking import BlockingClient
 from pandablocks.responses import Data, EndData, FrameData, ReadyData, StartData
 
-from ophyd_devices import PSIDeviceBase, StatusBase
+from ophyd_devices import DynamicSignal, PSIDeviceBase, StatusBase
+from ophyd_devices.devices.panda_box.utils import get_pcap_capture_fields
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import ScanInfo
@@ -153,7 +156,22 @@ class PandaBox(PSIDeviceBase):
     to integrate pre-defined PandaBox layout directly into the BEC scan interface, stage/unstage,
     trigger/complete, pre_scan or kickoff methods.
 
+    A signal_alias can be provided during initialization to specify the mapping from PandaBox signal names to
+    beamline specific signal names. Any signal that is found in the data frames will be automatically
+    mapped to the provided signal names. If data is received for a signal that is not included in the signal_alias,
+    the original name from the PandaBox will be used as the signal name. Signal config should be provided as a
+    dict with keys corresponding to the signal names from the PandaBox, and values corresponding to the desired
+    signal names to be used in the data frames.
     """
+
+    data = Cpt(
+        DynamicSignal,
+        name="data",
+        ndim=0,
+        max_size=1000,
+        signals=get_pcap_capture_fields(),
+        async_update={"type": "add", "max_shape": [None]},
+    )
 
     USER_ACCESS = ["send_raw", "add_status_callback", "remove_status_callback", "get_panda_state"]
 
@@ -162,10 +180,15 @@ class PandaBox(PSIDeviceBase):
         *,
         name: str,
         host: str,
+        signal_alias: dict[str, str] | None = None,
         scan_info: ScanInfo | None = None,
         device_manager: DeviceManagerDS | None = None,
         **kwargs,
     ) -> None:
+        self.signal_alias = signal_alias if signal_alias is not None else {}
+        kwargs.pop(
+            "signal_alias", None
+        )  # Remove signal_alias from kwargs to avoid issues with super().__init__()
         super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
         self.host = host
 
@@ -185,6 +208,19 @@ class PandaBox(PSIDeviceBase):
         )
         self.data_thread_kill_event = threading.Event()
         self.data_thread_run_event = threading.Event()
+
+        # Acquisition group of the PandaBox data.
+        self._acquisition_group = "panda"
+
+    def on_init(self):
+        """Initialize the PandaBox device. This method can be used to perform any additional initialization logic."""
+        super().on_init()
+        new_names = [
+            self.signal_alias.get(original_name, original_name)
+            for original_name, _ in self.data.signals
+        ]
+        # Unify names for data
+        self.data.signals = self.data._unify_signals(new_names)
 
     ##########################
     ### Public API methods ###
@@ -486,6 +522,13 @@ class PandaBox(PSIDeviceBase):
             raise e from e
         super().on_connected()
         self.data_thread.start()
+        self.add_data_callback(data_type=PandaState.FRAME.value, callback=self._receive_frame_data)
+
+    def _receive_frame_data(self, data: FrameData) -> None:
+        logger.info(f"Received frame data with signals {data}")
+        out = self.convert_frame_data(frame_data=data)
+        logger.info(f"Compiled data {out}")
+        self.data.put(out, acquisition_group=self._acquisition_group)
 
     def stop(self, *, success=False):
         """
@@ -493,8 +536,8 @@ class PandaBox(PSIDeviceBase):
         We call this prior to the super().stop() call to ensure that the PandaBox
         is disarmed before any additional stopping logic from child classes is executed.
         """
-        super().stop(success=success)
         self._disarm()
+        super().stop(success=success)
 
     def destroy(self):
         """
@@ -522,6 +565,9 @@ class PandaBox(PSIDeviceBase):
             list[object] | StatusBase: The result of the super().stage() call.
         """
         # First make sure that the data readout loop is not running
+        if self.staged != Staged.no:
+            return super().stage()
+        self.stopped = False
         status = StatusBase(obj=self)
         self.add_status_callback(status=status, success=[PandaState.DISARMED], failure=[])
         try:
@@ -530,7 +576,7 @@ class PandaBox(PSIDeviceBase):
             logger.error(f"PandaBox {self.name} did not disarm before staging.")
             # pylint: disable=raise-from-missing
             raise RuntimeError(
-                f"PandaBox {self.name} did not disarm properly. Please connection and the device integration."
+                f"PandaBox {self.name} did not disarm properly. Please check the connection and the device integration."
             )
 
         ret = super().stage()
@@ -545,9 +591,6 @@ class PandaBox(PSIDeviceBase):
         """
         status = super().pre_scan()
         status_ready_data_received = StatusBase(obj=self)
-        self.cancel_on_stop(
-            status_ready_data_received
-        )  # Make sure we cancel if the scan is stopped
         status_ready_data_received.add_callback(self._pre_scan_status_callback)
         self.add_status_callback(
             status=status_ready_data_received,
@@ -559,6 +602,7 @@ class PandaBox(PSIDeviceBase):
             ret_status = status_ready_data_received & status
         else:
             ret_status = status_ready_data_received
+        self.cancel_on_stop(ret_status)  # Make sure status is cancelled if externally stopped
         return ret_status
 
     def unstage(self) -> list[object] | StatusBase:
@@ -584,33 +628,30 @@ class PandaBox(PSIDeviceBase):
         ret = self.send_raw("*CAPTURE?")
         return [key.split(" ")[0].strip("!") for key in ret if key.strip(".")]
 
-    def _compile_frame_data_to_dict(
-        self, frame_data: FrameData, signal_name_key_mapping: dict[str, str] | None = None
-    ) -> dict[str, Any]:
+    def convert_frame_data(self, frame_data: FrameData) -> dict[str, Any]:
         """
-        Compile the data from a FrameData object into a dictionary with expected OPHYD
+        Convert the data from a FrameData object into a dictionary with expected OPHYD
         read format, e.g. signal {signal_name: {"value": [...]}}.
 
         Args:
             frame_data (FrameData): The FrameData object received from the PandaBox.
 
         Returns:
-            dict[str, Any]: The compiled data in OPHYD read format.
+            dict[str, Any]: The converted data in OPHYD read format.
         """
-        if signal_name_key_mapping is None:
-            signal_name_key_mapping = {}
         # Create output dict
         out = {}
         data = frame_data.data
         keys = data.dtype.names
         # Map keys if mapping is provided
-        mapped_key = [signal_name_key_mapping.get(key, key) for key in keys]
+        mapped_key = [self.signal_alias.get(key, key) for key in keys]
         # Initialize lists for each key, consider adjusting names to match
         for k in mapped_key:
             out[k] = {"value": []}  # Timestamp?
         for entry in data:
             for i, k in enumerate(mapped_key):
                 out[k]["value"].append(entry[i])  # Fill values from data
+        return out
 
     def _pre_scan_status_callback(self, status: StatusBase):
         """
@@ -635,3 +676,10 @@ class PandaBox(PSIDeviceBase):
     def _disarm(self) -> None:
         """Disarm the PandaBox device."""
         self._send_command(pbc.Disarm())
+
+
+if __name__ == "__main__":
+    # Example usage of the PandaBox class
+    panda_box = PandaBox(
+        name="PandaBox1", host="localhost", signal_alias={"long_list": "mapped_signal_name"}
+    )
