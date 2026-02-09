@@ -670,6 +670,7 @@ class DynamicSignal(BECMessageSignal):
         self,
         *,
         name: str,
+        max_size: int,
         signals: list[str] | Callable[[], list[str]] | str | None = None,
         value: messages.DeviceMessage | dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
@@ -681,6 +682,7 @@ class DynamicSignal(BECMessageSignal):
 
         Args:
             name (str): The name of the signal group.
+            max_size (int): The maximum number of entries in the signal group. This is required for BEC to know how much data to expect.
             signal_names (list[str] | Callable): Names of all signals. Can be a list or a callable.
             value (DeviceMessage | dict | None): The initial value of the signal. Defaults to None.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
@@ -710,6 +712,7 @@ class DynamicSignal(BECMessageSignal):
             value=value,
             bec_message_type=kwargs.pop("bec_message_type", messages.DeviceMessage),
             acquisition_group=acquisition_group,
+            signal_metadata={"max_size": max_size},
             **kwargs,
         )
 
@@ -910,7 +913,7 @@ class AsyncMultiSignal(DynamicSignal):
             value=value,
             bec_message_type=messages.DeviceMessage,
             async_update=async_update,
-            signal_metadata={"max_size": max_size},
+            max_size=max_size,
             acquisition_group=acquisition_group,
             signals=signals,
             **kwargs,
@@ -965,7 +968,7 @@ class AsyncSignal(DynamicSignal):
             value=value,
             bec_message_type=messages.DeviceMessage,
             async_update=async_update,
-            signal_metadata={"max_size": max_size},
+            max_size=max_size,
             acquisition_group=acquisition_group,
             signals=None,
             **kwargs,
