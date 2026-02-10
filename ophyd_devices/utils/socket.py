@@ -133,11 +133,13 @@ class SocketSignal(abc.ABC, Signal):
         if use_complete is None:
             use_complete = False
 
+        old_value = self._readback
         self._socket_set(value)
-        old_value = self._parent.position
 
         timestamp = time.time()
-        super().put(value, timestamp=timestamp, force=True)
+        super().put(
+            value, timestamp=timestamp, force=True
+        )  # Updates self._readback and runs SUB_VALUE subscriptions
         self._run_subs(
             sub_type=self.SUB_SETPOINT, old_value=old_value, value=value, timestamp=timestamp
         )
