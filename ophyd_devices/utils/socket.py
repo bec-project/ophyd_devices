@@ -82,35 +82,7 @@ def data_type(val):
 
 
 class SocketSignal(abc.ABC, Signal):
-    """
-    Base class for signals that interact with a socket connection. Subclasses
-    must implement the '_socket_get'and 'socket_set' methods to define how to
-    read from and write to the socket respectively. The signal also implements
-    caching of the last read values and a timeout mechanism at 10Hz to avoid
-    excessive socket reads. The 'get' method implements this caching and timeout
-    logic, while the 'put' method handles writing to the socket. Both implement
-    the necessary subscription notifications ('value' for get, 'setpoint' for put)
-    for value changes. Please note children should only overwrite these methods
-    if necessary and with care, as they handle caching and subscription notifications.
-
-    Args:
-        name (str): The name of the signal.
-        notify_bec (bool): Whether to notify the BEC (Bluesky Event Collector) of value changes.
-        readback_timeout (float): Time in seconds to wait between socket read attempts before
-                                  returning cached value.
-    """
-
     SUB_SETPOINT = "setpoint"
-    SUB_VALUE = "value"
-    READBACK_TIMEOUT = 0.1  # time to wait in between two readback attemps in seconds, otherwise return cached value
-
-    def __init__(
-        self, name: str, notify_bec: bool = True, readback_timeout: float = None, **kwargs
-    ):
-        super().__init__(name=name, **kwargs)
-        self.notify_bec = notify_bec
-        self._readback_timeout = readback_timeout or self.READBACK_TIMEOUT
-        self._last_readback = 0
 
     @abc.abstractmethod
     def _socket_get(self): ...
@@ -119,17 +91,7 @@ class SocketSignal(abc.ABC, Signal):
     def _socket_set(self, val): ...
 
     def get(self):
-        current_time = time.monotonic()
-        if current_time - self._last_readback > self._readback_timeout:
-            old_value = self._readback
-            self._last_readback = current_time  # _socket_get may rely on this value to be set.
-            self._readback = self._socket_get()
-            self._run_subs(
-                sub_type=self.SUB_VALUE,
-                old_value=old_value,
-                value=self._readback,
-                timestamp=current_time,
-            )
+        self._readback = self._socket_get()
         return self._readback
 
     def put(
