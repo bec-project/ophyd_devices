@@ -321,7 +321,9 @@ def test_utils_signal_normalization(input_msg, output_msg):
 def test_utils_dynamic_signal():
     """Test DynamicSignal"""
     dev = Device(name="device")
-    signal = DynamicSignal(name="dynamic_signal", signals=["sig1", "sig2"], value=None, parent=dev)
+    signal = DynamicSignal(
+        name="dynamic_signal", signals=["sig1", "sig2"], value=None, max_size=10, parent=dev
+    )
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DeviceMessage
     assert signal._readback is None
@@ -390,6 +392,7 @@ def test_utils_dynamic_signal_with_defaults():
         parent=dev,
         ndim=1,
         value=None,
+        max_size=10,
         async_update={"type": "add", "max_shape": [None, 1000]},
         acquisition_group="fly-scanning",
     )
