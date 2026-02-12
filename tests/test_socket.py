@@ -31,16 +31,20 @@ class DummySocketSignal(SocketSignal):
 
 @pytest.fixture
 def controller():
-    dm = DMMock()
-    controller = Controller(
-        name="controller",
-        socket_cls=SocketMock,
-        socket_host="localhost",
-        socket_port=8080,
-        device_manager=dm,
-    )
-    controller.on()
-    return controller
+    try:
+        dm = DMMock()
+        Controller._reset_controller()
+        controller = Controller(
+            name="controller",
+            socket_cls=SocketMock,
+            socket_host="localhost",
+            socket_port=8080,
+            device_manager=dm,
+        )
+        controller.on()
+        return controller
+    finally:
+        Controller._reset_controller()
 
 
 @pytest.fixture
