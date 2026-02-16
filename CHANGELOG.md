@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.32.9 (2026-02-16)
+
+### Bug Fixes
+
+- **socket-signal**: Add read timeout for SocketSignal ABC, and add notify_bec attribute
+  ([`1e9711a`](https://github.com/bec-project/ophyd_devices/commit/1e9711aa17169d0e81f047bf95f294baf9159b82))
+
+- **socket-signal**: Store old value before updating to ensure correct subscription notifications
+  ([`944fc73`](https://github.com/bec-project/ophyd_devices/commit/944fc73d4b03bef7fcc03e1fac0256c395d84da9))
+
+### Testing
+
+- **controller**: Fix leaking controller instance in test.
+  ([`b13520f`](https://github.com/bec-project/ophyd_devices/commit/b13520fe32c43476f72d5615e1c9a1cf7b45bc80))
+
+
 ## v1.32.8 (2026-01-30)
 
 ### Bug Fixes
