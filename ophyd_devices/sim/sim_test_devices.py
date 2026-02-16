@@ -330,7 +330,7 @@ class SimCameraWithPSIComponents(SimCamera):
     file_event = Cpt(FileEventSignal, doc="File event signal")
     progress = Cpt(ProgressSignal, doc="Progress signal")
     dynamic_signal = Cpt(
-        DynamicSignal, doc="Dynamic signals", signals=["dyn_signal1", "dyn_signal2"]
+        DynamicSignal, doc="Dynamic signals", signals=["dyn_signal1", "dyn_signal2"], max_size=1000
     )
     async_signal = Cpt(AsyncSignal, name="async_signal", ndim=1, doc="Async signal", max_size=1000)
     # TODO Handling of AsyncComponents is postponed, issue #104 is created
