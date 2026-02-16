@@ -5,11 +5,11 @@ Short Doumentation of the PandaBox Device Integration in Ophyd Devices
 
 The PandaBox integration provides a base class for interfacing with PandaBox hardware from Diamond Light Source. This implementation wraps the PandaBox hardware as a `PSIDeviceBase` device, integrating it into the BEC scan interface. It uses the `pandablocks` library for communication and data acquisition. Beamline-specific implementations should use the *on_hook* methods from PSIDeviceBase to implement custom logic.
 
-**IMPORTANT** : If the `on_connected()` method is overridden by a child class, it must always call `super().on_connected()` first to ensure proper initialization of the PandaBox device. This is implemented in the [PandaBox class](./panda_box.py). 
+**IMPORTANT** : If the `on_connected()` method is overridden by a child class, it must always call `super().on_connected()` first to ensure proper initialization of the PandaBox device. This is implemented in the [PandaBox class](./panda_box.py). The same is true for all the other *on_hook* methods, which may contain important logic for the proper setup for the scan. Only skip them if you are sure this logic is not required.
 
 ### PandaState
 
-The PandaBox has a PCAP module that can be used to record block values. The base integration implements logic that automatically arms/disarms the PCAP module for the BEC scan interface. Callbacks can be attached for status handlings *add_status_callback* and data handling *add_data_callback* respectively. Below is the enum defining the various PandaBox states:
+The PandaBox has a PCAP module that can be used to record block values. The base integration implements logic that automatically arms/disarms the PCAP module for the BEC scan interface. Callbacks can be attached for handling status updates *add_status_callback* and data handling *add_data_callback* respectively. Below is the enum defining the various PandaBox states:
 
 ```python
 class PandaState(StrEnum):
@@ -33,7 +33,7 @@ These methods include:
 
 ### Other useful methods
 
-- `_compile_frame_data_to_dict(frame_data: FrameData, signal_name_key_mapping: dict[str, str] | None = None) -> dict[str, Any]` : Convert FrameData from PandaBox into a dictionary format compatible with Ophyd signals. Optionally map PandaBox signal names to custom signal names.
+- `convert_frame_data(frame_data: FrameData, signal_name_key_mapping: dict[str, str] | None = None) -> dict[str, Any]` : Convert FrameData from PandaBox into a dictionary format compatible with Ophyd signals. Optionally map PandaBox signal names to custom signal names.
 - `_get_signal_names_allowed_for_capture() -> list[str]` : Get a list of all signal keys that can be configured for capture on the PandaBox.
 - `_get_signal_names_configured_for_capture() -> list[str]` : Get a list of all signal keys that are currently configured for capture on the PandaBox.
 
