@@ -1,3 +1,4 @@
+# skip-file
 """
 Module with utility scripts to run on the PandaBox device.
 
