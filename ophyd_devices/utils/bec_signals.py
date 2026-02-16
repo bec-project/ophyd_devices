@@ -79,6 +79,9 @@ class SignalInfo(BaseModel):
     )
 
 
+_SignalsTypes = list[tuple[str, str | Kind]] | list[str] | str | None
+
+
 class BECMessageSignal(Signal):
     """
     Custom signal class that accepts BECMessage objects as values.
@@ -98,12 +101,7 @@ class BECMessageSignal(Signal):
         role: Literal["main", "preview", "diagnostic", "file event", "progress"] = "main",
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
         enabled: bool = True,
-        signals: (
-            Callable[[], list[str]]
-            | Callable[[], list[tuple[str, str | Kind]]]
-            | list[tuple[str, str | Kind] | str]
-            | None
-        ) = None,
+        signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
         signal_metadata: dict | None = None,
         **kwargs,
     ):
@@ -140,7 +138,7 @@ class BECMessageSignal(Signal):
         self._bec_message_type = bec_message_type
 
     def _unify_signals(
-        self, signals: Callable[[], list[str]] | list[tuple[str, str | Kind] | str] | str | None
+        self, signals: _SignalsTypes | Callable[[], _SignalsTypes]
     ) -> list[tuple[str, int]]:
         """
         Unify the signals list to a list of tuples with signal name and kind.
@@ -151,7 +149,7 @@ class BECMessageSignal(Signal):
         Returns:
             list[tuple[str, str]]: The unified list of signals.
         """
-        if isinstance(signals, Callable):
+        if callable(signals):
             signals = signals()
         if signals is None:
             return [(self.name, Kind.hinted.value)]  # Default to signal name with hinted kind
