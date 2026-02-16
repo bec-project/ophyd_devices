@@ -343,7 +343,7 @@ def test_utils_dynamic_signal():
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("sig1", 1), ("sig2", 1)],
-                "signal_metadata": {},
+                "signal_metadata": {"max_size": 10},
                 "acquisition_group": None,
             },
         }
