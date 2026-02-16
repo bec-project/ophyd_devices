@@ -122,8 +122,8 @@ class SocketSignal(abc.ABC, Signal):
         current_time = time.monotonic()
         if current_time - self._last_readback > self._readback_timeout:
             old_value = self._readback
+            self._last_readback = current_time  # _socket_get may rely on this value to be set.
             self._readback = self._socket_get()
-            self._last_readback = current_time
             self._run_subs(
                 sub_type=self.SUB_VALUE,
                 old_value=old_value,
