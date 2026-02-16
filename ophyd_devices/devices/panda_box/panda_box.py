@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypedDict
@@ -41,7 +42,6 @@ from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypedDict
 import pandablocks.commands as pbc
 from bec_lib import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Staged
 from ophyd.status import WaitTimeoutError
 from pandablocks.blocking import BlockingClient
 from pandablocks.responses import Data, EndData, FrameData, ReadyData, StartData
@@ -226,6 +226,9 @@ class PandaBox(PSIDeviceBase):
 
         # Acquisition group of the PandaBox data.
         self._acquisition_group = "panda"
+
+        # Timeouts for wait operations in seconds
+        self._stage_timeout_in_s = 3
 
     def on_init(self):
         """Initialize the PandaBox device. This method can be used to perform any additional initialization logic."""
@@ -528,7 +531,7 @@ class PandaBox(PSIDeviceBase):
     # or re-evaluate the implemented logic as these methods attempt to partially
     # setup the PandaBox for data acquisition.
 
-    def wait_for_connection(self, timouet: float | None = None) -> bool:
+    def wait_for_connection(self, timeout: float | None = None) -> bool:
         ret = self.send_raw("*IDN?")
         return True
 
@@ -576,7 +579,7 @@ class PandaBox(PSIDeviceBase):
         status = StatusBase(obj=self)
         self.add_status_callback(status=status, success=[PandaState.DISARMED], failure=[])
         try:
-            status.wait(timeout=3)
+            status.wait(timeout=self._stage_timeout_in_s)
         except WaitTimeoutError:
             logger.error(f"PandaBox {self.name} did not disarm before staging.")
             # pylint: disable=raise-from-missing
@@ -619,7 +622,13 @@ class PandaBox(PSIDeviceBase):
     def _get_signal_names_configured_for_capture(self) -> list[str]:
         """Utility method to get a list of all signal keys thar ARE CURRENTLY CONFIGURED for capture on the PandaBox."""
         ret = self.send_raw("*CAPTURE?")
-        return [key.split(" ")[0].strip("!") for key in ret if key.strip(".")]
+        signal_names = []
+        for value in ret:
+            if value.strip("."):  # Ignore empty values "."
+                string_parts = value.strip("!").split(" ")
+                base_name = string_parts[0]  # Get base name without capture config
+                _ = [signal_names.append(f"{base_name}.{key}") for key in string_parts[1:]]
+        return signal_names
 
     def convert_frame_data(self, frame_data: FrameData) -> dict[str, Any]:
         """
@@ -640,7 +649,7 @@ class PandaBox(PSIDeviceBase):
         mapped_key = [self.signal_alias.get(key, key) for key in keys]
         # Initialize lists for each key, consider adjusting names to match
         for k in mapped_key:
-            out[k] = {"value": []}  # Timestamp?
+            out[k] = {"value": [], "timestamp": time.time()}
         for entry in data:
             for i, k in enumerate(mapped_key):
                 out[k]["value"].append(entry[i])  # Fill values from data
