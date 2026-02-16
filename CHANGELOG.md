@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.32.10 (2026-02-16)
+
+### Bug Fixes
+
+- **socket**: Fix setting _last_readback before _socket_get is called
+  ([`6079bdb`](https://github.com/bec-project/ophyd_devices/commit/6079bdbcdfaa9312819597b825fae4d578f63997))
+
+
 ## v1.32.9 (2026-02-16)
 
 ### Bug Fixes
