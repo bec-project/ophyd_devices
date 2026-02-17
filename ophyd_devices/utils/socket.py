@@ -201,9 +201,10 @@ class SocketSignal(abc.ABC, Signal):
             val = self.get()
         else:
             val = self._readback
+        controller = self.root.controller if hasattr(self.root, "controller") else None
         return {
             self.name: {
-                "source": f"{self.parent.controller.name}:{self.name}",
+                "source": f"{controller.name}:{self.name}" if controller else self.name,
                 "dtype": data_type(val),
                 "shape": data_shape(val),
             }
