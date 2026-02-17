@@ -1,4 +1,4 @@
-# skip-file
+# pragma: no cover # We skip these utility scripts in the coverage report.
 """
 Module with utility scripts to run on the PandaBox device.
 
