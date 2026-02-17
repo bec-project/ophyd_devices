@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.32.11 (2026-02-17)
+
+### Bug Fixes
+
+- **socket**: Fix controller access in describe of SocketSignal
+  ([`6494180`](https://github.com/bec-project/ophyd_devices/commit/64941807b0347c24630b432f028db901df237069))
+
+
 ## v1.32.10 (2026-02-16)
 
 ### Bug Fixes
