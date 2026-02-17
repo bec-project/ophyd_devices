@@ -107,7 +107,7 @@ def test_panda_add_status_callback(panda_box):
 
 def test_panda_receive_frame_data(panda_box, _signal_aliases):
     """Test that _receive_frame_data processes data and updates signals."""
-    # Create a mock frame data dict
+    # Create a mock FrameData
     data = np.array(
         [
             (np.float64(0), np.float64(10)),
@@ -117,33 +117,43 @@ def test_panda_receive_frame_data(panda_box, _signal_aliases):
         dtype=[("FMC_IN.VAL1.Value", "<f8"), ("COUNTER2.OUT.Value", "<f8")],
     )
     fdata = FrameData(data)
+    # Use on_connected to set up data callback
+    with mock.patch.object(panda_box, "data_thread") as mock_data_thread:
+        panda_box.on_connected()  # This will set up the data callback
+        mock_data_thread.start.assert_called_once()
 
-    panda_box._receive_frame_data(fdata)
-    # Check that the correct signals were updated
-    expected_data = {
-        f"{panda_box.data.name}_my_signal_1": {
-            "value": [np.float64(0), np.float64(1), np.float64(2)],
-            "timestamp": mock.ANY,
-        },
-        f"{panda_box.data.name}_COUNTER2.OUT.Value": {
-            "value": [np.float64(10), np.float64(11), np.float64(12)],
-            "timestamp": mock.ANY,
-        },
-    }
-    md = {
-        "async_update": {"type": "add", "max_shape": [None]},
-        "acquisition_group": panda_box._acquisition_group,
-    }
-    d = panda_box.data.read()
-    assert d[panda_box.data.name]["value"].metadata == md, "Metadata mismatch"
-    for key, v in expected_data.items():
-        assert key in d[panda_box.data.name]["value"].signals, f"Missing signal: {key}"
-        assert np.isclose(
-            d[panda_box.data.name]["value"].signals[key]["value"], v["value"]
-        ).all(), f"Incorrect values for {key}"
+        # Run the callback
+        panda_box._run_data_callbacks(data=fdata, event_type=PandaState.FRAME)
+
+        # Check that the correct signals were updated
+        expected_data = {
+            f"{panda_box.data.name}_my_signal_1": {
+                "value": [np.float64(0), np.float64(1), np.float64(2)],
+                "timestamp": mock.ANY,
+            },
+            f"{panda_box.data.name}_COUNTER2.OUT.Value": {
+                "value": [np.float64(10), np.float64(11), np.float64(12)],
+                "timestamp": mock.ANY,
+            },
+        }
+        md = {
+            "async_update": {"type": "add", "max_shape": [None]},
+            "acquisition_group": panda_box._acquisition_group,
+        }
+        d = panda_box.data.read()
+        assert d[panda_box.data.name]["value"].metadata == md, "Metadata mismatch"
+        for key, v in expected_data.items():
+            assert key in d[panda_box.data.name]["value"].signals, f"Missing signal: {key}"
+            assert np.isclose(
+                d[panda_box.data.name]["value"].signals[key]["value"], v["value"]
+            ).all(), f"Incorrect values for {key}"
+            assert (
+                "timestamp" in d[panda_box.data.name]["value"].signals[key]
+            ), f"Missing timestamp for {key}"
+
         assert (
-            "timestamp" in d[panda_box.data.name]["value"].signals[key]
-        ), f"Missing timestamp for {key}"
+            len(panda_box._data_callbacks) == 1
+        ), "Data callback should still be registered after receiving data"
 
 
 def test_panda_on_stop(panda_box):
@@ -280,3 +290,31 @@ def test_panda_get_pcap_capture_fields():
             expected_fields.append(f"{block}.{field}")
     actual_fields = get_pcap_capture_fields()
     assert actual_fields == expected_fields, "PCAP capture fields mismatch"
+
+
+def test_panda_on_pre_scan(panda_box):
+    """Test that on_pre_scan adds the correct pre-scan status callback."""
+    # I. Resolve immediately in success
+    panda_box.panda_state = PandaState.READY
+
+    status = panda_box.on_pre_scan()
+    assert status.done, "Status should be done"
+    assert status.success, "Status should be successful"
+
+    # II. Resolve immediately in failure
+    panda_box.panda_state = PandaState.FRAME
+    status = panda_box.on_pre_scan()
+    with pytest.raises(RuntimeError):
+        status.wait(timeout=1)
+    assert status.done, "Status should be done"
+    assert not status.success, "Status should be unsuccessful"
+
+    # III. Resolve in callback
+    panda_box.panda_state = PandaState.DISARMED
+    status = panda_box.on_pre_scan()
+    assert not status.done, "Status should not be done"
+    assert not status.success, "Status should not be successful"
+    panda_box._run_status_callbacks(PandaState.READY)
+    status.wait(timeout=1)
+    assert status.done, "Status should be done"
+    assert status.success, "Status should be successful"
