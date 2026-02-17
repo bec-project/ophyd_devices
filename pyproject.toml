@@ -37,6 +37,7 @@ dev = [
     "coverage~=7.0",
     "pylint~=3.0",
     "pytest-random-order~=1.1",
+    "requests-mock",
 ]
 
 [project.scripts]
