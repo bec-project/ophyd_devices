@@ -25,7 +25,7 @@ class PandaState(StrEnum):
 There are a couple of methods which are tagged as USER_ACCESS methods, and thereby also available on the proxy devices. 
 These methods include:
  - `send_raw(cmd: Union[str, list[str]]) -> Any` : Send raw commands or lists of commands to the PandaBox hardware.
- - `add_status_callback(status: StatusBase, success: list[PandaState], failure: list[PandaState], check_directly: bool = True) -> str` : Register a callback to resolve status objects based on PandaBox events. PandaBox events are defined in the `PandaState` enum, which includes states like READY, START, FRAME, END, and DISARMED. These states correspond to different stages of that data acquisition of the PCAP module of the PandaBox. 
+ - `add_status_callback(status: StatusBase, success: list[PandaState], failure: list[PandaState], check_directly: bool = True) -> str` : Register a callback to resolve status objects based on PandaBox events. PandaBox events are defined in the `PandaState` enum, which includes states like READY, START, FRAME, END, and DISARMED. These states correspond to different stages of the data acquisition of the PCAP module of the PandaBox. 
 - `remove_status_callback(cb_id: str) -> None` : Remove a registered status callback using its unique callback ID (str) which is returned by *add_status_callback*.
 - `add_data_callback(callback: Callable[[LITERAL_PANDA_DATA], None], data_type: PandaState = PandaState.FRAME.value) -> str` : Register a callback for processing PandaBox data. The callback function is called when data of the specified type (READY, START, FRAME, END, DATA) is received from the PandaBox. The default data type is FRAME, which corresponds to actual frame data from the PCAP module. These data frames can be inspected in pandablocks.response module.
 - `remove_data_callback(cb_id: str) -> None` : Remove a registered data callback using its unique callback ID (str) which is returned by *add_data_callback*.
@@ -33,7 +33,7 @@ These methods include:
 
 ### Other useful methods
 
-- `convert_frame_data(frame_data: FrameData, signal_name_key_mapping: dict[str, str] | None = None) -> dict[str, Any]` : Convert FrameData from PandaBox into a dictionary format compatible with Ophyd signals. Optionally map PandaBox signal names to custom signal names.
+- `convert_frame_data(frame_data: FrameData) -> dict[str, Any]` : Convert FrameData from PandaBox into a dictionary format compatible with Ophyd signals, using the device's configured signal aliases.
 - `_get_signal_names_allowed_for_capture() -> list[str]` : Get a list of all signal keys that can be configured for capture on the PandaBox.
 - `_get_signal_names_configured_for_capture() -> list[str]` : Get a list of all signal keys that are currently configured for capture on the PandaBox.
 
@@ -52,4 +52,4 @@ Saves the current layout from the PandaBox at the specified host to a local file
 ``` bash
 python ./utility_scripts.py --host panda-box-host.psi.ch --load-layout ./my_layout.ini
 ```
-**IMPORTANT**: Loads the layout from the local file `my_layout.ini` to the PandaBox at the specified host. Please note that loading a layout will overwrite the current configuration on the PandaBox. The UI will partly update, but the WEB server needs to be restarted manually to reflect these changes properly. We expect beamlines to prepare and test layouts beforehands and not use the PandaBox web interface in operation. All dynamic configuration should be done through the ophyd device hooks either directly in the device integration or temporarily through custom scan implementations.
+**IMPORTANT**: Loads the layout from the local file `my_layout.ini` to the PandaBox at the specified host. Please note that loading a layout will overwrite the current configuration on the PandaBox. The UI will partly update, but the WEB server needs to be restarted manually to reflect these changes properly. We expect beamlines to prepare and test layouts beforehand and not use the PandaBox web interface in operation. All dynamic configuration should be done through the ophyd device hooks either directly in the device integration or temporarily through custom scan implementations.

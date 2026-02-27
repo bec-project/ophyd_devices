@@ -50,6 +50,7 @@ def test_panda_wait_for_connection(panda_box):
 def test_panda_on_connected(panda_box):
     """Test that on_connected sets the connected flag."""
     with mock.patch.object(panda_box, "data_thread") as mock_data_thread:
+        mock_data_thread.is_alive.return_value = False
         panda_box.on_connected()
         mock_data_thread.start.assert_called_once()
         assert len(panda_box._data_callbacks) == 1
@@ -60,6 +61,12 @@ def test_panda_on_connected(panda_box):
         # Remove callback
         panda_box.remove_data_callback(cb_id)
         assert len(panda_box._data_callbacks) == 0, "Data callback was not removed"
+
+        # Call on_connected again, should add the callback again
+        mock_data_thread.reset_mock()
+        mock_data_thread.is_alive.return_value = True
+        panda_box.on_connected()
+        mock_data_thread.start.assert_not_called()
 
 
 def test_panda_add_status_callback(panda_box):
@@ -119,6 +126,7 @@ def test_panda_receive_frame_data(panda_box, _signal_aliases):
     fdata = FrameData(data)
     # Use on_connected to set up data callback
     with mock.patch.object(panda_box, "data_thread") as mock_data_thread:
+        mock_data_thread.is_alive.return_value = False
         panda_box.on_connected()  # This will set up the data callback
         mock_data_thread.start.assert_called_once()
 

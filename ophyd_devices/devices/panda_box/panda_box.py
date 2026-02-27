@@ -428,18 +428,22 @@ class PandaBox(PSIDeviceBase):
             with BlockingClient(self.host) as client:
                 for data in client.data(scaled=False):
                     if isinstance(data, ReadyData):
+                        logger.info("PandaBox is ready for data acquisition.")
                         self._run_status_callbacks(PandaState.READY)
                         self._run_data_callbacks(data, PandaState.READY)
 
                     elif isinstance(data, StartData):
+                        logger.info("PandaBox has started data acquisition.")
                         self._run_status_callbacks(PandaState.START)
                         self._run_data_callbacks(data, PandaState.START)
 
                     elif isinstance(data, FrameData):
+                        logger.info("PandaBox has received a frame of data.")
                         self._run_status_callbacks(PandaState.FRAME)
                         self._run_data_callbacks(data, PandaState.FRAME)
 
                     elif isinstance(data, EndData):
+                        logger.info("PandaBox has ended data acquisition.")
                         self._run_status_callbacks(PandaState.END)
                         self._run_data_callbacks(data, PandaState.END)
                         break  # Exit data readout loop
@@ -543,6 +547,11 @@ class PandaBox(PSIDeviceBase):
         """
         # Test connection by sending WHO command which should respond with PandaBox ID
         super().on_connected()
+        if self.data_thread.is_alive():
+            logger.warning(
+                "Data thread is already running. On Connected probably called multiple times."
+            )
+            return
         self.data_thread.start()
         self.add_data_callback(data_type=PandaState.FRAME, callback=self._receive_frame_data)
 
@@ -593,7 +602,7 @@ class PandaBox(PSIDeviceBase):
         """
         On pre_scan hook for the PandaBox. We use this hook to arm the PCAP module for data acquisition.
         This logic makes sure that the data readout loop is started and that we received the READY event
-        from the device. Only then can the PCAP module aquire data.
+        from the device. Only then can the PCAP module acquire data.
         """
         status = StatusBase(obj=self)
         status.add_callback(self._pre_scan_status_callback)
@@ -620,14 +629,14 @@ class PandaBox(PSIDeviceBase):
         return [key.split(" ")[0].strip("!") for key in ret if key.strip(".")]
 
     def _get_signal_names_configured_for_capture(self) -> list[str]:
-        """Utility method to get a list of all signal keys thar ARE CURRENTLY CONFIGURED for capture on the PandaBox."""
+        """Utility method to get a list of all signal keys that ARE CURRENTLY CONFIGURED for capture on the PandaBox."""
         ret = self.send_raw("*CAPTURE?")
         signal_names = []
         for value in ret:
             if value.strip("."):  # Ignore empty values "."
                 string_parts = value.strip("!").split(" ")
                 base_name = string_parts[0]  # Get base name without capture config
-                _ = [signal_names.append(f"{base_name}.{key}") for key in string_parts[1:]]
+                signal_names.extend(f"{base_name}.{key}" for key in string_parts[1:])
         return signal_names
 
     def convert_frame_data(self, frame_data: FrameData) -> dict[str, Any]:

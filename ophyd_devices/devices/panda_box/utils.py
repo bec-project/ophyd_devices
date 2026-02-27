@@ -46,5 +46,9 @@ def get_pcap_capture_fields():
     out = []
     for block in PANDA_AVAIL_PCAP_BLOCKS:
         for field in PANDA_AVAIL_PCAP_CAPTURE_FIELDS:
+            # Consider this mapping, and alsock
+            # block_name = f"{block}.{field}"
+            # block_name = block.replace(".", "_")
+            # out.append(block_name) TODO - If applied Adapt 'convert_frame_data' method in panda_box.py to handle this mapping
             out.append(f"{block}.{field}")
     return out
