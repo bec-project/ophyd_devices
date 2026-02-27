@@ -47,9 +47,6 @@ def main() -> None:
     elif args.load_layout is not None:
         load_layout_from_file_to_panda(host=args.host, file_path=args.load_layout)
 
-    else:
-        parser.print_help()
-
 
 if __name__ == "__main__":
     main()
