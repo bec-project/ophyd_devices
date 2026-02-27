@@ -1,6 +1,58 @@
 # CHANGELOG
 
 
+## v1.33.0 (2026-02-27)
+
+### Bug Fixes
+
+- **dynamic-signal**: Add max_size as required input to dynamic signal
+  ([`33a3c98`](https://github.com/bec-project/ophyd_devices/commit/33a3c98808aa4b21967d7565c2058e3296067fa5))
+
+- **dynamic-signal**: Add max_size to SimCameraWithPSIComponents
+  ([`f9a7432`](https://github.com/bec-project/ophyd_devices/commit/f9a743210df9a4200037b6d725db9ceeed2f8c52))
+
+- **panda-box**: Add signal_alias to map PandaBlock names ot beamline signal names.
+  ([`0851c27`](https://github.com/bec-project/ophyd_devices/commit/0851c2797d1b736886694c7523504baeb67ae750))
+
+- **pandabox**: Fix conversion of data to ophyd signal dict.
+  ([`1a2d519`](https://github.com/bec-project/ophyd_devices/commit/1a2d5197643e37851c12c8e5c1ad3d361de85b83))
+
+- **pandabox**: Improve docs and readme
+  ([`f02a010`](https://github.com/bec-project/ophyd_devices/commit/f02a0100784690894abf21f292b28e31f7445bf5))
+
+- **pandabox**: Simplify enum states
+  ([`7150e25`](https://github.com/bec-project/ophyd_devices/commit/7150e256e5c725c7605cfb3f15a9e9131c95a187))
+
+- **typehints**: Fix typehints for panda_box and bec_signal
+  ([`6ca90d2`](https://github.com/bec-project/ophyd_devices/commit/6ca90d242a91217e9fae7be7902728a50f59ad27))
+
+### Features
+
+- **pandabox**: Add initial integration of the pandabox
+  ([`2093a50`](https://github.com/bec-project/ophyd_devices/commit/2093a50968dd2a7c249f17f2f465100b2be3d6b5))
+
+### Refactoring
+
+- Fix typos, update documentation, and improve code readability
+  ([`b2a632d`](https://github.com/bec-project/ophyd_devices/commit/b2a632da89e4d101982ab04a4e3d4af6bcc42565))
+
+Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+
+- **panda**: Cleanup and add tests for pandabox
+  ([`a632798`](https://github.com/bec-project/ophyd_devices/commit/a632798b04b10144d8051dde46189793135a0884))
+
+- **pandabox**: Fix typehints and usage of pandablock.commands
+  ([`e72980b`](https://github.com/bec-project/ophyd_devices/commit/e72980bdb4f64e1b61ce2bc9c0bf749191c8a03d))
+
+### Testing
+
+- **dynamic-signal**: Add max_size input to tests
+  ([`67db203`](https://github.com/bec-project/ophyd_devices/commit/67db203299f2b7546328522d2c32f14b869090fe))
+
+- **panda**: Extend tests for panda
+  ([`b7fffe5`](https://github.com/bec-project/ophyd_devices/commit/b7fffe51bc2e29c607f987a5a50b427e5f7a39d8))
+
+
 ## v1.32.11 (2026-02-17)
 
 ### Bug Fixes
