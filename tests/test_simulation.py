@@ -711,11 +711,12 @@ def test_async_mon_send_data_to_bec(async_monitor):
     async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
     async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [0, 0]})
     with mock.patch.object(async_monitor.connector, "xadd") as mock_xadd:
-        async_monitor._send_data_to_bec()
         dev_msg = messages.DeviceMessage(
             signals={async_monitor.readback.name: async_monitor.data_buffer},
             metadata={"async_update": {"type": "add", "max_shape": [None]}},
         )
+
+        async_monitor._send_data_to_bec()
 
         call = [
             mock.call(
