@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.33.1 (2026-03-02)
+
+### Bug Fixes
+
+- **panda-box**: Add on_init to init of pandabox
+  ([`8274cc3`](https://github.com/bec-project/ophyd_devices/commit/8274cc3fba9bf58a1eb7d9b813df0731c4e90b93))
+
+
 ## v1.33.0 (2026-02-27)
 
 ### Bug Fixes
