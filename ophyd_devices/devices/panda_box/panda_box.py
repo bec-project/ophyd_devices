@@ -33,6 +33,7 @@ required for beamline operation.
 from __future__ import annotations
 
 import os
+import socket
 import threading
 import time
 import uuid
@@ -419,58 +420,79 @@ class PandaBox(PSIDeviceBase):
         status callback to resolve during a specific stage of the data acquisition based on an
         event received here.
 
-        # NOTE: The receiving loop has to be started before the ARM() command is sent to the PandaBox.
-        # The required sequence is to (1) start the data readout loop and receive ReadyData,
-        # (2) send the ARM() command to the PandaBox to start acquisition, (3) receive StartData and FrameData,
-        # (4) receive EndData when acquisition is complete. When an acquisition is interrupted prematurely, we have
-        # to ensure that we send the DISARM() command to the PandaBox to stop the acquisition cleanly. Multiple disarm
-        # commands are safe to send, so we can always ensure that we disarm at the end of the readout loop. (TODO to check).
+        NOTE: The receiving loop has to be started before the ARM() command is sent to the PandaBox.
+        The required sequence is to (1) start the data readout loop and receive ReadyData,
+        (2) send the ARM() command to the PandaBox to start acquisition, (3) receive StartData and FrameData,
+        (4) receive EndData when acquisition is complete. When an acquisition is interrupted prematurely, we have
+        to ensure that we send the DISARM() command to the PandaBox to stop the acquisition cleanly. Multiple disarm
+        commands are safe to send, so we can always ensure that we disarm at the end of the readout loop.
+        We still need to make sure that we drop out of the readout loop, as soon as the acquisition is stopped.
+        This is handled by checking the run_event and kill_event in a while loop. We will also break the while
+        loop after receiving EndData, as this indicates the end of the acquisition.
         """
         try:
-            with BlockingClient(self.host) as client:
-                for data in client.data(scaled=False):
-                    if isinstance(data, ReadyData):
-                        logger.info("PandaBox is ready for data acquisition.")
-                        self._run_status_callbacks(PandaState.READY)
-                        self._run_data_callbacks(data, PandaState.READY)
-
-                    elif isinstance(data, StartData):
-                        logger.info("PandaBox has started data acquisition.")
-                        self._run_status_callbacks(PandaState.START)
-                        self._run_data_callbacks(data, PandaState.START)
-
-                    elif isinstance(data, FrameData):
-                        logger.info("PandaBox has received a frame of data.")
-                        self._run_status_callbacks(PandaState.FRAME)
-                        self._run_data_callbacks(data, PandaState.FRAME)
-
-                    elif isinstance(data, EndData):
-                        logger.info("PandaBox has ended data acquisition.")
-                        self._run_status_callbacks(PandaState.END)
-                        self._run_data_callbacks(data, PandaState.END)
-                        break  # Exit data readout loop
-
+            while not self.data_thread_kill_event.is_set() and self.data_thread_run_event.is_set():
+                try:
+                    with BlockingClient(self.host) as client:
+                        # Timeout is needed to periodically check if we should leave the loop.
+                        for data in client.data(scaled=False, frame_timeout=0.1):
+                            if not self.__run_data_readout(data):
+                                break
+                except socket.timeout:
+                    # Timeout is expected to happen, but we have to check if the polling loop should still be running, or if
+                    # stop was called and we should exit the loop.
+                    continue
         finally:
-            # NOTE: This block ensures that we properly cleanup after a data acquisition,
-            # whether it completed successfully or was interrupted. This includes sending
-            # the DISARM() command to the PandaBox to stop any ongoing acquisition in case
-            # we exited the loop prematurely. It also clears the data_thread_run_event to block
-            # the data readout loop again, and runs the DISARMED status callbacks to notify
-            # any registered status objects that the PandaBox is now disarmed. DISARMED is the
-            # expected safe state of the data receiving loop from the PandaBox and was added
-            # in addition to the existing READY, START, FRAME, END events created from the existing
-            # PandaBox data messages.
+            # Make sure to leave the PandaBox in a clean state.
+            self._reset_panda()
 
-            self._disarm()  # Ensure we disarm at the end
+    def _reset_panda(self) -> None:
+        """
+        Method to reset the PandaBox to a clean state.
 
-            self.data_thread_run_event.clear()  # Stop data readout loop
+        NOTE: This method ensures that we properly clean up the acquisition on the PandaBox side. Disarm()
+        is safe to be called multiple times, so if we end up here to a scan abortion (stop called and thereby
+        data_thread_run_event is cleared), we run the full cleanup logic. If we leave through an EndData message,
+        we also clear the data_thread_run_event to get a fresh start.
+        """
+        # Ensure we disarm at the end
+        self._disarm()
+        # Stop data readout loop
+        self.data_thread_run_event.clear()
+        # DISARMED is an artificial state, we run it manually here
+        self._run_status_callbacks(PandaState.DISARMED)
+        self._run_data_callbacks(Data(), PandaState.DISARMED)
 
-            self._run_status_callbacks(PandaState.DISARMED)  # Run DISARMED status callbacks
+    def __run_data_readout(self, data) -> bool:
+        """
+        Inner loop to run the data logic. Returns True if loop should continue, False if it should break.
 
-            # As DISARMED is not triggered by a data message, we manually run data callbacks for it here
-            # and run it with an empty Data() object following the base class for data message responses
-            # of the pandablocks library.
-            self._run_data_callbacks(Data(), PandaState.DISARMED)
+        Args:
+            data (LITERAL_PANDA_DATA): The data received from the PandaBox. This can be of type ReadyData, StartData, FrameData, or EndData.
+        """
+        if isinstance(data, ReadyData):
+            logger.info("PandaBox is ready for data acquisition.")
+            self._run_status_callbacks(PandaState.READY)
+            self._run_data_callbacks(data, PandaState.READY)
+            return True
+
+        if isinstance(data, StartData):
+            logger.info("PandaBox has started data acquisition.")
+            self._run_status_callbacks(PandaState.START)
+            self._run_data_callbacks(data, PandaState.START)
+            return True
+
+        if isinstance(data, FrameData):
+            logger.info("PandaBox has received a frame of data.")
+            self._run_status_callbacks(PandaState.FRAME)
+            self._run_data_callbacks(data, PandaState.FRAME)
+            return True
+
+        if isinstance(data, EndData):
+            logger.info("PandaBox has ended data acquisition.")
+            self._run_status_callbacks(PandaState.END)
+            self._run_data_callbacks(data, PandaState.END)
+            return False
 
     def _run_status_callbacks(self, event: PandaState) -> None:
         """
@@ -484,7 +506,6 @@ class PandaBox(PSIDeviceBase):
 
         Args:
             event (PandaState): The PandaBox data event that occurred.
-            data (LITERAL_PANDA_DATA): The data associated with the event.
         """
         self.panda_state = event
         with self._lock:
@@ -532,36 +553,10 @@ class PandaBox(PSIDeviceBase):
     ### PSIDeviceBase methods ###
     #############################
 
-    # NOTE These are beamline hooks for the scan interface within BEC.
-    # If overwritten by child classes, please make sure to either call super()
-    # or re-evaluate the implemented logic as these methods attempt to partially
-    # setup the PandaBox for data acquisition.
-
     def wait_for_connection(self, timeout: float | None = None) -> bool:
-        ret = self.send_raw("*IDN?")
+        """Check if PandaBox is reachable by sending a raw command."""
+        self.send_raw("*IDN?")
         return True
-
-    def on_connected(self):
-        """
-        Here we start the data readout thread upon connection to the PandaBox device.
-        We do this after the super().on_connected() call to ensure that any additional
-        connection logic from child classes is executed first.
-        """
-        # Test connection by sending WHO command which should respond with PandaBox ID
-        super().on_connected()
-        if self.data_thread.is_alive():
-            logger.warning(
-                "Data thread is already running. On Connected probably called multiple times."
-            )
-            return
-        self.data_thread.start()
-        self.add_data_callback(data_type=PandaState.FRAME, callback=self._receive_frame_data)
-
-    def _receive_frame_data(self, data: FrameData) -> None:
-        logger.info(f"Received frame data with signals {data}")
-        out = self.convert_frame_data(frame_data=data)
-        logger.info(f"Compiled data {out}")
-        self.data.put(out, acquisition_group=self._acquisition_group)
 
     def stop(self, *, success=False):
         """
@@ -569,7 +564,7 @@ class PandaBox(PSIDeviceBase):
         We call this prior to the super().stop() call to ensure that the PandaBox
         is disarmed before any additional stopping logic from child classes is executed.
         """
-        self._disarm()
+        self._reset_panda()
         self.on_stop()
         super().stop(success=success)
 
@@ -584,6 +579,26 @@ class PandaBox(PSIDeviceBase):
         self.data_thread_run_event.set()  # Unblock thread if waiting
         self.on_destroy()
         super().destroy()
+
+    # NOTE These are beamline hooks for the scan interface within BEC.
+    # If overwritten by child classes, please make sure to either call super()
+    # or re-evaluate the implemented logic as these methods attempt to partially
+    # setup the PandaBox for data acquisition.
+
+    def on_connected(self):
+        """
+        Here we start the data readout thread upon connection to the PandaBox device.
+        We do this after the super().on_connected() call to ensure that any additional
+        connection logic from child classes is executed first.
+        """
+        super().on_connected()
+        if self.data_thread.is_alive():
+            logger.warning(
+                "Data thread is already running. On Connected probably called multiple times."
+            )
+            return
+        self.data_thread.start()
+        self.add_data_callback(data_type=PandaState.FRAME, callback=self._receive_frame_data)
 
     def on_stage(self) -> StatusBase | OphydStatusBase | None:
         """On stage hook for the PandaBox. Here we make sure that the PandaBox is disarmed before staging."""
@@ -615,15 +630,25 @@ class PandaBox(PSIDeviceBase):
         return status
 
     def on_unstage(self) -> list[object] | StatusBase | OphydStatusBase:
-        """
-        Any unstaging of the PandaBox device should ensure that"""
-        self.data_thread_run_event.clear()  # Make sure that the data readout loop is stopped
-        self._disarm()  # Disarm the PandaBox, should be idempotent
+        """Any unstaging of the PandaBox device should ensure that"""
+        self._reset_panda()
         return super().on_unstage()
 
     #######################
     ### Utility Methods ###
     #######################
+
+    def _receive_frame_data(self, data: FrameData) -> None:
+        """
+        Callback to receive frame data from the PandaBox.
+
+        Args:
+            data (FrameData): The frame data received from the PandaBox. This contains the actual data acquired from the PandaBox.
+        """
+        logger.info(f"Received frame data with signals {data}")
+        out = self.convert_frame_data(frame_data=data)
+        logger.info(f"Compiled data {out}")
+        self.data.put(out, acquisition_group=self._acquisition_group)
 
     def _get_signal_names_allowed_for_capture(self) -> list[str]:
         """Utility method to get a list of all signal keys that CAN BE CONFIGURED for capture on the PandaBox."""

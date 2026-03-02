@@ -166,9 +166,23 @@ def test_panda_receive_frame_data(panda_box, _signal_aliases):
 
 def test_panda_on_stop(panda_box):
     """Test that on_stop clears the data callbacks."""
+    panda_box.panda_state = PandaState.READY
+    panda_box.data_thread_run_event.set()  # Simulate that the data thread is running
     with mock.patch.object(panda_box, "_disarm") as mock_disarm:
         panda_box.stop()
         mock_disarm.assert_called_once()
+
+    assert (
+        panda_box.panda_state == PandaState.DISARMED
+    ), "PandaBox state should be DISARMED after stop"
+    # Should go back to DISARMED state
+    assert (
+        not panda_box.data_thread_run_event.is_set()
+    ), "Data thread run event should be unset after stop"
+
+
+def test_panda_data_thread_loop(panda_box):
+    """Test that the data thread loop can be started and stopped"""
 
 
 def test_panda_on_destroy(panda_box):
