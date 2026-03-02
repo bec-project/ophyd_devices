@@ -431,17 +431,19 @@ class PandaBox(PSIDeviceBase):
         loop after receiving EndData, as this indicates the end of the acquisition.
         """
         try:
-            while not self.data_thread_kill_event.is_set() and self.data_thread_run_event.is_set():
-                try:
-                    with BlockingClient(self.host) as client:
+            with BlockingClient(self.host) as client:
+                while (
+                    not self.data_thread_kill_event.is_set() and self.data_thread_run_event.is_set()
+                ):
+                    try:
                         # Timeout is needed to periodically check if we should leave the loop.
                         for data in client.data(scaled=False, frame_timeout=0.1):
-                            if not self.__run_data_readout(data):
-                                break
-                except socket.timeout:
-                    # Timeout is expected to happen, but we have to check if the polling loop should still be running, or if
-                    # stop was called and we should exit the loop.
-                    continue
+                            if not self._run_data_readout_step(data):
+                                return  # finally executes still
+                    except socket.timeout:
+                        # Timeout is expected to happen, but we have to check if the polling loop should still be running, or if
+                        # stop was called and we should exit the loop.
+                        continue
         finally:
             # Make sure to leave the PandaBox in a clean state.
             self._reset_panda()
@@ -463,7 +465,7 @@ class PandaBox(PSIDeviceBase):
         self._run_status_callbacks(PandaState.DISARMED)
         self._run_data_callbacks(Data(), PandaState.DISARMED)
 
-    def __run_data_readout(self, data) -> bool:
+    def _run_data_readout_step(self, data) -> bool:
         """
         Inner loop to run the data logic. Returns True if loop should continue, False if it should break.
 
@@ -493,6 +495,9 @@ class PandaBox(PSIDeviceBase):
             self._run_status_callbacks(PandaState.END)
             self._run_data_callbacks(data, PandaState.END)
             return False
+
+        else:
+            logger.error(f"Received unknown data type from PandaBox: {type(data)}. Data: {data}")
 
     def _run_status_callbacks(self, event: PandaState) -> None:
         """
@@ -630,7 +635,7 @@ class PandaBox(PSIDeviceBase):
         return status
 
     def on_unstage(self) -> list[object] | StatusBase | OphydStatusBase:
-        """Any unstaging of the PandaBox device should ensure that"""
+        """Unstage hook for the PandaBox. This resets the device to a known state before delegating to the parent implementation."""
         self._reset_panda()
         return super().on_unstage()
 
