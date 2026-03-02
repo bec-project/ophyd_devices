@@ -76,7 +76,12 @@ def patched_device(
 def patch_dual_pvs(device):
     """Patch dual PVs"""
     patch_functions_required_for_connection(device)
-    device.wait_for_connection(all_signals=True)
+    try:
+        device.wait_for_connection(all_signals=True)
+    except TypeError:
+        # Maybe no all_signals in kwargs,
+        device.wait_for_connection()
+
     for walk in device.walk_signals():
         if not hasattr(walk.item, "_read_pv"):
             continue
