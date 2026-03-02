@@ -204,7 +204,7 @@ class PandaBox(PSIDeviceBase):
         kwargs.pop(
             "signal_alias", None
         )  # Remove signal_alias from kwargs to avoid issues with super().__init__()
-        super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
+
         self.host = host
 
         # Lock
@@ -219,7 +219,7 @@ class PandaBox(PSIDeviceBase):
 
         # Thread to receive data from the PandaBox
         self.data_thread: threading.Thread = threading.Thread(
-            target=self._data_thread_loop, daemon=True, name=f"{self.name}_data_thread"
+            target=self._data_thread_loop, daemon=True, name=f"{name}_data_thread"
         )
         self.data_thread_kill_event = threading.Event()
         self.data_thread_run_event = threading.Event()
@@ -229,6 +229,8 @@ class PandaBox(PSIDeviceBase):
 
         # Timeouts for wait operations in seconds
         self._stage_timeout_in_s = 3
+        # Call super().__init__() here to ensure on_init in base class gets called after the PandaBox specific initialization.
+        super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
 
     def on_init(self):
         """Initialize the PandaBox device. This method can be used to perform any additional initialization logic."""
