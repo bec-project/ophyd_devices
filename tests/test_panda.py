@@ -181,10 +181,6 @@ def test_panda_on_stop(panda_box):
     ), "Data thread run event should be unset after stop"
 
 
-def test_panda_data_thread_loop(panda_box):
-    """Test that the data thread loop can be started and stopped"""
-
-
 def test_panda_on_destroy(panda_box):
     """Test that on_destroy clears the data callbacks."""
     panda_box.destroy()
