@@ -83,13 +83,11 @@ def data_type(val):
 
 class SocketSignal(abc.ABC, Signal):
     """
-    Base class for signals that interact with a socket connection. Subclasses
-    must implement the '_socket_get' and '_socket_set' methods to define how to
-    read from and write to the socket respectively. The signal also implements
-    an in-built caching mechanism if 'get' is called in a callback
-    from a subscription to avoid multiple socket reads in a recursion. It is important
-    that children keep the logic in 'read' and 'get' and implement the socket read logic
-    in '_socket_get' to ensure the caching mechanism works correctly.
+    A base class for signals that interact with a socket. This class provides the necessary structure
+    for reading from and writing to a socket, as well as handling callbacks and subscriptions in a way
+    that prevents recursive calls. Children should implement the `_socket_get` and `_socket_set` methods
+    to define the specific logic for interacting with the socket. `get` and `put` methods should not be
+    overriden by children to ensure proper callback handling.
 
     Args:
         name (str): The name of the signal.
@@ -139,11 +137,12 @@ class SocketSignal(abc.ABC, Signal):
         """
         if sub_type in self._active_socket_callbacks:
             return
-        self._active_socket_callbacks.add(sub_type)
         try:
+            self._active_socket_callbacks.add(sub_type)
             super()._run_subs(*args, sub_type=sub_type, **kwargs)
         finally:
-            self._active_socket_callbacks.remove(sub_type)
+            if sub_type in self._active_socket_callbacks:
+                self._active_socket_callbacks.remove(sub_type)
 
     def put(self, value, connection_timeout=1, **kwargs):
         """
