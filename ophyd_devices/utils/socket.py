@@ -100,9 +100,10 @@ class SocketSignal(abc.ABC, Signal):
 
     SUB_SETPOINT = "setpoint"
 
-    def __init__(self, *, name, **kwargs):
+    def __init__(self, *, name, auto_monitor=False, **kwargs):
 
         super().__init__(name=name, **kwargs)
+        self._auto_monitor = auto_monitor
         self._active_socket_callbacks: set[str] = set()
 
     @abc.abstractmethod
@@ -111,7 +112,14 @@ class SocketSignal(abc.ABC, Signal):
     @abc.abstractmethod
     def _socket_set(self, val): ...
 
-    def get(self):
+    def get(self, **kwargs):
+        """
+        Get the current value of the signal. Children should never
+        override this method, but should implement the socket read logic in
+        'socket_get' to ensure proper callback handling and caching of values.
+        """
+        if self.SUB_VALUE in self._active_socket_callbacks:
+            return self._readback
         old_value = self._readback
         self._readback = self._socket_get()
         timestamp = time.time()
@@ -122,58 +130,39 @@ class SocketSignal(abc.ABC, Signal):
         return self._readback
 
     def _run_subs(self, *args, sub_type, **kwargs):
+        """
+        This method runs the callbacks for a given subscription type. It is overridden to ensure that
+        callbacks for the same subscription type can not trigger additional subscriptions of the same type.
+        We thereby avoid that callbacks can triggered recursively. In practice, a callback may call 'get'
+        or 'read' itself, but it won't trigger any recursive calls of the callbacks for the same subscription type.
+
+        Args:
+            sub_type (str): The subscription type for which to run the callbacks.
+        """
         if sub_type in self._active_socket_callbacks:
             return
         self._active_socket_callbacks.add(sub_type)
         super()._run_subs(*args, sub_type=sub_type, **kwargs)
         self._active_socket_callbacks.remove(sub_type)
 
-    def put(
-        self,
-        value,
-        force=False,
-        connection_timeout=1,
-        callback=None,
-        use_complete=None,
-        timeout=1,
-        **kwargs,
-    ):
-        """Using channel access, set the write PV to `value`.
-
-        Keyword arguments are passed on to callbacks
-
-        Parameters
-        ----------
-        value : any
-            The value to set
-        force : bool, optional
-            Skip checking the value in Python first
-        connection_timeout : float, optional
-            If not already connected, allow up to `connection_timeout` seconds
-            for the connection to complete.
-        use_complete : bool, optional
-            Override put completion settings
-        callback : callable
-            Callback for when the put has completed
-        timeout : float, optional
-            Timeout before assuming that put has failed. (Only relevant if
-            put completion is used.)
+    def put(self, value, connection_timeout=1, **kwargs):
         """
-        if not force:
-            pass
-            # self.check_value(value)
+        Put method to send values to the socket. Children should never override this method,
+        but should implement instead the socket write logic in 'socket_set' to ensure proper
+        callback handling.
+
+        Args:
+            value (any): The value to set
+            connection_timeout (float, optional): If not already connected, allow up to `connection_timeout` seconds
+                for the connection to complete.
+        """
 
         self.wait_for_connection(timeout=connection_timeout)
-        if use_complete is None:
-            use_complete = False
-
         old_value = self._readback
         self._socket_set(value)
-
         timestamp = time.time()
-        super().put(
-            value, timestamp=timestamp, force=True
-        )  # Updates self._readback and runs SUB_VALUE subscriptions
+        # Super().put(..) triggers the SUB_VALUE callbacks with the new value.
+        super().put(value, timestamp=timestamp, force=True)
         self._run_subs(
             sub_type=self.SUB_SETPOINT, old_value=old_value, value=value, timestamp=timestamp
         )
