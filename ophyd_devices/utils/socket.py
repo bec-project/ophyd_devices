@@ -3,7 +3,6 @@ import functools
 import socket
 import time
 import typing
-import uuid
 
 import numpy as np
 from bec_lib import bec_logger
@@ -85,7 +84,7 @@ def data_type(val):
 class SocketSignal(abc.ABC, Signal):
     """
     Base class for signals that interact with a socket connection. Subclasses
-    must implement the '_socket_get'and 'socket_set' methods to define how to
+    must implement the '_socket_get' and '_socket_set' methods to define how to
     read from and write to the socket respectively. The signal also implements
     an in-built caching mechanism if 'get' is called in a callback
     from a subscription to avoid multiple socket reads in a recursion. It is important
@@ -94,8 +93,7 @@ class SocketSignal(abc.ABC, Signal):
 
     Args:
         name (str): The name of the signal.
-        readback_timeout (float): Time in seconds to wait between socket read attempts before
-                                  returning cached value.
+        auto_monitor (bool, optional): If True, it indicates that the signal should be auto_monitored.
     """
 
     SUB_SETPOINT = "setpoint"
@@ -142,8 +140,10 @@ class SocketSignal(abc.ABC, Signal):
         if sub_type in self._active_socket_callbacks:
             return
         self._active_socket_callbacks.add(sub_type)
-        super()._run_subs(*args, sub_type=sub_type, **kwargs)
-        self._active_socket_callbacks.remove(sub_type)
+        try:
+            super()._run_subs(*args, sub_type=sub_type, **kwargs)
+        finally:
+            self._active_socket_callbacks.remove(sub_type)
 
     def put(self, value, connection_timeout=1, **kwargs):
         """
