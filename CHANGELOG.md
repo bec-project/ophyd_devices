@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v1.34.0 (2026-03-03)
+
+### Bug Fixes
+
+- **socket**: Update docstring for SocketSignal
+  ([`086444b`](https://github.com/bec-project/ophyd_devices/commit/086444bf7ef8e416430067141430801efadbda14))
+
+### Features
+
+- **socket**: Add cache mechanism for SocketSignal
+  ([`cb720e0`](https://github.com/bec-project/ophyd_devices/commit/cb720e072c275b1b9511534ad0c545863d467d8f))
+
+### Refactoring
+
+- **socket**: Cleanup SocketSignal put/get methods
+  ([`da260ce`](https://github.com/bec-project/ophyd_devices/commit/da260ce4ce40210c345ddfe8ae8ac48edcd547bb))
+
+### Testing
+
+- **socket**: Add tests for SocketSignal callbacks
+  ([`4371987`](https://github.com/bec-project/ophyd_devices/commit/437198747621eadade7981d6f18ec144a84d0f72))
+
+
 ## v1.33.2 (2026-03-03)
 
 ### Bug Fixes
