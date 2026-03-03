@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.33.2 (2026-03-03)
+
+### Bug Fixes
+
+- **panda-box**: Adapt cleanup logic to avoid Panda to be stuck when stopped.
+  ([`bb7fcba`](https://github.com/bec-project/ophyd_devices/commit/bb7fcba34aad6b3870aed50f3d923b769046f3b3))
+
+### Refactoring
+
+- Cleanup, improve docstrings
+  ([`d00463f`](https://github.com/bec-project/ophyd_devices/commit/d00463f005096b16f142fe9ba2a7829519d7a088))
+
+
 ## v1.33.1 (2026-03-02)
 
 ### Bug Fixes
