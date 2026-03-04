@@ -473,25 +473,21 @@ class PandaBox(PSIDeviceBase):
             data (LITERAL_PANDA_DATA): The data received from the PandaBox. This can be of type ReadyData, StartData, FrameData, or EndData.
         """
         if isinstance(data, ReadyData):
-            logger.info("PandaBox is ready for data acquisition.")
             self._run_status_callbacks(PandaState.READY)
             self._run_data_callbacks(data, PandaState.READY)
             return True
 
         if isinstance(data, StartData):
-            logger.info("PandaBox has started data acquisition.")
             self._run_status_callbacks(PandaState.START)
             self._run_data_callbacks(data, PandaState.START)
             return True
 
         if isinstance(data, FrameData):
-            logger.info("PandaBox has received a frame of data.")
             self._run_status_callbacks(PandaState.FRAME)
             self._run_data_callbacks(data, PandaState.FRAME)
             return True
 
         if isinstance(data, EndData):
-            logger.info("PandaBox has ended data acquisition.")
             self._run_status_callbacks(PandaState.END)
             self._run_data_callbacks(data, PandaState.END)
             return False
@@ -650,9 +646,7 @@ class PandaBox(PSIDeviceBase):
         Args:
             data (FrameData): The frame data received from the PandaBox. This contains the actual data acquired from the PandaBox.
         """
-        logger.info(f"Received frame data with signals {data}")
         out = self.convert_frame_data(frame_data=data)
-        logger.info(f"Compiled data {out}")
         self.data.put(out, acquisition_group=self._acquisition_group)
 
     def _get_signal_names_allowed_for_capture(self) -> list[str]:
