@@ -650,6 +650,41 @@ def test_utils_preview_2d_signal():
         signal.put({"wrong_key": "wrong_value"})
 
 
+def test_utils_preview_2d_signal_transpose_rgb_swaps_only_spatial_axes():
+    """Transpose must preserve channel axis for RGB-like preview data."""
+    dev = Device(name="device")
+    signal = PreviewSignal(
+        name="preview_rgb_signal", ndim=2, value=None, parent=dev, transpose=True
+    )
+    data = np.arange(2 * 3 * 4).reshape(2, 3, 4)
+
+    signal.put(data)
+    reading = signal.read()[signal.name]["value"]
+
+    np.testing.assert_array_equal(reading.data, np.swapaxes(data, 0, 1))
+    assert reading.data.shape == (3, 2, 4)
+
+
+def test_utils_preview_2d_signal_rotation_and_transpose_rgb():
+    """Rotation and transpose should both operate on spatial axes only."""
+    dev = Device(name="device")
+    signal = PreviewSignal(
+        name="preview_rgb_rot_signal",
+        ndim=2,
+        value=None,
+        parent=dev,
+        num_rotation_90=1,
+        transpose=True,
+    )
+    data = np.arange(2 * 3 * 4).reshape(2, 3, 4)
+
+    signal.put(data)
+    reading = signal.read()[signal.name]["value"]
+
+    expected = np.swapaxes(np.rot90(data, k=1, axes=(0, 1)), 0, 1)
+    np.testing.assert_array_equal(reading.data, expected)
+
+
 def test_utils_progress_signal():
     """Test ProgressSignal"""
     dev = Device(name="device")

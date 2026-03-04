@@ -584,7 +584,8 @@ class PreviewSignal(BECMessageSignal):
         if self.num_rotation_90:
             value = np.rot90(value, k=self.num_rotation_90, axes=(0, 1))
         if self.transpose:
-            value = np.transpose(value)
+            # Transpose only spatial axes; keep channels/extra dims in place.
+            value = np.swapaxes(value, 0, 1)
 
         return value
 
