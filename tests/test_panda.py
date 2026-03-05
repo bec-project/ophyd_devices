@@ -20,6 +20,7 @@ from ophyd_devices.devices.panda_box.panda_box import (
 from ophyd_devices.devices.panda_box.utils import (
     PANDA_AVAIL_PCAP_BLOCKS,
     PANDA_AVAIL_PCAP_CAPTURE_FIELDS,
+    block_name_mapping,
     get_pcap_capture_fields,
 )
 
@@ -34,6 +35,18 @@ def panda_box(_signal_aliases):
     return PandaBox(name="panda_box", host="localhost", signal_alias=_signal_aliases)
 
 
+def test_panda_box_init_invalid_signal_alias():
+    """Test that providing invalid signal aliases raises an error."""
+    with pytest.raises(
+        ValueError, match="Invalid signal name in signal_alias: 'Invalid.Signal.Name'"
+    ):
+        PandaBox(
+            name="panda_box",
+            host="localhost",
+            signal_alias={"FMC_IN.VAL1.Value": "Invalid.Signal.Name"},
+        )
+
+
 def test_panda_box_init(panda_box, _signal_aliases):
     """Test initialization of PandaBox, including default signal aliases."""
     assert panda_box.name == "panda_box"
@@ -46,7 +59,9 @@ def test_panda_box_init(panda_box, _signal_aliases):
                 # These signals should be renamed
                 assert _signal_aliases[signal_name] in all_signal_names
                 continue
-            assert signal_name in all_signal_names, f"Missing signal: {signal_name}"
+            assert (
+                block_name_mapping(signal_name) in all_signal_names
+            ), f"Missing signal: {signal_name}"
 
 
 def test_panda_wait_for_connection(panda_box):
@@ -149,7 +164,7 @@ def test_panda_receive_frame_data(panda_box, _signal_aliases):
                 "value": [np.float64(0), np.float64(1), np.float64(2)],
                 "timestamp": mock.ANY,
             },
-            f"{panda_box.data.name}_COUNTER2.OUT.Value": {
+            f"{panda_box.data.name}_COUNTER2_OUT_Value": {
                 "value": [np.float64(10), np.float64(11), np.float64(12)],
                 "timestamp": mock.ANY,
             },
@@ -286,6 +301,7 @@ def test_panda_get_signal_names_configured_for_capture(panda_box):
     with mock.patch.object(panda_box, "send_raw") as mock_send_raw:
         mock_send_raw.return_value = return_capture
         list_of_signals = panda_box._get_signal_names_configured_for_capture()
+        list_of_signals = [block_name_mapping(name) for name in list_of_signals]
         mock_send_raw.assert_called_once_with("*CAPTURE?")
         for signal in list_of_signals:
             assert signal in possible_signal_names, f"Unexpected signal: {signal}"
@@ -315,7 +331,7 @@ def test_panda_get_pcap_capture_fields():
     expected_fields = []
     for block in PANDA_AVAIL_PCAP_BLOCKS:
         for field in PANDA_AVAIL_PCAP_CAPTURE_FIELDS:
-            expected_fields.append(f"{block}.{field}")
+            expected_fields.append(block_name_mapping(f"{block}.{field}"))
     actual_fields = get_pcap_capture_fields()
     assert actual_fields == expected_fields, "PCAP capture fields mismatch"
 

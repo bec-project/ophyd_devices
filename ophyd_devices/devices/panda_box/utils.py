@@ -1,3 +1,7 @@
+"""Module containing utility functions for the PandaBox device."""
+
+import keyword
+
 PANDA_AVAIL_PCAP_BLOCKS = [
     "INENC1.VAL",
     "INENC2.VAL",
@@ -42,13 +46,20 @@ PANDA_AVAIL_PCAP_BLOCKS = [
 PANDA_AVAIL_PCAP_CAPTURE_FIELDS = ["Value", "Diff", "Sum", "Mean", "Min", "Max"]
 
 
+def is_valid_attribute_name(name: str) -> bool:
+    """Check if a given name is a valid Python attribute name."""
+    return name.isidentifier() and not keyword.iskeyword(name)
+
+
+def block_name_mapping(block_name: str) -> str:
+    """Map block names to a format suitable for use as attribute names."""
+    return block_name.replace(".", "_")
+
+
 def get_pcap_capture_fields():
     out = []
     for block in PANDA_AVAIL_PCAP_BLOCKS:
         for field in PANDA_AVAIL_PCAP_CAPTURE_FIELDS:
-            # Consider this mapping, and alsock
-            # block_name = f"{block}.{field}"
-            # block_name = block.replace(".", "_")
-            # out.append(block_name) TODO - If applied Adapt 'convert_frame_data' method in panda_box.py to handle this mapping
-            out.append(f"{block}.{field}")
+            block_name = block_name_mapping(f"{block}.{field}")
+            out.append(block_name)
     return out
