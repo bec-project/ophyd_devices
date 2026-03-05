@@ -49,7 +49,11 @@ from pandablocks.connections import DataConnection, NeedMoreDataError
 from pandablocks.responses import Data, EndData, FrameData, ReadyData, StartData
 
 from ophyd_devices import DynamicSignal, PSIDeviceBase, StatusBase
-from ophyd_devices.devices.panda_box.utils import get_pcap_capture_fields
+from ophyd_devices.devices.panda_box.utils import (
+    block_name_mapping,
+    get_pcap_capture_fields,
+    is_valid_attribute_name,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import ScanInfo
@@ -206,7 +210,14 @@ class PandaBox(PSIDeviceBase):
     mapped to the provided signal names. If data is received for a signal that is not included in the signal_alias,
     the original name from the PandaBox will be used as the signal name. Signal config should be provided as a
     dict with keys corresponding to the signal names from the PandaBox, and values corresponding to the desired
-    signal names to be used in the data frames.
+    signal names to be used in the data frames. Values of the corresponding signal names must be valid Python
+    attribute names, and may not contain dots or other special characters.
+
+    Args:
+        name (str): The name of the device.
+        host (str): The hostname of the PandaBox to connect to.
+        signal_alias (dict[str, str], optional): A mapping from PandaBox signal names to desired signal names for the beamline. Defaults to None.
+                                                 Mapped keys may not contain dots or other special characters.
     """
 
     data = Cpt(
@@ -230,7 +241,7 @@ class PandaBox(PSIDeviceBase):
         device_manager: DeviceManagerDS | None = None,
         **kwargs,
     ) -> None:
-        self.signal_alias = signal_alias if signal_alias is not None else {}
+        self.signal_alias = self._convert_signal_aliases(signal_alias) if signal_alias else {}
         kwargs.pop(
             "signal_alias", None
         )  # Remove signal_alias from kwargs to avoid issues with super().__init__()
@@ -261,10 +272,23 @@ class PandaBox(PSIDeviceBase):
         self._stage_timeout_in_s = 3
         # Call super().__init__() here to ensure on_init in base class gets called after the PandaBox specific initialization.
         super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
+        self._apply_signal_aliases()
 
-    def on_init(self):
+    def _convert_signal_aliases(self, signal_alias: dict[str, str]) -> dict[str, str]:
+        """Convert signal names"""
+        out = {}
+        for block_key, signal_name in signal_alias.items():
+            if not is_valid_attribute_name(signal_name):
+                raise ValueError(
+                    f"Invalid signal name in signal_alias: '{signal_name}' for block '{block_key}'. "
+                    f"Signal names must be valid Python attribute names and may not contain dots or special characters."
+                )
+            out[block_name_mapping(block_key)] = signal_name
+
+        return out
+
+    def _apply_signal_aliases(self):
         """Initialize the PandaBox device. This method can be used to perform any additional initialization logic."""
-        super().on_init()
         new_names = [
             self.signal_alias.get(original_name, original_name)
             for original_name, _ in self.data.signals
@@ -711,7 +735,11 @@ class PandaBox(PSIDeviceBase):
     def convert_frame_data(self, frame_data: FrameData) -> dict[str, Any]:
         """
         Convert the data from a FrameData object into a dictionary with expected OPHYD
-        read format, e.g. signal {signal_name: {"value": [...]}}.
+        read format, e.g. signal {signal_name: {"value": [...]}}. Please be aware that if
+        this method is overriden by child classes, you need to make sure that the key names
+        in the FrameData is converted to the expected names in the data signal. This includes
+        replacing dots in the original PandaBox keys with underscores using "block_name_mapping"
+        from the utils, and using the key mapping provided through the signal_alias mapping.
 
         Args:
             frame_data (FrameData): The FrameData object received from the PandaBox.
@@ -723,9 +751,13 @@ class PandaBox(PSIDeviceBase):
         out = {}
         data = frame_data.data
         keys = data.dtype.names
-        # Map keys if mapping is provided
+        # Converting the data requires us to map the keys of the PandaBox data to follow valid
+        # Python attribute names, but also to match the renamed signals provided by the signal_alias mapping.
+        # The mapping is done in two steps:
+        # I. Remove dots '.' from Pandablock keys as they are not valid for Python attribute names
+        keys = [block_name_mapping(key) for key in keys]
+        # Map keys if mapping is provided. We also need to translate all keys received from the
         mapped_key = [self.signal_alias.get(key, key) for key in keys]
-        # Initialize lists for each key, consider adjusting names to match
         for k in mapped_key:
             out[k] = {"value": [], "timestamp": time.time()}
         for entry in data:
