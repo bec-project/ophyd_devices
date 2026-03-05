@@ -437,7 +437,11 @@ class PandaBox(PSIDeviceBase):
                 ):
                     try:
                         # Timeout is needed to periodically check if we should leave the loop.
-                        for data in client.data(scaled=False, frame_timeout=0.1):
+                        # IMPORTANT: Keep scaled=True to receive the data properly scaled and not in
+                        # raw format. If performance becomes an issue, this should be re-evaluated.
+                        # One could directly connect to the Socket, however, this should not be relevant
+                        # in the kHz range, maybe in the several MHz range.
+                        for data in client.data(scaled=True, frame_timeout=0.1):
                             if not self._run_data_readout_step(data):
                                 return  # finally executes still
                     except socket.timeout:
