@@ -8,8 +8,6 @@ from bec_lib import bec_logger
 from ophyd import DeviceStatus, Kind, Signal
 from ophyd.utils import ReadOnlyError
 
-from ophyd_devices.utils.bec_device_base import BECDeviceBase
-
 logger = bec_logger.logger
 
 # Readout precision for Setable/ReadOnlySignal signals
@@ -55,6 +53,7 @@ class SetableSignal(Signal):
         self.sim = getattr(self.parent, "sim", None)
         self._update_sim_state(value)
         self._metadata.update(write_access=True)
+        self._active_callbacks: set[str] = set()
 
     def _update_sim_state(self, value: Any) -> None:
         """Update the readback value."""
@@ -79,8 +78,10 @@ class SetableSignal(Signal):
 
         Core function for signal.
         """
-        self._value = self._get_value()
-        return self._value
+        old_value = self._readback
+        self._readback = self._value = self._get_value()
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     # pylint: disable=arguments-differ
     def put(self, value) -> None:
@@ -91,7 +92,6 @@ class SetableSignal(Signal):
         self.check_value(value)
         self._update_sim_state(value)
         self._value = value
-        # self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=value, **md_for_callback)
         super().put(value)
 
     def set(self, value):
@@ -115,6 +115,25 @@ class SetableSignal(Signal):
     def timestamp(self) -> float:
         """Timestamp of the readback value"""
         return self._get_timestamp()
+
+    def _run_subs(self, *args, sub_type, **kwargs):
+        """
+        This method runs the callbacks for a given subscription type. It is overridden to ensure that
+        callbacks for the same subscription type can not trigger additional subscriptions of the same type.
+        We thereby avoid that callbacks can triggered recursively. In practice, a callback may call 'get'
+        or 'read' itself, but it won't trigger any recursive calls of the callbacks for the same subscription type.
+
+        Args:
+            sub_type (str): The subscription type for which to run the callbacks.
+        """
+        if sub_type in self._active_callbacks:
+            return
+        try:
+            self._active_callbacks.add(sub_type)
+            super()._run_subs(*args, sub_type=sub_type, **kwargs)
+        finally:
+            if sub_type in self._active_callbacks:
+                self._active_callbacks.remove(sub_type)
 
 
 class ReadOnlySignal(Signal):
@@ -160,6 +179,7 @@ class ReadOnlySignal(Signal):
         if self.sim:
             self._init_sim_state()
         self._metadata.update(write_access=False)
+        self._active_callbacks: set[str] = set()
 
     def _init_sim_state(self) -> None:
         """Create the initial sim_state in the SimulatedData class of the parent device."""
@@ -180,11 +200,14 @@ class ReadOnlySignal(Signal):
     # pylint: disable=arguments-differ
     def get(self):
         """Get the current position of the simulated device."""
+        old_value = self._readback
         if self.sim:
             self._update_sim_state()
-            self._value = self._get_value()
-            return self._value
-        return np.random.rand()
+            self._readback = self._value = self._get_value()
+        else:
+            self._readback = np.random.rand()
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     # pylint: disable=arguments-differ
     def put(self, value) -> None:
@@ -207,3 +230,22 @@ class ReadOnlySignal(Signal):
         if self.sim:
             return self._get_timestamp()
         return time.time()
+
+    def _run_subs(self, *args, sub_type, **kwargs):
+        """
+        This method runs the callbacks for a given subscription type. It is overridden to ensure that
+        callbacks for the same subscription type can not trigger additional subscriptions of the same type.
+        We thereby avoid that callbacks can triggered recursively. In practice, a callback may call 'get'
+        or 'read' itself, but it won't trigger any recursive calls of the callbacks for the same subscription type.
+
+        Args:
+            sub_type (str): The subscription type for which to run the callbacks.
+        """
+        if sub_type in self._active_callbacks:
+            return
+        try:
+            self._active_callbacks.add(sub_type)
+            super()._run_subs(*args, sub_type=sub_type, **kwargs)
+        finally:
+            if sub_type in self._active_callbacks:
+                self._active_callbacks.remove(sub_type)
