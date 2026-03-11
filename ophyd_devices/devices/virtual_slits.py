@@ -14,6 +14,7 @@ the positioners coordinates are flipped in the control system below.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from threading import RLock
 from typing import TYPE_CHECKING, Tuple
 
 from ophyd import Component as Cpt
@@ -36,6 +37,7 @@ class _VirtualSlitSignal(ABC, Signal):
         self._sign_flip_low = False
         self._positioner_high = None
         self._sign_flip_high = False
+        self._rlock = RLock()
 
     def set_positioner_low(self, positioner: Device, sign_flip=False):
         """
@@ -166,12 +168,15 @@ class SlitWidthSetpoint(_VirtualSlitSignal):
         status = StatusBase(obj=self)
 
         def _status_callback(success, exception=None, **kwargs):
-            if success:
-                status.set_finished()
-            else:
-                if exception is None:
-                    exception = UnknownStatusFailure(f"{self.name} failed to move to {value}")
-                status.set_exception(exception)
+            with self._rlock:
+                if status.done:
+                    return
+                if success:
+                    status.set_finished()
+                else:
+                    if exception is None:
+                        exception = UnknownStatusFailure(f"{self.name} failed to move to {value}")
+                    status.set_exception(exception)
 
         pos_low, pos_high = self.get_positions_low_high()
         center = (pos_high + pos_low) / 2
@@ -324,8 +329,9 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
 
         self.motor_is_moving.put(1)
 
-        def _move_finished_callback(success, exception=None, **kwargs):
-            self.motor_is_moving.put(0)
+        def _move_finished_callback(status, exception=None, **kwargs):
+            if status.done:
+                self.motor_is_moving.put(0)
 
         status = self.user_setpoint.set(position)
         status.add_callback(_move_finished_callback)
