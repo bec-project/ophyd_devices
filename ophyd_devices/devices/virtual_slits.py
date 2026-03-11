@@ -64,7 +64,6 @@ class _VirtualSlitSignal(ABC, Signal):
         self._sign_flip_high = sign_flip
 
     def wait_for_connection(self, timeout=0):
-        """Wait for conn"""
         if self._positioner_low is None or self._positioner_high is None:
             raise ConnectionError(
                 f"Positioners must be set for device {self.root.name} to setup WidthSignal."
@@ -228,6 +227,8 @@ class SlitCenterSetpoint(_VirtualSlitSignal):
         status = StatusBase(obj=self)
 
         def _status_callback(success, exception=None, **kwargs):
+            if status.done:
+                return
             if success:
                 status.set_finished()
             else:
@@ -318,7 +319,7 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
         """Callback to update readbacks."""
         self.user_readback.get()
 
-    def move(self, position, wait=False, timeout=None, **kwargs):
+    def move(self, position, wait=False, timeout=None, **kwargs) -> StatusBase:
         """Move to the given position by setting the user_setpoint."""
 
         self.motor_is_moving.put(1)
@@ -334,6 +335,7 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
         except KeyboardInterrupt:
             self.stop()
             raise
+        return status
 
     def stop(self, **kwargs):
         """Stop the motion by stopping both positioners."""
