@@ -28,6 +28,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase
 
 
+class MoveError(Exception):
+    """Custom exception for move errors in virtual slit positioners."""
+
+
 class _VirtualSlitSignal(ABC, Signal):
     """Computed width signal for a virtual slit positioner."""
 
@@ -175,9 +179,7 @@ class SlitWidthSetpoint(_VirtualSlitSignal):
                 if status.done:
                     return
                 if success is False:
-                    if exception is None:
-                        exception = RuntimeError(f"{self.name} failed to move to {value}")
-                    status.set_exception(exception)
+                    status.set_exception(MoveError(f"{self.name} failed to move to {value}"))
                 else:
                     if (
                         self._positioner_low.name in callback_received
@@ -239,16 +241,22 @@ class SlitCenterSetpoint(_VirtualSlitSignal):
     def set(self, value, timestamp=None, force=False):
         """Alias for put to adhere to the set interface of a signal."""
         status = StatusBase(obj=self)
+        callback_received = set()
 
-        def _status_callback(success, exception=None, **kwargs):
-            if status.done:
-                return
-            if success:
-                status.set_finished()
-            else:
-                if exception is None:
-                    exception = UnknownStatusFailure(f"{self.name} failed to move to {value}")
-                status.set_exception(exception)
+        def _status_callback(success, **kwargs):
+            with self._rlock:
+                if status.done:
+                    return
+                if success is False:
+                    status.set_exception(MoveError(f"{self.name} failed to move to {value}"))
+                else:
+                    if (
+                        self._positioner_low.name in callback_received
+                        and self._positioner_high.name in callback_received
+                    ):
+                        status.set_finished()
+                    else:
+                        callback_received.add(kwargs["obj"].name)
 
         pos_low, pos_high = self.get_positions_low_high()
         width = pos_high - pos_low
