@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.34.1 (2026-03-11)
+
+### Bug Fixes
+
+- **bec_signal**: Preview signal fixed for RGB cameras transpose
+  ([`0d17982`](https://github.com/bec-project/ophyd_devices/commit/0d17982c5b9211b8450bce60f937f6cc05c7a40e))
+
+
 ## v1.34.0 (2026-03-03)
 
 ### Bug Fixes
