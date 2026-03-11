@@ -311,6 +311,7 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
         for sig in [self.user_readback, self.user_setpoint]:
             sig.set_positioner_low(self._positioner_low, sign_flip=self.sign_flip_low)
             sig.set_positioner_high(self._positioner_high, sign_flip=self.sign_flip_high)
+            sig.wait_for_connection()
 
         self._setup_subscriptions()
 
