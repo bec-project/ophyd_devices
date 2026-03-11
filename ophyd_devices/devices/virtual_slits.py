@@ -75,6 +75,7 @@ class _VirtualSlitSignal(ABC, Signal):
         connected_high = self._positioner_high.connected
         if connected_low and connected_high:
             self._metadata["connected"] = True
+            return
         raise ConnectionError(
             f"Both positioners must be connected. Positioner {self._positioner_low.name} connected: {connected_low}"
             f", Positioner {self._positioner_high.name} connected: {connected_high}."
