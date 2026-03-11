@@ -118,8 +118,11 @@ class SlitWidthReadback(_VirtualSlitSignal):
     """Computed width signal for a virtual slit positioner."""
 
     def get(self):
+        old_value = self._readback
         pos_low, pos_high = self.get_positions_low_high()
-        return pos_high - pos_low
+        self._readback = pos_high - pos_low
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     def put(self, value, *, timestamp=None, force=False):
         raise ReadOnlyError(
@@ -131,8 +134,11 @@ class SlitWidthSetpoint(_VirtualSlitSignal):
     """Computed width signal for a virtual slit positioner."""
 
     def get(self):
+        old_value = self._readback
         pos_low, pos_high = self.get_positions_low_high()
-        return pos_high - pos_low
+        self._readback = pos_high - pos_low
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     def check_value(self, value):
         """
@@ -152,8 +158,8 @@ class SlitWidthSetpoint(_VirtualSlitSignal):
         center = (pos_high + pos_low) / 2
         new_pos_low = center - value / 2
         new_pos_high = center + value / 2
-        self._positioner_low.set(new_pos_low, timestamp=timestamp, force=force)
-        self._positioner_high.set(new_pos_high, timestamp=timestamp, force=force)
+        self._positioner_low.set(new_pos_low)
+        self._positioner_high.set(new_pos_high)
 
     def set(self, value, timestamp=None, force=False):
         """Alias for put to adhere to the set interface of a signal."""
@@ -172,8 +178,8 @@ class SlitWidthSetpoint(_VirtualSlitSignal):
         center = (pos_high + pos_low) / 2
         new_pos_low = center - value / 2
         new_pos_high = center + value / 2
-        self._positioner_low.set(new_pos_low, timestamp=timestamp, force=force)
-        self._positioner_high.set(new_pos_high, timestamp=timestamp, force=force)
+        self._positioner_low.set(new_pos_low)
+        self._positioner_high.set(new_pos_high)
         self._positioner_low.subscribe(
             _status_callback, event_type=self._positioner_low._SUB_REQ_DONE, run=False
         )
@@ -187,8 +193,11 @@ class SlitCenterReadback(_VirtualSlitSignal):
     """Computed center signal for a virtual slit positioner."""
 
     def get(self):
+        old_value = self._readback
         pos_low, pos_high = self.get_positions_low_high()
-        return (pos_high + pos_low) / 2
+        self._readback = (pos_high + pos_low) / 2
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     def put(self, value, *, timestamp=None, force=False):
         raise ReadOnlyError(
@@ -200,16 +209,19 @@ class SlitCenterSetpoint(_VirtualSlitSignal):
     """Computed center signal for a virtual slit positioner."""
 
     def get(self):
+        old_value = self._readback
         pos_low, pos_high = self.get_positions_low_high()
-        return (pos_high + pos_low) / 2
+        self._readback = (pos_high + pos_low) / 2
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        return self._readback
 
     def put(self, value, *, timestamp=None, force=False):
         pos_low, pos_high = self.get_positions_low_high()
         width = pos_high - pos_low
         new_pos_low = value - width / 2
         new_pos_high = value + width / 2
-        self._positioner_low.put(new_pos_low, timestamp=timestamp, force=force)
-        self._positioner_high.put(new_pos_high, timestamp=timestamp, force=force)
+        self._positioner_low.set(new_pos_low)
+        self._positioner_high.set(new_pos_high)
 
     def set(self, value, timestamp=None, force=False):
         """Alias for put to adhere to the set interface of a signal."""
@@ -227,8 +239,8 @@ class SlitCenterSetpoint(_VirtualSlitSignal):
         width = pos_high - pos_low
         new_pos_low = value - width / 2
         new_pos_high = value + width / 2
-        self._positioner_low.put(new_pos_low, timestamp=timestamp, force=force)
-        self._positioner_high.put(new_pos_high, timestamp=timestamp, force=force)
+        self._positioner_low.set(new_pos_low)
+        self._positioner_high.set(new_pos_high)
         self._positioner_low.subscribe(
             _status_callback, event_type=self._positioner_low._SUB_REQ_DONE, run=False
         )
@@ -305,7 +317,6 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
     def _readback_callback(self, **kwargs):
         """Callback to update readbacks."""
         self.user_readback.get()
-        self.user_setpoint.get()
 
     def move(self, position, wait=False, timeout=None, **kwargs):
         """Move to the given position by setting the user_setpoint."""
