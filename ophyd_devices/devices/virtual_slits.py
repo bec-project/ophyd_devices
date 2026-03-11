@@ -71,8 +71,8 @@ class _VirtualSlitSignal(ABC, Signal):
             raise ConnectionError(
                 f"Positioners must be set for device {self.root.name} to setup WidthSignal."
             )
-        connected_low = self._positioner_low.wait_for_connection(timeout=timeout)
-        connected_high = self._positioner_high.wait_for_connection(timeout=timeout)
+        connected_low = self._positioner_low.connected
+        connected_high = self._positioner_high.connected
         if connected_low and connected_high:
             self._metadata["connected"] = True
         raise ConnectionError(
