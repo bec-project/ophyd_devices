@@ -38,6 +38,7 @@ class _VirtualSlitSignal(ABC, Signal):
         self._positioner_high = None
         self._sign_flip_high = False
         self._rlock = RLock()
+        self._metadata["connected"] = False
 
     def set_positioner_low(self, positioner: Device, sign_flip=False):
         """
@@ -73,7 +74,7 @@ class _VirtualSlitSignal(ABC, Signal):
         connected_low = self._positioner_low.wait_for_connection(timeout=timeout)
         connected_high = self._positioner_high.wait_for_connection(timeout=timeout)
         if connected_low and connected_high:
-            return True
+            self._metadata["connected"] = True
         raise ConnectionError(
             f"Both positioners must be connected. Positioner {self._positioner_low.name} connected: {connected_low}"
             f", Positioner {self._positioner_high.name} connected: {connected_high}."
@@ -322,7 +323,7 @@ class _VirtualSlitPositioner(ABC, PSIDeviceBase, PositionerBase):
 
     def _readback_callback(self, **kwargs):
         """Callback to update readbacks."""
-        self.user_readback.get()
+        self.user_readback.read()
 
     def move(self, position, wait=False, timeout=None, **kwargs) -> StatusBase:
         """Move to the given position by setting the user_setpoint."""
