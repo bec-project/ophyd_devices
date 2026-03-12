@@ -20,6 +20,7 @@ from .devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME
 from .devices.softpositioner import SoftPositioner
 from .interfaces.base_classes.psi_device_base import PSIDeviceBase
 from .utils.bec_device_base import BECDeviceBase
+from .utils.bec_processed_signal import *
 from .utils.bec_signals import *
 from .utils.dynamic_pseudo import ComputedSignal
 from .utils.psi_device_base_utils import *
