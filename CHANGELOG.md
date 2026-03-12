@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v1.34.2 (2026-03-12)
+
+### Bug Fixes
+
+- **panda-box**: Receive PandaBox data as scaled (scale and offset applied) data.
+  ([`2c8293d`](https://github.com/bec-project/ophyd_devices/commit/2c8293d2bbe162dd6a398f709d502da7e71806ef))
+
+- **panda-box**: Refactor data signal names, enforce valid python attribute name
+  ([`fe3a882`](https://github.com/bec-project/ophyd_devices/commit/fe3a88266c7fe422e72e8d173deef0b4a8725528))
+
+- **panda-box**: Refactor DataConnection to PandaBox
+  ([`164dc7c`](https://github.com/bec-project/ophyd_devices/commit/164dc7c056cd3c672f045c72ed79adaa01bed6d5))
+
+- **panda-box**: Remove logs from data_readout loop
+  ([`45d10f5`](https://github.com/bec-project/ophyd_devices/commit/45d10f515d134ced38b3422ababe12812d83d0be))
+
+### Refactoring
+
+- **pandabox**: Adapt block_name_mapping and improve docstrings
+  ([`5343f56`](https://github.com/bec-project/ophyd_devices/commit/5343f568fa92a45dc8ae8159ae577cd222e0e9cd))
+
+### Testing
+
+- **panda-box**: Add tests for data readout loop and context manager
+  ([`e8e0e81`](https://github.com/bec-project/ophyd_devices/commit/e8e0e81f62a898fd734d470ca6dcd2d9a8f641b4))
+
+
 ## v1.34.1 (2026-03-11)
 
 ### Bug Fixes
