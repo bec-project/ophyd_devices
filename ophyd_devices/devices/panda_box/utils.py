@@ -1,6 +1,7 @@
 """Module containing utility functions for the PandaBox device."""
 
 import keyword
+from collections.abc import Iterable
 
 PANDA_AVAIL_PCAP_BLOCKS = [
     "INENC1.VAL",
@@ -51,9 +52,13 @@ def is_valid_attribute_name(name: str) -> bool:
     return name.isidentifier() and not keyword.iskeyword(name)
 
 
-def block_name_mapping(block_name: str) -> str:
+def block_name_mapping(block_name: str | Iterable[str]) -> str | list[str]:
     """Map block names to a format suitable for use as attribute names."""
-    return block_name.replace(".", "_")
+    if isinstance(block_name, str):
+        return block_name.replace(".", "_")
+    if isinstance(block_name, Iterable):
+        return [name.replace(".", "_") for name in block_name]
+    raise TypeError(f"Unsupported type for block_name: {type(block_name)!r}")
 
 
 def get_pcap_capture_fields():
