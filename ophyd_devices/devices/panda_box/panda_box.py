@@ -175,7 +175,17 @@ class DataCallback(TypedDict):
 
 
 class PandaBoxDataConnection:
-    """Context Manager to conveniently manage the connection to the PandaBox data streams."""
+    """
+    Context Manager to conveniently manage the connection to the PandaBox data streams.
+
+    Args:
+        host (str): The hostname of the PandaBox to connect to.
+        scaled Optional(bool): Whether to request scaled data from the PandaBox. Scaled is recommended
+                       default is this is how data is also presented in the PandaBox UI or received
+                       from the CLI tool. Defaults to True.
+        socket_timeout Optional(float): Timeout of the socket if no new data is received. Important
+                        to be able to unblock and interrupt the data connection to the Pandabox.
+    """
 
     def __init__(self, host: str, scaled: bool = True, socket_timeout: float = 0.1):
         self.host = host
@@ -755,7 +765,7 @@ class PandaBox(PSIDeviceBase):
         # Python attribute names, but also to match the renamed signals provided by the signal_alias mapping.
         # The mapping is done in two steps:
         # I. Remove dots '.' from Pandablock keys as they are not valid for Python attribute names
-        keys = [block_name_mapping(key) for key in keys]
+        keys = block_name_mapping(keys)
         # Map keys if mapping is provided. We also need to translate all keys received from the
         mapped_key = [self.signal_alias.get(key, key) for key in keys]
         for k in mapped_key:
