@@ -1,4 +1,9 @@
-""" """
+"""Base class for pseudo motors built from real positioner objects.
+
+The class wires three :class:`BECProcessedSignal` instances (`readback`,
+`setpoint`, `motor_is_moving`) to user-defined calculation methods and combines
+child-motor move statuses into one pseudo-motor status.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +15,7 @@ from ophyd import Component as Cpt
 from ophyd import Kind, PositionerBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.utils.bec_processed_signal import BECProcessedSignal, ProcessedSignalModel
+from ophyd_devices.utils.bec_processed_signal import BECProcessedSignal
 from ophyd_devices.utils.psi_device_base_utils import AndStatus, StatusBase
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -18,21 +23,33 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
-    """
-    Base class for PSI pseudo motors.
+    """Abstract base class for pseudo-positioners.
+
+    Subclasses implement coordinate transforms via:
+
+    - ``forward_calculation`` for readback/setpoint projection
+    - ``inverse_calculation`` for pseudo-to-real target mapping
+    - ``motors_are_moving`` for movement aggregation
+
+    Please note that forward_calculation, inverse_calculation and motors_are_moving methods must be implemented with
+    the same signature as the keys for the associated positioner objects stored in the positioner_objects attribute
+    which is either passed to __init__ or set using the set_positioner_objects method. The positioner objects are expected
+    to be ophyd PositionerBase object like devices or at least implement a 'move' method and have attributes
+    'readback' or 'user_readback', 'setpoint' or 'user_setpoint', and 'motor_is_moving'.
 
     Args:
-        name (str): The name of the pseudo motor.
-        device_manager (DeviceManagerDS): The device manager to use for connecting to the positioners.
-        positioners (dict[str, str]): A dictionary mapping positioner names to device names in the device manager.
-                                      Keys of this dictionary must match the arguments of the forward_calculation,
-                                      inverse_calculation and motors_are_moving methods. The values must be the names
-                                      of the devices in the device manager that correspond to the positioners.
+        name (str): The name of the pseudo motor device.
+        device_manager (DeviceManagerDS): The device manager instance to fetch the positioner objects from based on the configuration.
+        positioners (dict[str, PositionerBase] | None): A dictionary of positioner objects that this pseudo motor depends on. The keys should match the input parameters of the forward_calculation, inverse_calculation and motors_are_moving methods. If not provided during initialization, it can be set later using the set_positioner_objects method.
+        egu (str): Engineering units for the pseudo motor.
+        **kwargs: Additional keyword arguments to pass to the parent classes.
     """
 
-    readback = Cpt(BECProcessedSignal, name="readback", model={}, kind=Kind.hinted)
-    setpoint = Cpt(BECProcessedSignal, name="setpoint", model={}, kind=Kind.normal)
-    motor_is_moving = Cpt(BECProcessedSignal, name="motor_is_moving", model={}, kind=Kind.omitted)
+    readback = Cpt(BECProcessedSignal, name="readback", model_config=None, kind=Kind.hinted)
+    setpoint = Cpt(BECProcessedSignal, name="setpoint", model_config=None, kind=Kind.normal)
+    motor_is_moving = Cpt(
+        BECProcessedSignal, name="motor_is_moving", model_config=None, kind=Kind.omitted
+    )
 
     def __init__(
         self,
@@ -46,23 +63,23 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
         self._positioner_move_kwargs: dict[str, dict[str, Any]] = {}
         self._egu = egu
         super().__init__(name=name, device_manager=device_manager, **kwargs)
+        self.readback.name = self.name
 
     @property
     def egu(self) -> str:
-        """Engineering units for the pseudo motor. This can be set during initialization or by setting the egu attribute."""
+        """Engineering units for the pseudo motor."""
         return self._egu
 
     def set_positioner_objects(self, positioners: dict[str, PositionerBase]) -> None:
-        """
-        Method to set the positioner objects after initialization. This can be used if the positioner objects are not available at the time of initialization.
+        """Set the positioner objects for the pseudo motor.
 
         Args:
-            positioners (dict[str, PositionerBase]): A dictionary mapping positioner names to positioner objects.
+            positioners (dict[str, PositionerBase]): A dictionary of positioner objects that this pseudo motor depends on.
         """
         self.positioner_objects = positioners
 
     def wait_for_connection(self, *args, **kwargs) -> None:
-        """Connect to relevant positioners, setup processed signals."""
+        """Validate signatures, wire processed signals, and connect dependencies."""
         if not self.positioner_objects:
             raise ConnectionError(
                 f"No positioners specified for pseudo motor {self.name}. Please use 'set_positioner_objects' or pass positioner objects during initialization."
@@ -70,21 +87,21 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
         # Check if all methods have the required signature that matches the positioner_objects keys
         self._check_method_signatures()
         self._setup_pseudo_signal(
-            "readback", ["readback", "user_readback"], self.forward_calculation, return_type=float
+            "readback", ["readback", "user_readback"], self.forward_calculation
         )
         self._setup_pseudo_signal(
-            "setpoint", ["setpoint", "user_setpoint"], self.forward_calculation, return_type=float
+            "setpoint", ["setpoint", "user_setpoint"], self.forward_calculation
         )
-        self._setup_pseudo_signal(
-            "motor_is_moving", ["motor_is_moving"], self.motors_are_moving, return_type=int
-        )
+        self._setup_pseudo_signal("motor_is_moving", ["motor_is_moving"], self.motors_are_moving)
+        # Prepare move kwargs for each positioner based on their move method signature
+        for name, positioner in self.positioner_objects.items():
+            move_signature = inspect.signature(positioner.move)
+            if "wait" in move_signature.parameters:
+                self._positioner_move_kwargs[name] = {"wait": False}
         return super().wait_for_connection(*args, **kwargs)
 
     def _check_method_signatures(self) -> None:
-        """
-        Method to check that the forward_calculation, inverse_calculation and motors_are_moving methods
-        have the required signature that matches the positioner_objects keys.
-        """
+        """Ensure calculation method parameters match configured positioner keys."""
         input_names = set(self.positioner_objects.keys())
         for method in [self.forward_calculation, self.inverse_calculation, self.motors_are_moving]:
             signature = inspect.signature(method)
@@ -96,22 +113,15 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
                     )
 
     def _setup_pseudo_signal(
-        self,
-        pseudo_attr: str,
-        allowed_attributes: list[str],
-        compute_method: Callable[..., float],
-        return_type: type,
+        self, pseudo_attr: str, allowed_attributes: list[str], compute_method: Callable[..., float]
     ):
-        """
-        Setup a pseudo signal with the given compute method and return type. The compute method will be called with
-        the values of the positioners as arguments. The allowed_attributes are used to determine which signal of the
-        positioner to use as input for the compute method. The first attribute that is found in the positioner will be used.
+        """Configure one pseudo signal from selected positioner attributes.
 
         Args:
-            pseudo_attr (str): The attribute of the pseudo motor to set the model for.
-            allowed_attributes (list[str]): The attributes of the positioner to look for as input for the compute method.
-            compute_method (Callable[..., float]): The method to compute the value of the pseudo signal.
-            return_type (type): The return type of the compute method.
+            pseudo_attr (str): The name of the pseudo attribute to set up.
+            allowed_attributes (list[str]): A list of allowed attributes for the positioner objects.
+            compute_method (Callable[..., float]): Function used to compute the
+                pseudo signal value.
         """
         device_objects = {}
         dotted_names = {}
@@ -130,26 +140,23 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
             dotted_names[name] = f"{device_name}.{obj.name}"
             device_objects[name] = obj
 
-        model = ProcessedSignalModel(
-            devices=dotted_names, compute_method=compute_method, return_type=return_type
+        pseudo_attr_obj.set_compute_method(
+            compute_method, **{name: obj for name, obj in device_objects.items()}
         )
-        pseudo_attr_obj.set_device_object(device_objects)
-        pseudo_attr_obj.set_model(model)
         pseudo_attr_obj.wait_for_connection()
 
     def get_positioner_objects(
         self, name: str, positioners: dict[str, str], device_manager: DeviceManagerDS
     ) -> dict[str, PositionerBase]:
-        """
-        Helper method to get the positioner objects from the device manager based on a positioner dictionary.
+        """Resolve and validate positioner objects from device-manager names.
 
         Args:
-            name (str): The name of the pseudo motor device to look for in the device manager config.
-            positioners (dict[str, str]): A dictionary mapping positioner names to device names in the device manager.
-            device_manager (DeviceManagerDS): The device manager to use for connecting to the positioners.
+            name (str): The name of the pseudo motor device.
+            positioners (dict[str, str]): A dictionary mapping positioner names to device names.
+            device_manager (DeviceManagerDS): The device manager instance to fetch the positioner objects from.
 
         Returns:
-            dict[str, PositionerBase]: A dictionary mapping positioner names to positioner objects.
+            dict[str, PositionerBase]: A dictionary of positioner objects.
         """
         positioner_objs = {}
         # First we check that the device config of this device specifies
@@ -180,16 +187,22 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
                     f"Device '{device_name}' must have at least one argument for each tuple in the following list of tuples: {required_attrs}."
                 )
             positioner_objs[name] = device
-            move_signature = inspect.signature(device.move)
-            if "wait" in move_signature.parameters:
-                self._positioner_move_kwargs[name] = {"wait": False}
         return positioner_objs
 
     def _find_device_config_in_session(
         self, device_name: str, device_manager: DeviceManagerDS
     ) -> dict[str, Any]:
-        """
-        Helper method to find the device config for a given device name in the current session config of the device manager.
+        """Find the session configuration entry for ``device_name``.
+
+        Args:
+            device_name (str): The name of the device to find the configuration for.
+            device_manager (DeviceManagerDS): The device manager instance to fetch the configuration from.
+
+        Returns:
+            dict[str, Any]: The configuration dictionary for the device.
+
+        Raises:
+            ConnectionError: If the device configuration is not found in the current session.
         """
         configs = device_manager.current_session["devices"]
         config = None
@@ -203,30 +216,44 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
 
     @abstractmethod
     def forward_calculation(self, *args) -> float:
-        """Calculate the pseudo motor value based on the positioner values."""
+        """Compute pseudo value from positioner signals.
+
+        Method parameters must include all keys defined in
+        ``self.positioner_objects``.
+        """
 
     @abstractmethod
     def inverse_calculation(self, position: float, **positioner_objects) -> dict[str, float]:
-        """Calculate the positioner values based on the pseudo motor value."""
+        """Map a pseudo target position to child-motor setpoints.
+
+        The first argument is always the desired pseudo position.
+        """
 
     @abstractmethod
     def motors_are_moving(self, *args) -> int:
-        """Calculate whether the motors are moving based on the positioner values. Should be 0 or 1."""
+        """Return a movement flag derived from child-motor motion signals."""
 
     # pylint: disable=arguments-differ
     def move(self, position: float, **kwargs) -> StatusBase:
-        """
-        Move method for the pseudo motor. This currently only supports moving all positioners
-        at once. If children want to implement more complex move logic, they can override this method
-        based on this implementation and the inverse_calculation method.
+        """Move child motors to realize a pseudo target position.
+
+        The method calls :meth:`inverse_calculation` with the current method
+        inputs of the ``readback`` processed signal, then moves each configured
+        child positioner and combines all returned statuses with
+        :class:`AndStatus`.
 
         Args:
-            position (float): The position to move the pseudo motor to.
-            kwargs: The kwargs to pass to the move method of the positioners.
+            position (float): The desired position to move the pseudo motor to.
+            **kwargs: Additional keyword arguments to pass to the move method of the positioner objects.
+        Returns:
+            StatusBase: A combined status object that represents the status of all the move operations on the
+            positioner objects.
         """
         self.check_value(position)
         status = None
-        motor_positions = self.inverse_calculation(position, **self.positioner_objects)
+        motor_positions = self.inverse_calculation(
+            position, **self.readback.compute_model.method_inputs
+        )
         for name, pos in motor_positions.items():
             positioner = self.positioner_objects[name]
             move_kwargs = self._positioner_move_kwargs.get(name, {})

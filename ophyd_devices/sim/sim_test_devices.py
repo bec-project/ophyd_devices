@@ -7,11 +7,13 @@ from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, DeviceStatus, Kind, OphydObject, PositionerBase, Staged
+from ophyd import Device, DeviceStatus, Kind, OphydObject, PositionerBase, Signal, Staged
 
+from ophyd_devices.interfaces.base_classes.psi_pseudo_motor_base import PSIPseudoMotorBase
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.sim.sim_signals import SetableSignal
+from ophyd_devices.utils.bec_processed_signal import BECProcessedSignal, ProcessedSignalModel
 from ophyd_devices.utils.bec_signals import (
     AsyncSignal,
     DynamicSignal,
@@ -422,6 +424,97 @@ class SimCameraWithPSIComponents(SimCamera):
 
         status = self.task_handler.submit_task(complete_cam)
         return status
+
+
+class VirtualSlitCenter(PSIPseudoMotorBase):
+    """
+    Alternative implementation of a Virtual Slit Center based on two sub-positioners.
+    The positioners are sub-devices called left_edge and right_edge, and are used
+    to calculate the center position of the slit.
+
+    Args:
+        name (str): The name of the pseudo motor device.
+        device_manager (DeviceManagerBase): The device manager instance to fetch the positioner devices from
+    """
+
+    left_edge = Cpt(SimPositioner, name="left_edge", kind=Kind.normal)
+    right_edge = Cpt(SimPositioner, name="right_edge", kind=Kind.normal)
+
+    def __init__(self, name, device_manager, **kwargs):
+        super().__init__(name, device_manager, **kwargs)
+        positioners = {"left_edge": self.left_edge, "right_edge": self.right_edge}
+        self.set_positioner_objects(positioners)
+
+    def forward_calculation(self, left_edge: Signal, right_edge: Signal) -> float:
+        """
+        Forward calculation to compute the center position of the slit based on the positions of the left and right edges.
+
+        Args:
+            left_edge (Signal): The signal representing the position of the left edge positioner.
+            right_edge (Signal): The signal representing the position of the right edge positioner.
+        """
+        return float((left_edge.get() + right_edge.get()) / 2)
+
+    def inverse_calculation(
+        self, position, left_edge: Signal, right_edge: Signal
+    ) -> dict[str, float]:
+        """
+        Inverse calculation to compute the setpoints for the left and right edge positioners based on the desired center position.
+
+        Args:
+            position (float): The desired center position of the slit.
+            left_edge (Signal): The signal representing the position of the left edge positioner.
+            right_edge (Signal): The signal representing the position of the right edge positioner.
+        Returns:
+            dict[str, float]: A dictionary containing the setpoints for the left and right edge positioners.
+        """
+        left_pos = left_edge.root.readback.get()
+        right_pos = right_edge.root.readback.get()
+        width = right_pos - left_pos
+        new_right_pos = position + width / 2
+        new_left_pos = position - width / 2
+        return {"left_edge": new_left_pos, "right_edge": new_right_pos}
+
+    def motors_are_moving(self, left_edge: Signal, right_edge: Signal) -> int:
+        """
+        Check if either the left or right edge positioners are currently moving.
+
+        Args:
+            left_edge (Signal): The signal representing the position of the left edge positioner.
+            right_edge (Signal): The signal representing the position of the right edge positioner.
+        Returns:
+            int: 1 if either motor is moving, 0 otherwise.
+        """
+        left_moving = left_edge.get()
+        right_moving = right_edge.get()
+        return int(left_moving or right_moving)
+
+
+class BECPseudoSignal(BECProcessedSignal):
+    """
+    Example of a pseudo signal implementation based on two signals available in the device manager.
+    The value of the signal is calculated based on the compute method.
+
+    Args:
+        name (str): The name of the pseudo signal.
+        signal_1 (str): The name of the first signal in the device manager.
+        signal_2 (str): The name of the second signal in the device manager.
+        device_manager (DeviceManagerBase): The device manager instance to fetch the signals from.
+    """
+
+    def __init__(self, name, signal_1: str, signal_2: str, device_manager=None, **kwargs):
+        super().__init__(name, model_config=None, device_manager=device_manager, **kwargs)
+        signal_1 = self.get_device_object_from_bec(
+            object_name=signal_1, signal_name=self.name, device_manager=device_manager
+        )
+        signal_2 = self.get_device_object_from_bec(
+            object_name=signal_2, signal_name=self.name, device_manager=device_manager
+        )
+        self.set_compute_method(self.compute, signal_1=signal_1, signal_2=signal_2)
+
+    def compute(self, signal_1: Signal, signal_2: Signal) -> float:
+        """Compute the value of the pseudo signal based on the values of signal_1 and signal_2."""
+        return float(signal_1.get() + signal_2.get())
 
 
 if __name__ == "__main__":

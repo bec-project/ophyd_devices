@@ -155,6 +155,13 @@ class SimPositioner(Device, PositionerBase):
             value=self.sim.sim_state[self.readback.name]["value"],
             timestamp=self.sim.sim_state[self.readback.name]["timestamp"],
         )
+        # Run subscription on "value"
+        self.readback._run_subs(
+            sub_type=self.readback.SUB_VALUE,
+            old_value=old_readback,
+            value=self.sim.sim_state[self.readback.name]["value"],
+            timestamp=self.sim.sim_state[self.readback.name]["timestamp"],
+        )
 
     def _move_to_setpoint(self) -> None:
         """Move the simulated device to the setpoint."""
