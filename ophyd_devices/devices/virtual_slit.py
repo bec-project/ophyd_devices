@@ -1,8 +1,18 @@
-"""Module for virtual slit center implementation."""
+"""Pseudo-motor implementations for slit center and slit width.
+
+Both devices map one pseudo axis onto two real motors (left and right slit
+edges). They can be instantiated from names resolved through the BEC device
+manager and support an optional offset term in their coordinate transforms.
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
+from bec_lib.logger import bec_logger
+from ophyd import Component as Cpt
+from ophyd import Kind
+from ophyd.signal import SignalRO
 
 from ophyd_devices.interfaces.base_classes.psi_pseudo_motor_base import PSIPseudoMotorBase
 
@@ -11,18 +21,36 @@ if TYPE_CHECKING:  # pragma: no cover
     from ophyd import PositionerBase, Signal
 
 
+logger = bec_logger.logger
+
+
 class VirtualSlitCenter(PSIPseudoMotorBase):
-    """
-    Virtual slit center implementation. It expects the left and right slit positioner names to be passed
-    as arguments. The named devices must be positioners and available in the device_manager. In addition,
-    it must have a readback (user_readback), setpoint (user_setpoint) and motor_is_moving signal.
+    """Pseudo motor controlling slit center from two edge motors.
+
+    Both positioners must be present in the device manager, and the pseudo
+    motor entry in the current session config must declare them in ``needs``.
+
+    The forward calculation computes the center position based on the positions of the left and right positioners,
+    while the inverse calculation computes the setpoints for the left and right positioners based on a desired center
+    position. The motors_are_moving method checks if either of the positioners is currently moving.
 
     Args:
-        name (str): The name of the virtual slit center.
-        left_slit (str): The name of the left slit positioner in the device manager.
-        right_slit (str): The name of the right slit positioner in the device manager.
-        device_manager (DeviceManagerBase): The device manager to use for connecting to the positioners.
+        name (str): The name of the pseudo motor device.
+        left_slit (str): The name of the left slit positioner device in the device manager.
+        right_slit (str): The name of the right slit positioner device in the device manager.
+        device_manager (DeviceManagerBase): The device manager instance to fetch the positioner devices from.
+        offset (float, optional): Constant center offset added in forward
+            calculation and removed in inverse calculation.
+        egu (str | None, optional): Engineering units. If omitted, units are
+            taken from the left positioner.
     """
+
+    offset = Cpt(
+        SignalRO,
+        name="offset",
+        kind=Kind.config,
+        doc="Offset applied to the position of the slit center when calculating the width.",
+    )
 
     def __init__(
         self,
@@ -31,6 +59,7 @@ class VirtualSlitCenter(PSIPseudoMotorBase):
         right_slit: str,
         device_manager: DeviceManagerBase,
         offset: float = 0,
+        egu: str | None = None,
         **kwargs,
     ):
         positioners = self.get_positioner_objects(
@@ -38,32 +67,44 @@ class VirtualSlitCenter(PSIPseudoMotorBase):
             positioners={"left": left_slit, "right": right_slit},
             device_manager=device_manager,
         )
+        if egu is None:  # if not specified, fetch it from the left positioner
+            egu = positioners["left"].egu
+            if positioners["right"].egu != egu:
+                logger.warning(
+                    f"Device {name} found inconsistency for egu for positioner left {left_slit} and right {right_slit}. Using egu {egu}."
+                )
         self._offset = offset
         super().__init__(
-            name=name, device_manager=device_manager, positioners=positioners, **kwargs
+            name=name, device_manager=device_manager, positioners=positioners, egu=egu, **kwargs
         )
 
+    def wait_for_connection(self, *args, **kwargs):
+        """Connect and initialize the read-only ``offset`` configuration signal."""
+        super().wait_for_connection(*args, **kwargs)
+        # Set the initial value of the offset signal
+        # Config values are read by back after wait_for_connection is called.
+        self.offset._readback = self._offset
+
     def _get_pos_motor(self, motor: PositionerBase) -> float:
-        """
-        Helper method to get the position of a motor.
+        """Return the current position read from ``motor``.
 
         Args:
-            motor (PositionerBase): The motor to get the position of.
+            motor (PositionerBase): The positioner motor to read the position from.
+        Returns:
+            float: Current motor position.
         """
         return motor.read()[motor.name]["value"]
 
     # pylint: disable=arguments-differ
     def forward_calculation(self, left: Signal, right: Signal) -> float:
-        """
-        Forward calculation to compute the value for the pseudo motor readback
-        and setpoint based on the position of the left and right slit.
+        """Compute slit center from left and right positions.
 
         Args:
-            left (Signal): The left slit positioner signal.
-            right (Signal): The right slit positioner signal.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
 
         Returns:
-            float: The center position of the slit.
+            float: Center position ``(left + right) / 2 + offset``.
         """
         left_pos = left.get()
         right_pos = right.get()
@@ -71,33 +112,33 @@ class VirtualSlitCenter(PSIPseudoMotorBase):
         return float(center)
 
     def inverse_calculation(self, position: float, left: Signal, right: Signal) -> dict[str, float]:
-        """
-        Inverse calculation to compute the position of the left and right slit based on the center position.
+        """Compute left/right setpoints for a target center.
+
+        The current slit width is preserved.
 
         Args:
-            center (float): The center position of the slit.
-            left (Signal): The left slit positioner signal.
-            right (Signal): The right slit positioner signal.
-
+            position (float): The desired center position of the slit.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
         Returns:
-            dict[str, float]: The positions of the left and right slit.
+            A dictionary with the new setpoints for the left and right positioners, with keys "left" and "right".
         """
         position_with_offset = position - self._offset
         # To access position, run read on the root (PositionerBase) of the signal
-        left_pos = self._get_pos_motor(left.root)
-        right_pos = self._get_pos_motor(right.root)
+        left_pos = left.get()
+        right_pos = right.get()
         width = right_pos - left_pos
         new_left_pos = position_with_offset - width / 2
         new_right_pos = position_with_offset + width / 2
         return {"left": new_left_pos, "right": new_right_pos}
 
     def motors_are_moving(self, left: Signal, right: Signal) -> int:
-        """
-        Calculate whether the motors are moving based on the motor_is_moving signal of the left and right slit.
+        """Return 1 when either left or right motor is moving, else 0.
 
         Args:
-            left (Signal): The left slit positioner signal.
-            right (Signal): The right slit positioner signal.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
+
         Returns:
             int: 1 if either motor is moving, 0 otherwise.
         """
@@ -107,6 +148,28 @@ class VirtualSlitCenter(PSIPseudoMotorBase):
 
 
 class VirtualSlitWidth(PSIPseudoMotorBase):
+    """Pseudo motor controlling slit width from two edge motors.
+
+    Both positioners must be present in the device manager, and the pseudo
+    motor entry in the current session config must declare them in ``needs``.
+
+    Args:
+        name (str): The name of the pseudo motor device.
+        left_slit (str): The name of the left slit positioner device in the device manager.
+        right_slit (str): The name of the right slit positioner device in the device manager.
+        device_manager (DeviceManagerBase): The device manager instance to fetch the positioner devices from.
+        offset (float, optional): Constant width offset added in forward
+            calculation and removed in inverse calculation.
+        egu (str | None, optional): Engineering units. If omitted, units are
+            taken from the left positioner.
+    """
+
+    offset = Cpt(
+        SignalRO,
+        name="offset",
+        kind=Kind.config,
+        doc="Offset applied to the position of the slit center when calculating the width.",
+    )
 
     def __init__(
         self,
@@ -114,6 +177,8 @@ class VirtualSlitWidth(PSIPseudoMotorBase):
         left_slit: str,
         right_slit: str,
         device_manager: DeviceManagerBase,
+        offset: float = 0,
+        egu: str | None = None,
         **kwargs,
     ):
         positioners = self.get_positioner_objects(
@@ -121,62 +186,66 @@ class VirtualSlitWidth(PSIPseudoMotorBase):
             positioners={"left": left_slit, "right": right_slit},
             device_manager=device_manager,
         )
+        if egu is None:  # if not specified, fetch it from the left positioner
+            egu = positioners["left"].egu
+            if positioners["right"].egu != egu:
+                logger.warning(
+                    f"Device {name} found inconsistency for egu for positioner left {left_slit} and right {right_slit}. Using egu {egu}."
+                )
+        self._offset = offset
         super().__init__(
-            name=name, device_manager=device_manager, positioners=positioners, **kwargs
+            name=name, device_manager=device_manager, positioners=positioners, egu=egu, **kwargs
         )
 
-    def _get_pos_motor(self, motor: PositionerBase) -> float:
-        """
-        Helper method to get the position of a motor.
-
-        Args:
-            motor (PositionerBase): The motor to get the position of.
-        """
-        return motor.read()[motor.name]["value"]
+    def wait_for_connection(self, *args, **kwargs):
+        """Connect and initialize the read-only ``offset`` configuration signal."""
+        super().wait_for_connection(*args, **kwargs)
+        # Set the initial value of the offset signal
+        # Config values are read by back after wait_for_connection is called.
+        self.offset._readback = self._offset
 
     # pylint: disable=arguments-differ
     def forward_calculation(self, left: Signal, right: Signal) -> float:
-        """
-        Forward calculation to compute the value for the pseudo motor readback
-        and setpoint based on the position of the left and right slit.
+        """Compute slit width from left and right positions.
 
         Args:
-            left (Signal): The left slit positioner signal.
-            right (Signal): The right slit positioner signal.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
 
         Returns:
-            float: The center position of the slit.
+            float: Width ``right - left + offset``.
         """
         left_pos = left.get()
         right_pos = right.get()
-        width = right_pos - left_pos
+        width = right_pos - left_pos + self._offset
         return float(width)
 
     def inverse_calculation(self, position: float, left: Signal, right: Signal) -> dict[str, float]:
-        """
-        Inverse calculation to compute the position of the left and right slit based on the center position.
+        """Compute left/right setpoints for a target width.
+
+        The current slit center is preserved.
 
         Args:
-            position (float): The center position of the slit.
-
+            position (float): The desired width of the slit.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
         Returns:
-            dict[str, float]: The positions of the left and right slit.
+            A dictionary with the new setpoints for the left and right positioners, with keys "left" and "right".
         """
-        left_pos = self._get_pos_motor(left.root)
-        right_pos = self._get_pos_motor(right.root)
+        left_pos = left.get()
+        right_pos = right.get()
         center = (left_pos + right_pos) / 2
-        width = right_pos - left_pos
+        width = position - self._offset
         new_right_pos = center + width / 2
         new_left_pos = center - width / 2
         return {"left": new_left_pos, "right": new_right_pos}
 
     def motors_are_moving(self, left: Signal, right: Signal) -> int:
-        """
-        Calculate whether the motors are moving based on the motor_is_moving signal of the left and right slit.
+        """Return 1 when either left or right motor is moving, else 0.
 
         Args:
-            left (Signal): The left slit positioner signal.
-            right (Signal): The right slit positioner signal.
+            left (Signal): The signal representing the position of the left slit positioner.
+            right (Signal): The signal representing the position of the right slit positioner.
         Returns:
             int: 1 if either motor is moving, 0 otherwise.
         """
@@ -186,10 +255,14 @@ class VirtualSlitWidth(PSIPseudoMotorBase):
 
 
 if __name__ == "__main__":  # pragma: no cover
+    # pylint: disable=import-outside-toplevel, unused-import, missing-docstring, ungrouped-imports, arguments-differ, protected-access
     from ophyd import Component as Cpt
 
     from ophyd_devices.sim.sim_positioner import SimPositioner
 
+    ###########
+    ## Alternative approach for virtual slit center
+    ###########
     class TestPseudoMotor(PSIPseudoMotorBase):
 
         motor_a = Cpt(SimPositioner, name="motor_a")
