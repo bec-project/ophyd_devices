@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.34.3 (2026-03-18)
+
+### Bug Fixes
+
+- **pyproject**: Update black dependency
+  ([`b0db46d`](https://github.com/bec-project/ophyd_devices/commit/b0db46dd97fe2c4f6da5e63169b7cb19a8c9a228))
+
+### Refactoring
+
+- Apply black 2026.1 formatting to ophyd_devices
+  ([`3a71629`](https://github.com/bec-project/ophyd_devices/commit/3a716299b5db70053bea55965153dccdf2d68b68))
+
+
 ## v1.34.2 (2026-03-12)
 
 ### Bug Fixes
