@@ -746,7 +746,7 @@ class PandaBox(PSIDeviceBase):
         """
         Convert the data from a FrameData object into a dictionary with expected OPHYD
         read format, e.g. signal {signal_name: {"value": [...]}}. Please be aware that if
-        this method is overriden by child classes, you need to make sure that the key names
+        this method is overridden by child classes, you need to make sure that the key names
         in the FrameData is converted to the expected names in the data signal. This includes
         replacing dots in the original PandaBox keys with underscores using "block_name_mapping"
         from the utils, and using the key mapping provided through the signal_alias mapping.

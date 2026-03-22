@@ -54,8 +54,7 @@ class DeviceProxy(BECDeviceBase, ABC):
     def _compute(self, device_name: str, *args, **kwargs) -> any:
         """
         The purpose of this method is to compute the readback value for the signal of the device
-        that this proxy is attached to. This method is meant to be overriden by the user.
-        P
+        that this proxy is attached to. This method is meant to be overridden by the user.
 
         Args:
             device_name (str): Name of the device.

@@ -11,8 +11,8 @@ from ophyd_devices.utils.bec_utils import ConfigSignal
 logger = bec_logger.logger
 
 
-class OphtyRotationBaseError(Exception):
-    """Exception specific for implmenetation of rotation stages."""
+class OphydRotationBaseError(Exception):
+    """Exception specific for implementation of rotation stages."""
 
 
 class OphydRotationBase(BECRotationProtocol, ABC):
@@ -98,7 +98,7 @@ class EpicsRotationBase(OphydRotationBase, EpicsMotor):
                 self.set_current_position(new_val)
             except Exception as exc:
                 error_msg = f"Failed to set new position {new_val} from {cur_val} on device {self.name} with error {exc}"
-                raise OphtyRotationBaseError(error_msg) from exc
+                raise OphydRotationBaseError(error_msg) from exc
             return
         logger.info(
             f"Did not apply mod360 for device {self.name} with has_mod={self.has_mod360} and allow_mod={self.allow_mod360.get()}"

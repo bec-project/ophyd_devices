@@ -6,7 +6,7 @@
 
 # This module contains:
 # - Classes like `StatsPlugin_V{X}{Y}` that are design to be counterparts to
-#   AreaDetector verion X.Y.
+#   AreaDetector version X.Y.
 #
 # isort: skip_file
 

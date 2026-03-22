@@ -58,7 +58,7 @@ class SimWaveform(Device):
 
     Parameters
     ----------
-    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.
+    name (string)           : Name of the device. This is the only required argument, passed on to all signals of the device.
     precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
     sim_init (dict)         : Dictionary to initiate parameters of the simulation, check simulation type defaults for more details.
     parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.

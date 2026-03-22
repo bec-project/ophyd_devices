@@ -87,7 +87,7 @@ class SocketSignal(abc.ABC, Signal):
     for reading from and writing to a socket, as well as handling callbacks and subscriptions in a way
     that prevents recursive calls. Children should implement the `_socket_get` and `_socket_set` methods
     to define the specific logic for interacting with the socket. `get` and `put` methods should not be
-    overriden by children to ensure proper callback handling.
+    overridden by children to ensure proper callback handling.
 
     Args:
         name (str): The name of the signal.

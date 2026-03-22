@@ -13,7 +13,7 @@ from ophyd_devices.sim.sim_frameworks.device_proxy import DeviceProxy
 class H5ImageReplayProxy(DeviceProxy):
     """This Proxy class can be used to replay images from an h5 file.
 
-    If the number of requested images is larger than the number of available iamges,
+    If the number of requested images is larger than the number of available images,
     the images will be replayed from the beginning.
 
     An example for the configuration of this is device is in ophyd_devices.configs.ophyd_devices_simulation.yaml

@@ -21,16 +21,16 @@ logger = bec_logger.logger
 
 class SimPositioner(Device, PositionerBase):
     """
-    A simulated device mimicing any 1D Axis device (position, temperature, rotation).
+    A simulated device mimicking any 1D Axis device (position, temperature, rotation).
 
     >>> motor = SimPositioner(name="motor")
 
     Parameters
     ----------
-    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.\
+    name (string)           : Name of the device. This is the only required argument, passed on to all signals of the device.\
     Optional parameters:
     ----------
-    delay (int)             : If 0, execution of move will be instant. If 1, exectution will depend on motor velocity. Default is 1.
+    delay (int)             : If 0, execution of move will be instant. If 1, execution will depend on motor velocity. Default is 1.
     update_frequency (int)  : Frequency in Hz of the update of the simulated state during a move. Default is 2 Hz.
     precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
     limits (tuple)          : Tuple of the low and high limits of the positioner. Overrides low/high_limit_travel is specified. Default is None.
