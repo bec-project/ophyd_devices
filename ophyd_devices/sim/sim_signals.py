@@ -22,7 +22,7 @@ class SetableSignal(Signal):
     The signal will store the value in sim_state of the SimulatedData class of the parent device.
     It will also return the value from sim_state when get is called. Compared to the ReadOnlySignal,
     this signal can be written to.
-    The setable signal inherits from the Signal class of ophyd, thus the class attribute needs to be
+    The settable signal inherits from the Signal class of ophyd, thus the class attribute needs to be
     initiated as a Component (class from ophyd).
 
     >>> signal = SetableSignal(name="signal", parent=parent, value=0)

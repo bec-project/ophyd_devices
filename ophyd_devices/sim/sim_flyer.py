@@ -17,7 +17,7 @@ logger = bec_logger.logger
 
 
 class SimFlyer(Device, FlyerInterface):
-    """A simulated device mimicing any 2D Flyer device (position, temperature, rotation).
+    """A simulated device mimicking any 2D Flyer device (position, temperature, rotation).
 
     The corresponding simulation class is sim_cls=SimulatedPositioner, more details on defaults within the simulation class.
 
@@ -25,7 +25,7 @@ class SimFlyer(Device, FlyerInterface):
 
     Parameters
     ----------
-    name (string)           : Name of the device. This is the only required argmuent, passed on to all signals of the device.
+    name (string)           : Name of the device. This is the only required argument, passed on to all signals of the device.
     precision (integer)     : Precision of the readback in digits, written to .describe(). Default is 3 digits.
     parent                  : Parent device, optional, is used internally if this signal/device is part of a larger device.
     kind                    : A member the Kind IntEnum (or equivalent integer), optional. Default is Kind.normal. See Kind for options.

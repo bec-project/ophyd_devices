@@ -1,5 +1,5 @@
 # PandaBox Integration
-Short Doumentation of the PandaBox Device Integration in Ophyd Devices
+Short Documentation of the PandaBox Device Integration in Ophyd Devices
 
 ## Overview
 

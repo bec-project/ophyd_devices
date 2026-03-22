@@ -7,7 +7,7 @@ from ophyd_devices.sim.sim_frameworks.device_proxy import DeviceProxy
 
 class SlitProxy(DeviceProxy):
     """
-    Simulation framework to immitate the behaviour of slits.
+    Simulation framework to imitate the behaviour of slits.
 
     This device is a proxy that is meant to override the behaviour of a SimCamera.
     You may use this to simulate the effect of slits on the camera image.

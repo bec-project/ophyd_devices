@@ -92,7 +92,7 @@ class SimulatedDataBase(ABC):
 
     - execute_simulation_method:    execute a method from the simulated data class or reroute execution to device proxy class
     - select_model:             select the active simulation model
-    - params:                   get the parameters for the active simulation mdoel
+    - params:                   get the parameters for the active simulation model
     - sim_models:                   get the available simulation models
     - update_sim_state:             update the simulated state of the device
     """

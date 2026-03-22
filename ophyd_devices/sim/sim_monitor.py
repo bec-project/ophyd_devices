@@ -27,7 +27,7 @@ class SimMonitor(ReadOnlySignal):
 
     Parameters
     ----------
-    name (string)           : Name of the device. This is the only required argmuent,
+    name (string)           : Name of the device. This is the only required argument,
                               passed on to all signals of the device.
     precision (integer)     : Precision of the readback in digits, written to .describe().
                               Default is 3 digits.

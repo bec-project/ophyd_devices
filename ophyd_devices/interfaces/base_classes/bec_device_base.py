@@ -384,7 +384,7 @@ class BECDeviceBase(Device):
         """
         Hook for beamline specific logic during class initialization.
 
-        Please to not set any of the class's signals during intialisation, but
+        Please do not set any of the class's signals during initialisation, but
         instead use the wait_for_connection.
         """
         self.custom_prepare.on_init()
@@ -411,7 +411,7 @@ class BECDeviceBase(Device):
 
         Stage is idempotent, if staged twice it should raise (we let ophyd.Device handle the raise here).
         Other that that, we reset the stopped property in case the device was stopped before, and
-        pull the latest scan metadata from BEC. Ater that, we allow for beamline specific logic to
+        pull the latest scan metadata from BEC. After that, we allow for beamline specific logic to
         be implemented through the custom_prepare.on_stage method.
 
         Returns:
@@ -456,7 +456,7 @@ class BECDeviceBase(Device):
         softwareTrigger needs to be set to True, which will indicate to BEC that the device
         should be triggered from the software during the scan.
 
-        Custom logic should be implemented non-blocking, i.e. be fast, or implemented asynchroniously.
+        Custom logic should be implemented non-blocking, i.e. be fast, or implemented asynchronously.
 
         Returns:
             DeviceStatus: DeviceStatus object that BEC will use to check if the trigger was successful.

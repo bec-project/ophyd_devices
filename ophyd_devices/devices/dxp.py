@@ -98,7 +98,7 @@ ROI_RANGE = range(0, 8)
 
 
 class EpicsMCARecord(_EpicsMCARecord):
-    """EpicsMCARecord with addtional fields"""
+    """EpicsMCARecord with additional fields"""
 
     # Calibration values
     calo = Cpt(EpicsSignal, ".CALO", kind=Kind.config)
@@ -130,7 +130,7 @@ class EpicsDXPFalcon(Device):
     preset_triggers = Cpt(EpicsSignalWithRBV, "PresetTriggers")
     preset_real_time = Cpt(EpicsSignalWithRBV, "PresetReal")
 
-    # Couting statistics
+    # Counting statistics
     elapsed_live_time = Cpt(EpicsSignalRO, "ElapsedLiveTime", lazy=True)
     elapsed_real_time = Cpt(EpicsSignalRO, "ElapsedRealTime", lazy=True)
     elapsed_trigger_live = Cpt(EpicsSignalRO, "ElapsedTriggerLiveTime", lazy=True)

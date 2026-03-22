@@ -1,7 +1,7 @@
 """This module provides a range of protocols that describe the expected
 interface for different types of devices.
 
-The protocols below can be used as teamplates for functionality to be implemeted
+The protocols below can be used as templates for functionality to be implemented
 by different type of devices. They further facilitate runtime checks on devices
 and provide a minimum set of properties required for a device to be loadable by BEC.
 
@@ -100,7 +100,7 @@ class BECBaseProtocol(Protocol):
         """
 
     def clear_sub(self, cb: callable, event_type: str = None):
-        """Clear subscription, given the origianl callback fucntion
+        """Clear subscription, given the original callback function
 
         Args:
             cb (callable)   : Callback
@@ -263,7 +263,7 @@ class BECDeviceProtocol(BECBaseProtocol, Protocol):
     """Staged property to indicate if the device is staged."""
 
     def stage(self) -> list[object]:
-        """Stage method to prepare the device for an upcoming acquistion.
+        """Stage method to prepare the device for an upcoming acquisition.
 
         This prepares a device for an upcoming acquisition, i.e. it is the first
         method for which the scan parameters are known and the device can be configured.
@@ -286,7 +286,7 @@ class BECDeviceProtocol(BECBaseProtocol, Protocol):
         """Unstage method to cleanup after the acquisition.
 
         It can also be used to implement checks whether the acquisition was successful,
-        inform BEC that the file has been succesfully written, or raise upon receiving
+        inform BEC that the file has been successfully written, or raise upon receiving
         feedback that the scan did not finish successful.
 
         Unstaging is not idempotent. If called twice it should simply resolve.
