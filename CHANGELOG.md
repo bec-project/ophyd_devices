@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.34.4 (2026-03-23)
+
+### Bug Fixes
+
+- Typos
+  ([`1452748`](https://github.com/bec-project/ophyd_devices/commit/1452748c89737aaf818647f44c16cb58cfd9b4a3))
+
+
 ## v1.34.3 (2026-03-18)
 
 ### Bug Fixes
