@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.35.0 (2026-03-25)
+
+### Bug Fixes
+
+- Add more camera classes to export list
+  ([`9a9f563`](https://github.com/bec-project/ophyd_devices/commit/9a9f563db71cc0c528f37469c4e36ced8e4a1d22))
+
+- Add PeakAnalyserCam to export list
+  ([`8b80209`](https://github.com/bec-project/ophyd_devices/commit/8b802098d770e5833596c3a93f7242d33fd2235c))
+
+### Features
+
+- Add peakAnalyser driver class
+  ([`8e64d78`](https://github.com/bec-project/ophyd_devices/commit/8e64d78daaa6d06be68ee8ed224d7e24b6610e16))
+
+
 ## v1.34.4 (2026-03-23)
 
 ### Bug Fixes
