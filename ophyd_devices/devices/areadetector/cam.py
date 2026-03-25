@@ -25,6 +25,8 @@ __all__ = [
     "AravisDetectorCam",
     "PylonDetectorCam",
     "VimbaDetectorCam",
+    "SLSDetectorCam",
+    "ASItpxCam",
 ]
 
 
