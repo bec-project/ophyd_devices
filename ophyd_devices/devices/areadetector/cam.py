@@ -27,6 +27,7 @@ __all__ = [
     "VimbaDetectorCam",
     "SLSDetectorCam",
     "ASItpxCam",
+    "PeakAnalyserCam",
 ]
 
 
@@ -311,6 +312,7 @@ class ASItpxCam(CamBase):
     data_source = ADCpt(EpicsSignalWithRBV, "DataSource")
     preview_period = ADCpt(EpicsSignalWithRBV, "PreviewPeriod")
 
+
 class PeakAnalyserCam(CamBase):
     """
     Scienta PEAK software driver, https://github.com/paulscherrerinstitute/peakAnalyser
@@ -322,6 +324,7 @@ class PeakAnalyserCam(CamBase):
         class MyDetector(ADBase):
             cam = Cpt(PeakAnalyserCam, 'cam1:')
     """
+
     # Analyser settings
     acquisition_mode = ADCpt(EpicsSignalWithRBV, "ACQ_MODE")
     energy_mode = ADCpt(EpicsSignalWithRBV, "ENERGY_MODE")
