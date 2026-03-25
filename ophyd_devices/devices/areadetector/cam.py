@@ -310,3 +310,53 @@ class ASItpxCam(CamBase):
 
     data_source = ADCpt(EpicsSignalWithRBV, "DataSource")
     preview_period = ADCpt(EpicsSignalWithRBV, "PreviewPeriod")
+
+class PeakAnalyserCam(CamBase):
+    """
+    Scienta PEAK software driver, https://github.com/paulscherrerinstitute/peakAnalyser
+
+    ::
+
+        from ophyd import Component as Cpt
+
+        class MyDetector(ADBase):
+            cam = Cpt(PeakAnalyserCam, 'cam1:')
+    """
+    # Analyser settings
+    acquisition_mode = ADCpt(EpicsSignalWithRBV, "ACQ_MODE")
+    energy_mode = ADCpt(EpicsSignalWithRBV, "ENERGY_MODE")
+    work_function = ADCpt(EpicsSignalWithRBV, "WORK_FUNCTION")
+    excitation_energy = ADCpt(EpicsSignalWithRBV, "EXCITATION_ENERGY")
+    element_set = ADCpt(EpicsSignalRO, "ELEMENT_SET_RBV")
+    lens_mode = ADCpt(EpicsSignalWithRBV, "LENS_MODE")
+    detector_mode = ADCpt(EpicsSignalWithRBV, "DETECTOR_MODE")
+    pass_energy = ADCpt(EpicsSignalWithRBV, "PASS_ENERGY")
+    entrance_slit = ADCpt(EpicsSignalWithRBV, "SLIT")
+
+    # Detector settings
+    num_channels = ADCpt(EpicsSignalWithRBV, "CHANNELS")
+    num_slices = ADCpt(EpicsSignalWithRBV, "SLICES")
+
+    # Spectrum definition
+    low_energy = ADCpt(EpicsSignalWithRBV, "LOW_ENERGY")
+    high_energy = ADCpt(EpicsSignalWithRBV, "HIGH_ENERGY")
+    center_energy = ADCpt(EpicsSignalWithRBV, "CENTRE_ENERGY")
+    step_energy = ADCpt(EpicsSignalWithRBV, "STEP_SIZE")
+
+    low_slice = ADCpt(EpicsSignalRO, "LOW_SLICE_RBV")
+    high_slice = ADCpt(EpicsSignalRO, "HIGH_SLICE_RBV")
+    center_slice = ADCpt(EpicsSignalWithRBV, "CENTRE_SLICE")
+    step_slice = ADCpt(EpicsSignalRO, "SLICE_STEP_SIZE_RBV")
+
+    low_theta_y = ADCpt(EpicsSignalWithRBV, "LOW_THETA_Y")
+    high_theta_y = ADCpt(EpicsSignalWithRBV, "HIGH_THETA_Y")
+    center_theta_y = ADCpt(EpicsSignalWithRBV, "CENTRE_THETA_Y")
+    step_theta_y = ADCpt(EpicsSignalWithRBV, "THETA_Y_STEP_SIZE")
+
+    # Live spectrum
+    spectrum = ADCpt(EpicsSignalRO, "SPECTRUM")
+    energy_scale = ADCpt(EpicsSignalRO, "ENERGY_SCALE_RBV")
+    slice_scale = ADCpt(EpicsSignalRO, "SLICE_SCALE_RBV")
+
+    # Electronics control
+    zero_supplies = ADCpt(EpicsSignal, "ZERO_SUPPLIES")
