@@ -51,24 +51,32 @@ class EpicsSignalWithRBVDeviceConfigTemplate(BaseModel):
 
 
 # Dictionary mapping device groups to supported device class templates/variants.
-OPHYD_DEVICE_TEMPLATES: dict[str, dict[str, dict[str, type]]] = {
+OPHYD_DEVICE_TEMPLATES: dict[str, dict[str, dict[str, type | str]]] = {
     "EpicsMotor": {
         "EpicsMotor": {
-            "deviceClass": "ophyd.EpicsMotor",  # "ophyd_devices.devices.EpicsMotor",
+            "deviceClass": "ophyd_devices.EpicsMotor",  # "ophyd_devices.devices.EpicsMotor",
             "deviceConfig": EpicsMotorDeviceConfigTemplate,
-        }
+        },
+        "EpicsMotorEC": {
+            "deviceClass": "ophyd_devices.EpicsMotorEC",  # "ophyd_devices.devices.EpicsMotorEC",
+            "deviceConfig": EpicsMotorDeviceConfigTemplate,
+        },
+        "EpicsUserMotorVME": {
+            "deviceClass": "ophyd_devices.EpicsUserMotorVME",  # "ophyd_devices.devices.EpicsUserMotorVME",
+            "deviceConfig": EpicsMotorDeviceConfigTemplate,
+        },
     },
     "EpicsSignal": {
         "EpicsSignal": {
-            "deviceClass": "ophyd.EpicsSignal",
+            "deviceClass": "ophyd_devices.EpicsSignal",
             "deviceConfig": EpicsSignalDeviceConfigTemplate,
         },
         "EpicsSignalRO": {
-            "deviceClass": "ophyd.EpicsSignalRO",
+            "deviceClass": "ophyd_devices.EpicsSignalRO",
             "deviceConfig": EpicsSignalRODeviceConfigTemplate,
         },
         "EpicsSignalWithRBV": {
-            "deviceClass": "ophyd.EpicsSignalWithRBV",
+            "deviceClass": "ophyd_devices.EpicsSignalWithRBV",
             "deviceConfig": EpicsSignalWithRBVDeviceConfigTemplate,
         },
     },

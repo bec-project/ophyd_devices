@@ -19,24 +19,24 @@ def test_interfaces_OPHYD_DEVICE_TEMPLATES():
     # Component level checks
     assert "EpicsMotor" in OPHYD_DEVICE_TEMPLATES["EpicsMotor"]
     template_info = OPHYD_DEVICE_TEMPLATES["EpicsMotor"]["EpicsMotor"]
-    assert "ophyd.EpicsMotor" == template_info.get("deviceClass", "")
+    assert "ophyd_devices.EpicsMotor" == template_info.get("deviceClass", "")
     assert issubclass(template_info.get("deviceConfig", object), EpicsMotorDeviceConfigTemplate)
 
     assert "EpicsSignalRO" in OPHYD_DEVICE_TEMPLATES["EpicsSignal"]
     template_info = OPHYD_DEVICE_TEMPLATES["EpicsSignal"]["EpicsSignalRO"]
-    assert "ophyd.EpicsSignalRO" == template_info.get("deviceClass", "")
+    assert "ophyd_devices.EpicsSignalRO" == template_info.get("deviceClass", "")
     assert issubclass(template_info.get("deviceConfig", object), EpicsSignalRODeviceConfigTemplate)
 
     assert "EpicsSignalWithRBV" in OPHYD_DEVICE_TEMPLATES["EpicsSignal"]
     template_info = OPHYD_DEVICE_TEMPLATES["EpicsSignal"]["EpicsSignalWithRBV"]
-    assert "ophyd.EpicsSignalWithRBV" == template_info.get("deviceClass", "")
+    assert "ophyd_devices.EpicsSignalWithRBV" == template_info.get("deviceClass", "")
     assert issubclass(
         template_info.get("deviceConfig", object), EpicsSignalWithRBVDeviceConfigTemplate
     )
 
     assert "EpicsSignal" in OPHYD_DEVICE_TEMPLATES["EpicsSignal"]
     template_info = OPHYD_DEVICE_TEMPLATES["EpicsSignal"]["EpicsSignal"]
-    assert "ophyd.EpicsSignal" == template_info.get("deviceClass", "")
+    assert "ophyd_devices.EpicsSignal" == template_info.get("deviceClass", "")
     assert issubclass(template_info.get("deviceConfig", object), EpicsSignalDeviceConfigTemplate)
 
     assert "CustomDevice" in OPHYD_DEVICE_TEMPLATES["CustomDevice"]
