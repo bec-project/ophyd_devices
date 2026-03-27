@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v1.36.0 (2026-03-27)
+
+### Bug Fixes
+
+- **pseudo-motor**: Add subscription callbacks to readback signal, and SUB_READBACK event from
+  positioners
+  ([`f8a2ee6`](https://github.com/bec-project/ophyd_devices/commit/f8a2ee6df11a63bdb4d373b32e021560b2854578))
+
+- **sim-signal**: Fix subscription for simulated signals.
+  ([`4f238fa`](https://github.com/bec-project/ophyd_devices/commit/4f238facec62625242023b51c904964745495e33))
+
+### Features
+
+- Add pseudo motor
+  ([`fdc91e4`](https://github.com/bec-project/ophyd_devices/commit/fdc91e4aff0cbccc30666e0a6f73665ab805fcdd))
+
+- **processed-signal**: Add ProcessedSignal
+  ([`2c17e75`](https://github.com/bec-project/ophyd_devices/commit/2c17e75e3fe8f4358b3360df14f6ad596b69ccec))
+
+### Refactoring
+
+- Cleanup, bugfixes, and docs
+  ([`9c2721b`](https://github.com/bec-project/ophyd_devices/commit/9c2721bf74d21006389cc3d0bc57ff7a88e85dff))
+
+- **ProcessedSignal**: Add auto monitor attribute to ProcessedSignal
+  ([`b6633bc`](https://github.com/bec-project/ophyd_devices/commit/b6633bc7e9767ea58f24c44bf79a5cccda480763))
+
+
 ## v1.35.0 (2026-03-25)
 
 ### Bug Fixes
