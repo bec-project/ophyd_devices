@@ -132,9 +132,11 @@ class BECProcessedSignal(SignalRO):
         name: str,
         model_config: dict[Literal["method_inputs", "compute_method"], Any] | None = None,
         device_manager: DeviceManagerDS | None = None,
+        auto_monitor: bool = False,
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        self._auto_monitor = auto_monitor
         self.compute_model: ProcessedSignalModel | None = None
         self._device_manager: DeviceManagerDS = self._get_device_manager(device_manager)
         self._metadata["connected"] = False
