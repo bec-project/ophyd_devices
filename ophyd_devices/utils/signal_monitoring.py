@@ -55,10 +55,13 @@ class SignalMonitoring:
                 timeout=self._polling_interval
             )  # Poll at the specified interval
             with self._lock:
-                for signal in self._signal_instances.values():
-                    signal.get()
-                for call in self._callables.values():
-                    call()
+                try:
+                    for signal in self._signal_instances.values():
+                        signal.get()
+                    for call in self._callables.values():
+                        call()
+                except Exception as e:
+                    logger.error(f"Error while polling signals: {e}")
 
     def register_signal(self, signal: Signal | Callable[[], None]) -> str:
         """
