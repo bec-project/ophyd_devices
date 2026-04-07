@@ -27,7 +27,7 @@ class SignalMonitoring:
         self.name = name
         self._signal_instances = {}
         self._callables = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._poll_thread = threading.Thread(target=self._poll_signals, daemon=True)
         self._kill_event = threading.Event()
         self._start_poll_event = threading.Event()
@@ -109,8 +109,10 @@ class SignalMonitoring:
 
     def shutdown(self):
         """Shutdown the monitoring thread and clean up resources."""
-        self._callables.clear()
-        self._signal_instances.clear()
+        with self._lock:
+            self._callables.clear()
+            self._signal_instances.clear()
         self._kill_event.set()
         self._start_poll_event.set()  # Ensure the polling thread is not waiting
+        self._polling_interval_event.set()  # Ensure the polling thread is not waiting
         self._poll_thread.join()
