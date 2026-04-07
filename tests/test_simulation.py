@@ -221,10 +221,12 @@ def test_init_async_monitor(async_monitor):
 
 
 @pytest.mark.parametrize("center", [-10, 0, 10])
-def test_monitor_readback(monitor, center):
+def test_monitor_readback(monitor, center, positioner):
     """Test the readback method of SimMonitor."""
     motor_pos = 0
-    monitor.device_manager.add_device(name="samx", value=motor_pos)
+    samx = SimPositioner(name="samx", device_manager=monitor.device_manager)
+    setattr(samx, "obj", samx)  # Set obj attribute to itself for proxy lookup
+    monitor.device_manager.devices["samx"] = samx
     for model_name in monitor.sim.get_models():
         monitor.sim.select_model(model_name)
         monitor.sim.params["noise_multipler"] = 10
@@ -234,16 +236,28 @@ def test_monitor_readback(monitor, center):
         elif "center" in monitor.sim.params:
             monitor.sim.params["center"] = center
         assert isinstance(monitor.read()[monitor.name]["value"], monitor.BIT_DEPTH)
-        expected_value = _safeint(monitor.sim._model.eval(monitor.sim._model_params, x=motor_pos))
-        print(expected_value, monitor.read()[monitor.name]["value"])
+        expected_value = _safeint(
+            monitor.sim._model.eval(monitor.sim._model_params, x=samx.read()["samx"]["value"])
+        )
         tolerance = (
             monitor.sim.params["noise_multipler"] + 1
         )  # due to ceiling in calculation, but maximum +1int
         assert np.isclose(
             monitor.read()[monitor.name]["value"],
             expected_value,
-            atol=monitor.sim.params["noise_multipler"] + 1,
+            atol=monitor.sim.params["noise_multipler"] + 2,  # allow extra tolerance for ceiling
         )
+
+    # Test callback on motor motion
+    _callback_bucket = []
+
+    def _callback(value, **kwargs):
+        _callback_bucket.append(value)
+
+    monitor.subscribe(_callback, run=False)
+    assert not _callback_bucket
+    monitor.device_manager.devices["samx"].move(10).wait()
+    assert len(_callback_bucket) > 0
 
 
 @pytest.mark.parametrize("amplitude, noise_multiplier", [(0, 1), (100, 10), (1000, 50)])

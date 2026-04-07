@@ -164,6 +164,10 @@ class SimulatedDataBase(ABC):
         """
         Method to set the parameters for the active simulation model.
         """
+        self._set_params(params)
+
+    def _set_params(self, params: dict) -> None:
+        """Utility method to set parameters for active model."""
         for k, v in params.items():
             if k in self.params:
                 if k == "noise":
@@ -327,6 +331,32 @@ class SimulatedDataMonitor(SimulatedDataBase):
         self.bit_depth = self.parent.BIT_DEPTH
         self._init_default()
 
+    @SimulatedDataBase.params.setter
+    def params(self, params: dict) -> None:
+        SimulatedDataBase.params.fset(self, params)
+        self._add_callback_to_motor()
+
+    def _add_callback_to_motor(self) -> None:
+        # Setup subscription to the reference motor if available
+        mot_name = self.params.get("ref_motor", "")
+        if not hasattr(self.parent, "device_manager"):
+            return
+        if mot_name in self.parent.device_manager.devices:
+            if hasattr(self.parent, "setup_readback_monitor"):
+                self.parent.setup_readback_monitor(mot_name)
+
+    def select_model(self, model: str) -> None:
+        """
+        Method to select the active simulation model.
+        It will initiate the model_cls and parameters for the model.
+
+        Args:
+            model (str): Name of the simulation model to select.
+
+        """
+        super().select_model(model)
+        self._add_callback_to_motor()
+
     def _get_additional_params(self) -> None:
         params = deepcopy(DEFAULT_PARAMS_NOISE)
         params.update(deepcopy(DEFAULT_PARAMS_MOTOR))
@@ -432,7 +462,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
         Returns:
             float: Value computed by the active model.
         """
-        mot_name = self.params["ref_motor"]
+        mot_name = self.params.get("ref_motor", "")
         if self.parent.device_manager and mot_name in self.parent.device_manager.devices:
             motor_pos = self.parent.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
         else:
