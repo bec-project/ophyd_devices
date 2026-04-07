@@ -1,5 +1,7 @@
 """Module for simulated monitor devices."""
 
+from dataclasses import dataclass
+
 import numpy as np
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
@@ -13,6 +15,13 @@ from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
 
 logger = bec_logger.logger
+
+
+@dataclass
+class RegisteredCallback:
+
+    motor: str
+    callback_id: int
 
 
 class SimMonitor(ReadOnlySignal):
@@ -61,8 +70,9 @@ class SimMonitor(ReadOnlySignal):
         self.precision = precision
         self.sim_init = sim_init
         self.device_manager = device_manager
-        self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
+        self._registered_callback: RegisteredCallback | None = None
+        self.sim = self.sim_cls(parent=self, **kwargs)
 
         super().__init__(
             name=name,
@@ -77,9 +87,36 @@ class SimMonitor(ReadOnlySignal):
             self.sim.set_init(self.sim_init)
 
     @property
-    def registered_proxies(self) -> None:
+    def registered_proxies(self) -> dict:
         """Dictionary of registered signal_names and proxies."""
         return self._registered_proxies
+
+    def setup_readback_monitor(self, motor_name: str) -> None:
+        """
+        Set up monitoring of the readback signal of a motor.
+
+        Args:
+            motor_name (str): The name of the motor to monitor.
+        """
+
+        if self._registered_callback:
+            if self._registered_callback.motor == motor_name:
+                # Already registered callback
+                return
+            else:  # Unregister callback from previous motor if necessary
+                motor = self.device_manager.devices.get(self._registered_callback.motor, None)
+                if motor:
+                    motor.unsubscribe(self._registered_callback.callback_id)
+
+        # Register new callback
+        motor = self.device_manager.devices.get(motor_name, None)
+        if motor:
+            cb_id = motor.subscribe(self._update_readback, run=True)
+            self._registered_callback = RegisteredCallback(motor=motor_name, callback_id=cb_id)
+
+    def _update_readback(self, value, **kwargs):
+        """Callback function to update the readback value."""
+        self.get()  # Trigger a read to update the readback value
 
 
 class SimMonitorAsyncControl(Device):
