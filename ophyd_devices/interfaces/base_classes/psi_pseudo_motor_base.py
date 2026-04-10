@@ -110,7 +110,7 @@ class PSIPseudoMotorBase(ABC, PSIDeviceBase, PositionerBase):
         """Run subscriptions on the readback signal when it updates."""
         self._run_subs(sub_type=self.SUB_READBACK, old_value=old_value, value=value)
 
-    def _run_readback_event_subs(self, value: float, old_value: float, **kwargs):
+    def _run_readback_event_subs(self, *args, **kwargs):
         """Run subscriptions on the readback event when it updates."""
         new_val = self.readback.get()
         self._run_subs(sub_type=self.SUB_READBACK, value=new_val)
