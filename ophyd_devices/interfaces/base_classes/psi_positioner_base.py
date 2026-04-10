@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import TypedDict
+from typing import Self, TypedDict
 
 from ophyd import Component as Cpt
 from ophyd import Device
@@ -9,6 +9,9 @@ from ophyd.signal import EpicsSignalBase, Signal
 from ophyd.status import MoveStatus
 from ophyd.status import wait as status_wait
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
+
+from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus, TransitionStatus
 
 
 class _SignalSentinel(object): ...
@@ -65,13 +68,14 @@ class PositionerSignals(SimplePositionerSignals, total=False):
 _SIGNAL_NAMES = PositionerSignals.__optional_keys__
 
 
-class PSISimplePositionerBase(ABC, Device, PositionerBase):
+# psi device basee cancel on stop
+class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
     """Base class for simple positioners."""
 
     SIGNAL_NAMES = _SIMPLE_SIGNAL_NAMES
 
     user_readback: EpicsSignalBase = _REQUIRED_SIGNAL
-    user_setpoint: EpicsSignalBase = _OPTIONAL_SIGNAL
+    user_setpoint: EpicsSignalBase = _REQUIRED_SIGNAL
     velocity: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_stop: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_done_move: EpicsSignalBase = _OPTIONAL_SIGNAL
@@ -87,7 +91,6 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         name,
         limits: list[float] | tuple[float, ...] | None = None,
         deadband: float | None = None,
-        use_put_completion: bool | None = None,
         read_attrs=None,
         configuration_attrs=None,
         parent=None,
@@ -118,14 +121,12 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         else:
             self._limits = None
         self._deadband = deadband
-        if use_put_completion is not None:
-            self.use_put_complete = use_put_completion
         self._egu = kwargs.get("egu") or ""
 
         if (missing := self._remaining_defaults(_REQUIRED_SIGNAL)) != set():
             raise RequiredSignalNotSpecified(f"Signal(s) {missing} must be defined in a subclass")
 
-        if self.user_readback is _OPTIONAL_SIGNAL and self.motor_done_move is _OPTIONAL_SIGNAL:
+        if self.user_readback is _REQUIRED_SIGNAL and self.motor_done_move is _OPTIONAL_SIGNAL:
             raise ValueError(
                 "Positioner must have at least one of user_readback and motor_done_move"
             )
@@ -145,7 +146,7 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
                     f"{self.__class__} does not implement overridden signal {signal_name}"
                 )
 
-        if self.user_readback is not _OPTIONAL_SIGNAL:
+        if self.user_readback is not _REQUIRED_SIGNAL:
             self.user_readback.subscribe(self._pos_changed)
         if self.motor_done_move is not _OPTIONAL_SIGNAL:
             self.motor_done_move.subscribe(self._move_changed)
@@ -180,22 +181,43 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
         If a `done` PV is specified, it will be read directly to get the motion
         status. If not, it determined from the internal state of PVPositioner.
 
-        Returns
-        -------
-        bool
+        Returns: bool
         """
-        dval = self.motor_done_move.get(use_monitor=False)
-        return dval != self.done_value
+        if self.motor_done_move is not _OPTIONAL_SIGNAL:
+            dval = self.motor_done_move.get(use_monitor=False)
+            return dval != self.done_value
+        else:
+            return super().moving
 
     def _setup_move(self, position):
         """Move and do not wait until motion is complete (asynchronous)"""
-        self.log.debug(f"{self.name}.user_setpoint = {position}")
-        if not self.use_put_complete:
-            self.user_setpoint.put(position, wait=True)
-        else:
-            self.user_setpoint.put(
-                position, wait=False, callback=lambda *_: self._done_moving(success=True)
+
+        def _manual_check_cb(*args, **kwargs):
+            return (
+                abs(self.user_setpoint.get() - self.user_readback.get())  # type: ignore
+                < self._deadband  # type: ignore
             )
+
+        def _done_cb(status, *args, **kwargs):
+            self._done_moving(success=status.success)
+            self._move_completion_status = None
+
+        # set up an internal status to track the move
+        # and keep a ref so it doesn't get gc'd
+        if self.motor_done_move is not _OPTIONAL_SIGNAL:
+            # for a transition status, set it up before moving
+            self._move_completion_status = TransitionStatus(
+                self.motor_done_move, transitions=[0, 1]
+            )
+            self.user_setpoint.put(position, wait=False)
+        else:
+            # for a subscription status, must update the setpoint before checking it
+            self.user_setpoint.put(position, wait=False)
+            self._move_completion_status = SubscriptionStatus(self, callback=_manual_check_cb)
+        self.cancel_on_stop(self._move_completion_status)
+        self._move_completion_status.add_callback(_done_cb)
+
+        self.log.debug(f"{self.name}.user_setpoint = {position}")
 
     def move(self, position, wait=True, timeout=None, moved_cb=None):
         """Move to a specified position, optionally waiting for motion to
@@ -231,9 +253,11 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
             return MoveStatus(self, position, done=True, success=True)
 
         status = super().move(position, timeout=timeout, moved_cb=moved_cb)
-
+        # TDDO: Here create subs for resolving the status
         try:
             self._setup_move(position)
+            self.log.debug(f"{self.name}.user_setpoint = {position}")
+            self.user_setpoint.put(position, wait=False)
             if wait:
                 status_wait(status)
         except KeyboardInterrupt:
@@ -282,6 +306,9 @@ class PSISimplePositionerBase(ABC, Device, PositionerBase):
     def stop(self, *, success=False):
         if self.motor_stop is not _OPTIONAL_SIGNAL:
             self.motor_stop.put(self.stop_value, wait=False)
+        elif self.user_readback is not _OPTIONAL_SIGNAL:
+            val = self.user_readback.get()
+            self.user_setpoint.put(val)
         super().stop(success=success)
 
     @property
