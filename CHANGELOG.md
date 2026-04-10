@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.36.1 (2026-04-10)
+
+### Bug Fixes
+
+- **psi-pseudo-motor-base**: Fix readback callback
+  ([`4a8c4a1`](https://github.com/bec-project/ophyd_devices/commit/4a8c4a1bf4593a931e916961d0850f129b0634fb))
+
+
 ## v1.36.0 (2026-03-27)
 
 ### Bug Fixes
