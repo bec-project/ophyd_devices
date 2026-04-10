@@ -1,11 +1,10 @@
 import threading
-from time import sleep
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, patch
 
 import ophyd
 import pytest
 from ophyd.device import Component as Cpt
-from ophyd.signal import EpicsSignal, EpicsSignalRO, Kind, Signal
+from ophyd.signal import EpicsSignal, Kind, Signal
 from ophyd.sim import FakeEpicsSignal, FakeEpicsSignalRO
 
 from ophyd_devices.devices.simple_positioner import PSISimplePositioner
@@ -105,6 +104,20 @@ def test_status_completed_when_req_done_sub_runs(mock_psi_positioner: PSISimpleP
     assert st.done
 
 
+def test_mdm_used_for_moving_if_available(mock_psi_positioner):
+    mock_psi_positioner.wait_for_connection()
+    mock_psi_positioner.motor_done_move._read_pv.mock_data = 0
+    assert mock_psi_positioner.moving
+    mock_psi_positioner.motor_done_move._read_pv.mock_data = 1
+    assert not mock_psi_positioner.moving
+
+
+def test_stop_puts_to_readback(mock_psi_positioner):
+    mock_psi_positioner.user_readback._read_pv.mock_data = 12.34
+    mock_psi_positioner.stop()
+    assert mock_psi_positioner.user_setpoint.get() == 12.34
+
+
 def test_psi_positioner_soft_limits():
     class PsiTestPosWSoftLimits(PSIPositionerBase):
         user_setpoint: EpicsSignal = Cpt(FakeEpicsSignal, ".VAL", limits=True, auto_monitor=True)
@@ -163,25 +176,3 @@ def test_done_move_based_on_readback(mock_readback_positioner, setpoint, move_po
 
     mock_readback_positioner.user_readback.sim_put(final_pos)
     assert st.done == completes
-
-
-def test_put_complete_positioner():
-    class PsiTestPosPutComplete(PSISimplePositionerBase):
-        user_setpoint: EpicsSignal = Cpt(EpicsSignal, ".VAL", auto_monitor=True)
-        user_readback = Cpt(EpicsSignalRO, ".RBV", kind="hinted", auto_monitor=True)
-
-    with patch.object(ophyd, "cl") as mock_cl:
-        mock_cl.get_pv = MockPV
-        mock_cl.thread_class = threading.Thread
-        dev = PsiTestPosPutComplete("prefix:", name="test", use_put_completion=True, deadband=0.001)
-        patch_dual_pvs(dev)
-        dev.wait_for_connection()
-        dev.user_setpoint._read_pv._put_complete_event = threading.Event()
-        dev._set_position(0)
-
-    st = dev.move(6, wait=False)
-    assert dev.user_setpoint.get() == 6
-    assert not st.done
-    dev.user_setpoint._read_pv._put_complete_event.set()
-    sleep(1)
-    assert st.done

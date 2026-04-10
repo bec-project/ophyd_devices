@@ -118,7 +118,7 @@ class AndStatus(StatusBase):
         return "({self.left!r} & {self.right!r})".format(self=self)
 
     def __str__(self):
-        return "{0}(done={1.done}, " "success={1.success})" "".format(self.__class__.__name__, self)
+        return "{0}(done={1.done}, success={1.success})".format(self.__class__.__name__, self)
 
     def __contains__(self, status) -> bool:
         for child in [self.left, self.right]:
@@ -172,7 +172,6 @@ class SubscriptionStatus(StatusBase):
         self.obj = obj
         # Start timeout thread in the background
         super().__init__(obj=obj, timeout=timeout, settle_time=settle_time)
-
         self.obj.subscribe(self.check_value, event_type=event_type, run=run)
 
     def check_value(self, *args, **kwargs):
