@@ -420,7 +420,6 @@ class SimCameraWithPSIComponents(SimCamera):
             }
             progress = messages.ProgressMessage(**progress)
             self.progress.set(progress).wait()
-            self._set_async_signal(update_all=True)
 
         status = self.task_handler.submit_task(complete_cam)
         return status
