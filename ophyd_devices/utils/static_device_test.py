@@ -156,15 +156,40 @@ class StaticDeviceTest:
         if "auto_monitor" not in config:
             self.print_and_write(f"WARNING: Device {name} is configured without auto monitor.")
 
+    def construct_device_obj(self, name: str, conf: dict) -> ophyd.Device | None:
+        """
+        Construct the device object
+
+        Args:
+            name(str): name of the device
+            conf(dict): device config
+
+        Returns:
+            ophyd.Device: device object
+        """
+        try:
+            conf_in = copy.deepcopy(conf)
+            conf_in["name"] = name
+            obj, _ = device_manager.construct_device_obj(conf_in, self.device_manager_ds)
+        except Exception:
+            content = traceback.format_exc()
+            self.print_and_write(f"ERROR: {name} can not construct ophyd device: {content}")
+            return None
+        return obj
+
     def connect_device(
-        self, name: str, conf: dict, force_connect: bool = False, timeout_per_device: float = 30
+        self,
+        name: str,
+        obj: ophyd.Device,
+        force_connect: bool = False,
+        timeout_per_device: float = 30,
     ) -> int:
         """
         Connect to the device
 
         Args:
             name(str): name of the device
-            conf(dict): device config
+            obj(ophyd.Device): device object
             force_connect(bool): force connection to all signals even if devices report .connected = True. Default is False.
             timeout_per_device(float): timeout for each device connection. Default is 30 seconds.
 
@@ -172,10 +197,6 @@ class StaticDeviceTest:
             int: 0 if all checks passed, 1 otherwise
         """
         try:
-            conf_in = copy.deepcopy(conf)
-            conf_in["name"] = name
-            obj, _ = device_manager.construct_device_obj(conf_in, self.device_manager_ds)
-
             device_manager.connect_device(
                 obj, wait_for_all=True, timeout=timeout_per_device, force=force_connect
             )
@@ -262,11 +283,22 @@ class StaticDeviceTest:
             self.print_and_write(f"Checking {name}...")
             return_val += self.validate_schema(name, conf)
             return_val += self.check_device_classes(name, conf)
-            if connect:
-                return_val += self.connect_device(
-                    name, conf, force_connect=force_connect, timeout_per_device=timeout_per_device
+            if device_manager is not None:  # Only possible if bec-server is installed
+                obj = self.construct_device_obj(name, conf)
+                if obj is None:  # construction failed, skip connection test
+                    return_value += 1
+                elif obj is not None and connect:
+                    return_val += self.connect_device(
+                        name,
+                        obj,
+                        force_connect=force_connect,
+                        timeout_per_device=timeout_per_device,
+                    )
+            elif connect:
+                self.print_and_write(
+                    "ERROR: bec-server is not installed. Please install it first with pip install bec-server to run test with 'connect' option."
                 )
-
+                return_val += 1
             if return_val == 0:
                 self.print_and_write("OK")
             else:
@@ -336,13 +368,22 @@ class StaticDeviceTest:
                     return_val += self.check_device_classes(name, conf)
                     if return_val == 0:
                         config_is_valid = True
-                    if device_manager is not None and connect:
-                        return_val += self.connect_device(
-                            name,
-                            conf,
-                            force_connect=force_connect,
-                            timeout_per_device=timeout_per_device,
+                    if device_manager is not None:
+                        obj = self.construct_device_obj(name, conf)
+                        if obj is None:  # construction failed, skip connection test
+                            return_val += 1
+                        elif obj is not None and connect:
+                            return_val += self.connect_device(
+                                name,
+                                obj,
+                                force_connect=force_connect,
+                                timeout_per_device=timeout_per_device,
+                            )
+                    elif connect:
+                        self.print_and_write(
+                            "ERROR: bec-server is not installed. Please install it first with pip install bec-server to run test with 'connect' option."
                         )
+                        return_val += 1
                     if return_val == 0:
                         status = True
                         self.print_and_write(f"{name} is OK")
