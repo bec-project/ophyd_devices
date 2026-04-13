@@ -78,7 +78,10 @@ class ComputedSignal(SignalRO):
         self._compute_method_str = None
 
     def _signal_callback(self, *args, **kwargs):
-        self._run_subs(sub_type=self.SUB_VALUE, old_value=None, value=self.get())
+        old_value = self._readback
+        val = self.get()
+        if val is not None:
+            self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=val)
 
     @property
     def compute_method(self) -> Callable | None:
@@ -147,21 +150,25 @@ class ComputedSignal(SignalRO):
         if self._signal_subs:
             for signal, sub_id in self._signal_subs:
                 signal.unsubscribe(sub_id)
+            self._signal_subs.clear()
         signals = []
         for signal in input_vars:
             if isinstance(signal, str):
                 obj = rgetattr(self._device_manager.devices, signal)
-                sub_id = obj.subscribe(self._signal_callback)
+                sub_id = obj.subscribe(self._signal_callback, run=False)
                 self._signal_subs.append((obj, sub_id))
                 signals.append(obj)
             else:
                 signals.append(signal)
         self._input_signals = signals
 
-    def get(self):
+    def get(self, **kwargs):
+        return_value = None
         if self._compute_method:
             # pylint: disable=not-callable
             if self.input_signals:
-                return self._compute_method(*self.input_signals)
-            return self._compute_method()
-        return None
+                return_value = self._compute_method(*self.input_signals)
+            else:
+                return_value = self._compute_method()
+        self._readback = return_value if return_value is not None else self._readback
+        return return_value
