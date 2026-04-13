@@ -215,6 +215,8 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
 
     def _progress_update(self, value: int, **kwargs):
         """Update the progress of the device."""
+        if not self.scan_info.msg:
+            return
         max_value = self.scan_info.msg.num_points
         # pylint: disable=protected-access
         self._run_subs(
