@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.36.2 (2026-04-15)
+
+### Bug Fixes
+
+- Fix status resolution in simple positioner
+  ([`993b84d`](https://github.com/bec-project/ophyd_devices/commit/993b84d00db541de62116957789247a13da07e70))
+
+
 ## v1.36.1 (2026-04-10)
 
 ### Bug Fixes
