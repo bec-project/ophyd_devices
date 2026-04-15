@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v1.36.3 (2026-04-15)
+
+### Bug Fixes
+
+- **dynamic-pseudo**: Fix signal_callback runs before compute method
+  ([`f7ef57b`](https://github.com/bec-project/ophyd_devices/commit/f7ef57b79699d370544d3d24e768c164070d08a2))
+
+- **sim-monitor**: Fix progress update scan_info.msg is None
+  ([`142b761`](https://github.com/bec-project/ophyd_devices/commit/142b761eab837af663ca2fb8bd82177693560520))
+
+- **sim-test-devices**: Fix complete method calls unknown signal
+  ([`05b9ec3`](https://github.com/bec-project/ophyd_devices/commit/05b9ec3a184d898959ce37f04a47784317259a43))
+
+- **static-device-test**: Fix static device test constructing device the device obj
+  ([`cf519f1`](https://github.com/bec-project/ophyd_devices/commit/cf519f19d5a93974c28e9c7d8517882e58195d0d))
+
+
 ## v1.36.2 (2026-04-15)
 
 ### Bug Fixes
