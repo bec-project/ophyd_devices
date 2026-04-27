@@ -129,9 +129,9 @@ class SimWaveform(Device):
         self._trigger_received = 0
         self.scan_info = scan_info
         self._delay_slice_update = False
+        self._slice_index = 0
         if self.sim_init:
             self.sim.set_init(self.sim_init)
-        self._slice_index = 0
 
     @property
     def delay_slice_update(self) -> bool:

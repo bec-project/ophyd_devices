@@ -80,7 +80,8 @@ class SetableSignal(Signal):
         """
         old_value = self._readback
         self._readback = self._value = self._get_value()
-        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        if old_value != self._readback:  # only run subs if the value has changed
+            self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
         return self._readback
 
     # pylint: disable=arguments-differ
@@ -89,9 +90,11 @@ class SetableSignal(Signal):
 
         Core function for signal.
         """
+        old_value = self._value
         self.check_value(value)
         self._update_sim_state(value)
         self._value = value
+        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._value)
         super().put(value)
 
     def set(self, value):

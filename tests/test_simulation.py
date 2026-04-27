@@ -48,6 +48,7 @@ def waveform(name="waveform"):
     """Fixture for SimWaveform."""
     dm = DMMock()
     wave = SimWaveform(name=name, device_manager=dm)
+    wave.wait_for_connection()
     yield wave
 
 
@@ -59,10 +60,21 @@ def signal(name="signal"):
 
 
 @pytest.fixture(scope="function")
-def monitor(name="monitor"):
-    """Fixture for SimMonitor."""
+def samx(name="samx"):
+    """Fixture for SimPositioner."""
     dm = DMMock()
+    pos = SimPositioner(name=name, device_manager=dm)
+    yield pos
+
+
+@pytest.fixture(scope="function")
+def monitor(samx, name="monitor"):
+    """Fixture for SimMonitor."""
+    dm = samx.device_manager
+    samx.obj = samx  # Set obj attribute to itself for proxy lookup
+    dm.devices["samx"] = samx
     mon = SimMonitor(name=name, device_manager=dm)
+    mon.wait_for_connection()
     yield mon
 
 
@@ -97,6 +109,7 @@ def async_monitor(name="async_monitor"):
     """Fixture for SimMonitorAsync."""
     dm = DMMock()
     mon = SimMonitorAsync(name=name, device_manager=dm)
+    mon.wait_for_connection()
     yield mon
 
 
@@ -168,6 +181,7 @@ def test_monitor_with_sim_init():
     """Test to see if the sim init parameters are passed to the device"""
     dm = DMMock()
     sim = SimMonitor(name="sim", device_manager=dm)
+    sim.wait_for_connection()
     assert sim.sim._model._name == "constant"
     model = "GaussianModel"
     params = {
@@ -179,6 +193,7 @@ def test_monitor_with_sim_init():
         "ref_motor": "samy",
     }
     sim = SimMonitor(name="sim", device_manager=dm, sim_init={"model": model, "params": params})
+    sim.wait_for_connection()
     assert sim.sim._model._name == model.strip("Model").lower()
     diff_keys = set(sim.sim.params.keys()) - set(params.keys())
     for k in params:
@@ -224,9 +239,7 @@ def test_init_async_monitor(async_monitor):
 def test_monitor_readback(monitor, center, positioner):
     """Test the readback method of SimMonitor."""
     motor_pos = 0
-    samx = SimPositioner(name="samx", device_manager=monitor.device_manager)
-    setattr(samx, "obj", samx)  # Set obj attribute to itself for proxy lookup
-    monitor.device_manager.devices["samx"] = samx
+    samx = monitor.device_manager.devices.get("samx", None)
     for model_name in monitor.sim.get_models():
         monitor.sim.select_model(model_name)
         monitor.sim.params["noise_multipler"] = 10

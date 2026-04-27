@@ -108,7 +108,7 @@ class SimulatedDataBase(ABC):
         self.parent = parent
         self.sim_state = defaultdict(dict)
         self.registered_proxies = getattr(self.parent, "registered_proxies", {})
-        self._model = {}
+        self._model = None
         self._model_params = None
         self._params = {}
 
@@ -329,6 +329,7 @@ class SimulatedDataMonitor(SimulatedDataBase):
         self._model_lookup = self.init_lmfit_models()
         super().__init__(*args, parent=parent, **kwargs)
         self.bit_depth = self.parent.BIT_DEPTH
+        self._cb_registered = False
         self._init_default()
 
     @SimulatedDataBase.params.setter
@@ -341,9 +342,22 @@ class SimulatedDataMonitor(SimulatedDataBase):
         mot_name = self.params.get("ref_motor", "")
         if not hasattr(self.parent, "device_manager"):
             return
+        if not hasattr(self.parent.device_manager, "devices"):
+            return
         if mot_name in self.parent.device_manager.devices:
             if hasattr(self.parent, "setup_readback_monitor"):
                 self.parent.setup_readback_monitor(mot_name)
+            # pylint: disable=protected-access
+            if (
+                hasattr(self.parent, "_registered_callback")
+                and self.parent._registered_callback is not None
+                and self.parent._registered_callback.motor == mot_name
+            ):
+                # If the callback was registered, keep track of it
+                self._cb_registered = True
+            else:
+                # If no callback was registered, this should also be reflected in self._cb_registered
+                self._cb_registered = False
 
     def select_model(self, model: str) -> None:
         """
@@ -396,6 +410,8 @@ class SimulatedDataMonitor(SimulatedDataBase):
             dict: {name: value} for the active simulation model.
         """
         rtr = {}
+        if not isinstance(self._model, Model):
+            return rtr
         params = self._model.make_params()
         for name, parameter in params.items():
             if name in DEFAULT_PARAMS_LMFIT:
@@ -465,6 +481,10 @@ class SimulatedDataMonitor(SimulatedDataBase):
         mot_name = self.params.get("ref_motor", "")
         if self.parent.device_manager and mot_name in self.parent.device_manager.devices:
             motor_pos = self.parent.device_manager.devices[mot_name].obj.read()[mot_name]["value"]
+            # It can happen that the SimMonitor was created before the motor was available in the device manager,
+            # therefore we have to check if a callback is registered and update it if not.
+            if not self._cb_registered:
+                self._add_callback_to_motor()
         else:
             motor_pos = 0
         method = self._model
