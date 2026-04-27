@@ -85,6 +85,7 @@ class SimPositioner(Device, PositionerBase):
         self.precision = precision
         self.sim_init = sim_init
         self._registered_proxies = {}
+        self._lock = threading.RLock()
 
         self.update_frequency = update_frequency
         self._stopped = False
@@ -186,21 +187,25 @@ class SimPositioner(Device, PositionerBase):
                     raise DeviceStopError(f"{self.name} was stopped")
                 ttime.sleep(1 / self.update_frequency)
             self._update_state(self.readback.get())
-            for status in self._status_list:
-                status.set_finished()
         # pylint: disable=broad-except
         except Exception as exc:
             content = traceback.format_exc()
             logger.warning(
-                f"Error in on_complete call in device {self.name}. Error traceback: {content}"
+                f"Error in _move_to_setpoint call in device {self.name}. Error traceback: {content}"
             )
-            for status in self._status_list:
-                status.set_exception(exc=exc)
+            with self._lock:
+                for status in self._status_list:
+                    status.set_exception(exc=exc)
+                self._status_list = []
         finally:
-            self.motor_is_moving.put(0)
-            if not self._stopped:
-                self._update_state(self.readback.get())
-            self._status_list = []
+            with self._lock:
+                self.motor_is_moving.put(0)
+                if not self._stopped:
+                    self._update_state(self.readback.get())
+                for status in self._status_list:
+                    if not status.done:
+                        status.set_finished()
+                self._status_list = []
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
@@ -210,7 +215,8 @@ class SimPositioner(Device, PositionerBase):
         self.setpoint.put(value)
 
         st = DeviceStatus(device=self)
-        self._status_list.append(st)
+        with self._lock:
+            self._status_list.append(st)
         if self.delay:
             if self.move_thread is None or not self.move_thread.is_alive():
                 self.move_thread = threading.Thread(target=self._move_to_setpoint)

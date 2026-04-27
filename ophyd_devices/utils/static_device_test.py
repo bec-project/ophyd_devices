@@ -286,7 +286,7 @@ class StaticDeviceTest:
             if device_manager is not None:  # Only possible if bec-server is installed
                 obj = self.construct_device_obj(name, conf)
                 if obj is None:  # construction failed, skip connection test
-                    return_value += 1
+                    return_val += 1
                 elif obj is not None and connect:
                     return_val += self.connect_device(
                         name,
