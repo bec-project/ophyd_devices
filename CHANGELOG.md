@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v1.37.0 (2026-04-28)
+
+### Continuous Integration
+
+- Add device list update workflow and script
+  ([`2772265`](https://github.com/bec-project/ophyd_devices/commit/27722659a8ff1e82975298b545b2fff1df61707b))
+
+### Documentation
+
+- Update device list
+  ([`70353c7`](https://github.com/bec-project/ophyd_devices/commit/70353c758e7189661329c7d0c28591a9f83820ce))
+
+### Features
+
+- Add ecmc and vme user motor to device templates
+  ([`f430a59`](https://github.com/bec-project/ophyd_devices/commit/f430a599a87e5b45c4521b28b8b08cb7bc16ef87))
+
+- Expose EpicsSignal classes in ophyd_devices
+  ([`082af04`](https://github.com/bec-project/ophyd_devices/commit/082af04408fd4fdf88870ee269f681e375761eab))
+
+
 ## v1.36.3 (2026-04-15)
 
 ### Bug Fixes
