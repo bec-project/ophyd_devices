@@ -10,12 +10,13 @@ import functools
 import numpy as np
 from ophyd import Component as Cpt
 from ophyd import EpicsMotor as OphydEpicsMotor
-from ophyd import EpicsSignal, EpicsSignalRO, Kind
+from ophyd import EpicsSignal, EpicsSignalRO, Kind, Signal
 from ophyd.status import MoveStatus
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 from ophyd.utils.errors import UnknownStatusFailure
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+from ophyd_devices.sim.sim_signals import SetableSignal
 
 
 class SpmgStates:
@@ -86,6 +87,44 @@ class EpicsMotor(OphydEpicsMotor):
     )
     high_limit_travel = Cpt(EpicsSignalWithCheck, ".HLM", kind=Kind.omitted, auto_monitor=True)
     low_limit_travel = Cpt(EpicsSignalWithCheck, ".LLM", kind=Kind.omitted, auto_monitor=True)
+
+    settle_time = Cpt(
+        Signal, value=0, kind=Kind.config, doc="Settle time after move completion in seconds"
+    )
+    timeout = Cpt(Signal, kind=Kind.config, doc="Timeout for move completion in seconds.")
+
+    def __init__(
+        self,
+        prefix="",
+        *,
+        name,
+        kind=None,
+        read_attrs=None,
+        configuration_attrs=None,
+        parent=None,
+        **kwargs,
+    ):
+        super().__init__(
+            prefix=prefix,
+            name=name,
+            kind=kind,
+            read_attrs=read_attrs,
+            configuration_attrs=configuration_attrs,
+            parent=parent,
+            **kwargs,
+        )
+        self.settle_time.subscribe(self._on_settle_time_change, run=False)
+        self.timeout.subscribe(self._on_timeout_change, run=False)
+
+    def _on_settle_time_change(self, value, **kwargs):
+        if value <= 0:
+            value = None  # interpret non-positive values as no settle time
+        self._settle_time = value
+
+    def _on_timeout_change(self, value, **kwargs):
+        if value <= 0:
+            value = None  # interpret non-positive values as no timeout
+        self._timeout = value
 
     def _check_motion_status(self) -> tuple[bool, Exception | None]:
         """Check if the motion finished successfully"""

@@ -61,6 +61,20 @@ class SimPositioner(Device, PositionerBase):
     low_limit_travel = Cpt(SetableSignal, value=0, kind=Kind.omitted)
     unused = Cpt(SetableSignal, value=1, kind=Kind.omitted)
 
+    settle_time = Cpt(
+        SetableSignal,
+        name="settle_time",
+        value=0,
+        kind=Kind.config,
+        doc="Settle time after move completion in seconds",
+    )
+    timeout = Cpt(
+        SetableSignal,
+        name="timeout",
+        kind=Kind.config,
+        doc="Timeout for move completion in seconds.",
+    )
+
     SUB_READBACK = "readback"
     _default_sub = SUB_READBACK
 
@@ -101,6 +115,19 @@ class SimPositioner(Device, PositionerBase):
             self.high_limit_travel.put(limits[1])
         if self.sim_init:
             self.sim.set_init(self.sim_init)
+
+        self.settle_time.subscribe(self._on_settle_time_change, run=False)
+        self.timeout.subscribe(self._on_timeout_change, run=False)
+
+    def _on_settle_time_change(self, value, **kwargs):
+        if value <= 0:
+            value = None  # interpret non-positive values as no settle time
+        self._settle_time = value
+
+    def _on_timeout_change(self, value, **kwargs):
+        if value <= 0:
+            value = None  # interpret non-positive values as no timeout
+        self._timeout = value
 
     @property
     def limits(self):
