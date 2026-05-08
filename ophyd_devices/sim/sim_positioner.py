@@ -146,7 +146,11 @@ class SimPositioner(Device, PositionerBase):
     def _update_state(self, val):
         """Update the state of the simulated device."""
         old_readback = self._get_sim_state(self.readback.name)
+
         self._set_sim_state(self.readback.name, val)
+
+        if np.isclose(old_readback, val, atol=self.tolerance.get()):
+            return
 
         # Run subscription on "readback"
         self._run_subs(
