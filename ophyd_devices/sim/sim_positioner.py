@@ -312,36 +312,23 @@ class SimLinearTrajectoryPositioner(SimPositioner):
                         ttime.sleep(1 / self.update_frequency)
                         self._update_readback(traj.position())
                     raise DeviceStopError(f"{self.name} was stopped")
-            st.set_finished()
+            self._update_readback(self.readback.get())
         # pylint: disable=broad-except
         except Exception as exc:
             content = traceback.format_exc()
             logger.warning(
-                f"Error in on_complete call in device {self.name}. Error traceback: {content}"
+                f"Error in _move_to_setpoint call in device {self.name}. Error traceback: {content}"
             )
-            st.set_exception(exc=exc)
+            with self._lock:
+                for status in self._status_list:
+                    status.set_exception(exc=exc)
+                self._status_list = []
         finally:
-            self.motor_is_moving.put(0)
-
-    def move(self, value: float, **kwargs) -> DeviceStatus:
-        """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
-        self._stopped = False
-        self.check_value(value)
-        self.motor_is_moving.put(1)
-        self._update_readback(value)
-
-        st = DeviceStatus(device=self)
-        if self.delay:
-            if self.move_thread is None or not self.move_thread.is_alive():
-                self.move_thread = threading.Thread(
-                    target=self._move_and_finish, args=(self.position, value, st)
-                )
-                self.move_thread.start()
-            else:
-                raise RuntimeError(f"{self.name} is already moving. Cannot start a new move.")
-        else:
-            self._done_moving()
-            self.motor_is_moving.put(0)
-            self._update_readback(value)
-            st.set_finished()
-        return st
+            with self._lock:
+                self.motor_is_moving.put(0)
+                if not self._stopped:
+                    self._update_readback(self.readback.get())
+                for status in self._status_list:
+                    if not status.done:
+                        status.set_finished()
+                self._status_list = []
