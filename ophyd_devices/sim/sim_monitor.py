@@ -98,25 +98,26 @@ class SimMonitor(ReadOnlySignal):
         Args:
             motor_name (str): The name of the motor to monitor.
         """
-
-        if self._registered_callback:
-            if self._registered_callback.motor == motor_name:
-                # Already registered callback
-                return
-            else:  # Unregister callback from previous motor if necessary
-                motor = self.device_manager.devices.get(self._registered_callback.motor, None)
-                if motor:
-                    motor.unsubscribe(self._registered_callback.callback_id)
-
+        if self._registered_callback and self._registered_callback.motor == motor_name:
+            return  # Already registered callback for this motor
+        self.unregister_readback_cb(motor_name)  # Unregister previous callback if necessary
         # Register new callback
         motor = self.device_manager.devices.get(motor_name, None)
         if motor:
-            cb_id = motor.subscribe(self._update_readback, run=True)
+            cb_id = motor.subscribe(self._update_readback, run=False)
             self._registered_callback = RegisteredCallback(motor=motor_name, callback_id=cb_id)
+
+    def unregister_readback_cb(self, motor_name: str) -> None:
+        """Unregister the callback from the motor."""
+        if self._registered_callback:
+            motor = self.device_manager.devices.get(self._registered_callback.motor, None)
+            if motor:
+                motor.unsubscribe(self._registered_callback.callback_id)
+                self._registered_callback = None
 
     def _update_readback(self, value, **kwargs):
         """Callback function to update the readback value."""
-        self.get()  # Trigger a read to update the readback value
+        self.get()
 
 
 class SimMonitorAsyncControl(Device):

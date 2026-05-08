@@ -345,7 +345,10 @@ class SimulatedDataMonitor(SimulatedDataBase):
         if not hasattr(self.parent.device_manager, "devices"):
             return
         if mot_name in self.parent.device_manager.devices:
-            if hasattr(self.parent, "setup_readback_monitor"):
+            if isinstance(self._model, models.ConstantModel):
+                if hasattr(self.parent, "unregister_readback_cb"):
+                    self.parent.unregister_readback_cb(mot_name)
+            elif hasattr(self.parent, "setup_readback_monitor"):
                 self.parent.setup_readback_monitor(mot_name)
             # pylint: disable=protected-access
             if (
