@@ -117,7 +117,6 @@ class SimPositioner(Device, PositionerBase):
             self.high_limit_travel.put(limits[1])
         if self.sim_init:
             self.sim.set_init(self.sim_init)
-        self._last_emitted_readback_value = self.readback.get()
 
     def _run_subs(self, *args, sub_type, **kwargs):
         """Prevent concurrent callbacks for the same subscription type."""
@@ -189,8 +188,6 @@ class SimPositioner(Device, PositionerBase):
         old_readback = self._get_sim_state(self.readback.name)
         self._set_sim_state(self.readback.name, val)
 
-        if abs(val - self._last_emitted_readback_value) < self.tolerance.get():
-            return  # Run subscriptions only if the change in readback is larger than the tolerance
         # Run subscription on "readback"
         self._run_subs(
             sub_type=self.SUB_READBACK,
@@ -251,6 +248,7 @@ class SimPositioner(Device, PositionerBase):
 
     def move(self, value: float, **kwargs) -> DeviceStatus:
         """Change the setpoint of the simulated device, and simultaneously initiate a motion."""
+        # If value smaller then tolerance, ignore move request and resolve right away.
         self._stopped = False
         self.check_value(value)
         self.setpoint.put(value)
@@ -302,6 +300,7 @@ class SimLinearTrajectoryPositioner(SimPositioner):
         traj = LinearTrajectory(start_pos, end_pos, vel, acc)
 
         try:
+            self.setpoint.put(end_pos)  # Update setpoint
             while not traj.ended:
                 ttime.sleep(1 / self.update_frequency)
                 self._update_readback(traj.position())
