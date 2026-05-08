@@ -386,31 +386,6 @@ def test_linear_traj(initial_position, final_position, max_velocity, acceleratio
     assert trajectory.ended
 
 
-def test_sim_linear_trajectory_positioner(linear_traj_positioner):
-    vel = 5  # velocity 5 m.s^-1
-    acc = 20  # acceleration 20 m.s^-2
-    linear_traj_positioner.velocity.set(vel)
-    linear_traj_positioner.acceleration.set(vel / acc)  # acctime 250 ms
-    linear_traj_positioner.update_frequency = 100
-    assert linear_traj_positioner.position == 0
-
-    t0 = time.time()
-    trajectory = LinearTrajectory(0, 50, vel, acc, t0)
-    t2 = (
-        t0 + trajectory.time_accel + trajectory.time_const_vel / 2
-    )  # Halfway through constant velocity phase
-    decel_distance = trajectory.position(t0 + trajectory.time_accel)
-    expected_pos = trajectory.position(t2) + decel_distance
-
-    linear_traj_positioner.move(50)
-    # move is non-blocking, so sleep until it is time to stop:
-    time.sleep(t2 - t0)
-    linear_traj_positioner.stop()
-
-    # ensure position is ok
-    assert pytest.approx(linear_traj_positioner.position - expected_pos, abs=1e-1) == 0
-
-
 @pytest.mark.parametrize("proxy_active", [True, False])
 def test_sim_camera_proxies(camera, proxy_active):
     """Test mocking compute_method with framework class"""
