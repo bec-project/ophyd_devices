@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.38.0 (2026-05-08)
+
+### Features
+
+- Add subscription to update sim_monitor with motor readbacks
+  ([`6e2507b`](https://github.com/bec-project/ophyd_devices/commit/6e2507bcb5dc83b092901ac3e2181177e66052d5))
+
+### Refactoring
+
+- Fix thread leak in SimPositioner, improve callback in SimMonitor
+  ([`36e24e6`](https://github.com/bec-project/ophyd_devices/commit/36e24e6e5b2cdbee2d844f265f4e14c74972ccba))
+
+
 ## v1.37.0 (2026-04-28)
 
 ### Continuous Integration
