@@ -76,6 +76,7 @@ class ComputedSignal(SignalRO):
         self._signal_subs = []
         self._compute_method = None
         self._compute_method_str = None
+        self._active_callbacks: set[str] = set()
 
     def _signal_callback(self, *args, **kwargs):
         old_value = self._readback
@@ -172,3 +173,22 @@ class ComputedSignal(SignalRO):
                 return_value = self._compute_method()
         self._readback = return_value if return_value is not None else self._readback
         return return_value
+
+    def _run_subs(self, *args, sub_type, **kwargs):
+        """
+        This method runs the callbacks for a given subscription type. It is overridden to ensure that
+        callbacks for the same subscription type can not trigger additional subscriptions of the same type.
+        We thereby avoid that callbacks can triggered recursively. In practice, a callback may call 'get'
+        or 'read' itself, but it won't trigger any recursive calls of the callbacks for the same subscription type.
+
+        Args:
+            sub_type (str): The subscription type for which to run the callbacks.
+        """
+        if sub_type in self._active_callbacks:
+            return
+        try:
+            self._active_callbacks.add(sub_type)
+            super()._run_subs(*args, sub_type=sub_type, **kwargs)
+        finally:
+            if sub_type in self._active_callbacks:
+                self._active_callbacks.remove(sub_type)

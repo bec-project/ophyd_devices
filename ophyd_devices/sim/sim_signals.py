@@ -209,7 +209,20 @@ class ReadOnlySignal(Signal):
             self._readback = self._value = self._get_value()
         else:
             self._readback = np.random.rand()
-        self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+        try:
+            if (
+                isinstance(old_value, (int, float, list)) and old_value != self._readback
+            ):  # only run subs if the value has changed
+                self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback)
+            else:  # must be numpy
+                if not np.array_equal(old_value, self._readback):
+                    self._run_subs(
+                        sub_type=self.SUB_VALUE, old_value=old_value, value=self._readback
+                    )
+        except Exception as e:
+            logger.info(
+                f"Error in comparing old_value {old_value} with new_value {self._readback}: {e}"
+            )
         return self._readback
 
     # pylint: disable=arguments-differ
