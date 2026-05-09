@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.39.0 (2026-05-09)
+
+### Features
+
+- Add settle time and timeout signals to EpicsMotor and SimPositioner
+  ([`eba6915`](https://github.com/bec-project/ophyd_devices/commit/eba691589f51f822e96457b3fb87ccb6ddf49b70))
+
+
 ## v1.38.0 (2026-05-08)
 
 ### Features
