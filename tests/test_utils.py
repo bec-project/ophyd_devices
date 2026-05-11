@@ -27,6 +27,7 @@ from ophyd_devices.utils.psi_device_base_utils import (
     AndStatus,
     CompareStatus,
     DeviceStatus,
+    ExceptionStatus,
     FileHandler,
     MoveStatus,
     Status,
@@ -821,6 +822,63 @@ def test_compare_status_string():
     assert status.done is True
     assert status.success is True
     assert status.exception() is None
+
+
+def test_exception_status_andstatus_does_not_block_success():
+    """ExceptionStatus should fail composites early but not block success while pending."""
+    sig_primary_a = Signal(name="primary_a", value=0)
+    sig_primary_b = Signal(name="primary_b", value=0)
+    sig_watch = Signal(name="watch", value=0)
+
+    primary_a = CompareStatus(signal=sig_primary_a, value=1, operation_success="==")
+    primary_b = CompareStatus(signal=sig_primary_b, value=2, operation_success="==")
+    watch = ExceptionStatus(signal=sig_watch, value=0, operation="!=")
+
+    combined = primary_a & primary_b & watch
+    sig_primary_a.put(1)
+    assert not combined.done
+    sig_primary_b.put(2)
+    combined.wait(timeout=1)
+    assert combined.done is True
+    assert combined.success is True
+    assert watch.done is False
+
+
+def test_exception_status_andstatus_fails_early():
+    """ExceptionStatus should abort a composite status when the watched value is reached."""
+    sig_primary = Signal(name="primary", value=0)
+    sig_watch = Signal(name="watch", value=0)
+
+    primary = CompareStatus(signal=sig_primary, value=1, operation_success="==")
+    watch = ExceptionStatus(signal=sig_watch, value=0, operation="!=")
+    combined = primary & watch
+
+    sig_watch.put(1)
+    with pytest.raises(ValueError):
+        combined.wait(timeout=1)
+    assert combined.done is True
+    assert combined.success is False
+
+
+def test_exception_status_andstatus_fails_early_with_custom_exception():
+    """ExceptionStatus should abort a composite status with the specified exception when the watched value is reached."""
+    sig_primary = Signal(name="primary", value=0)
+    sig_watch = Signal(name="watch", value=0)
+
+    primary = CompareStatus(signal=sig_primary, value=1, operation_success="==")
+    watch = ExceptionStatus(
+        signal=sig_watch,
+        value=0,
+        operation="!=",
+        exception=RuntimeError("Watch signal reached failure value"),
+    )
+    combined = primary & watch
+
+    sig_watch.put(1)
+    with pytest.raises(RuntimeError, match="Watch signal reached failure value"):
+        combined.wait(timeout=1)
+    assert combined.done is True
+    assert combined.success is False
 
 
 def test_transition_status():
