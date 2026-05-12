@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v1.40.1 (2026-05-12)
+
+### Bug Fixes
+
+- Skip run subs recursively
+  ([`2f1f9d9`](https://github.com/bec-project/ophyd_devices/commit/2f1f9d99c91cfa87c789bdc82b96ef5fb472e976))
+
+- **sim-monitor**: Fix updates of callbacks during motion, ConstantModel won't update its value
+  ([`41e38df`](https://github.com/bec-project/ophyd_devices/commit/41e38dfb8294e3164407916ce18be85105c8dc77))
+
+- **sim-positioner**: Fix move method of lin positioner with trajectory
+  ([`0626ac8`](https://github.com/bec-project/ophyd_devices/commit/0626ac8f62156573db616a20827054fce3c59710))
+
+- **sim-positioner**: Only run readback subs if values changed by more than the tolerance
+  ([`88dbe27`](https://github.com/bec-project/ophyd_devices/commit/88dbe2776c833be38719e70579232451058cb703))
+
+### Testing
+
+- Drop test of linear projectory that relied on progress of move and sleep timing.
+  ([`b267a5b`](https://github.com/bec-project/ophyd_devices/commit/b267a5b1d5b9fb89ec40f6e05df73036ee5de128))
+
+
 ## v1.40.0 (2026-05-12)
 
 ### Features
