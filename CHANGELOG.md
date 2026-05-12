@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.40.0 (2026-05-12)
+
+### Features
+
+- Add watch status for tracking alarms
+  ([`b1002cb`](https://github.com/bec-project/ophyd_devices/commit/b1002cb04303406f11e97d35fed55718f42ea1ea))
+
+
 ## v1.39.0 (2026-05-09)
 
 ### Features
