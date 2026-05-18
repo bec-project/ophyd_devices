@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.0 (2026-05-18)
+
+### Features
+
+- **sim**: Add a new device to simulate ramp ups
+  ([`b317d28`](https://github.com/bec-project/ophyd_devices/commit/b317d28d8fc24b374983bd1495badcc76d1076e3))
+
+
 ## v1.40.1 (2026-05-12)
 
 ### Bug Fixes
