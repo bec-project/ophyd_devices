@@ -881,6 +881,19 @@ def test_exception_status_andstatus_fails_early_with_custom_exception():
     assert combined.success is False
 
 
+def test_exception_status_with_exception():
+    """Test that ExceptionStatus raises the specified exception when the condition is met."""
+    sig = Signal(name="test_signal", value=0)
+    sig.put(1)
+    status = ExceptionStatus(
+        signal=sig, value=1, operation="==", exception=RuntimeError("Test signal reached 1")
+    )
+    assert status.done is True
+    assert status.success is False
+    with pytest.raises(RuntimeError, match="Test signal reached 1"):
+        status.wait(timeout=1)
+
+
 def test_transition_status():
     """Test TransitionStatus"""
     sig = Signal(name="test_signal", value=0)

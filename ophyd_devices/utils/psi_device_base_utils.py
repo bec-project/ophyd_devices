@@ -357,6 +357,7 @@ class ExceptionStatus(CompareStatus):
         event_type=None,
         exception: Exception | None = None,
     ):
+        self._configured_exception = exception
         super().__init__(
             signal=signal,
             value=value,
@@ -366,7 +367,6 @@ class ExceptionStatus(CompareStatus):
             run=run,
             event_type=event_type,
         )
-        self._configured_exception = exception
 
     def _compare_callback(self, value: any, **kwargs) -> bool:
         try:
