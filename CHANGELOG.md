@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.41.1 (2026-05-21)
+
+### Bug Fixes
+
+- **psi-device-base-utils**: If run=True, then _configured_exception must be defined before
+  CompareStatus is initialized.
+  ([`b01ac0f`](https://github.com/bec-project/ophyd_devices/commit/b01ac0f505cd7149424602596d0c008646e2adaf))
+
+
 ## v1.41.0 (2026-05-18)
 
 ### Features
