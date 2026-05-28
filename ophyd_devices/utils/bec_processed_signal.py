@@ -147,6 +147,19 @@ class BECProcessedSignal(SignalRO):
                 compute_method=model_config["compute_method"], **model_config["devices"]
             )
 
+    def read(self) -> dict[str, Any]:
+        if self._metadata.get("connected", False) is False:
+            return super().read()
+        # Lazy import DSDevice to avoid circular import issues
+        # pylint: disable=import-outside-toplevel
+        from bec_server.device_server.devices.devicemanager import DSDevice
+
+        for inp in self.compute_model.method_inputs.values():
+            if not isinstance(inp, (Component, Device, Signal, DSDevice)):
+                continue  # Skip non-ophyd objects, they are additional arguments for the compute method
+            inp.read()  # Read the linked device/signals to ensure to be up to date before computing the value
+        return super().read()
+
     @staticmethod
     def get_device_object_from_bec(
         object_name: str, signal_name: str, device_manager: DeviceManagerDS
