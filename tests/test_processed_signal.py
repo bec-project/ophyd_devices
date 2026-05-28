@@ -2,6 +2,8 @@
 
 # pylint: disable=redefined-outer-name
 
+from unittest import mock
+
 import pytest
 from bec_server.device_server.tests.utils import DMMock
 from ophyd import Component as Cpt
@@ -119,6 +121,13 @@ def test_processed_signal_describe_metadata(processed_signal_from_device_manager
     assert info["extra_kwargs"] == {"offset": 1.0}
     assert "samx.readback" in info["method_inputs"]
     assert "samy.readback" in info["method_inputs"]
+
+
+def test_processed_signal_forces_read(processed_signal_from_device_manager, samx):
+    """Test that get() forces read of all input signals."""
+    with mock.patch.object(samx.readback, "read") as mock_read:
+        processed_signal_from_device_manager.read()
+        mock_read.assert_called_once()
 
 
 def test_processed_signal_model_rejects_missing_required_inputs():
