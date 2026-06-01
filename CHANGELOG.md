@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.2 (2026-06-01)
+
+### Bug Fixes
+
+- **bec-processed-signal**: Fix read on processed signal, will force a read on linked signal now
+  ([`87cd2cc`](https://github.com/bec-project/ophyd_devices/commit/87cd2ccfafd5c28720d339e7c562dfdf7035920e))
+
+
 ## v1.41.1 (2026-05-21)
 
 ### Bug Fixes
