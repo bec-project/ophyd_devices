@@ -1,98 +1,98 @@
 name: Update device list
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 jobs:
-    device_list_update:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-        concurrency:
-            group: device-list-update-${{ github.ref_name }}
-            cancel-in-progress: true
+  device_list_update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: device-list-update-${{ github.ref_name }}
+      cancel-in-progress: true
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0 # required for git diff / reset
-                  ssh-key: ${{ secrets.CI_DEPLOY_SSH_KEY }}
-                  ssh-known-hosts: ${{ secrets.CI_DEPLOY_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # required for git diff / reset
+          ssh-key: ${{ secrets.CI_DEPLOY_SSH_KEY }}
+          ssh-known-hosts: ${{ secrets.CI_DEPLOY_SSH_KNOWN_HOSTS }}
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
 
-            - name: Setup | Force release branch to be at workflow sha
-              run: |
-                  git reset --hard ${{ github.sha }}
+      - name: Setup | Force release branch to be at workflow sha
+        run: |
+          git reset --hard ${{ github.sha }}
 
-            - name: Evaluate | Verify upstream has NOT changed
-              shell: bash
-              run: |
-                  set +o pipefail
+      - name: Evaluate | Verify upstream has NOT changed
+        shell: bash
+        run: |
+          set +o pipefail
 
-                  UPSTREAM_BRANCH_NAME="$(git status -sb | head -n 1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
-                  printf '%s\n' "Upstream branch name: $UPSTREAM_BRANCH_NAME"
+          UPSTREAM_BRANCH_NAME="$(git status -sb | head -n 1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
+          printf '%s\n' "Upstream branch name: $UPSTREAM_BRANCH_NAME"
 
-                  set -o pipefail
+          set -o pipefail
 
-                  if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
-                      printf >&2 '%s\n' "::error::Unable to determine upstream branch name!"
-                      exit 1
-                  fi
+          if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
+              printf >&2 '%s\n' "::error::Unable to determine upstream branch name!"
+              exit 1
+          fi
 
-                  git fetch "${UPSTREAM_BRANCH_NAME%%/*}"
+          git fetch "${UPSTREAM_BRANCH_NAME%%/*}"
 
-                  if ! UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"; then
-                      printf >&2 '%s\n' "::error::Unable to determine upstream branch sha!"
-                      exit 1
-                  fi
+          if ! UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"; then
+              printf >&2 '%s\n' "::error::Unable to determine upstream branch sha!"
+              exit 1
+          fi
 
-                  HEAD_SHA="$(git rev-parse HEAD)"
+          HEAD_SHA="$(git rev-parse HEAD)"
 
-                  if [ "$HEAD_SHA" != "$UPSTREAM_SHA" ]; then
-                      printf >&2 '%s\n' "[HEAD SHA] $HEAD_SHA != $UPSTREAM_SHA [UPSTREAM SHA]"
-                      printf >&2 '%s\n' "::error::Upstream has changed, aborting release..."
-                      exit 1
-                  fi
+          if [ "$HEAD_SHA" != "$UPSTREAM_SHA" ]; then
+              printf >&2 '%s\n' "[HEAD SHA] $HEAD_SHA != $UPSTREAM_SHA [UPSTREAM SHA]"
+              printf >&2 '%s\n' "::error::Upstream has changed, aborting release..."
+              exit 1
+          fi
 
-                  printf '%s\n' "Verified upstream branch has not changed, continuing..."
+          printf '%s\n' "Verified upstream branch has not changed, continuing..."
 
-            - name: Install Python dependencies
-              run: |
-                  pip install .
+      - name: Install Python dependencies
+        run: |
+          pip install .
 
-            - name: Generate device list
-              run: |
-                  python .github/scripts/retrieve_device_classes.py \
-                    "ophyd_devices" \
-                    "./ophyd_devices/devices/device_list.md" \
-                    --ignore areadetector.plugins
+      - name: Generate device list
+        run: |
+          python .github/scripts/retrieve_device_classes.py \
+            "ophyd_devices" \
+            "./ophyd_devices/devices/device_list.md" \
+            --ignore areadetector.plugins
 
-            - name: Commit and push if device list changed
-              run: |
-                  FILE="./ophyd_devices/devices/device_list.md"
+      - name: Commit and push if device list changed
+        run: |
+          FILE="./ophyd_devices/devices/device_list.md"
 
-                  if [ -f "$FILE" ]; then
-                    git add "$FILE"
+          if [ -f "$FILE" ]; then
+            git add "$FILE"
 
-                    git config user.name "github-actions[bot]"
-                    git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
 
-                    if ! git diff-index --quiet HEAD --; then
-                      git commit -m "docs: Update device list"
+            if ! git diff-index --quiet HEAD --; then
+              git commit -m "docs: Update device list"
 
-                      git push origin "${{ github.ref_name }}"
+              git push origin "${{ github.ref_name }}"
 
-                      echo "Device list updated"
-                    else
-                      echo "No changes detected"
-                    fi
-                  else
-                    echo "Device list file not found"
-                  fi
+              echo "Device list updated"
+            else
+              echo "No changes detected"
+            fi
+          else
+            echo "Device list file not found"
+          fi

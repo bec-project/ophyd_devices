@@ -1,16 +1,16 @@
 name: Run Pytest with different Python versions
-on: 
+on:
   workflow_call:
     inputs:
       BEC_CORE_BRANCH:
-        description: 'Branch of BEC Core to install'
+        description: "Branch of BEC Core to install"
         required: false
-        default: 'main'
+        default: "main"
         type: string
       OPHYD_DEVICES_BRANCH:
-        description: 'Branch of Ophyd Devices to install'
+        description: "Branch of Ophyd Devices to install"
         required: false
-        default: 'main'
+        default: "main"
         type: string
 
 jobs:
@@ -21,9 +21,8 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-
       - name: Checkout BEC Ophyd Devices
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: bec-project/ophyd_devices
           ref: ${{ inputs.OPHYD_DEVICES_BRANCH }}

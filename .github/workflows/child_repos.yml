@@ -1,23 +1,22 @@
 name: Run Pytest with Coverage
-on: 
+on:
   workflow_call:
     inputs:
       BEC_CORE_BRANCH:
-        description: 'Branch for BEC Core'
+        description: "Branch for BEC Core"
         required: false
-        default: 'main'
+        default: "main"
         type: string
       OPHYD_DEVICES_BRANCH:
-        description: 'Branch for Ophyd Devices'
+        description: "Branch for Ophyd Devices"
         required: false
-        default: 'main'
+        default: "main"
         type: string
       BEC_WIDGETS_BRANCH:
-        description: 'Branch for BEC Widgets'
+        description: "Branch for BEC Widgets"
         required: false
-        default: 'main'
+        default: "main"
         type: string
-
 
 jobs:
   bec:
@@ -29,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout BEC
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: bec-project/bec
           ref: ${{ inputs.BEC_CORE_BRANCH }}
@@ -39,7 +38,7 @@ jobs:
         with:
           BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH }}
           OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH }}
-          PYTHON_VERSION: '3.11'
+          PYTHON_VERSION: "3.11"
       - name: Run Pytest
         run: |
           cd ./bec
@@ -50,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout BEC
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: bec-project/bec
           ref: ${{ inputs.BEC_CORE_BRANCH }}
@@ -61,4 +60,4 @@ jobs:
           BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH }}
           OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH }}
           BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH }}
-          PYTHON_VERSION: '3.11'
+          PYTHON_VERSION: "3.11"
