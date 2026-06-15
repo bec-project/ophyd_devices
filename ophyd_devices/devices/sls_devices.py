@@ -10,20 +10,15 @@ class SLSOperatorMessages(Device):
     SUB_VALUE = "value"
     _default_sub = SUB_VALUE
     messages_info = {
-        f"message{i}": (EpicsSignalRO, f"ACOAU-ACCU:OP-MSG{i}", {}) for i in range(1, 6)
+        f"msg{i}": (EpicsSignalRO, f"AGEOP-CPCL-OPMSG:CR-MSG{i}", {"auto_monitor": True})
+        for i in range(1, 6)
     }
     messages = Dcpt(messages_info)
-    date_info = {f"message{i}": (EpicsSignalRO, f"ACOAU-ACCU:OP-DATE{i}", {}) for i in range(1, 6)}
+    date_info = {
+        f"msg_date{i}": (EpicsSignalRO, f"AGEOP-CPCL-OPMSG:CR-MSG-DATE{i}", {"auto_monitor": True})
+        for i in range(1, 6)
+    }
     date = Dcpt(date_info)
-
-    def __init__(self, prefix="", *, name, **kwargs):
-        super().__init__(prefix, name=name, **kwargs)
-        self.messages.message1.subscribe(self._emit_value)
-
-    def _emit_value(self, **kwargs):
-        timestamp = kwargs.pop("timestamp", time.time())
-        self.wait_for_connection()
-        self._run_subs(sub_type=self.SUB_VALUE, timestamp=timestamp, obj=self)
 
 
 class SLSInfo(Device):
