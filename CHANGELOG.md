@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.41.3 (2026-06-16)
+
+### Bug Fixes
+
+- Adjust op msgs PVs for SLS2
+  ([`5b72a2d`](https://github.com/bec-project/ophyd_devices/commit/5b72a2d4edaad4b698722edd9ff5c5142729e1de))
+
+### Chores
+
+- Upgrade GitHub Actions to use latest versions of setup-python and checkout actions
+  ([`3b502ad`](https://github.com/bec-project/ophyd_devices/commit/3b502ad2f5d42260fec7f074521f299e78e96075))
+
+
 ## v1.41.2 (2026-06-01)
 
 ### Bug Fixes
