@@ -332,7 +332,7 @@ class EpicsMotorEC(EpicsMotor):
 
     def _check_motion_status(self) -> tuple[bool, Exception | None]:
         success, exception = super()._check_motion_status()
-        if success:
+        if not success:
             # Additionally check for ECMC errors
             error = self.error.get(use_monitor=False)
             if error:
