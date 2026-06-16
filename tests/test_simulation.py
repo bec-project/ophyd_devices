@@ -29,7 +29,7 @@ from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks.h5_image_replay_proxy import H5ImageReplayProxy
 from ophyd_devices.sim.sim_frameworks.slit_proxy import SlitProxy
 from ophyd_devices.sim.sim_frameworks.stage_camera_proxy import StageCameraProxy
-from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
+from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync, SimMonitorMixedSignals
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.sim.sim_test_devices import SimCameraWithPSIComponents, SimDeviceWithSignalDelay
@@ -110,6 +110,17 @@ def async_monitor(name="async_monitor"):
     dm = DMMock()
     mon = SimMonitorAsync(name=name, device_manager=dm)
     mon.wait_for_connection()
+    yield mon
+
+
+@pytest.fixture(scope="function")
+def mixed_mon(name="mixed_mon"):
+    """Fixture for SimMonitorMixedSignals."""
+    dm = DMMock()
+    mon = SimMonitorMixedSignals(name=name, device_manager=dm)
+    mon.wait_for_connection()
+    mon.scan_info = get_mock_scan_info(device=mon)
+    mon.scan_info.msg.scan_id = "test_scan"
     yield mon
 
 
@@ -797,6 +808,104 @@ def test_async_mon_send_data_to_bec(async_monitor):
         ]
         assert mock_xadd.mock_calls == call
         assert async_monitor.data_buffer["value"] == []
+
+
+def test_mixed_mon_signal_classes(mixed_mon):
+    """A 'monitored' device may expose async signals (bec_widgets issue #1185).
+
+    The class names are exactly what the device server serializes into device._info
+    as 'signal_class', which is what a signal-aware curve classifier keys on.
+    """
+    assert type(mixed_mon.readback).__name__ == "ReadOnlySignal"  # synchronous
+    assert type(mixed_mon.async_counts).__name__ == "AsyncSignal"  # async
+    assert type(mixed_mon.async_spectrum).__name__ == "AsyncSignal"  # async
+    assert type(mixed_mon.async_channels).__name__ == "AsyncMultiSignal"  # async
+    assert type(mixed_mon.morphing).__name__ == "SetableSignal"  # late-typed (sync class)
+    assert type(mixed_mon.progress).__name__ == "ProgressSignal"  # not a curve
+
+
+def test_mixed_mon_describe_roles(mixed_mon):
+    """Async signals embed a 'main' signal_info; progress embeds 'progress'.
+
+    Plain synchronous signals embed no signal_info block at all.
+    """
+
+    def role(comp):
+        sig = getattr(mixed_mon, comp)
+        return sig.describe().get(sig.name, {}).get("signal_info", {}).get("role")
+
+    assert role("async_counts") == "main"
+    assert role("async_spectrum") == "main"
+    assert role("async_channels") == "main"
+    assert role("progress") == "progress"
+    # Synchronous signals carry no signal_info block.
+    for comp in ("readback", "morphing"):
+        sig = getattr(mixed_mon, comp)
+        assert "signal_info" not in sig.describe().get(sig.name, {})
+
+
+def test_mixed_mon_stage_resets(mixed_mon):
+    """Staging resets the counter and the late-typed buffer."""
+    mixed_mon._counter = 5
+    mixed_mon._morphing_buffer["value"].append(1)
+    mixed_mon.stage()
+    assert mixed_mon._counter == 0
+    assert mixed_mon._morphing_buffer["value"] == []
+
+
+def test_mixed_mon_trigger_streams_async_signals(mixed_mon):
+    """One trigger updates every async signal and streams the late-typed signal."""
+    with mock.patch.object(mixed_mon.connector, "xadd") as mock_xadd:
+        mixed_mon.stage()
+        status = mixed_mon.trigger()
+        status_wait(status)
+        assert status.success is True
+
+        # Modern AsyncSignal-family signals hold their last DeviceMessage.
+        counts_msg = mixed_mon.async_counts.get()
+        assert mixed_mon.async_counts.name in counts_msg.signals
+        assert counts_msg.metadata["async_update"] == {"type": "add", "max_shape": [None]}
+
+        spectrum_msg = mixed_mon.async_spectrum.get()
+        assert spectrum_msg.metadata["async_update"] == {"type": "replace"}
+
+        channels_msg = mixed_mon.async_channels.get()
+        assert {
+            f"{mixed_mon.name}_async_channels_ch1",
+            f"{mixed_mon.name}_async_channels_ch2",
+        } == set(channels_msg.signals)
+
+        # Late-typed signal streamed on the async readback endpoint (interval == 1).
+        assert mock_xadd.call_count == 1
+        assert mock_xadd.call_args[0][0] == MessageEndpoints.device_async_readback(
+            scan_id=mixed_mon.scan_info.msg.scan_id, device=mixed_mon.name
+        )
+        assert mixed_mon._morphing_buffer["value"] == []  # flushed on send
+
+
+def test_mixed_mon_morphing_can_be_disabled(mixed_mon):
+    """Disabling stream_morphing_async stops the late-typed async streaming."""
+    mixed_mon.stream_morphing_async.put(0)
+    with mock.patch.object(mixed_mon.connector, "xadd") as mock_xadd:
+        mixed_mon.stage()
+        status_wait(mixed_mon.trigger())
+        assert mock_xadd.call_count == 0
+        assert mixed_mon._morphing_buffer["value"] == []
+
+
+def test_mixed_mon_complete_flushes_buffer(mixed_mon):
+    """on_complete flushes any buffered late-typed data not yet sent."""
+    mixed_mon._morphing_send_interval = 100  # don't flush on trigger
+    with mock.patch.object(mixed_mon.connector, "xadd") as mock_xadd:
+        mixed_mon.stage()
+        status_wait(mixed_mon.trigger())
+        assert mock_xadd.call_count == 0  # buffered, not sent yet
+        assert mixed_mon._morphing_buffer["value"] != []
+        status = mixed_mon.complete()
+        status_wait(status)
+        assert status.success is True
+        assert mock_xadd.call_count == 1
+        assert mixed_mon._morphing_buffer["value"] == []
 
 
 def test_positioner_updated_timestamp(positioner):

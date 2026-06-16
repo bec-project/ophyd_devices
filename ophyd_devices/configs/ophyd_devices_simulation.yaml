@@ -98,6 +98,26 @@ bpm5i:
   enabled: true
   readOnly: false
 
+# Monitored device that ALSO exposes asynchronous signals (bec_widgets issue #1185).
+# Its readout priority is 'monitored', yet async_counts / async_spectrum / async_channels
+# stream asynchronously, and 'morphing' is delivered both ways. softwareTrigger drives the
+# async streams at every scan point.
+mixed_mon:
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.sim.SimMonitorMixedSignals
+  deviceConfig:
+    sim_init:
+      model: GaussianModel
+      params:
+        amplitude: 100
+        center: 0
+        sigma: 5
+  deviceTags:
+    - beamline
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
 ring_current_sim:
   readoutPriority: monitored
   deviceClass: ophyd_devices.ReadOnlySignal
