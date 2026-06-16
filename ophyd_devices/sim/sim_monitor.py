@@ -408,6 +408,8 @@ class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
     def _generate_spectrum(self) -> np.ndarray:
         """Generate a noisy 1D spectrum whose peak drifts with the trigger counter."""
         size = int(self.spectrum_size.get())
+        if size <= 0:
+            raise ValueError(f"{self.name}: spectrum_size must be > 0, got {size}")
         x = np.arange(size)
         center = (self._counter * max(size // 20, 1)) % size
         spectrum = 100 * np.exp(-((x - center) ** 2) / (2 * (size / 20) ** 2))
