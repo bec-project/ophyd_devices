@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.41.4 (2026-06-16)
+
+### Bug Fixes
+
+- **psi-motor**: Epicsmotorec was always skipping the extra check if motion failed
+  ([`545419e`](https://github.com/bec-project/ophyd_devices/commit/545419e848c33f913c435fbe1e3631ca676f34c5))
+
+### Testing
+
+- **psi-motor**: Fix test for ecmotor callback
+  ([`358f0d3`](https://github.com/bec-project/ophyd_devices/commit/358f0d3914a0b653c4908f18ce6c99a1b0b2ffd5))
+
+
 ## v1.41.3 (2026-06-16)
 
 ### Bug Fixes
