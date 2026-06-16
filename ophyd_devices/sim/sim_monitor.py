@@ -458,9 +458,10 @@ class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
 
             # Late-typed signal: also stream the plain 'morphing' signal asynchronously.
             if self.stream_morphing_async.get():
-                self.morphing.put(self.BIT_DEPTH(counts))
-                self._morphing_buffer["value"].append(counts)
-                self._morphing_buffer["timestamp"].append(time.time())
+                val = self.BIT_DEPTH(counts)
+                self.morphing.put(val)
+                self._morphing_buffer["value"].append(val)
+                self._morphing_buffer["timestamp"].append(self.morphing.timestamp)
                 if self._counter % self._morphing_send_interval == 0:
                     self._send_morphing_to_bec()
 
