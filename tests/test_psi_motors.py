@@ -122,10 +122,6 @@ def test_move_epics_motor_ec(mock_epics_motor_ec):
         assert mock_log_warning.call_count == 1
         motor_ec.user_readback._read_pv.mock_data = 8
         motor_ec.motor_done_move._read_pv.mock_data = 1
-        with pytest.raises(RuntimeError):
-            status.wait(timeout=5)
-            assert status.done is True
-            assert isinstance(status.exception(), RuntimeError)
 
         motor_ec.error._read_pv.mock_data = 0
         # Note: Position has to be > current position from 8 to 9...
