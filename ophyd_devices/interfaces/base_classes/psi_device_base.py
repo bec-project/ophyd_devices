@@ -73,6 +73,20 @@ class PSIDeviceBase(Device):
         self.scan_info = scan_info
         self.on_init()
 
+    def wait_for_connection(self, *args, **kwargs):
+        """Wait for the device to be connected.
+
+        This method is called from BEC after the device is added to the device manager.
+        It waits for the device to be connected and then calls the on_connected method.
+        """
+        for walk in self.walk_components():
+            if (
+                hasattr(walk.item.cls, "REQUIRES_WAIT_FOR_CONNECTION")
+                and walk.item.cls.REQUIRES_WAIT_FOR_CONNECTION is True
+            ):
+                getattr(self, walk.dotted_name).wait_for_connection(*args, **kwargs)
+        super().wait_for_connection(*args, **kwargs)
+
     ########################################
     # Additional Properties and Attributes #
     ########################################
