@@ -100,8 +100,8 @@ bpm5i:
 
 # Monitored device that ALSO exposes asynchronous signals (bec_widgets issue #1185).
 # Its readout priority is 'monitored', yet async_counts / async_spectrum / async_channels
-# stream asynchronously, and 'morphing' is delivered both ways. softwareTrigger drives the
-# async streams at every scan point.
+# stream asynchronously (the signals push their own data via put()). softwareTrigger
+# drives the async streams at every scan point.
 mixed_mon:
   readoutPriority: monitored
   deviceClass: ophyd_devices.sim.SimMonitorMixedSignals

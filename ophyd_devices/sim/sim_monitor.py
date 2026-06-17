@@ -1,6 +1,5 @@
 """Module for simulated monitor devices."""
 
-import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -289,10 +288,11 @@ class SimMonitorMixedSignalsControl(Device):
     # Its serialized signal_class is 'ReadOnlySignal', so it is classified as sync.
     readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
 
-    # --- Asynchronous signals (modern AsyncSignal family) -------------------
+    # --- Asynchronous signals (AsyncSignal family) --------------------------
     # These carry signal_class 'AsyncSignal' / 'AsyncMultiSignal' in the device info,
     # so a signal-aware classifier marks them async even though the parent device sits
     # in the 'monitored' readout-priority group (the core of bec_widgets issue #1185).
+    # As in SimWaveform, the signals push their own data to BEC via ``.put()``.
     async_counts = Cpt(
         AsyncSignal, ndim=0, max_size=1000, doc="Scalar counts streamed asynchronously."
     )
@@ -307,22 +307,12 @@ class SimMonitorMixedSignalsControl(Device):
         doc="Two scalar channels streamed asynchronously as one multi-signal.",
     )
 
-    # --- Late-typed signal --------------------------------------------------
-    # Declared as a plain (synchronous) SetableSignal, so its serialized signal_class
-    # is 'SetableSignal'. Outside a scan it behaves synchronously, but once a scan
-    # starts the device also streams it on the async readback endpoint. Its effective
-    # data-delivery type is therefore only known at the first reported value /
-    # beginning of the scan -- the case static, class-based classification cannot see.
-    morphing = Cpt(SetableSignal, value=BIT_DEPTH(0), kind=Kind.normal)
-
     # --- Non-curve signal ---------------------------------------------------
     # role='progress' -> not curve data; a signal-aware classifier must ignore it.
     progress = Cpt(ProgressSignal, doc="Scan progress; not plotted as a curve.")
 
     # --- Config -------------------------------------------------------------
     spectrum_size = Cpt(SetableSignal, value=200, kind=Kind.config)
-    # Whether the late-typed 'morphing' signal is streamed asynchronously during a scan.
-    stream_morphing_async = Cpt(SetableSignal, value=1, kind=Kind.config)
 
     SUB_READBACK = "readback"
     SUB_PROGRESS = "progress"
@@ -333,7 +323,6 @@ class SimMonitorMixedSignalsControl(Device):
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-        self.connector = self.device_manager.connector
         self.sim_init = sim_init
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
@@ -354,23 +343,22 @@ class SimMonitorMixedSignalsControl(Device):
 class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
     """A simulated *monitored* device that mixes synchronous and asynchronous signals.
 
-    This device exists to reproduce and exercise bec_widgets issue #1185: a device whose
-    readout priority is ``monitored`` can still expose asynchronous signals. Curves must
-    therefore be classified per-signal (sync vs async), not by the parent device's
-    readout-priority group.
+    Reproduces and exercises bec_widgets issue #1185: a device whose readout priority is
+    ``monitored`` can still expose asynchronous signals, so curves must be classified
+    per-signal (sync vs async), not by the parent device's readout-priority group.
+
+    Following the practice in :class:`~ophyd_devices.sim.sim_waveform.SimWaveform`, the
+    asynchronous signals push their own data through ``.put(..., async_update=...)``; the
+    device never assembles device messages by hand. The device server publishes those
+    ``BECMessageSignal`` puts to the async endpoint.
 
     Signals exposed:
 
-    * ``readback``         - synchronous, hinted; read at every scan point. (sync)
-    * ``async_counts``     - ``AsyncSignal`` (scalar); appended on every trigger. (async)
-    * ``async_spectrum``   - ``AsyncSignal`` (1D); the latest spectrum on every trigger. (async)
-    * ``async_channels``   - ``AsyncMultiSignal`` (ch1/ch2); appended on every trigger. (async)
-    * ``morphing``         - plain ``SetableSignal`` that is *also* streamed on the async
-      endpoint during a scan. Its data-delivery type is only revealed at the first
-      reported value / beginning of the scan -- a case static class-based classification
-      cannot resolve, and which class-based classification will (incorrectly) treat as
-      synchronous. Useful for validating any runtime/first-value reclassification.
-    * ``progress``         - ``ProgressSignal`` (role 'progress'); never a curve.
+    * ``readback``       - synchronous, hinted; read at every scan point. (sync)
+    * ``async_counts``   - ``AsyncSignal`` (scalar); a value appended on every trigger. (async)
+    * ``async_spectrum`` - ``AsyncSignal`` (1D); the latest spectrum on every trigger. (async)
+    * ``async_channels`` - ``AsyncMultiSignal`` (ch1/ch2); a value per channel each trigger. (async)
+    * ``progress``       - ``ProgressSignal`` (role 'progress'); never a curve.
 
     Intended config: ``readoutPriority: monitored`` and ``softwareTrigger: true`` so that
     the device is both read at every point (sync) and triggered to stream async data.
@@ -394,16 +382,7 @@ class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
             sim_init=sim_init,
             **kwargs,
         )
-        self._stream_ttl = 1800  # 30 min max
         self._counter = 0
-        self._morphing_send_interval = 1  # flush the morphing buffer every trigger
-        self._morphing_buffer: dict[str, list] = {"value": [], "timestamp": []}
-
-    # ------------------------------------------------------------------ helpers
-    def _clear_morphing_buffer(self) -> None:
-        """Clear the buffer used for the late-typed ``morphing`` signal."""
-        self._morphing_buffer["value"].clear()
-        self._morphing_buffer["timestamp"].clear()
 
     def _generate_spectrum(self) -> np.ndarray:
         """Generate a noisy 1D spectrum whose peak drifts with the trigger counter."""
@@ -416,54 +395,25 @@ class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
         spectrum = spectrum + np.random.normal(0, 2, size)
         return self.BIT_DEPTH(np.clip(spectrum, 0, None))
 
-    def _send_morphing_to_bec(self) -> None:
-        """Stream the buffered ``morphing`` values on the async readback endpoint.
-
-        This emulates a legacy/late-typed async signal: a plain signal whose values are
-        delivered asynchronously even though its static signal_class looks synchronous.
-        """
-        msg = messages.DeviceMessage(
-            signals={self.morphing.name: dict(self._morphing_buffer)},
-            metadata={"async_update": {"type": "add", "max_shape": [None]}},
-        )
-        self.connector.xadd(
-            MessageEndpoints.device_async_readback(
-                scan_id=self.scan_info.msg.scan_id, device=self.name
-            ),
-            {"data": msg},
-            expire=self._stream_ttl,
-        )
-        self._clear_morphing_buffer()
-
-    # -------------------------------------------------------------- scan hooks
     def on_stage(self) -> None:
-        """Reset counters and buffers for a fresh scan."""
+        """Reset the trigger counter for a fresh scan."""
         self._counter = 0
-        self._clear_morphing_buffer()
 
     def on_trigger(self) -> StatusBase:
-        """Read the sync readback and stream all async signals for one scan point."""
+        """Read the sync readback and let each async signal push its data for one point."""
 
         def _acquire():
             self._counter += 1
             counts = int(self.readback.get())  # synchronous, computed readback
 
-            # Modern AsyncSignal-family streams (classified async by signal_class).
+            # The AsyncSignal-family signals push their own data via put(); the device
+            # server publishes these BECMessageSignal puts to the async endpoint.
             self.async_counts.put(counts, async_update={"type": "add", "max_shape": [None]})
             self.async_spectrum.put(self._generate_spectrum(), async_update={"type": "replace"})
             self.async_channels.put(
                 {"ch1": {"value": counts}, "ch2": {"value": counts // 2}},
                 async_update={"type": "add", "max_shape": [None]},
             )
-
-            # Late-typed signal: also stream the plain 'morphing' signal asynchronously.
-            if self.stream_morphing_async.get():
-                val = self.BIT_DEPTH(counts)
-                self.morphing.put(val)
-                self._morphing_buffer["value"].append(val)
-                self._morphing_buffer["timestamp"].append(self.morphing.timestamp)
-                if self._counter % self._morphing_send_interval == 0:
-                    self._send_morphing_to_bec()
 
             # Progress (role 'progress' -> never a curve).
             num_points = getattr(self.scan_info.msg, "num_points", 0) or 0
@@ -474,15 +424,6 @@ class SimMonitorMixedSignals(PSIDeviceBase, SimMonitorMixedSignalsControl):
             )
 
         return self.task_handler.submit_task(_acquire)
-
-    def on_complete(self) -> StatusBase:
-        """Flush any buffered late-typed data at the end of the scan."""
-
-        def _complete():
-            if self._morphing_buffer["value"]:
-                self._send_morphing_to_bec()
-
-        return self.task_handler.submit_task(_complete)
 
     def on_stop(self) -> None:
         """Stop the device and shut down background tasks."""
