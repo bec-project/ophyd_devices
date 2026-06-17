@@ -450,7 +450,12 @@ class SimCameraWithPSIComponents(SimCamera):
     file_event = Cpt(FileEventSignal, doc="File event signal")
     progress = Cpt(ProgressSignal, doc="Progress signal")
     dynamic_signal = Cpt(
-        DynamicSignal, doc="Dynamic signals", signals=["dyn_signal1", "dyn_signal2"], max_size=1000
+        DynamicSignal,
+        doc="Dynamic signals",
+        signals=["dyn_signal_1", "dyn_signal_2", "dyn_signal_3"],
+        max_size=1000,
+        ndim=0,
+        async_update={"type": "add", "max_shape": [None]},
     )
     async_signal = Cpt(AsyncSignal, name="async_signal", ndim=1, doc="Async signal", max_size=1000)
     # TODO Handling of AsyncComponents is postponed, issue #104 is created
@@ -499,7 +504,11 @@ class SimCameraWithPSIComponents(SimCamera):
                 # sum array in one dimension
                 self.preview_1d.put(np.sum(data, 1))
                 self.dynamic_signal.put(
-                    {"preview_2d": {"value": data}, "preview_1d": {"value": np.sum(data, 1)}}
+                    {
+                        "dyn_signal_1": {"value": float(np.mean(data))},
+                        "dyn_signal_2": {"value": np.max(data)},
+                        "dyn_signal_3": {"value": np.min(data)},
+                    }
                 )
                 progress = {
                     "value": self._triggers_received,
