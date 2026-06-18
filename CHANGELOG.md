@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.5 (2026-06-18)
+
+### Bug Fixes
+
+- **signal-info**: Fix signal_info role to be file_event insteaad of file event
+  ([`c1be1e4`](https://github.com/bec-project/ophyd_devices/commit/c1be1e44574aa716c5825d12b63bce010b6c172f))
+
+
 ## v1.41.4 (2026-06-16)
 
 ### Bug Fixes
