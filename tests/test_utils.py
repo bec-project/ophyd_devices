@@ -488,7 +488,7 @@ def test_utils_file_event_signal():
                 "saved": False,
                 "ndim": 0,
                 "scope": "scan",
-                "role": "file event",
+                "role": "file_event",
                 "enabled": True,
                 "rpc_access": False,
                 "signals": [("file_event_signal", 5)],
