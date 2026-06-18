@@ -52,7 +52,7 @@ class SignalInfo(BaseModel):
         description="The scope of the signal indicates whether it is relevant for a specific "
         "scan or provides continuous updates, independent of a scan.",
     )
-    role: Literal["main", "preview", "diagnostic", "file event", "progress"] = Field(
+    role: Literal["main", "preview", "diagnostic", "file_event", "progress"] = Field(
         default="main",
         description="The role of the signal provides context for its usage and allows other components to filter"
         " or prioritize signals based on their intended function.",
@@ -98,7 +98,7 @@ class BECMessageSignal(Signal):
         saved: bool = True,
         ndim: Literal[0, 1, 2] | None = None,
         scope: Literal["scan", "continuous"] = "scan",
-        role: Literal["main", "preview", "diagnostic", "file event", "progress"] = "main",
+        role: Literal["main", "preview", "diagnostic", "file_event", "progress"] = "main",
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
         enabled: bool = True,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
@@ -385,7 +385,7 @@ class FileEventSignal(BECMessageSignal):
             saved=False,
             ndim=0,
             scope="scan",
-            role="file event",
+            role="file_event",
             signal_metadata=None,
             value=value,
             bec_message_type=messages.FileMessage,
