@@ -91,7 +91,7 @@ class ROIProcessing(Device, ABC):
                 ret_kwargs[k] = kwargs.pop(k)
         return kwargs, ret_kwargs
 
-    def wait_for_connection(self, all_signals=False, timeout=...):
+    def wait_for_connection(self, all_signals=False, timeout=5):
         """
         Wait for the ROI processing signal to be connected to Redis. The root device must ensure
         that wait_for_connection is called when connecting the device. Otherwise, the ROIProcessing
