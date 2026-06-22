@@ -45,7 +45,10 @@ class AvailableOperationsSignal(SignalRO):
 
 
 class ConfigUpdateReceivedSignal(Signal):
-    """Signal to publish ROI configuration updates, optionally coalescing them while blocked."""
+    """
+    Signal to publish ROI configuration updates. Based on the updated configuration,
+    updates will be published right away or blocked until released.
+    """
 
     def __init__(self, name, parent=None, **kwargs):
         super().__init__(name=name, parent=parent, **kwargs)
@@ -74,16 +77,20 @@ class ConfigUpdateReceivedSignal(Signal):
 
     def destroy(self):
         """Clean up the signal and unregister from Redis."""
-        if self._connector is not None:
+        if self._connector is not None and self._metadata.get("connected") is True:
             self._connector.unregister(
                 MessageEndpoints.scan_status(), self._handle_scan_status_update
             )
+        self._metadata["connected"] = False
         super().destroy()
 
     @property
     def connected(self) -> bool:
         """Return whether the signal is connected to Redis."""
-        self.wait_for_connection()
+        if self._destroyed:
+            return False
+        if self._metadata.get("connected") is not True:
+            self.wait_for_connection()
         return self._metadata.get("connected", False)
 
     def wait_for_connection(self, *args, **kwargs):
@@ -143,7 +150,14 @@ class ConfigUpdateReceivedSignal(Signal):
         timeout=None,
         **kwargs,
     ):
-        """Publish ``value`` immediately, or stage it as the next update while blocked."""
+        """
+        Put a new ROI configuration message to the signal. If updates are currently blocked,
+        the update will be cached and published once `unblock_updates` is called. Any subsequent
+        updates will overwrite the cached update until updates are unblocked.
+
+        Args:
+            value (ROIConfigurationMessage): The new ROI configuration message to put.
+        """
         if self._metadata.get("connected") is not True:
             raise RuntimeError(
                 f"Signal {self.name} is not connected to Redis and cannot publish updates."

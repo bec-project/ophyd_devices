@@ -23,10 +23,16 @@ class SimCameraROIProcessing(ROIProcessing):
     """ROI processing signal for simulated camera setups."""
 
     def get_scalar_outputs(self) -> list[str]:
-        return SIM_CONFIG["basic_statistics"]["scalar_outputs"]
+        scalar_outpus = []
+        for v in SIM_CONFIG.values():
+            scalar_outpus.extend(v["scalar_outputs"])
+        return scalar_outpus
 
     def get_waveform_outputs(self) -> list[str]:
-        return SIM_CONFIG["basic_statistics"]["waveform_outputs"]
+        waveform_outputs = []
+        for v in SIM_CONFIG.values():
+            waveform_outputs.extend(v["waveform_outputs"])
+        return waveform_outputs
 
     def get_available_analysis_operations(self) -> list[str]:
         return list(SIM_CONFIG.keys())
