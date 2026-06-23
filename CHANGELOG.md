@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.6 (2026-06-23)
+
+### Bug Fixes
+
+- **controller**: Ensure proper instance creation in Controller class
+  ([`629d884`](https://github.com/bec-project/ophyd_devices/commit/629d8844229c921893e60f69150b58c850e978fc))
+
+
 ## v1.41.5 (2026-06-18)
 
 ### Bug Fixes
