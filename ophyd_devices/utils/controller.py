@@ -319,6 +319,8 @@ class Controller(OphydObject):
         if not device_manager:
             raise RuntimeError("Device manager must be specified.")
         host_port = f"{socket_host}:{socket_port}"
-        if host_port not in cls._controller_instances:
+        if host_port not in cls._controller_instances or not isinstance(
+            cls._controller_instances[host_port], cls
+        ):
             cls._controller_instances[host_port] = object.__new__(cls)
         return cls._controller_instances[host_port]
