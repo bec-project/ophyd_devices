@@ -79,7 +79,7 @@ class ConfigUpdateReceivedSignal(Signal):
         """Clean up the signal and unregister from Redis."""
         if self._connector is not None and self._metadata.get("connected") is True:
             self._connector.unregister(
-                MessageEndpoints.scan_status(), self._handle_scan_status_update
+                MessageEndpoints.scan_status(), cb=self._handle_scan_status_update
             )
         self._metadata["connected"] = False
         super().destroy()
