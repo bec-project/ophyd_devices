@@ -10,12 +10,22 @@ from bec_lib.utils.rpc_utils import rgetattr
 from ophyd import Component as Cpt
 from ophyd import Device
 
-from ophyd_devices.devices.areadetector.plugins import ROIPlugin
-from ophyd_devices.devices.areadetector.plugins import StatsPlugin_V35 as StatsPlugin
+from ophyd_devices.devices.areadetector.plugins import ROIPlugin_V35, StatsPlugin_V35
 from ophyd_devices.utils.bec_roi_signals.roi_processing import (
     LITERAL_ROI_PROCESSING_CONFIG,
     ROIProcessing,
 )
+
+
+class StatsPlugin(StatsPlugin_V35):
+    plugin_type = None
+    codec = None
+    compressed_size = None
+
+
+class ROIPlugin(ROIPlugin_V35):
+    plugin_type = None
+
 
 logger = bec_logger.logger
 
