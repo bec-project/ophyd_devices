@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, TypedDict
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -22,9 +22,17 @@ if TYPE_CHECKING:
 
 logger = bec_logger.logger
 
-LITERAL_ROI_PROCESSING_CONFIG = dict[
-    str, dict[Literal["scalar_outputs", "waveform_outputs"], list[str]]
-]
+
+class ROIOperationConfig(TypedDict, total=False):
+    """Configuration for one selectable ROI analysis operation."""
+
+    scalar_outputs: list[str]
+    waveform_outputs: list[str]
+    enable_signal: str | None
+    source_signals: dict[str, str]
+
+
+LITERAL_ROI_PROCESSING_CONFIG = dict[str, ROIOperationConfig]
 
 
 class ROIProcessing(Device, ABC):

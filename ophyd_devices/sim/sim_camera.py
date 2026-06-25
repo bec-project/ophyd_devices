@@ -15,7 +15,12 @@ from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
 logger = bec_logger.logger
 
 SIM_CONFIG: LITERAL_ROI_PROCESSING_CONFIG = {
-    "basic_statistics": {"scalar_outputs": ["sum", "mean", "min", "max"], "waveform_outputs": []}
+    "basic_statistics": {
+        "scalar_outputs": ["sum", "mean", "min", "max"],
+        "waveform_outputs": [],
+        "enable_signal": None,
+        "source_signals": {},
+    }
 }
 
 
