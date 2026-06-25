@@ -18,15 +18,15 @@ from ophyd_devices.utils.bec_roi_signals.roi_processing import (
 
 
 class StatsPlugin(StatsPlugin_V35):
-    plugin_type = None
-    codec = None
-    compressed_size = None
+    # plugin_type = None
+    # codec = None
+    # compressed_size = None
 
 
 class ROIPlugin(ROIPlugin_V35):
-    plugin_type = None
-    codec = None
-    compressed_size = None
+    # plugin_type = None
+    # codec = None
+    # compressed_size = None
 
 
 logger = bec_logger.logger
