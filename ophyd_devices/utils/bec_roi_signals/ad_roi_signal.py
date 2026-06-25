@@ -18,12 +18,14 @@ from ophyd_devices.utils.bec_roi_signals.roi_processing import (
 
 
 class StatsPlugin(StatsPlugin_V35):
+    pass
     # plugin_type = None
     # codec = None
     # compressed_size = None
 
 
 class ROIPlugin(ROIPlugin_V35):
+    pass
     # plugin_type = None
     # codec = None
     # compressed_size = None
