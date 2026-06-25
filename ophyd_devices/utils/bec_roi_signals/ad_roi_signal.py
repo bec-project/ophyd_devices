@@ -317,12 +317,12 @@ import traceback
 
 from ophyd import ADBase
 
-from ophyd_devices import PreviewSignal
+from ophyd_devices import PreviewSignal, PSIDeviceBase
 from ophyd_devices.devices.areadetector.cam import SimDetectorCam
 from ophyd_devices.devices.areadetector.plugins import ImagePlugin_V35 as ImagePlugin
 
 
-class MyDetector(ADBase):
+class MyDetector(PSIDeviceBase, ADBase):
     cam = Cpt(SimDetectorCam, "cam1:")
     image = Cpt(ImagePlugin, "image1:")
     roi_processing = Cpt(ADROIProcessing, prefix="ROI1:", kind="normal")
