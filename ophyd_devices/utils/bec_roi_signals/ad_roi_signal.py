@@ -178,6 +178,8 @@ class ADROIProcessing(ROIProcessing):
 
     def wait_for_connection(self, *args, **kwargs):
         super().wait_for_connection(*args, **kwargs)
+        # Subscribe stats plugin to ROI plugin
+        self.stats1.nd_array_port.put(self.roi1.port_name.get())
         # ROIPlugin related callbacks
         self.selected_operations.subscribe(
             self._on_processing_selection_update,
