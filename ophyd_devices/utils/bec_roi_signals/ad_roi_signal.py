@@ -337,7 +337,7 @@ from ophyd_devices.devices.areadetector.plugins import ImagePlugin_V35 as ImageP
 class MyDetector(PSIDeviceBase, ADBase):
     cam = Cpt(SimDetectorCam, "cam1:")
     image = Cpt(ImagePlugin, "image1:")
-    roi_processing = Cpt(ADROIProcessing, prefix="ROI1:", kind="normal")
+    roi_processing = Cpt(ADROIProcessing, "", kind="normal")
 
     preview = Cpt(
         PreviewSignal,
