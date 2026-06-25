@@ -312,7 +312,66 @@ class ADROIProcessing(ROIProcessing):
         return bool(self.active.get()) and operation in self.selected_operations.get()
 
 
-class MyDevice(Device):
-    """Example device with ROI processing."""
+import threading
+import traceback
 
+from ophyd import ADBase
+
+from ophyd_devices import PreviewSignal
+from ophyd_devices.devices.areadetector.cam import SimDetectorCam
+from ophyd_devices.devices.areadetector.plugins import ImagePlugin_V35 as ImagePlugin
+
+
+class MyDetector(ADBase):
+    cam = Cpt(SimDetectorCam, "cam1:")
+    image = Cpt(ImagePlugin, "image1:")
     roi_processing = Cpt(ADROIProcessing, prefix="ROI1:", kind="normal")
+
+    preview = Cpt(
+        PreviewSignal,
+        name="preview",
+        ndim=2,
+        num_rotation_90=0,
+        doc="Preview signal for the camera.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._poll_thread_kill_event = threading.Event()
+        self._poll_rate = 1.0  # Hz
+        self._unique_array_id = None
+        self._poll_thread = threading.Thread(
+            target=self._poll_array_data, daemon=True, name=f"{self.name}_poll_thread"
+        )
+
+    def wait_for_connection(self, *args, **kwargs):
+        super().wait_for_connection(*args, **kwargs)
+        self._poll_thread.start()
+
+    def _poll_array_data(self):
+        """Poll the array data for preview updates."""
+        while not self._poll_thread_kill_event.wait(1 / self._poll_rate):
+            try:
+                # First check if there is a new image
+                if self.image.unique_id.get() != self._unique_array_id:
+                    self._unique_array_id = self.image.unique_id.get()
+                else:
+                    logger.info(f"No new image for preview of {self.name}, skipping update.")
+                    continue  # No new image, skip update
+                # Get new image data
+                value = self.image.array_data.get()
+                if value is None:
+                    logger.info(f"No image data available for preview of {self.name}")
+                    continue
+
+                width = self.image.array_size.width.get()
+                height = self.image.array_size.height.get()
+                # Geometry correction for the image
+                data = np.reshape(value, (height, width))
+                logger.info(f"Setting preview data for {self.name} with shape {data.shape}")
+                self.preview.put(data)
+            except Exception:  # pylint: disable=broad-except
+                content = traceback.format_exc()
+                logger.error(
+                    f"Error while polling array data for preview of {self.name}: {content}"
+                )
