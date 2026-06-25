@@ -5,7 +5,7 @@ import pytest
 from bec_server.device_server.tests.utils import DMMock
 
 from ophyd_devices.tests.utils import SocketMock
-from ophyd_devices.utils.controller import Controller
+from ophyd_devices.utils.controller import Controller, ControllerCommunicationError
 from ophyd_devices.utils.socket import SocketIO, SocketSignal
 
 
@@ -211,3 +211,18 @@ def test_socket_signal_put(signal):
     assert callback_read_buffer[0][signal.name]["value"] == "new_value"
     assert callback_read_buffer[1][signal.name]["value"] == "new_value"
     assert callback_value_buffer == [("new_value", "value2"), ("new_value", "new_value")]
+
+
+def test_socket_put_and_receive_raises_controller_communication_error(controller):
+    """Test that socket_put_and_receive raises ControllerCommunicationError on socket errors."""
+    controller.sock.buffer_recv = [b"\xbfhello", b"ok"]
+
+    # First receive will raise a UnicodeDecodeError, which should be caught and re-raised as ControllerCommunicationError
+    # second one will be successful
+    val = controller.socket_put_and_receive("test")
+    assert val == "ok"
+
+    # Second test: simulate a socket error that cannot be decoded
+    controller.sock.buffer_recv = [b"\xbfhello", b"\xbfworld"]
+    with pytest.raises(ControllerCommunicationError):
+        controller.socket_put_and_receive("test")

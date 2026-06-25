@@ -135,10 +135,14 @@ class Controller(OphydObject):
         Override this method in the derived class if necessary, especially if the response
         needs to be parsed differently.
         """
-        self.socket_put(val)
-        if remove_trailing_chars:
-            return self._remove_trailing_characters(self.sock.receive().decode())
-        return self.socket_get()
+        try:
+            self.socket_put(val)
+            if remove_trailing_chars:
+                return self._remove_trailing_characters(self.sock.receive().decode())
+            return self.socket_get()
+        except Exception as exc:
+            logger.error(f"Error in socket_put_and_receive: {exc}")
+            raise ControllerCommunicationError from exc
 
     def _remove_trailing_characters(self, var) -> str:
         if len(var) > 1:
