@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.7 (2026-06-25)
+
+### Bug Fixes
+
+- **controller**: Fix retry_once for socket_put and socket_put_and_receive
+  ([`be32dce`](https://github.com/bec-project/ophyd_devices/commit/be32dceba03a7226cbfcea93ec263520eacae4b3))
+
+
 ## v1.41.6 (2026-06-23)
 
 ### Bug Fixes
