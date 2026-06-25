@@ -153,7 +153,7 @@ class ADROIProcessing(ROIProcessing):
     """ROI processing signal for AD detector setups at PSI."""
 
     roi1 = Cpt(ROIPlugin, "ROI1:", kind="normal")
-    stats1 = Cpt(StatsPlugin, "STATS1:", kind="normal")
+    stats1 = Cpt(StatsPlugin, "Stats1:", kind="normal")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
