@@ -25,6 +25,8 @@ class StatsPlugin(StatsPlugin_V35):
 
 class ROIPlugin(ROIPlugin_V35):
     plugin_type = None
+    codec = None
+    compressed_size = None
 
 
 logger = bec_logger.logger
