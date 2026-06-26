@@ -347,7 +347,18 @@ if TYPE_CHECKING:
 class MyDetector(PSIDeviceBase, ADBase):
     cam = Cpt(SimDetectorCam, "cam1:")
     image = Cpt(ImagePlugin, "image1:")
-    roi_processing = Cpt(ADROIProcessing, "", kind="normal")
+    roi_processing = Cpt(
+        ADROIProcessing,
+        "",
+        kind="normal",
+        active=1,
+        roi_name="roi1",
+        x=400,
+        y=400,
+        width=100,
+        height=100,
+        selected_operations=["basic_statistics", "histogram"],
+    )
 
     preview = Cpt(
         PreviewSignal,
