@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.42.1 (2026-06-26)
+
+### Bug Fixes
+
+- **dependencies**: Update pyepics version constraint to allow 3.5.10 and above
+  ([`0ca0c92`](https://github.com/bec-project/ophyd_devices/commit/0ca0c9238fe64629445d384cb01b1130e4143b45))
+
+
 ## v1.42.0 (2026-06-26)
 
 ### Bug Fixes
