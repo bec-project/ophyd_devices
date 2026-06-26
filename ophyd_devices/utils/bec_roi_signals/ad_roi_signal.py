@@ -179,6 +179,7 @@ class ADROIProcessing(ROIProcessing):
     def wait_for_connection(self, *args, **kwargs):
         super().wait_for_connection(*args, **kwargs)
         # Subscribe stats plugin to ROI plugin
+        self.roi1.nd_array_port.put(self.cam1.port_name.get())
         self.stats1.nd_array_port.put(self.roi1.port_name.get())
         # ROIPlugin related callbacks
         self.selected_operations.subscribe(
@@ -351,8 +352,8 @@ class MyDetector(PSIDeviceBase, ADBase):
         doc="Preview signal for the camera.",
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, device_manager=None, **kwargs):
+        super().__init__(*args, device_manager=device_manager, **kwargs)
         self._poll_thread_kill_event = threading.Event()
         self._poll_rate = 1.0  # Hz
         self._unique_array_id = None
