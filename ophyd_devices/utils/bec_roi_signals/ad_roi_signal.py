@@ -407,3 +407,9 @@ class MyDetector(PSIDeviceBase, ADBase):
                 logger.error(
                     f"Error while polling array data for preview of {self.name}: {content}"
                 )
+
+    def destroy(self):
+        """Clean up resources."""
+        self._poll_thread_kill_event.set()
+        if self._poll_thread.is_alive():
+            self._poll_thread.join(timeout=0.5)
