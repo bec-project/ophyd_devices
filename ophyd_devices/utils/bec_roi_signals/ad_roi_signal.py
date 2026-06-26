@@ -331,12 +331,17 @@ class ADROIProcessing(ROIProcessing):
 
 import threading
 import traceback
+from typing import TYPE_CHECKING
 
 from ophyd import ADBase
 
 from ophyd_devices import PreviewSignal, PSIDeviceBase
 from ophyd_devices.devices.areadetector.cam import SimDetectorCam
 from ophyd_devices.devices.areadetector.plugins import ImagePlugin_V35 as ImagePlugin
+
+if TYPE_CHECKING:
+    from bec_lib.devicemanager import ScanInfo
+    from bec_server.device_server.devices.devicemanager import DeviceManagerDS
 
 
 class MyDetector(PSIDeviceBase, ADBase):
@@ -352,15 +357,18 @@ class MyDetector(PSIDeviceBase, ADBase):
         doc="Preview signal for the camera.",
     )
 
-    def __init__(self, 
-            *,
-            name: str,
-            prefix: str = "",
-            scan_info: ScanInfo | None = None,
-            device_manager: DeviceManagerBase | None = None,
-            **kwargs,
+    def __init__(
+        self,
+        *,
+        name: str,
+        prefix: str = "",
+        scan_info: ScanInfo | None = None,
+        device_manager: DeviceManagerDS | None = None,
+        **kwargs,
+    ):
+        super().__init__(
+            name=name, prefix=prefix, scan_info=scan_info, device_manager=device_manager, **kwargs
         )
-        super().__init__(name=name, prefix=prefix, scan_info=scan_info, device_manager=device_manager, **kwargs)
         self._poll_thread_kill_event = threading.Event()
         self._poll_rate = 1.0  # Hz
         self._unique_array_id = None
