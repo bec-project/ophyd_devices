@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.42.0 (2026-06-26)
+
+### Bug Fixes
+
+- **controller**: Enhance error handling in retry_once decorator with traceback logging
+  ([`6ca27af`](https://github.com/bec-project/ophyd_devices/commit/6ca27afa9cc6277fcf838b07fb2cbe6149e2ba0c))
+
+### Features
+
+- **controller**: Add command history tracking for socket communication
+  ([`4f3ea9d`](https://github.com/bec-project/ophyd_devices/commit/4f3ea9db84b398c472b4167e4eb8f5dba4aafd0b))
+
+
 ## v1.41.7 (2026-06-25)
 
 ### Bug Fixes
