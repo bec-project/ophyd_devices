@@ -223,6 +223,9 @@ class ADROIProcessing(ROIProcessing):
         for key in set(self._stats_subscriptions) - set(desired):
             subscription = self._stats_subscriptions.pop(key)
             subscription.signal.unsubscribe(subscription.callback_id)
+            logger.info(
+                f"Unsubscribed from StatsPlugin output {subscription.operation}.{subscription.result_name} ({subscription.output_kind})"
+            )
 
         for key, (operation, result_name, output_kind, dotted_name) in desired.items():
             if key in self._stats_subscriptions:
@@ -243,6 +246,9 @@ class ADROIProcessing(ROIProcessing):
                 operation=operation,
                 result_name=result_name,
                 output_kind=output_kind,
+            )
+            logger.info(
+                f"Subscribed to StatsPlugin output {operation}.{result_name} ({output_kind})"
             )
 
         self._apply_stats_enable_signals()
@@ -319,6 +325,7 @@ class ADROIProcessing(ROIProcessing):
         **kwargs,
     ) -> None:
         """Publish a StatsPlugin update into the matching BEC result signal."""
+        logger.info(f"StatsPlugin update for {operation}.{result_name} ({output_kind}): {value}")
         if not self._is_operation_active(operation):
             return
 
