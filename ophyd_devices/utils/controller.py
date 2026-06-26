@@ -1,5 +1,6 @@
 import functools
 import threading
+import traceback
 from collections import deque
 from typing import TYPE_CHECKING, Type
 
@@ -43,7 +44,11 @@ def retry_once(fcn):
     def wrapper(self, *args, **kwargs):
         try:
             val = fcn(self, *args, **kwargs)
-        except ControllerCommunicationError:
+        except Exception:
+            content = traceback.format_exc()
+            logger.warning(
+                f"Communication error occurred. Retrying the command. Traceback: {content}"
+            )
             val = fcn(self, *args, **kwargs)
         return val
 
