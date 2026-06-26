@@ -131,6 +131,21 @@ class ROIProcessing(Device, ABC):
             cb=self._receive_roi_configuration_message,
         )
         self._publish_available_analysis()
+        if self.active.get():
+            msg = ROIConfigurationMessage(
+                device=self.root.name,
+                signal=self.dotted_name,
+                active=self.active.get(),
+                name=self.roi_name.get(),
+                roi_config={
+                    "x": self.x.get(),
+                    "y": self.y.get(),
+                    "width": self.width.get(),
+                    "height": self.height.get(),
+                },
+                selected_operations=self.selected_operations.get(),
+            )
+            self._on_config_update(msg)  # Apply the initial configuration if active is True
 
     def destroy(self):
         """Clean up the ROI processing signal and unregister from Redis."""
