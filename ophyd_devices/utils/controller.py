@@ -1,5 +1,6 @@
 import functools
 import threading
+from collections import deque
 from typing import TYPE_CHECKING, Type
 
 from bec_lib import bec_logger
@@ -100,6 +101,7 @@ class Controller(OphydObject):
             super().__init__(
                 name=name, attr_name=attr_name, parent=parent, labels=labels, kind=kind
             )
+            self._command_history_length = 50  # Store the last 50 commands sent to the controller
             self._lock = threading.RLock()
             self._axis: list[Device] = []
             self._initialize()
@@ -109,6 +111,7 @@ class Controller(OphydObject):
             self._socket_cls = socket_cls
             self._socket_host = socket_host
             self._socket_port = socket_port
+            self.command_history: deque[str] = deque(maxlen=self._command_history_length)
 
     @threadlocked
     def socket_put(self, val: str):
@@ -118,6 +121,7 @@ class Controller(OphydObject):
         Args:
             val (str): Command to send
         """
+        self.command_history.append(f"[PUT]: {val}")
         self.sock.put(f"{val}\n".encode())
 
     @threadlocked
@@ -125,7 +129,9 @@ class Controller(OphydObject):
         """
         Receive a response from the controller through the socket.
         """
-        return self.sock.receive().decode()
+        response = self.sock.receive().decode()
+        self.command_history.append(f"[GET]: {response}")
+        return response
 
     @retry_once
     @threadlocked
@@ -141,8 +147,13 @@ class Controller(OphydObject):
                 return self._remove_trailing_characters(self.sock.receive().decode())
             return self.socket_get()
         except Exception as exc:
-            logger.error(f"Error in socket_put_and_receive: {exc}")
-            raise ControllerCommunicationError from exc
+            logger.error(
+                f"Error in socket_put_and_receive: {exc}. Command history: {list(self.command_history)}"
+            )
+            raise ControllerCommunicationError(
+                f"Failed to communicate with the controller. The last {self._command_history_length} commands were: "
+                f"{list(self.command_history)}"
+            ) from exc
 
     def _remove_trailing_characters(self, var) -> str:
         if len(var) > 1:
