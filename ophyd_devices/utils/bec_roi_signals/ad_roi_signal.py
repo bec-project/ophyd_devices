@@ -352,8 +352,15 @@ class MyDetector(PSIDeviceBase, ADBase):
         doc="Preview signal for the camera.",
     )
 
-    def __init__(self, *args, device_manager=None, **kwargs):
-        super().__init__(*args, device_manager=device_manager, **kwargs)
+    def __init__(self, 
+            *,
+            name: str,
+            prefix: str = "",
+            scan_info: ScanInfo | None = None,
+            device_manager: DeviceManagerBase | None = None,
+            **kwargs,
+        )
+        super().__init__(name=name, prefix=prefix, scan_info=scan_info, device_manager=device_manager, **kwargs)
         self._poll_thread_kill_event = threading.Event()
         self._poll_rate = 1.0  # Hz
         self._unique_array_id = None
