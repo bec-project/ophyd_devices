@@ -294,6 +294,11 @@ class ProgressSignal(BECMessageSignal):
             max_value (float): The maximum progress value.
             done (bool): Whether the progress is done.
             metadata (dict | None): Additional metadata
+
+        Example:
+            progress_signal = Cpt(ProgressSignal, doc="Signal to emit progress updates")
+            ...
+            progress_signal.put(value=50, max_value=100, done=False)
         """
         if msg is None and (value is None or max_value is None or done is None):
             raise ValueError(
@@ -377,6 +382,11 @@ class FileEventSignal(BECMessageSignal):
             name (str) : The name of the signal.
             value (FileMessage | dict | None) : The initial value of the signal. Defaults to None.
             kind (Kind | str) : The kind of the signal. Defaults to Kind.omitted.
+
+        Example:
+            file_event = Cpt(FileEventSignal, doc="Signal to emit file events")
+            ...
+            file_event.put(file_path="/path/to/file.h5", done=True, successful=True, hinted_h5_entries={"data": "/entry/data/data"})
         """
         kwargs.pop("kind", None)  # Ignore kind if specified
         super().__init__(
@@ -544,6 +554,12 @@ class PreviewSignal(BECMessageSignal):
             num_rotation_90 (Literal[0, 1, 2, 3]): The number of 90 degree counter-clockwise rotations to apply to the data for visualization.
             transpose (bool): Whether to transpose the data for visualization.
             value (DeviceMonitorMessage | dict | None): The initial value of the signal. Defaults to None.
+
+        Example:
+            preview = Cpt(PreviewSignal, name="preview", ndim=2, num_rotation_90=1, transpose=True)
+            ...
+            data = np.random.rand(100, 100)
+            preview.put(value=data)
         """
         kwargs.pop("kind", None)
         super().__init__(
@@ -696,6 +712,24 @@ class DynamicSignal(BECMessageSignal):
                                                                         it should be [None]. For a 1D dataset with 3000 elements, it should be [None, 3000].
                                                                         For a 2D dataset with 3000x3000 elements, it should be [None, 3000, 3000].
                                         "index" (int): Only required for type 'add_slice'. It defines the index where the data is added.
+        Example:
+            dynamic_signal = Cpt(
+                DynamicSignal,
+                name="dynamic_signal",
+                max_size=1000,
+                signals=["signal1", "signal2"],
+                async_update={
+                    "type": "add",
+                    "max_shape": [None, 1000],
+                }
+            )
+            ...
+            dynamic_signal.put(
+                value={
+                    "signal1": {"value": np.random.rand(1000), "timestamp": time.time()},
+                }
+            )
+
         """
         self.async_update = async_update
 
@@ -900,6 +934,27 @@ class AsyncMultiSignal(DynamicSignal):
                                                                         it should be [None]. For a 1D dataset with 3000 elements, it should be [None, 3000].
                                                                         For a 2D dataset with 3000x3000 elements, it should be [None, 3000, 3000].
                                         "index" (int): Only required for type 'add_slice'. It defines the index where the data is added.
+
+        Example:
+            async_multi_signal = Cpt(
+                AsyncMultiSignal,
+                name="async_multi_signal",
+                ndim=1,
+                max_size=1000,
+                signals=["signal1", "signal2"],
+                async_update={
+                    "type": "add",
+                    "max_shape": [None, 1000],
+                }
+            )
+            ...
+            async_multi_signal.put(
+                value={
+                    "async_multi_signal_signal1": {"value": np.random.rand(1000), "timestamp": time.time()},
+                    "async_multi_signal_signal2": {"value": np.random.rand(1000), "timestamp": time.time()},
+                }
+            )
+
         """
         kwargs.pop("kind", None)  # Ignore kind if specified
         super().__init__(
@@ -955,6 +1010,22 @@ class AsyncSignal(DynamicSignal):
                                                                         it should be [None]. For a 1D dataset with 3000 elements, it should be [None, 3000].
                                                                         For a 2D dataset with 3000x3000 elements, it should be [None, 3000, 3000].
                                         "index" (int): Only required for type 'add_slice'. It defines the index where the data is added.
+        Example:
+            async_signal = Cpt(
+                AsyncSignal,
+                name="async_signal",
+                ndim=1,
+                max_size=1000,
+                async_update={
+                    "type": "add",
+                    "max_shape": [None, 1000],
+                }
+            )
+            ...
+            async_signal.put(
+                value={"async_signal": {"value": np.random.rand(1000), "timestamp": time.time()}}
+            )
+
         """
         kwargs.pop("kind", None)  # Ignore kind if specified
         super().__init__(
