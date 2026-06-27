@@ -90,7 +90,14 @@ class SimWaveform(Device):
         compute_readback=True,
         kind=Kind.hinted,
     )
-    waveform_0d = Cpt(AsyncSignal, name="waveform_0d", ndim=0, max_size=1000, kind=Kind.hinted)
+    waveform_0d = Cpt(
+        AsyncSignal,
+        name="waveform_0d",
+        ndim=0,
+        max_size=1000,
+        kind=Kind.hinted,
+        acquisition_group="monitored",
+    )
     data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
     # Can be extend or append
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
