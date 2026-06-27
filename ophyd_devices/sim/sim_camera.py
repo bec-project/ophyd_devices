@@ -9,7 +9,7 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
-from ophyd_devices.utils.bec_signals import PreviewSignal
+from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
 
 logger = bec_logger.logger
 
@@ -22,9 +22,6 @@ class SimCameraControl(Device):
     sim_cls = SimulatedDataCamera
     SHAPE = (100, 100)
     BIT_DEPTH = np.uint16
-
-    SUB_MONITOR = "device_monitor_2d"
-    _default_sub = SUB_MONITOR
 
     exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
@@ -40,6 +37,7 @@ class SimCameraControl(Device):
         kind=Kind.omitted,
     )
     preview = Cpt(PreviewSignal, name="preview", ndim=2, num_rotation_90=0)
+    file_event = Cpt(FileEventSignal)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
     def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
@@ -83,10 +81,10 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
     def on_trigger(self) -> StatusBase:
         """Trigger the camera to acquire images.
 
-        This method can be called from BEC during a scan. It will acquire images and send them to BEC.
-        Whether the trigger is send from BEC is determined by the softwareTrigger argument in the device config.
-
-        Here, we also run a callback on SUB_MONITOR to send the image data the device_monitor endpoint in BEC.
+        This method can be called from BEC during a scan. It will acquire images and send them to BEC using the
+        preview signal. Whether the device receives a trigger from BEC or not is determined by the softwareTrigger
+        parameter in the device configuration. If softwareTrigger is set to True, the device will receive a trigger
+        from BEC and acquire images.
         """
 
         def trigger_cam() -> None:
@@ -95,7 +93,6 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
                 data = self.image.get()
                 # pylint: disable=protected-access
                 self.preview.put(data)
-                self._run_subs(sub_type=self.SUB_MONITOR, value=data)
                 if self.write_to_disk.get():
                     self.h5_writer.receive_data(data)
 
@@ -122,13 +119,11 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         self.burst.set(self.scan_info.msg.scan_parameters["frames_per_trigger"]).wait()
         if self.write_to_disk.get():
             self.h5_writer.on_stage(file_path=self.file_path, h5_entry="/entry/data/data")
-            # pylint: disable=protected-access
-            self._run_subs(
-                sub_type=self.SUB_FILE_EVENT,
+            self.file_event.put(
                 file_path=self.file_path,
                 done=False,
                 successful=False,
-                hinted_location={"data": "/entry/data/data"},
+                hinted_h5_entries={"data": "/entry/data/data"},
             )
 
     def on_complete(self) -> StatusBase:
@@ -140,8 +135,7 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         def complete_cam():
             """Complete the camera acquisition."""
             self.h5_writer.on_complete()
-            self._run_subs(
-                sub_type=self.SUB_FILE_EVENT,
+            self.file_event.put(
                 file_path=self.file_path,
                 done=True,
                 successful=True,
