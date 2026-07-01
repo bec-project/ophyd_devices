@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.43.0 (2026-07-01)
+
+### Features
+
+- **controller**: Add print_command_history method for debugging command history
+  ([`b43da77`](https://github.com/bec-project/ophyd_devices/commit/b43da774aedea5c2a34132e4b03bd57286d3a783))
+
+
 ## v1.42.1 (2026-06-26)
 
 ### Bug Fixes
