@@ -149,7 +149,7 @@ class Controller(OphydObject):
         try:
             self.socket_put(val)
             if remove_trailing_chars:
-                return self._remove_trailing_characters(self.sock.receive().decode())
+                return self._remove_trailing_characters(self.socket_get())
             return self.socket_get()
         except Exception as exc:
             logger.error(
@@ -164,6 +164,13 @@ class Controller(OphydObject):
         if len(var) > 1:
             return var.split("\r\n")[0]
         return var
+
+    @threadlocked
+    def print_command_history(self):
+        """
+        Print the command history for debugging purposes.
+        """
+        print("\n".join(self.command_history))
 
     def get_axis_by_name(self, name: str) -> Device:
         """
