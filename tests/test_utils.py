@@ -7,8 +7,13 @@ import numpy as np
 import ophyd
 import pytest
 from bec_lib import messages
+from bec_lib.bec_errors import ExceptionWithErrorInfo
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignalRO, Signal
+from ophyd.status import DeviceStatus as OphydDeviceStatus
+from ophyd.status import MoveStatus as OphydMoveStatus
+from ophyd.status import Status as OphydStatus
+from ophyd.status import StatusBase as OphydStatusBase
 from ophyd.status import WaitTimeoutError
 from typeguard import TypeCheckError
 
@@ -32,6 +37,7 @@ from ophyd_devices.utils.psi_device_base_utils import (
     MoveStatus,
     Status,
     StatusBase,
+    StatusTimeoutErrorWithErrorInfo,
     SubscriptionStatus,
     TaskHandler,
     TaskKilledError,
@@ -1129,6 +1135,118 @@ def test_patched_status_objects():
             move_st.wait(timeout=10)
         assert move_st.done is True
         assert move_st.success is False
+
+
+class Positioner(Device):
+    SUB_READBACK = "readback"
+    setpoint = Signal(name="setpoint", value=0)
+    readback = Signal(name="readback", value=0)
+
+    @property
+    def position(self):
+        return self.readback.get()
+
+    def stop(self):
+        pass
+
+
+@pytest.mark.parametrize(
+    ("factory", "expected_compact"),
+    [
+        pytest.param(
+            lambda: StatusBase(timeout=0.01, description="base timed out"),
+            "base timed out",
+            id="statusbase",
+        ),
+        pytest.param(
+            lambda: Status(timeout=0.01, description="status timed out"),
+            "status timed out",
+            id="status",
+        ),
+        pytest.param(
+            lambda: DeviceStatus(
+                Device(name="device"), timeout=0.01, description="device timed out"
+            ),
+            "device timed out",
+            id="devicestatus",
+        ),
+        pytest.param(
+            lambda: MoveStatus(
+                Positioner(name="positioner"), target=10, timeout=0.01, description="move timed out"
+            ),
+            "move timed out",
+            id="movestatus",
+        ),
+        pytest.param(
+            lambda: TaskStatus(Device(name="device"), timeout=0.01, description="task timed out"),
+            "task timed out",
+            id="taskstatus",
+        ),
+        pytest.param(
+            lambda: SubscriptionStatus(
+                Signal(name="sig", value=0),
+                callback=lambda *args, **kwargs: False,
+                timeout=0.01,
+                run=False,
+                description="subscription timed out",
+            ),
+            "subscription timed out",
+            id="subscriptionstatus",
+        ),
+    ],
+)
+def test_all_patched_status_types_raise_structured_timeout(factory, expected_compact):
+    """All patched timeout-capable status types should raise structured timeout errors."""
+    status = factory()
+
+    with pytest.raises(StatusTimeoutErrorWithErrorInfo) as exc_info:
+        status.wait(timeout=1)
+
+    assert status.exception() is exc_info.value
+    assert isinstance(exc_info.value, ExceptionWithErrorInfo)
+    assert "Status initialization traceback" in exc_info.value.error_info.error_message
+    assert exc_info.value.error_info.exception_type == "StatusTimeoutError"
+    assert expected_compact in exc_info.value.error_info.compact_error_message
+
+
+@pytest.mark.parametrize(
+    ("left_factory", "right_factory"),
+    [
+        pytest.param(
+            lambda: StatusBase(timeout=0.5, description="custom timeout"),
+            lambda: StatusBase(),
+            id="custom-custom",
+        ),
+        pytest.param(
+            lambda: StatusBase(), lambda: OphydStatusBase(timeout=0.5), id="custom-ophydstatusbase"
+        ),
+        pytest.param(
+            lambda: StatusBase(), lambda: OphydStatus(timeout=0.5), id="custom-ophydstatus"
+        ),
+        pytest.param(
+            lambda: StatusBase(timeout=0.5, description="custom timeout"),
+            lambda: OphydDeviceStatus(Device(name="device")),
+            id="custom-ophyddevicestatus",
+        ),
+        pytest.param(
+            lambda: StatusBase(),
+            lambda: OphydMoveStatus(Positioner(name="positioner"), target=10, timeout=0.5),
+            id="custom-ophydmovestatus",
+        ),
+    ],
+)
+def test_and_status_works_with_plain_ophyd_status_objects(left_factory, right_factory):
+    """Composite statuses should work with both patched and plain ophyd status objects."""
+    left = left_factory()
+    right = right_factory()
+    combined = left & right
+
+    with pytest.raises(Exception) as exc_info:
+        combined.wait(timeout=1)
+
+    assert combined.done is True
+    assert combined.success is False
+    assert isinstance(exc_info.value, ExceptionWithErrorInfo)
 
 
 @pytest.fixture(scope="function")

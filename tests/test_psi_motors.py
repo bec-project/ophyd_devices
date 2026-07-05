@@ -8,9 +8,11 @@ from unittest import mock
 
 import ophyd
 import pytest
+from bec_lib.bec_errors import ExceptionWithErrorInfo
 
 from ophyd_devices.devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME, SpmgStates
 from ophyd_devices.tests.utils import MockPV, patched_device
+from ophyd_devices.utils.psi_device_base_utils import StatusTimeoutErrorWithErrorInfo
 
 
 @pytest.fixture(scope="function")
@@ -157,6 +159,24 @@ def test_epics_motor_high_limit_switch_raises(mock_epics_motor):
     motor.high_limit_switch._read_pv.mock_data = 1  # Simulate high limit switch active
     with pytest.raises(ophyd.utils.LimitError):
         motor.move(15)
+
+
+def test_epics_motor_move_timeout_includes_initialization_traceback(mock_epics_motor):
+    """Motor move timeouts should include the status creation traceback."""
+    motor = mock_epics_motor
+    motor.user_setpoint._metadata["lower_ctrl_limit"] = -10
+    motor.user_setpoint._metadata["upper_ctrl_limit"] = 10
+    motor.motor_mode.put(SpmgStates.GO)
+
+    status = motor.move(5, timeout=0.01)
+
+    with pytest.raises(StatusTimeoutErrorWithErrorInfo) as exc_info:
+        status.wait(timeout=1)
+
+    message = exc_info.value.error_info.error_message
+    assert "Status initialization traceback" in message
+    assert "test_epics_motor_move_timeout_includes_initialization_traceback" in message
+    assert isinstance(exc_info.value, ExceptionWithErrorInfo)
 
 
 @pytest.fixture(scope="function")

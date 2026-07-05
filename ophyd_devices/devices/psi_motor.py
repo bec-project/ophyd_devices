@@ -11,12 +11,11 @@ import numpy as np
 from ophyd import Component as Cpt
 from ophyd import EpicsMotor as OphydEpicsMotor
 from ophyd import EpicsSignal, EpicsSignalRO, Kind, Signal
-from ophyd.status import MoveStatus
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 from ophyd.utils.errors import UnknownStatusFailure
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.sim.sim_signals import SetableSignal
+from ophyd_devices.utils.psi_device_base_utils import MoveStatus
 
 
 class SpmgStates:
