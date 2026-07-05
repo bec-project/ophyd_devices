@@ -1,13 +1,17 @@
 """Utility handler to run tasks (function, conditions) in an asynchronous fashion."""
 
+from __future__ import annotations
+
 import ctypes
 import operator
 import threading
 import traceback
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Literal, Union
+from typing import TYPE_CHECKING, Callable, Literal
 
+from bec_lib import messages
+from bec_lib.bec_errors import ExceptionWithErrorInfo
 from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
@@ -15,6 +19,7 @@ from ophyd.status import DeviceStatus as _DeviceStatus
 from ophyd.status import MoveStatus as _MoveStatus
 from ophyd.status import Status as _Status
 from ophyd.status import StatusBase as _StatusBase
+from ophyd.utils import StatusTimeoutError
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import ScanStatusMessage
@@ -50,6 +55,144 @@ OP_MAP = {
 }
 
 
+class StatusTimeoutErrorWithErrorInfo(ExceptionWithErrorInfo, TimeoutError):
+    """Status timeout exception that carries structured BEC error info."""
+
+
+def _capture_status_initialization_traceback() -> str:
+    """Capture the stack at status creation time."""
+    stack = traceback.extract_stack()
+    trimmed_stack = stack[:-1]
+    while trimmed_stack:
+        frame = trimmed_stack[-1]
+        if frame.filename != __file__:
+            break
+        trimmed_stack.pop()
+    return "".join(traceback.format_list(trimmed_stack)).rstrip()
+
+
+class _StatusTimeoutDiagnostics:
+    """Enhance timeout failures with the status creation traceback."""
+
+    def __init__(
+        self, status_initialization_traceback: str | None = None, description: str | None = None
+    ):
+        self._status = None
+        self._status_initialization_traceback = (
+            status_initialization_traceback or _capture_status_initialization_traceback()
+        )
+        self._description = description
+
+    def bind(self, status: _StatusBase) -> None:
+        """
+        Bind the diagnostics to a status object.
+
+        Args:
+            status (_StatusBase): The status object to bind to.
+        """
+        self._status = status
+
+    def build_timeout_error_message(self) -> str:
+        """
+        Build a detailed error message for a timeout error with the status object and
+        the status initialization traceback.
+
+        Returns:
+            str: The detailed error message.
+        """
+        message = f"Status {self._status!r} failed to complete in specified timeout."
+        if self._status_initialization_traceback:
+            message = (
+                f"{message}\n\n"
+                "Status initialization traceback (most recent call last):\n"
+                f"{self._status_initialization_traceback}"
+            )
+        return message
+
+    def build_timeout_error_info(self) -> messages.ErrorInfo:
+        """
+        Build a structured error info object for a timeout error with the status object and
+        the status initialization traceback.
+
+        Returns:
+            messages.ErrorInfo: The structured error info object.
+        """
+        device_name = None
+        if hasattr(self._status, "device") and getattr(self._status, "device", None) is not None:
+            device = self._status.device  # type: ignore
+            device_name = getattr(device, "dotted_name", None) or getattr(device, "name", None)
+        elif hasattr(self._status, "obj") and getattr(self._status, "obj", None) is not None:
+            obj = self._status.obj  # type: ignore
+            device_name = getattr(obj, "dotted_name", None) or getattr(obj, "name", None)
+
+        compact_message = f"Status timeout for {device_name or self._status.__class__.__name__}."
+        if self._description:
+            compact_message = f"{self._description}\n\n{compact_message}"
+
+        return messages.ErrorInfo(
+            error_message=self.build_timeout_error_message(),
+            compact_error_message=compact_message,
+            exception_type="StatusTimeoutError",
+            device=device_name,
+        )
+
+    def new_timeout_exception(self) -> StatusTimeoutErrorWithErrorInfo:
+        """
+        Create a new StatusTimeoutErrorWithErrorInfo exception with the structured error info.
+        """
+        return StatusTimeoutErrorWithErrorInfo(self.build_timeout_error_info())
+
+
+def _run_callbacks_with_diagnostics(
+    status: _StatusBase, diagnostics: _StatusTimeoutDiagnostics | None
+):
+    """
+    Set the Event and run the callbacks.
+
+    This mirrors ophyd's implementation but preserves the status creation
+    traceback when a timeout is raised on the background thread.
+    """
+    # pylint: disable=protected-access
+    if status.timeout is None:
+        timeout = None
+    else:
+        timeout = status.timeout + status.settle_time
+    if not status._settled_event.wait(timeout):
+        logger.warning(
+            f"Status {status!r} failed to complete in specified timeout of {timeout} seconds. "
+            "This may be due to a bug in the device or a slow operation."
+        )
+        with status._externally_initiated_completion_lock:
+            if status._exception is None:
+                if diagnostics is None:
+                    status._exception = StatusTimeoutError(
+                        f"Status {status!r} failed to complete in specified timeout."
+                    )
+                else:
+                    status._exception = diagnostics.new_timeout_exception()
+    try:
+        status._settled()
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception(f"Exception raised while running _settled() for status {status!r}: {exc}")
+    with status._lock:
+        status._event.set()
+    if status._exception is not None:
+        try:
+            status._handle_failure()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception(
+                f"Exception raised while running _handle_failure() for status {status!r}: {exc}"
+            )
+    for cb in status._callbacks:
+        try:
+            cb(status)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.exception(
+                f"An error was raised on a background thread while running the callback {cb!r}({status!r}): {exc}"
+            )
+    status._callbacks.clear()
+
+
 class StatusBase(_StatusBase):
     """Base class for all status objects."""
 
@@ -57,15 +200,18 @@ class StatusBase(_StatusBase):
 
     def __init__(
         self,
-        obj: Union["Device", None] = None,
+        obj: Device | None = None,
         *,
         timeout=None,
         settle_time=0,
         done=None,
         success=None,
+        description: str | None = None,
     ):
         self.obj = obj
+        self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
         super().__init__(timeout=timeout, settle_time=settle_time, done=done, success=success)
+        self._timeout_diagnostics.bind(self)
 
     def __and__(self, other):
         """Returns a new 'composite' status object, AndStatus"""
@@ -79,6 +225,21 @@ class StatusBase(_StatusBase):
     def _cleanup(self) -> None:
         """Release resources held by the status once a composite no longer needs it."""
         return None
+
+    def _run_callbacks(self):
+        _run_callbacks_with_diagnostics(self, self._timeout_diagnostics)
+
+    def set_exception(self, exc):
+        """Normalize ophyd timeout failures into the structured timeout type."""
+        if isinstance(exc, StatusTimeoutError):
+            exc = StatusTimeoutErrorWithErrorInfo(
+                messages.ErrorInfo(
+                    error_message=str(exc),
+                    compact_error_message=str(exc),
+                    exception_type=exc.__class__.__name__,
+                )
+            )
+        return super().set_exception(exc)
 
 
 class AndStatus(StatusBase):
@@ -172,25 +333,61 @@ class AndStatus(StatusBase):
 class Status(_Status):
     """Thin wrapper around StatusBase to add __and__ operator."""
 
+    def __init__(
+        self,
+        obj=None,
+        timeout=None,
+        settle_time=0,
+        done=None,
+        success=None,
+        description: str | None = None,
+    ):
+        self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
+        super().__init__(
+            obj=obj, timeout=timeout, settle_time=settle_time, done=done, success=success
+        )
+        self._timeout_diagnostics.bind(self)
+
     def __and__(self, other):
         """Returns a new 'composite' status object, AndStatus"""
         return AndStatus(self, other)
+
+    def _run_callbacks(self):
+        _run_callbacks_with_diagnostics(self, self._timeout_diagnostics)
 
 
 class DeviceStatus(_DeviceStatus):
     """Thin wrapper around DeviceStatus to add __and__ operator."""
 
+    def __init__(self, device, description: str | None = None, **kwargs):
+        self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
+        super().__init__(device=device, **kwargs)
+        self._timeout_diagnostics.bind(self)
+
     def __and__(self, other):
         """Returns a new 'composite' status object, AndStatus"""
         return AndStatus(self, other)
+
+    def _run_callbacks(self):
+        _run_callbacks_with_diagnostics(self, self._timeout_diagnostics)
 
 
 class MoveStatus(_MoveStatus):
     """Thin wrapper around MoveStatus to ensure __and__ operator and stop on failure."""
 
+    def __init__(
+        self, positioner, target, *, start_ts=None, description: str | None = None, **kwargs
+    ):
+        self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
+        super().__init__(positioner=positioner, target=target, start_ts=start_ts, **kwargs)
+        self._timeout_diagnostics.bind(self)
+
     def __and__(self, other):
         """Returns a new 'composite' status object, AndStatus"""
         return AndStatus(self, other)
+
+    def _run_callbacks(self):
+        _run_callbacks_with_diagnostics(self, self._timeout_diagnostics)
 
 
 class SubscriptionStatus(StatusBase):
@@ -198,18 +395,19 @@ class SubscriptionStatus(StatusBase):
 
     def __init__(
         self,
-        obj: Union["Device", "Signal"],
+        obj: Device | Signal,
         callback: Callable,
         event_type=None,
         timeout=None,
         settle_time=None,
         run=True,
+        description: str | None = None,
     ):
         # Store device and attribute information
         self.callback = callback
         self.obj = obj
         # Start timeout thread in the background
-        super().__init__(obj=obj, timeout=timeout, settle_time=settle_time)
+        super().__init__(obj=obj, timeout=timeout, settle_time=settle_time, description=description)
         self.obj.subscribe(self.check_value, event_type=event_type, run=run)
 
     def check_value(self, *args, **kwargs):
@@ -260,7 +458,7 @@ class CompareStatus(SubscriptionStatus):
 
     def __init__(
         self,
-        signal: "Signal",
+        signal: Signal,
         value: float | int | str,
         *,
         operation_success: Literal["==", "!=", "<", "<=", ">", ">="] = "==",
@@ -270,6 +468,7 @@ class CompareStatus(SubscriptionStatus):
         settle_time: float = 0,
         run: bool = True,
         event_type=None,
+        description: str | None = None,
     ):
         if isinstance(value, str):
             if operation_success not in ("==", "!=") or operation_failure not in ("==", "!="):
@@ -302,6 +501,7 @@ class CompareStatus(SubscriptionStatus):
             settle_time=settle_time,
             event_type=event_type,
             run=run,
+            description=description,
         )
 
     def _compare_callback(self, value: any, **kwargs) -> bool:
@@ -347,7 +547,7 @@ class ExceptionStatus(CompareStatus):
 
     def __init__(
         self,
-        signal: "Signal",
+        signal: Signal,
         value: float | int | str,
         *,
         operation: Literal["==", "!=", "<", "<=", ">", ">="] = "==",
@@ -356,6 +556,7 @@ class ExceptionStatus(CompareStatus):
         run: bool = True,
         event_type=None,
         exception: Exception | None = None,
+        description: str | None = None,
     ):
         self._configured_exception = exception
         super().__init__(
@@ -366,6 +567,7 @@ class ExceptionStatus(CompareStatus):
             settle_time=settle_time,
             run=run,
             event_type=event_type,
+            description=description,
         )
 
     def _compare_callback(self, value: any, **kwargs) -> bool:
@@ -420,7 +622,7 @@ class TransitionStatus(SubscriptionStatus):
 
     def __init__(
         self,
-        signal: "Signal",
+        signal: Signal,
         transitions: list[float | int | str],
         *,
         strict: bool = True,
@@ -429,6 +631,7 @@ class TransitionStatus(SubscriptionStatus):
         timeout: float = None,
         settle_time: float = 0,
         event_type=None,
+        description: str | None = None,
     ):
         self._signal = signal
         self._transitions = tuple(transitions)
@@ -444,6 +647,7 @@ class TransitionStatus(SubscriptionStatus):
             settle_time=settle_time,
             event_type=event_type,
             run=run,
+            description=description,
         )
 
     def _compare_callback(self, old_value: any, value: any, **kwargs) -> bool:
@@ -504,15 +708,21 @@ class TaskStatus(StatusBase):
 
     def __init__(
         self,
-        obj: Union["Device", "Signal"],
+        obj: Device | Signal,
         *,
         timeout=None,
         settle_time=0,
         done=None,
         success=None,
+        description: str | None = None,
     ):
         super().__init__(
-            obj=obj, timeout=timeout, settle_time=settle_time, done=done, success=success
+            obj=obj,
+            timeout=timeout,
+            settle_time=settle_time,
+            done=done,
+            success=success,
+            description=description,
         )
         self._state = TaskState.NOT_STARTED
         self._task_id = str(uuid.uuid4())
@@ -535,7 +745,7 @@ class TaskStatus(StatusBase):
 class TaskHandler:
     """Handler to manage asynchronous tasks"""
 
-    def __init__(self, parent: "Device"):
+    def __init__(self, parent: Device):
         """Initialize the handler"""
         self._tasks = {}
         self._parent = parent
