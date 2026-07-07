@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.44.0 (2026-07-07)
+
+### Bug Fixes
+
+- Add extra info to msg from error_info
+  ([`0e4e21c`](https://github.com/bec-project/ophyd_devices/commit/0e4e21c4159d75921a9709d6973266b7dfca253b))
+
+### Features
+
+- **status**: Enhance timeout error handling with initialization traceback
+  ([`31f3ac2`](https://github.com/bec-project/ophyd_devices/commit/31f3ac27cc84a96d512053ba40587efebe12b23e))
+
+
 ## v1.43.0 (2026-07-01)
 
 ### Features
