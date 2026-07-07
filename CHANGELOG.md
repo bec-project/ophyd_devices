@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.44.1 (2026-07-07)
+
+### Bug Fixes
+
+- **sim_waveform**: Add acquisition_group to waveform_0d component
+  ([`42ea005`](https://github.com/bec-project/ophyd_devices/commit/42ea005769d1ce7bb2ea893b728245edbfeff17d))
+
+### Documentation
+
+- **signals**: Add usage examples for ProgressSignal, FileEventSignal, PreviewSignal, DynamicSignal,
+  AsyncMultiSignal, and AsyncSignal
+  ([`c377c95`](https://github.com/bec-project/ophyd_devices/commit/c377c95ea430f08cb0e218549605c63dd1bee9f0))
+
+### Refactoring
+
+- **sim_camera**: Clean up unused subscription and enhance file event handling
+  ([`b2b2b6f`](https://github.com/bec-project/ophyd_devices/commit/b2b2b6f571f9fc0954ee5b19aa1d8f8e0fbc6c88))
+
+
 ## v1.44.0 (2026-07-07)
 
 ### Bug Fixes
