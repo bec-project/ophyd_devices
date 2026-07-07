@@ -59,16 +59,17 @@ class StatusTimeoutErrorWithErrorInfo(ExceptionWithErrorInfo, TimeoutError):
     """Status timeout exception that carries structured BEC error info."""
 
 
-def _capture_status_initialization_traceback() -> str:
+def _capture_status_initialization_traceback() -> tuple[traceback.FrameSummary | None, str]:
     """Capture the stack at status creation time."""
     stack = traceback.extract_stack()
     trimmed_stack = stack[:-1]
+    frame = None
     while trimmed_stack:
         frame = trimmed_stack[-1]
         if frame.filename != __file__:
             break
         trimmed_stack.pop()
-    return "".join(traceback.format_list(trimmed_stack)).rstrip()
+    return frame, "".join(traceback.format_list(trimmed_stack)).rstrip()
 
 
 class _StatusTimeoutDiagnostics:
@@ -78,9 +79,9 @@ class _StatusTimeoutDiagnostics:
         self, status_initialization_traceback: str | None = None, description: str | None = None
     ):
         self._status = None
-        self._status_initialization_traceback = (
-            status_initialization_traceback or _capture_status_initialization_traceback()
-        )
+        frame, traceback_str = _capture_status_initialization_traceback()
+        self._status_initialization_traceback = status_initialization_traceback or traceback_str
+        self._status_initialization_frame = frame
         self._description = description
 
     def bind(self, status: _StatusBase) -> None:
@@ -118,14 +119,24 @@ class _StatusTimeoutDiagnostics:
             messages.ErrorInfo: The structured error info object.
         """
         device_name = None
+        signal_name = None
+
         if hasattr(self._status, "device") and getattr(self._status, "device", None) is not None:
             device = self._status.device  # type: ignore
-            device_name = getattr(device, "dotted_name", None) or getattr(device, "name", None)
+            device_root = getattr(device, "root", device)
+            device_name = device_root.name
+            signal_name = getattr(device, "dotted_name", None) or getattr(device, "name", None)
         elif hasattr(self._status, "obj") and getattr(self._status, "obj", None) is not None:
             obj = self._status.obj  # type: ignore
-            device_name = getattr(obj, "dotted_name", None) or getattr(obj, "name", None)
+            device_root = getattr(obj, "root", obj)
+            device_name = device_root.name
+            signal_name = getattr(obj, "dotted_name", None) or getattr(obj, "name", None)
 
-        compact_message = f"Status timeout for {device_name or self._status.__class__.__name__}."
+        compact_message = f"Status timeout for {device_name or self._status.__class__.__name__}"
+        if self._status_initialization_frame:
+            compact_message += f" in method '{self._status_initialization_frame.name}'"
+        if signal_name and signal_name != device_name:
+            compact_message += f" waiting for signal {signal_name}."
         if self._description:
             compact_message = f"{self._description}\n\n{compact_message}"
 
