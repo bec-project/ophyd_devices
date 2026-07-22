@@ -82,7 +82,7 @@ class StatsPluginWithTSControl(StatsPlugin_V35):
     ts_read_mode = Cpt(EpicsSignal, "TS:TSRead.SCAN", kind=Kind.omitted)
     ts_read = Cpt(EpicsSignal, "TS:TSRead.PROC", kind=Kind.omitted)
     ts_current_index = Cpt(EpicsSignalRO, "TS:TSCurrentPoint", kind=Kind.omitted)
-    ts_num_points = Cpt(EpicsSignalRO, "TS:TSNumPoints", kind=Kind.omitted, auto_monitor=True)
+    ts_num_points = Cpt(EpicsSignal, "TS:TSNumPoints", kind=Kind.omitted, auto_monitor=True)
 
 
 @dataclass
