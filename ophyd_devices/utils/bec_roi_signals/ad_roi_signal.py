@@ -333,13 +333,35 @@ class ADROIProcessing(ROIProcessing):
         """Publish a StatsPlugin update into the matching BEC result signal."""
         if not self._is_operation_active(operation):
             return
+        if not self.scan_server_scan_info:
+            return
+        async_update = {
+            "type": "add",
+            "max_shape": [
+                self.scan_server_scan_info.frames_per_trigger
+                * len(self.scan_server_scan_info.positions)
+            ],
+        }
         if self.average_frames_per_trigger.get() is True:
             if isinstance(value, (list, np.ndarray)):
                 value = value / len(value)  # Average over the number of frames per trigger
             value = float(value)  # Ensure the value is a float for list and np.ndarray types
+            async_update["max_shape"] = len(
+                self.scan_server_scan_info.positions
+            )  # Only one value per position
 
-        signal = self.result_scalar if output_kind == "scalar" else self.result_waveform
-        signal.put({result_name: {"value": value, "timestamp": timestamp or time.time()}})
+        if output_kind == "scalar":
+            self.result_scalar.put(
+                {result_name: {"value": value, "timestamp": timestamp or time.time()}},
+                async_update=async_update,
+            )
+        else:
+            shape_0 = async_update["max_shape"][0]
+            async_update["max_shape"] = [shape_0, None]  # Allow the second dimension to be variable
+            self.result_waveform.put(
+                {result_name: {"value": value, "timestamp": timestamp or time.time()}},
+                async_update=async_update,
+            )
 
     def _is_operation_active(self, operation: str) -> bool:
         return bool(self.active.get()) and operation in self.selected_operations.get()
