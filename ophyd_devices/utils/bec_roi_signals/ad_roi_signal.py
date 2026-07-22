@@ -346,7 +346,7 @@ class ADROIProcessing(ROIProcessing):
             if isinstance(value, (list, np.ndarray)):
                 value = value / len(value)  # Average over the number of frames per trigger
             value = float(value)  # Ensure the value is a float for list and np.ndarray types
-            async_update["max_shape"] = len(
+            async_update["max_shape"] = [len(
                 self.scan_server_scan_info.positions
             )  # Only one value per position
 
