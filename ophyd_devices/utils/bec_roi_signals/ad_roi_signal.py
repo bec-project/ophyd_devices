@@ -176,7 +176,7 @@ class ADROIProcessing(ROIProcessing):
     roi1 = Cpt(ROIPlugin, "ROI1:", kind="normal")
     stats1 = Cpt(StatsPluginWithTSControl, "Stats1:", kind="normal")
     average_frames_per_trigger = Cpt(
-        AverageFramesForEachTrigger, "average_frames_per_trigger", kind=Kind.config, value=True
+        AverageFramesForEachTrigger, name="average_frames_per_trigger", kind=Kind.config, value=True
     )
 
     def __init__(self, *args, **kwargs):
