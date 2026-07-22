@@ -375,7 +375,6 @@ class ADROIProcessing(ROIProcessing):
 
     def on_destroy(self):
         """Hook called when the device is destroyed."""
-        self.stats1.ts_acquire.put(0)  # Stop timestamp acquisition
         self._unsubscribe_all_stats()
 
 
