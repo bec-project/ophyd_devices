@@ -76,7 +76,7 @@ class TSReadMode(IntEnum):
 class StatsPluginWithTSControl(StatsPlugin_V35):
     """StatsPlugin with additional timestamp control signals."""
 
-    ts_acquire_status = Cpt(EpicsSignalRO, ":TS:TSAcquiring", kind=Kind.omitted, auto_monitor=True)
+    ts_acquire_status = Cpt(EpicsSignalRO, "TS:TSAcquiring", kind=Kind.omitted, auto_monitor=True)
     ts_acquire = Cpt(EpicsSignal, "TS:TSAcquire", kind=Kind.omitted)
     ts_acquire_mode = Cpt(EpicsSignal, "TS:TSAcquireMode", kind=Kind.omitted)
     ts_read_mode = Cpt(EpicsSignal, "TS:TSRead.SCAN", kind=Kind.omitted)
