@@ -411,7 +411,7 @@ class MyDetector(PSIDeviceBase, ADBase):
         y=400,
         width=100,
         height=100,
-        selected_operations=["basic_statistics", "profiles"],
+        selected_operations=["basic_statistics", "centroid"],
     )
 
     preview = Cpt(
