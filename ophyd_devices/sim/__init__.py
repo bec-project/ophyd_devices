@@ -1,4 +1,4 @@
-from .sim_camera import SimCamera
+from .sim_camera import SimCamera, SimNegativeCamera
 from .sim_flyer import SimFlyer
 
 SynFlyer = SimFlyer

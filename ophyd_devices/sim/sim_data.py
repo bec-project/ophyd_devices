@@ -72,6 +72,12 @@ DEFAULT_PARAMS_HOT_PIXEL = {
     "hot_pixel_values": np.array([1e3, 1e4, 1e3]),
 }
 
+DEFAULT_PARAMS_NEGATIVE_PIXEL = {
+    "negative_pixel_count": 20,
+    "negative_pixel_min": -100,
+    "negative_pixel_max": -1,
+}
+
 
 def _safeint(val: float) -> int:
     if isnan(val):
@@ -825,3 +831,36 @@ class SimulatedDataCamera(SimulatedDataBase):
                     if v[coord[0], coord[1]] / maximum > 0.5:
                         v[coord[0], coord[1]] = value
         return v
+
+
+class SimulatedDataNegativeCamera(SimulatedDataCamera):
+    """Simulated 2D camera data with signed negative pixel values."""
+
+    def _get_additional_params(self) -> None:
+        params = super()._get_additional_params()
+        params.update(deepcopy(DEFAULT_PARAMS_NEGATIVE_PIXEL))
+        return params
+
+    def compute_sim_state(self, signal_name: str, compute_readback: bool) -> None:
+        super().compute_sim_state(signal_name=signal_name, compute_readback=compute_readback)
+        value = np.asarray(self.sim_state[signal_name]["value"], dtype=self.bit_depth)
+        value = self._add_negative_pixels(value)
+        self.update_sim_state(signal_name, value)
+
+    def _add_negative_pixels(self, value: np.ndarray) -> np.ndarray:
+        pixel_count = int(self.params["negative_pixel_count"])
+        if pixel_count <= 0 or value.size == 0:
+            return value
+
+        negative_min = int(self.params["negative_pixel_min"])
+        negative_max = int(self.params["negative_pixel_max"])
+        if negative_min > negative_max:
+            raise SimulatedDataException(
+                "negative_pixel_min must be smaller than or equal to negative_pixel_max."
+            )
+
+        indices = np.random.choice(value.size, size=min(pixel_count, value.size), replace=False)
+        negative_values = np.random.randint(negative_min, negative_max + 1, size=len(indices))
+        flat_value = value.reshape(-1)
+        flat_value[indices] = negative_values.astype(self.bit_depth)
+        return value

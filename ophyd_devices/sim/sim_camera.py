@@ -6,7 +6,7 @@ from ophyd import Component as Cpt
 from ophyd import Device, Kind, StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.sim.sim_data import SimulatedDataCamera
+from ophyd_devices.sim.sim_data import SimulatedDataCamera, SimulatedDataNegativeCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
 from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
@@ -154,3 +154,18 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         """Stop the camera acquisition."""
         self.task_handler.shutdown()
         self.on_unstage()
+
+
+class SimNegativeCamera(SimCamera):
+    """A simulated 2D camera that emits signed images with negative pixel values."""
+
+    sim_cls = SimulatedDataNegativeCamera
+    BIT_DEPTH = np.int16
+
+    image = Cpt(
+        ReadOnlySignal,
+        name="image",
+        value=np.empty(SimCameraControl.SHAPE, dtype=BIT_DEPTH),
+        compute_readback=True,
+        kind=Kind.omitted,
+    )
