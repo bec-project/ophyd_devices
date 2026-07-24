@@ -23,7 +23,7 @@ from ophyd_devices.interfaces.protocols.bec_protocols import (
     BECPositionerProtocol,
     BECSignalProtocol,
 )
-from ophyd_devices.sim.sim_camera import SimCamera
+from ophyd_devices.sim.sim_camera import SimCamera, SimNegativeCamera
 from ophyd_devices.sim.sim_data import _safeint
 from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks.h5_image_replay_proxy import H5ImageReplayProxy
@@ -357,6 +357,16 @@ def test_camera_readback(camera, amplitude, noise_multiplier):
         assert camera.image.get().shape == camera.SHAPE
         assert isinstance(camera.image.get()[0, 0], camera.BIT_DEPTH)
         assert (camera.image.get() <= (amplitude + noise_multiplier + 1)).all()
+
+
+def test_negative_camera_readback_contains_negative_pixels():
+    """Test that SimNegativeCamera emits signed images with negative values."""
+    camera = SimNegativeCamera(name="eiger_negative", device_manager=DMMock())
+    image = camera.image.get()
+
+    assert image.dtype == np.int16
+    assert image.shape == camera.SHAPE
+    assert (image < 0).sum() == camera.sim.params["negative_pixel_count"]
 
 
 def test_positioner_move(positioner):
