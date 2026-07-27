@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.44.2 (2026-07-27)
+
+### Bug Fixes
+
+- **base-classes**: Deprecate bec_device_base, ophyd_rotation_base and psi_detector_base
+  ([`c30a614`](https://github.com/bec-project/ophyd_devices/commit/c30a6149a45cf3f73d877b7b14715bf89a91ae7f))
+
+
 ## v1.44.1 (2026-07-07)
 
 ### Bug Fixes
