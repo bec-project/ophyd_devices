@@ -8,6 +8,7 @@ import inspect
 import time
 from typing import TYPE_CHECKING, Callable
 
+from bec_lib.logger import bec_logger
 from ophyd import Device, DeviceStatus, Staged, StatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
@@ -15,6 +16,9 @@ from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
+
+
+logger = bec_logger.logger
 
 
 class DeviceStoppedError(Exception):
@@ -230,7 +234,9 @@ class PSIDeviceBase(Device):
         Example:
             >>> self.wait_for_condition(condition=my_condition, timeout=5, interval=0.05, check_stopped=True)
         """
-
+        logger.info(
+            f"This method will be deprecated in the future, please use CompareStatus and TransitionStatus objects instead."
+        )
         start_time = time.time()
         while time.time() < start_time + timeout:
             if condition() is True:

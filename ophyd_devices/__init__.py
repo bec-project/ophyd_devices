@@ -16,8 +16,7 @@ from .sim.sim_signals import ReadOnlySignal
 from .sim.sim_waveform import SimWaveform
 
 SynSignalRO = ReadOnlySignal
-from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
-
+from .devices.epics_signals import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 from .devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME
 from .devices.softpositioner import SoftPositioner
 from .interfaces.base_classes.psi_device_base import PSIDeviceBase
