@@ -8,10 +8,11 @@ import inspect
 import time
 from typing import TYPE_CHECKING, Callable
 
-from ophyd import Device, DeviceStatus, Staged, StatusBase
+from ophyd import Device, Staged
+from ophyd.status import StatusBase as OphydStatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
-from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+from ophyd_devices.utils.psi_device_base_utils import DeviceStatus, FileHandler, TaskHandler
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
@@ -38,6 +39,7 @@ class PSIDeviceBase(Device):
     SUB_DEVICE_MONITOR_1D = "device_monitor_1d"
     SUB_DEVICE_MONITOR_2D = "device_monitor_2d"
     _default_sub = SUB_VALUE
+    DEFAULT_STATUS_TIMEOUT: float | None = None
 
     def __init__(
         self,
@@ -65,7 +67,7 @@ class PSIDeviceBase(Device):
         else:
             super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
-        self._stoppable_status_objects: list[StatusBase] = []
+        self._stoppable_status_objects: list[OphydStatusBase] = []
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
         if scan_info is None:
@@ -100,50 +102,50 @@ class PSIDeviceBase(Device):
     # Wrapper around Device class methods  #
     ########################################
 
-    def stage(self) -> list[object] | DeviceStatus | StatusBase:  # type: ignore
+    def stage(self) -> list[object] | DeviceStatus | OphydStatusBase:  # type: ignore
         """Stage the device."""
         if self.staged != Staged.no:
             return super().stage()
         self.stopped = False
         super_staged = super().stage()
         status = self.on_stage()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, StatusBase):
+        if isinstance(status, OphydStatusBase):
             return status
         return super_staged
 
-    def unstage(self) -> list[object] | DeviceStatus | StatusBase:  # type: ignore
+    def unstage(self) -> list[object] | DeviceStatus | OphydStatusBase:  # type: ignore
         """Unstage the device."""
         super_unstage = super().unstage()
         status = self.on_unstage()  # pylint: disable=assignment-from-no-return
         self._stop_stoppable_status_objects()
-        if isinstance(status, StatusBase):
+        if isinstance(status, OphydStatusBase):
             return status
         return super_unstage
 
-    def pre_scan(self) -> DeviceStatus | StatusBase | None:
+    def pre_scan(self) -> DeviceStatus | OphydStatusBase | None:
         """Pre-scan function."""
         status = self.on_pre_scan()  # pylint: disable=assignment-from-no-return
         return status
 
-    def trigger(self) -> DeviceStatus | StatusBase:
+    def trigger(self) -> DeviceStatus | OphydStatusBase:
         """Trigger the device."""
         super_trigger = super().trigger()
         status = self.on_trigger()  # pylint: disable=assignment-from-no-return
         return status if status else super_trigger
 
-    def complete(self) -> DeviceStatus | StatusBase:
+    def complete(self) -> DeviceStatus | OphydStatusBase:
         """Complete the device."""
         status = self.on_complete()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, StatusBase):
+        if isinstance(status, OphydStatusBase):
             return status
         status = DeviceStatus(self)
         status.set_finished()
         return status
 
-    def kickoff(self) -> DeviceStatus | StatusBase:
+    def kickoff(self) -> DeviceStatus | OphydStatusBase:
         """Kickoff the device."""
         status = self.on_kickoff()  # pylint: disable=assignment-from-no-return
-        if isinstance(status, StatusBase):
+        if isinstance(status, OphydStatusBase):
             return status
         status = DeviceStatus(self)
         status.set_finished()
@@ -172,15 +174,15 @@ class PSIDeviceBase(Device):
     # Stoppable Status Objects Management   #
     ########################################
 
-    def cancel_on_stop(self, status: StatusBase) -> None:
+    def cancel_on_stop(self, status: OphydStatusBase) -> None:
         """
         Register a status object to be cancelled when the device is stopped.
 
         Args:
-            status (StatusBase): The status object to be cancelled.
+            status (OphydStatusBase): The status object to be cancelled.
         """
-        if not isinstance(status, StatusBase):
-            raise TypeError("status must be an instance of StatusBase")
+        if not isinstance(status, OphydStatusBase):
+            raise TypeError("status must be an instance of ophyd.StatusBase")
         self._stoppable_status_objects.append(status)
 
     def _clear_stoppable_status_objects(self) -> None:
@@ -258,26 +260,26 @@ class PSIDeviceBase(Device):
         Default values for signals should be set here.
         """
 
-    def on_stage(self) -> DeviceStatus | StatusBase | None:
+    def on_stage(self) -> DeviceStatus | OphydStatusBase | None:
         """
         Called while staging the device.
 
         Information about the upcoming scan can be accessed from the scan_info (self.scan_info.msg) object.
         """
 
-    def on_unstage(self) -> DeviceStatus | StatusBase | None:
+    def on_unstage(self) -> DeviceStatus | OphydStatusBase | None:
         """Called while unstaging the device."""
 
-    def on_pre_scan(self) -> DeviceStatus | StatusBase | None:
+    def on_pre_scan(self) -> DeviceStatus | OphydStatusBase | None:
         """Called right before the scan starts on all devices automatically."""
 
-    def on_trigger(self) -> DeviceStatus | StatusBase | None:
+    def on_trigger(self) -> DeviceStatus | OphydStatusBase | None:
         """Called when the device is triggered."""
 
-    def on_complete(self) -> DeviceStatus | StatusBase | None:
+    def on_complete(self) -> DeviceStatus | OphydStatusBase | None:
         """Called to inquire if a device has completed a scans."""
 
-    def on_kickoff(self) -> DeviceStatus | StatusBase | None:
+    def on_kickoff(self) -> DeviceStatus | OphydStatusBase | None:
         """Called to kickoff a device for a fly scan. Has to be called explicitly."""
 
     def on_stop(self) -> None:

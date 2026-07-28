@@ -5,12 +5,20 @@ import time
 from unittest import mock
 
 import pytest
-from ophyd import Device
+from ophyd import Component as Cpt
+from ophyd import Device, Signal
 from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
+from ophyd_devices.utils.psi_device_base_utils import DeviceStatus as PSIDeviceStatus
+from ophyd_devices.utils.psi_device_base_utils import MoveStatus as PSIMoveStatus
+from ophyd_devices.utils.psi_device_base_utils import StatusBase as PSIStatusBase
+from ophyd_devices.utils.psi_device_base_utils import (
+    StatusTimeoutErrorWithErrorInfo,
+    SubscriptionStatus,
+)
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -24,6 +32,19 @@ class SimDevice(PSIDeviceBase, Device):
     """Simulated Device with PSI Device Base"""
 
 
+class TimeoutConfiguredDevice(PSIDeviceBase, Device):
+    """Simulated device with a default timeout for status objects."""
+
+    DEFAULT_STATUS_TIMEOUT = 0.5
+    signal = Cpt(Signal, value=0)
+
+
+class TimeoutConfiguredPositionerDevice(PSIDeviceBase, SimPositioner):
+    """Simulated positioner device with a default timeout for move statuses."""
+
+    DEFAULT_STATUS_TIMEOUT = 0.5
+
+
 @pytest.fixture
 def device_positioner():
     """Fixture for Device"""
@@ -34,6 +55,18 @@ def device_positioner():
 def device():
     """Fixture for Device"""
     yield SimDevice(name="device", prefix="test:")
+
+
+@pytest.fixture
+def timeout_device():
+    """Fixture for a device with default status timeout configuration."""
+    yield TimeoutConfiguredDevice(name="timeout_device", prefix="test:")
+
+
+@pytest.fixture
+def timeout_positioner():
+    """Fixture for a positioner device with default status timeout configuration."""
+    yield TimeoutConfiguredPositionerDevice(name="timeout_positioner")
 
 
 def test_psi_device_base_wait_for_signals(device_positioner):
@@ -176,3 +209,52 @@ def test_stoppable_status_not_done(device):
 
     assert status.done is True
     assert status.success is False
+
+
+def test_device_default_status_timeout_applies_to_status_objects(timeout_device):
+    """Status objects should inherit the owning device's default timeout."""
+    status = PSIStatusBase(obj=timeout_device)
+    device_status = PSIDeviceStatus(timeout_device)
+    subscription_status = SubscriptionStatus(
+        timeout_device.signal, callback=lambda *args, **kwargs: False, run=False
+    )
+
+    assert status.timeout == timeout_device.DEFAULT_STATUS_TIMEOUT
+    assert device_status.timeout == timeout_device.DEFAULT_STATUS_TIMEOUT
+    assert subscription_status.timeout == timeout_device.DEFAULT_STATUS_TIMEOUT
+
+
+def test_subscription_status_with_default_timeout_normalizes_none_settle_time(timeout_device):
+    """SubscriptionStatus should safely normalize None settle_time when a default timeout applies."""
+    status = SubscriptionStatus(
+        timeout_device.signal, callback=lambda *args, **kwargs: False, run=False
+    )
+
+    assert status.settle_time == 0.0
+
+    with pytest.raises(StatusTimeoutErrorWithErrorInfo):
+        status.wait(timeout=1)
+
+
+def test_device_default_status_timeout_can_be_overridden(timeout_device):
+    """Explicit timeouts should take precedence over the device default."""
+    status = PSIStatusBase(obj=timeout_device, timeout=1.25)
+    device_status = PSIDeviceStatus(timeout_device, timeout=1.5)
+
+    assert status.timeout == 1.25
+    assert device_status.timeout == 1.5
+
+
+def test_psidevicebase_fallback_statuses_use_default_timeout(timeout_device):
+    """Base-class fallback kickoff/complete statuses should use the device default timeout."""
+    kickoff_status = timeout_device.kickoff()
+    complete_status = timeout_device.complete()
+
+    assert kickoff_status.timeout == timeout_device.DEFAULT_STATUS_TIMEOUT
+    assert complete_status.timeout == timeout_device.DEFAULT_STATUS_TIMEOUT
+
+
+def test_move_status_uses_device_default_timeout(timeout_positioner):
+    """Move statuses should inherit the default timeout from PSI positioner devices."""
+    status = PSIMoveStatus(timeout_positioner, target=1)
+    assert status.timeout == timeout_positioner.DEFAULT_STATUS_TIMEOUT

@@ -55,6 +55,26 @@ OP_MAP = {
 }
 
 
+def _resolve_default_status_timeout(obj) -> float | None:
+    """Walk an object/parent chain to find a device-specific default status timeout."""
+    current = obj
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        timeout = getattr(current, "DEFAULT_STATUS_TIMEOUT", None)
+        if timeout is not None:
+            return timeout
+        current = getattr(current, "parent", None)
+    return None
+
+
+def _resolve_status_timeout(timeout, obj) -> float | None:
+    """Prefer an explicit timeout, otherwise fall back to the owning device default."""
+    if timeout is not None:
+        return timeout
+    return _resolve_default_status_timeout(obj)
+
+
 class StatusTimeoutErrorWithErrorInfo(ExceptionWithErrorInfo, TimeoutError):
     """Status timeout exception that carries structured BEC error info."""
 
@@ -220,6 +240,13 @@ class StatusBase(_StatusBase):
         description: str | None = None,
     ):
         self.obj = obj
+        if obj is None:
+            logger.warning(
+                "StatusBase created without an associated object. Consider adding one for better diagnostics."
+            )
+        timeout = _resolve_status_timeout(timeout, obj)
+        if settle_time is None:
+            settle_time = 0
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
         super().__init__(timeout=timeout, settle_time=settle_time, done=done, success=success)
         self._timeout_diagnostics.bind(self)
@@ -353,6 +380,7 @@ class Status(_Status):
         success=None,
         description: str | None = None,
     ):
+        timeout = _resolve_status_timeout(timeout, obj)
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
         super().__init__(
             obj=obj, timeout=timeout, settle_time=settle_time, done=done, success=success
@@ -371,6 +399,7 @@ class DeviceStatus(_DeviceStatus):
     """Thin wrapper around DeviceStatus to add __and__ operator."""
 
     def __init__(self, device, description: str | None = None, **kwargs):
+        kwargs["timeout"] = _resolve_status_timeout(kwargs.get("timeout"), device)
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
         super().__init__(device=device, **kwargs)
         self._timeout_diagnostics.bind(self)
@@ -389,6 +418,7 @@ class MoveStatus(_MoveStatus):
     def __init__(
         self, positioner, target, *, start_ts=None, description: str | None = None, **kwargs
     ):
+        kwargs["timeout"] = _resolve_status_timeout(kwargs.get("timeout"), positioner)
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
         super().__init__(positioner=positioner, target=target, start_ts=start_ts, **kwargs)
         self._timeout_diagnostics.bind(self)
