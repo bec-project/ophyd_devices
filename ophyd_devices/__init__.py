@@ -1,3 +1,5 @@
+# First we import our own EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Signal, SignalRO classes from the devices.epics_signals module.
+from .devices.epics_signals import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV, Signal, SignalRO
 from .devices.sls_devices import SLSInfo, SLSOperatorMessages
 from .sim.sim_camera import SimCamera
 from .sim.sim_monitor import SimMonitor, SimMonitorAsync
@@ -16,7 +18,7 @@ from .sim.sim_signals import ReadOnlySignal
 from .sim.sim_waveform import SimWaveform
 
 SynSignalRO = ReadOnlySignal
-from .devices.epics_signals import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
+
 from .devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME
 from .devices.softpositioner import SoftPositioner
 from .interfaces.base_classes.psi_device_base import PSIDeviceBase
