@@ -81,6 +81,8 @@ class Controller(OphydObject):
         socket_host (str): Hostname or IP address of the controller
         socket_port (int): Port number of the controller
         device_manager (DeviceManagerDS): Device manager instance
+        term (str): Termination string to add to the end of a socket request
+        trail (str): Trailing character to be removed from a socket reply
     """
 
     _controller_instances = {}
@@ -101,6 +103,8 @@ class Controller(OphydObject):
         parent=None,
         labels=None,
         kind=None,
+        term: str = "\n",
+        trail: str = "\r\n",
     ):
         if not self._initialized:
             super().__init__(
@@ -116,6 +120,8 @@ class Controller(OphydObject):
             self._socket_cls = socket_cls
             self._socket_host = socket_host
             self._socket_port = socket_port
+            self._term = term
+            self._trail = trail
             self.command_history: deque[str] = deque(maxlen=self._command_history_length)
 
     @threadlocked
@@ -127,7 +133,7 @@ class Controller(OphydObject):
             val (str): Command to send
         """
         self.command_history.append(f"[PUT]: {val}")
-        self.sock.put(f"{val}\n".encode())
+        self.sock.put(f"{val}{self._term}".encode())
 
     @threadlocked
     def socket_get(self):
@@ -162,7 +168,7 @@ class Controller(OphydObject):
 
     def _remove_trailing_characters(self, var) -> str:
         if len(var) > 1:
-            return var.split("\r\n")[0]
+            return var.split(f"{self._trail}")[0]
         return var
 
     @threadlocked
