@@ -226,3 +226,105 @@ def test_socket_put_and_receive_raises_controller_communication_error(controller
     controller.sock.buffer_recv = [b"\xbfhello", b"\xbfworld"]
     with pytest.raises(ControllerCommunicationError):
         controller.socket_put_and_receive("test")
+
+
+@pytest.fixture
+def make_controller():
+    """Factory fixture to build a fresh controller singleton with custom term/trail settings."""
+
+    def _make(controller_cls=Controller, **kwargs):
+        Controller._reset_controller()
+        controller = controller_cls(
+            name="controller",
+            socket_cls=SocketMock,
+            socket_host="localhost",
+            socket_port=8080,
+            device_manager=DMMock(),
+            **kwargs,
+        )
+        controller.on()
+        return controller
+
+    yield _make
+    Controller._reset_controller()
+
+
+def test_socket_put_appends_custom_term(make_controller):
+    controller = make_controller(term="\r")
+    controller.socket_put("get")
+    assert controller.sock.buffer_put == [b"get\r"]
+
+
+@pytest.mark.parametrize(
+    ["trail", "reply", "expected"],
+    [
+        (None, "value\r\n", "value"),
+        (None, "\r\n", ""),
+        (None, "line1\r\nline2\r\n", "line1\r\nline2"),
+        ("\n", "value\n", "value"),
+        ("\n", "\n", ""),
+        ("\n", "line1\nline2\n", "line1\nline2"),
+        ("", "value\r\n", "value\r\n"),
+    ],
+)
+def test_remove_trailing_characters_strips_suffix_only(make_controller, trail, reply, expected):
+    """The trail is stripped from the end of a reply only; mid-reply occurrences are preserved,
+    a bare terminator reduces to an empty payload, and an empty trail strips nothing."""
+    kwargs = {} if trail is None else {"trail": trail}
+    controller = make_controller(**kwargs)
+    assert controller._remove_trailing_characters(reply) == expected
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{"term": b"\n"}, {"trail": b"\r\n"}, {"term": 13}, {"trail": 0}]
+)
+def test_term_and_trail_must_be_strings(make_controller, kwargs):
+    with pytest.raises(TypeError):
+        make_controller(**kwargs)
+
+
+def test_second_construction_with_conflicting_term_trail_warns(make_controller):
+    """A second construction for the same host:port keeps the first term/trail and warns."""
+    controller = make_controller(term="\r", trail="\n")
+    with mock.patch("ophyd_devices.utils.controller.logger") as mock_logger:
+        second = Controller(
+            name="controller",
+            socket_cls=SocketMock,
+            socket_host="localhost",
+            socket_port=8080,
+            device_manager=DMMock(),
+            term="\n",
+        )
+        assert second is controller
+        mock_logger.warning.assert_called_once()
+    assert controller._term == "\r"
+    assert controller._trail == "\n"
+
+
+def test_second_construction_without_conflict_does_not_warn(make_controller):
+    controller = make_controller(term="\r")
+    with mock.patch("ophyd_devices.utils.controller.logger") as mock_logger:
+        for kwargs in ({"term": "\r"}, {}):
+            second = Controller(
+                name="controller",
+                socket_cls=SocketMock,
+                socket_host="localhost",
+                socket_port=8080,
+                device_manager=DMMock(),
+                **kwargs,
+            )
+            assert second is controller
+        mock_logger.warning.assert_not_called()
+
+
+def test_subclass_overrides_term_trail_as_class_attributes(make_controller):
+    """Subclasses can set the wire protocol with class attributes, without any constructor plumbing."""
+
+    class CRTermController(Controller):
+        _term = "\r"
+        _trail = "\n"
+
+    controller = make_controller(controller_cls=CRTermController)
+    controller.sock.buffer_recv = [b"value\n"]
+    assert controller.socket_put_and_receive("get") == "value"
+    assert controller.sock.buffer_put == [b"get\r"]

@@ -81,13 +81,21 @@ class Controller(OphydObject):
         socket_host (str): Hostname or IP address of the controller
         socket_port (int): Port number of the controller
         device_manager (DeviceManagerDS): Device manager instance
-        term (str): Termination string to add to the end of a socket request
-        trail (str): Trailing character to be removed from a socket reply
+        term (str, optional): Termination string appended to each outgoing socket request.
+            Defaults to the class attribute _term ("\\n").
+        trail (str, optional): Termination string stripped from the end of each socket reply.
+            Defaults to the class attribute _trail ("\\r\\n").
+
+    Subclasses that need a different wire protocol should override the _term and _trail class
+    attributes. The constructor arguments only take effect on the first instantiation per
+    host:port; the controller is a singleton and later values are ignored with a warning.
     """
 
     _controller_instances = {}
     _initialized = False
     _axes_per_controller = 1
+    _term = "\n"  # termination string appended to each outgoing request
+    _trail = "\r\n"  # termination string stripped from the end of each reply
 
     SUB_CONNECTION_CHANGE = "connection_change"
 
@@ -103,9 +111,13 @@ class Controller(OphydObject):
         parent=None,
         labels=None,
         kind=None,
-        term: str = "\n",
-        trail: str = "\r\n",
+        term: str | None = None,
+        trail: str | None = None,
     ):
+        if term is not None and not isinstance(term, str):
+            raise TypeError(f"term must be a string, got {type(term).__name__}")
+        if trail is not None and not isinstance(trail, str):
+            raise TypeError(f"trail must be a string, got {type(trail).__name__}")
         if not self._initialized:
             super().__init__(
                 name=name, attr_name=attr_name, parent=parent, labels=labels, kind=kind
@@ -120,9 +132,19 @@ class Controller(OphydObject):
             self._socket_cls = socket_cls
             self._socket_host = socket_host
             self._socket_port = socket_port
-            self._term = term
-            self._trail = trail
+            if term is not None:
+                self._term = term
+            if trail is not None:
+                self._trail = trail
             self.command_history: deque[str] = deque(maxlen=self._command_history_length)
+        elif (term is not None and term != self._term) or (
+            trail is not None and trail != self._trail
+        ):
+            logger.warning(
+                f"Controller {self._socket_host}:{self._socket_port} is already initialized with "
+                f"term={self._term!r} and trail={self._trail!r}; ignoring conflicting values "
+                f"term={term!r}, trail={trail!r}."
+            )
 
     @threadlocked
     def socket_put(self, val: str):
@@ -132,7 +154,7 @@ class Controller(OphydObject):
         Args:
             val (str): Command to send
         """
-        self.command_history.append(f"[PUT]: {val}")
+        self.command_history.append(f"[PUT]: {val + self._term!r}")
         self.sock.put(f"{val}{self._term}".encode())
 
     @threadlocked
@@ -167,9 +189,8 @@ class Controller(OphydObject):
             ) from exc
 
     def _remove_trailing_characters(self, var) -> str:
-        if len(var) > 1:
-            return var.split(f"{self._trail}")[0]
-        return var
+        """Strip the trail terminator from the end of a reply; mid-reply occurrences are kept."""
+        return var.removesuffix(self._trail)
 
     @threadlocked
     def print_command_history(self):
