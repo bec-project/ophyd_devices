@@ -39,6 +39,11 @@ jobs:
 
       - name: Run Pytest with Coverage
         id: coverage
+        env:
+          EPICS_CA_ADDR_LIST: 127.0.0.1
+          EPICS_CA_AUTO_ADDR_LIST: "NO"
+          EPICS_CAS_AUTO_BEACON_ADDR_LIST: "NO"
+          EPICS_CAS_BEACON_ADDR_LIST: 127.0.0.1
         run: |
           cd ./ophyd_devices
           coverage run --source=./ophyd_devices --omit=*/ophyd_devices/tests/* -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
