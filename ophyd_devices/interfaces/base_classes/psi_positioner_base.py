@@ -1,17 +1,45 @@
+import functools
 from abc import ABC
-from typing import Self, TypedDict
+from typing import TypedDict
 
+import numpy as np
 from ophyd import Component as Cpt
-from ophyd import Device
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
 from ophyd.signal import EpicsSignalBase, Signal
-from ophyd.status import MoveStatus
 from ophyd.status import wait as status_wait
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus, TransitionStatus
+from ophyd_devices.utils.psi_device_base_utils import (
+    MoveStatus,
+    SubscriptionStatus,
+    TransitionStatus,
+)
+
+
+class MoveStatusWithTolerance(MoveStatus):
+    """A MoveStatus that checks the final position against a tolerance if provided."""
+
+    def __init__(self, positioner, *args, **kwargs):
+        super().__init__(positioner, *args, **kwargs)
+        self.positioner = positioner
+
+    def _finished(self, success: bool = True, **kwargs):
+        if not success:
+            return super()._finished(success=success, **kwargs)
+
+        if self.positioner.tolerance is not _OPTIONAL_SIGNAL:
+            tol = self.positioner.tolerance.get()
+        else:
+            tol = np.inf
+        if abs(self.positioner.user_setpoint.get() - self.positioner.user_readback.get()) > tol:  # type: ignore
+            exc = RuntimeError(
+                f"Move to {self.positioner.user_setpoint.get()} failed, "
+                f"final position {self.positioner.user_readback.get()} outside of tolerance {tol}"  # type: ignore
+            )
+            return self.set_exception(exc)
+        return super()._finished(success=success, **kwargs)
 
 
 class _SignalSentinel(object): ...
@@ -79,6 +107,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
     velocity: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_stop: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_done_move: EpicsSignalBase = _OPTIONAL_SIGNAL
+    tolerance: Signal = _OPTIONAL_SIGNAL
 
     stop_value = 1  # The value to put to the stop PV (if set) to make the motor stop
     done_value = 1  # The value expected to be reported by motor_done_move when the move is done
@@ -252,7 +281,23 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         if self._deadband is not None and abs(position - self._position) < self._deadband:
             return MoveStatus(self, position, done=True, success=True)
 
-        status = super().move(position, timeout=timeout, moved_cb=moved_cb)
+        if timeout is None:
+            timeout = self._timeout
+
+        self.check_value(position)
+
+        self._run_subs(sub_type=self._SUB_REQ_DONE, success=False)
+        self._reset_sub(self._SUB_REQ_DONE)
+
+        status = MoveStatusWithTolerance(
+            self, position, timeout=timeout, settle_time=self._settle_time
+        )
+
+        if moved_cb is not None:
+            status.add_callback(functools.partial(moved_cb, obj=self))
+            # the status object will run this callback when finished
+
+        self.subscribe(status._finished, event_type=self._SUB_REQ_DONE, run=False)
         # TDDO: Here create subs for resolving the status
         try:
             self._setup_move(position)
