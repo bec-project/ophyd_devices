@@ -4,6 +4,7 @@ from typing import TypedDict
 
 import numpy as np
 from ophyd import Component as Cpt
+from ophyd import Kind
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
 from ophyd.signal import EpicsSignalBase, Signal
@@ -26,13 +27,15 @@ class MoveStatusWithTolerance(MoveStatus):
         self.positioner = positioner
 
     def _finished(self, success: bool = True, **kwargs):
-        if not success:
+
+        # We need user_readback, user_setpoint, and tolerance to be defined to check the final position
+        if not success or any(
+            sig is _OPTIONAL_SIGNAL
+            for sig in (self.positioner.user_readback, self.positioner.user_setpoint)
+        ):
             return super()._finished(success=success, **kwargs)
 
-        if self.positioner.tolerance is not _OPTIONAL_SIGNAL:
-            tol = self.positioner.tolerance.get()
-        else:
-            tol = np.inf
+        tol = self.positioner.tolerance.get()
         if abs(self.positioner.user_setpoint.get() - self.positioner.user_readback.get()) > tol:  # type: ignore
             exc = RuntimeError(
                 f"Move to {self.positioner.user_setpoint.get()} failed, "
@@ -107,10 +110,13 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
     velocity: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_stop: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_done_move: EpicsSignalBase = _OPTIONAL_SIGNAL
-    tolerance: Signal = _OPTIONAL_SIGNAL
+    tolerance = Cpt(Signal, value=np.inf, kind=Kind.config)
 
     stop_value = 1  # The value to put to the stop PV (if set) to make the motor stop
     done_value = 1  # The value expected to be reported by motor_done_move when the move is done
+    moving_value = int(
+        not done_value
+    )  # The value expected to be reported by motor_done_move when the move is in progress
     use_put_complete = False  # Whether to use put-completion for the setpoint for the move status
 
     def __init__(
@@ -236,7 +242,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         if self.motor_done_move is not _OPTIONAL_SIGNAL:
             # for a transition status, set it up before moving
             self._move_completion_status = TransitionStatus(
-                self.motor_done_move, transitions=[0, 1]
+                self.motor_done_move, transitions=[self.moving_value, self.done_value]
             )
             self.user_setpoint.put(position, wait=False)
         else:

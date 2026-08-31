@@ -39,10 +39,6 @@ def _caput(*args, **kwargs):
     return caput(*args, **kwargs)
 
 
-class TolerantSimplePositioner(PSISimplePositioner):
-    tolerance = Cpt(Signal, value=0.001)
-
-
 def wait_for(condition, timeout: float = 5.0, interval: float = 0.05, label: str = "condition"):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -67,7 +63,8 @@ def caproto_simple_positioner_ioc():
 
 @pytest.fixture()
 def live_simple_positioner(caproto_simple_positioner_ioc):
-    pos = TolerantSimplePositioner(name="test", prefix=MOTOR_PREFIX, override_suffixes=SUFFIXES)
+    pos = PSISimplePositioner(name="test", prefix=MOTOR_PREFIX, override_suffixes=SUFFIXES)
+    pos.tolerance.put(0.001)
     pos.wait_for_connection(timeout=10)
     wait_for(
         lambda: pos.motor_done_move.get(use_monitor=False) == 1, timeout=10, label="initial DMOV=1"
