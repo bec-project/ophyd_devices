@@ -204,6 +204,32 @@ def _run_callbacks_with_diagnostics(
     status._callbacks.clear()
 
 
+def _get_default_timeout(obj) -> float | None:
+    """
+    Walk an object/parent chain to find a PSIDeviceBase default timeout.
+    We have to filter down to instances of PSIDeviceBase to avoid conflicting
+    with timeout attributes set on other objects in the device hierarchy, such as
+    regular ophyd signals.
+    """
+    from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+
+    current = obj
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, PSIDeviceBase):
+            return getattr(current, "_timeout")
+        current = getattr(current, "parent", None)
+    return None
+
+
+def _resolve_timeout(timeout, obj) -> float | None:
+    """Use an explicit timeout, falling back to the object's default timeout."""
+    if timeout is not None:
+        return timeout
+    return _get_default_timeout(obj)
+
+
 class StatusBase(_StatusBase):
     """Base class for all status objects."""
 
@@ -221,6 +247,7 @@ class StatusBase(_StatusBase):
     ):
         self.obj = obj
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
+        timeout = _resolve_timeout(timeout, obj)
         super().__init__(timeout=timeout, settle_time=settle_time, done=done, success=success)
         self._timeout_diagnostics.bind(self)
 
@@ -354,6 +381,7 @@ class Status(_Status):
         description: str | None = None,
     ):
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
+        timeout = _resolve_timeout(timeout, obj)
         super().__init__(
             obj=obj, timeout=timeout, settle_time=settle_time, done=done, success=success
         )
@@ -370,9 +398,21 @@ class Status(_Status):
 class DeviceStatus(_DeviceStatus):
     """Thin wrapper around DeviceStatus to add __and__ operator."""
 
-    def __init__(self, device, description: str | None = None, **kwargs):
+    def __init__(
+        self,
+        device,
+        *,
+        timeout=None,
+        settle_time=0,
+        done=None,
+        success=None,
+        description: str | None = None,
+    ):
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
-        super().__init__(device=device, **kwargs)
+        timeout = _resolve_timeout(timeout, device)
+        super().__init__(
+            device=device, timeout=timeout, settle_time=settle_time, done=done, success=success
+        )
         self._timeout_diagnostics.bind(self)
 
     def __and__(self, other):
@@ -387,10 +427,28 @@ class MoveStatus(_MoveStatus):
     """Thin wrapper around MoveStatus to ensure __and__ operator and stop on failure."""
 
     def __init__(
-        self, positioner, target, *, start_ts=None, description: str | None = None, **kwargs
+        self,
+        positioner,
+        target,
+        *,
+        start_ts=None,
+        timeout=None,
+        settle_time=0,
+        done=None,
+        success=None,
+        description: str | None = None,
     ):
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
-        super().__init__(positioner=positioner, target=target, start_ts=start_ts, **kwargs)
+        timeout = _resolve_timeout(timeout, positioner)
+        super().__init__(
+            positioner=positioner,
+            target=target,
+            start_ts=start_ts,
+            timeout=timeout,
+            settle_time=settle_time,
+            done=done,
+            success=success,
+        )
         self._timeout_diagnostics.bind(self)
 
     def __and__(self, other):

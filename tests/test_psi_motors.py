@@ -179,6 +179,15 @@ def test_epics_motor_move_timeout_includes_initialization_traceback(mock_epics_m
     assert isinstance(exc_info.value, ExceptionWithErrorInfo)
 
 
+def test_epics_user_motor_vme_timeout_init_arg_updates_signal():
+    """PSIDeviceBase timeout init arg should initialize the EpicsMotor timeout signal."""
+    with patched_device(
+        EpicsUserMotorVME, _mock_pv_initial_value=2, name="motor", timeout=4
+    ) as motor:
+        assert motor._timeout == 4
+        assert motor.timeout.get() == 4
+
+
 @pytest.fixture(scope="function")
 def motor():
     with patched_device(EpicsUserMotorVME, _mock_pv_initial_value=2, name="motor") as mtr:

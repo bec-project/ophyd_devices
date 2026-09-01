@@ -8,7 +8,7 @@ import pytest
 from bec_server.device_server.devices.devicemanager import DeviceManagerDS
 from bec_server.device_server.tests.utils import DMMock
 from ophyd import Component as Cpt
-from ophyd import Device, Staged
+from ophyd import Device, Signal, Staged
 from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
@@ -84,6 +84,31 @@ class ParentWithMultiplePreviews(PSIDeviceBase):
 
     preview = Cpt(PreviewSignal, name="preview", ndim=1)
     child = Cpt(ChildWithPreview, "child:")
+
+
+class TimeoutSignalDevice(PSIDeviceBase, Device):
+    """Device that exposes the base timeout as a signal."""
+
+    timeout = Cpt(Signal, value=10)
+
+    def __init__(self, timeout=10, **kwargs):
+        super().__init__(timeout=timeout, **kwargs)
+        self.timeout.subscribe(self._on_timeout_change, run=False)
+
+    def _on_timeout_change(self, value, **kwargs):
+        self._timeout = self._normalize_timeout(value)
+
+
+class TimeoutConsumingDeviceBase(Device):
+    """Cooperative device base that consumes a timeout init argument."""
+
+    def __init__(self, *, timeout=None, **kwargs):
+        self.consumed_timeout = timeout
+        super().__init__(**kwargs)
+
+
+class TimeoutConsumingDevice(PSIDeviceBase, TimeoutConsumingDeviceBase):
+    """Device that verifies timeout passthrough to cooperative bases."""
 
 
 @pytest.fixture
@@ -296,6 +321,44 @@ def test_psi_subdevice_stop_is_propagated_when_connected():
 
     assert parent.stopped is True
     assert parent.child.stopped is True
+
+
+def test_psi_device_base_timeout_init_arg():
+    """Test default timeout initialization."""
+    assert SimDevice(name="device")._timeout is None
+    assert SimDevice(name="device", timeout=3)._timeout == 3
+    assert SimDevice(name="device", timeout=0)._timeout is None
+
+
+def test_psi_device_base_timeout_signal_compatibility():
+    """Test that subclasses can expose timeout as a signal."""
+    device = TimeoutSignalDevice(name="device")
+
+    assert device._timeout == 10
+    assert device.timeout.get() == 10
+
+    device.timeout.set(5).wait()
+    assert device._timeout == 5
+
+    device.timeout.set(0).wait()
+    assert device.timeout.get() == 0
+    assert device._timeout is None
+
+
+def test_psi_device_base_timeout_reaches_cooperative_parent_class():
+    """Test timeout reaches later cooperative base classes that explicitly accept it."""
+    device = TimeoutConsumingDevice(name="device", timeout=3)
+
+    assert device.consumed_timeout == 3
+    assert device._timeout == 3
+
+
+def test_psi_device_base_fallback_statuses_use_default_timeout():
+    """Test fallback complete and kickoff statuses use the base timeout."""
+    device = SimDevice(name="device", timeout=3)
+
+    assert device.complete().timeout == 3
+    assert device.kickoff().timeout == 3
 
 
 def test_on_stage_hook(device):
