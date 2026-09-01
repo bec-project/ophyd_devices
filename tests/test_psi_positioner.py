@@ -122,6 +122,23 @@ def test_positioner_move_uses_timeout_init_arg(mock_psi_positioner: PSISimplePos
     assert st.timeout == 3
 
 
+def test_positioner_internal_move_status_not_bound_by_default_timeout(
+    mock_psi_positioner: PSISimplePositioner,
+):
+    """The caller's move status owns the deadline; the internal completion
+    watchdog must not inherit the device default, so an explicit per-move
+    timeout cannot be cut short by it."""
+    mock_psi_positioner._timeout = 0.5
+    mock_psi_positioner.motor_done_move._read_pv.mock_data = 0
+    mock_psi_positioner._position = 0
+
+    st = mock_psi_positioner.move(1, wait=False, timeout=10)
+
+    assert st.timeout == 10
+    assert mock_psi_positioner._move_completion_status.timeout is None
+    mock_psi_positioner.stop()
+
+
 def test_mdm_used_for_moving_if_available(mock_psi_positioner):
     mock_psi_positioner.wait_for_connection()
     mock_psi_positioner.motor_done_move._read_pv.mock_data = 0

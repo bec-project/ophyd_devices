@@ -11,7 +11,11 @@ from ophyd.status import wait as status_wait
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus, TransitionStatus
+from ophyd_devices.utils.psi_device_base_utils import (
+    NO_TIMEOUT,
+    SubscriptionStatus,
+    TransitionStatus,
+)
 
 
 class _SignalSentinel(object): ...
@@ -204,16 +208,21 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
 
         # set up an internal status to track the move
         # and keep a ref so it doesn't get gc'd
+        # The caller-facing move status owns the deadline; the internal completion
+        # watchdog must stay unbounded, or it would cut short moves whose explicit
+        # timeout is longer than the device default.
         if self.motor_done_move is not _OPTIONAL_SIGNAL:
             # for a transition status, set it up before moving
             self._move_completion_status = TransitionStatus(
-                self.motor_done_move, transitions=[0, 1]
+                self.motor_done_move, transitions=[0, 1], timeout=NO_TIMEOUT
             )
             self.user_setpoint.put(position, wait=False)
         else:
             # for a subscription status, must update the setpoint before checking it
             self.user_setpoint.put(position, wait=False)
-            self._move_completion_status = SubscriptionStatus(self, callback=_manual_check_cb)
+            self._move_completion_status = SubscriptionStatus(
+                self, callback=_manual_check_cb, timeout=NO_TIMEOUT
+            )
         self.cancel_on_stop(self._move_completion_status)
         self._move_completion_status.add_callback(_done_cb)
 
