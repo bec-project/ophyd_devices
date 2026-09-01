@@ -5,6 +5,7 @@ Base class for all PSI ophyd device integration to ensure consistent configurati
 from __future__ import annotations
 
 import inspect
+import math
 import time
 from typing import TYPE_CHECKING, Callable
 
@@ -45,6 +46,7 @@ class PSIDeviceBase(Device):
         *,
         name: str,
         prefix: str = "",
+        timeout: float | None = None,
         scan_info: ScanInfo | None = None,
         device_manager: DeviceManagerBase | None = None,
         **kwargs,
@@ -55,9 +57,13 @@ class PSIDeviceBase(Device):
         Args:
             name (str) : Name of the device
             prefix (str): The prefix for the device.
+            timeout (float): The default timeout for status objects created on this device,
+                in seconds. None, non-positive, NaN or inf means no default timeout.
             scan_info (ScanInfo): The scan info to use.
             device_manager (DeviceManagerBase): The device manager to use.
         """
+        timeout = self._normalize_timeout(timeout)
+        self._timeout = timeout
         # Make sure device_manager is not passed to super().__init__ if not specified
         # This is to avoid issues with ophyd.OphydObject.__init__ when the parent is ophyd.Device
         # and the device_manager is passed to it. This will cause a TypeError.
@@ -67,12 +73,9 @@ class PSIDeviceBase(Device):
             super().__init__(device_manager=device_manager, prefix=prefix, name=name, **kwargs)
         else:
             super().__init__(prefix=prefix, name=name, **kwargs)
-        timeout = kwargs.pop("timeout", None)
-        if getattr(self, "_timeout", None) is None:
-            self._timeout = self._normalize_timeout(timeout)
-        if not isinstance(self._timeout, (float, int, type(None))):
-            raise TypeError(f"Timeout must be a float, int or None, got {type(self._timeout)}")
-        self._timeout = self._normalize_timeout(timeout)
+        # PositionerBase.__init__ resets self._timeout to its own default (None); re-assert ours
+        # so both the status default and PositionerBase.move() use the configured value.
+        self._timeout = timeout
         self._set_timeout_signal(timeout)
         self._stopped = False
         self._stoppable_status_objects: list[OphydStatusBase] = []
@@ -108,18 +111,24 @@ class PSIDeviceBase(Device):
 
     @staticmethod
     def _normalize_timeout(timeout: float | int | None) -> float | None:
-        """Normalize non-positive timeout values to no timeout."""
-        if not isinstance(timeout, (float, int, type(None))):
-            raise TypeError(f"Timeout must be a float, int, or None, got {type(timeout)}")
-        if timeout is None or timeout <= 0:
+        """Normalize to a finite positive float; None, non-positive, NaN and inf mean no timeout."""
+        if timeout is None:
             return None
-        return float(timeout)
+        if isinstance(timeout, (bool, str, bytes)):
+            raise TypeError(f"Timeout must be a number or None, got {timeout!r}")
+        try:
+            timeout = float(timeout)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(f"Timeout must be a number or None, got {timeout!r}") from exc
+        if not math.isfinite(timeout) or timeout <= 0:
+            return None
+        return timeout
 
     def _set_timeout_signal(self, timeout: float | None) -> None:
-        """Initialize an optional timeout component from the constructor value."""
+        """Initialize an optional timeout component from the normalized constructor value."""
         if timeout is None or "timeout" not in getattr(self, "component_names", ()):
             return
-        self.timeout.put(0 if timeout <= 0 else timeout)
+        self.timeout.put(timeout)
 
     ########################################
     # Wrapper around Device class methods  #
