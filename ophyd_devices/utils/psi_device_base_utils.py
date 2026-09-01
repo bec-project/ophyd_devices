@@ -426,21 +426,10 @@ class Status(_Status):
 class DeviceStatus(_DeviceStatus):
     """Thin wrapper around DeviceStatus to add __and__ operator."""
 
-    def __init__(
-        self,
-        device,
-        *,
-        timeout=None,
-        settle_time=0,
-        done=None,
-        success=None,
-        description: str | None = None,
-    ):
+    def __init__(self, device, description: str | None = None, **kwargs):
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
-        timeout = _resolve_timeout(timeout, device)
-        super().__init__(
-            device=device, timeout=timeout, settle_time=settle_time, done=done, success=success
-        )
+        kwargs["timeout"] = _resolve_timeout(kwargs.get("timeout"), device)
+        super().__init__(device=device, **kwargs)
         self._timeout_diagnostics.bind(self)
 
     def __and__(self, other):
@@ -455,28 +444,11 @@ class MoveStatus(_MoveStatus):
     """Thin wrapper around MoveStatus to ensure __and__ operator and stop on failure."""
 
     def __init__(
-        self,
-        positioner,
-        target,
-        *,
-        start_ts=None,
-        timeout=None,
-        settle_time=0,
-        done=None,
-        success=None,
-        description: str | None = None,
+        self, positioner, target, *, start_ts=None, description: str | None = None, **kwargs
     ):
         self._timeout_diagnostics = _StatusTimeoutDiagnostics(description=description)
-        timeout = _resolve_timeout(timeout, positioner)
-        super().__init__(
-            positioner=positioner,
-            target=target,
-            start_ts=start_ts,
-            timeout=timeout,
-            settle_time=settle_time,
-            done=done,
-            success=success,
-        )
+        kwargs["timeout"] = _resolve_timeout(kwargs.get("timeout"), positioner)
+        super().__init__(positioner=positioner, target=target, start_ts=start_ts, **kwargs)
         self._timeout_diagnostics.bind(self)
 
     def __and__(self, other):
