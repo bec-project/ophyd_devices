@@ -1188,17 +1188,35 @@ def test_patched_status_types_use_default_timeout_from_object():
 
     assert [status.timeout for status in statuses] == [3, 3, 3, 4, 3, 3, 3, None, 3]
 
+    # Finish the statuses so their timeout threads do not fire mid-suite and
+    # call device.stop() on the test devices.
+    for status in statuses:
+        if not status.done:
+            status.set_finished()
+    dev.destroy()
+    pos.destroy()
+
 
 def test_patched_status_explicit_timeout_overrides_object_default():
     """Explicit status timeouts should take precedence over object defaults."""
     dev = TimeoutDevice(name="device", timeout=3)
     pos = TimeoutPositioner(name="positioner", timeout=4)
 
-    assert StatusBase(obj=dev, timeout=7).timeout == 7
-    assert Status(obj=dev, timeout=7).timeout == 7
-    assert DeviceStatus(dev, timeout=7).timeout == 7
-    assert MoveStatus(pos, target=10, timeout=7).timeout == 7
-    assert CompareStatus(dev.sig, value=1, timeout=7, run=False).timeout == 7
+    statuses = [
+        StatusBase(obj=dev, timeout=7),
+        Status(obj=dev, timeout=7),
+        DeviceStatus(dev, timeout=7),
+        MoveStatus(pos, target=10, timeout=7),
+        CompareStatus(dev.sig, value=1, timeout=7, run=False),
+    ]
+
+    assert [status.timeout for status in statuses] == [7, 7, 7, 7, 7]
+
+    for status in statuses:
+        if not status.done:
+            status.set_finished()
+    dev.destroy()
+    pos.destroy()
 
 
 def test_patched_status_ignores_signal_internal_timeout():

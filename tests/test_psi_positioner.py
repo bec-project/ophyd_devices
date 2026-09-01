@@ -106,20 +106,36 @@ def test_status_completed_when_req_done_sub_runs(mock_psi_positioner: PSISimpleP
 
 def test_positioner_timeout_init_arg_survives_positioner_base_init():
     """PSIDeviceBase timeout should remain the default move timeout."""
-    pos = PSISimplePositioner(name="positioner", prefix="SIM:MOTOR", deadband=0.0013, timeout=3)
+    with patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        pos = PSISimplePositioner(name="positioner", prefix="SIM:MOTOR", deadband=0.0013, timeout=3)
+        # The normalized float proves the PSI path owns the value; PositionerBase
+        # would have stored the raw int (or clobbered it to None).
+        assert pos._timeout == 3.0
+        assert isinstance(pos._timeout, float)
 
-    assert pos._timeout == 3
+        pos_no_timeout = PSISimplePositioner(
+            name="positioner2", prefix="SIM:MOTOR2", deadband=0.0013, timeout=-1
+        )
+        assert pos_no_timeout._timeout is None
 
 
-def test_positioner_move_uses_timeout_init_arg(mock_psi_positioner: PSISimplePositioner):
-    """Positioner move statuses should inherit the init timeout by default."""
-    mock_psi_positioner._timeout = 3
-    mock_psi_positioner.motor_done_move._read_pv.mock_data = 0
-    mock_psi_positioner._position = 0
+def test_positioner_move_uses_timeout_init_arg():
+    """Positioner move statuses should inherit the constructor timeout by default."""
+    with patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        pos = PSISimplePositioner(name="positioner", prefix="SIM:MOTOR", deadband=0.0013, timeout=3)
+        pos.wait_for_connection()
+        patch_dual_pvs(pos)
+        pos.motor_done_move._read_pv.mock_data = 0
+        pos._position = 0
 
-    st = mock_psi_positioner.move(1, wait=False)
+        st = pos.move(1, wait=False)
 
-    assert st.timeout == 3
+        assert st.timeout == 3
+        pos.stop()
 
 
 def test_positioner_internal_move_status_not_bound_by_default_timeout(
