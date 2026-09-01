@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import math
 import operator
 import threading
 import traceback
@@ -37,10 +38,21 @@ __all__ = [
     "AndStatus",
     "DeviceStatus",
     "MoveStatus",
+    "NO_TIMEOUT",
     "Status",
     "StatusBase",
     "SubscriptionStatus",
 ]
+
+
+class _NoTimeout:
+    """Sentinel requesting a status without any timeout, bypassing the device default."""
+
+    def __repr__(self) -> str:
+        return "NO_TIMEOUT"
+
+
+NO_TIMEOUT = _NoTimeout()
 
 logger = bec_logger.logger
 
@@ -231,8 +243,17 @@ def _get_default_timeout(obj) -> float | None:
 
 
 def _resolve_timeout(timeout, obj) -> float | None:
-    """Use an explicit timeout, falling back to the object's default timeout."""
+    """
+    Use an explicit timeout, falling back to the object's default timeout.
+
+    Pass NO_TIMEOUT (or a non-positive/non-finite value) to explicitly request
+    a status without any timeout, bypassing the device default.
+    """
+    if timeout is NO_TIMEOUT:
+        return None
     if timeout is not None:
+        if not math.isfinite(timeout) or timeout <= 0:
+            return None
         return timeout
     return _get_default_timeout(obj)
 
