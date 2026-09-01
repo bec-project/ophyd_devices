@@ -628,11 +628,13 @@ class ExceptionStatus(CompareStatus):
         description: str | None = None,
     ):
         self._configured_exception = exception
+        # A watchdog is meant to stay pending for as long as its composite lives;
+        # inheriting the device default timeout would guarantee a spurious failure.
         super().__init__(
             signal=signal,
             value=value,
             operation_success=operation,
-            timeout=timeout,
+            timeout=NO_TIMEOUT if timeout is None else timeout,
             settle_time=settle_time,
             run=run,
             event_type=event_type,
@@ -835,7 +837,9 @@ class TaskHandler:
         """
         task_args = task_args if task_args else ()
         task_kwargs = task_kwargs if task_kwargs else {}
-        task_status = TaskStatus(self._parent)
+        # Background tasks are unbounded by design; the device default timeout
+        # must not fail their status while the task thread is still running.
+        task_status = TaskStatus(self._parent, timeout=NO_TIMEOUT)
         thread = threading.Thread(
             target=self._wrap_task,
             args=(task, task_args, task_kwargs, task_status),
