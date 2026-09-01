@@ -43,12 +43,11 @@ from typing import TYPE_CHECKING, Any, Callable, Tuple, TypeAlias, TypedDict
 import pandablocks.commands as pbc
 from bec_lib import bec_logger
 from ophyd import Component as Cpt
-from ophyd.status import WaitTimeoutError
 from pandablocks.blocking import BlockingClient, _SocketHelper
 from pandablocks.connections import DataConnection, NeedMoreDataError
 from pandablocks.responses import Data, EndData, FrameData, ReadyData, StartData
 
-from ophyd_devices import DynamicSignal, PSIDeviceBase, StatusBase
+from ophyd_devices import NO_TIMEOUT, DynamicSignal, PSIDeviceBase, StatusBase
 from ophyd_devices.devices.panda_box.utils import (
     block_name_mapping,
     get_pcap_capture_fields,
@@ -680,11 +679,13 @@ class PandaBox(PSIDeviceBase):
 
     def on_stage(self) -> StatusBase | OphydStatusBase | None:
         """On stage hook for the PandaBox. Here we make sure that the PandaBox is disarmed before staging."""
-        status = StatusBase(obj=self)
+        # The gate is bounded by the wait below; it must not inherit the device
+        # default timeout, whose failure would bypass the except clause here.
+        status = StatusBase(obj=self, timeout=NO_TIMEOUT)
         self.add_status_callback(status=status, success=[PandaState.DISARMED], failure=[])
         try:
             status.wait(timeout=self._stage_timeout_in_s)
-        except WaitTimeoutError:
+        except TimeoutError:
             logger.error(f"PandaBox {self.name} did not disarm before staging.")
             # pylint: disable=raise-from-missing
             raise RuntimeError(
