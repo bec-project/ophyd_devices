@@ -128,12 +128,17 @@ def test_psi_device_base_timeout_signal_compatibility():
     assert device._timeout is None
 
 
-def test_psi_device_base_fallback_statuses_use_default_timeout():
-    """Test fallback complete and kickoff statuses use the base timeout."""
+def test_psi_device_base_fallback_statuses_have_no_timeout():
+    """Fallback complete and kickoff statuses are finished immediately and
+    must not inherit the default timeout, so they stay synchronously done."""
     device = SimDevice(name="device", timeout=3)
 
-    assert device.complete().timeout == 3
-    assert device.kickoff().timeout == 3
+    complete_status = device.complete()
+    kickoff_status = device.kickoff()
+    assert complete_status.timeout is None
+    assert kickoff_status.timeout is None
+    assert complete_status.done is True
+    assert kickoff_status.done is True
 
 
 def test_on_stage_hook(device):

@@ -13,7 +13,12 @@ from ophyd import Device, Staged
 from ophyd.status import StatusBase as OphydStatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
-from ophyd_devices.utils.psi_device_base_utils import DeviceStatus, FileHandler, TaskHandler
+from ophyd_devices.utils.psi_device_base_utils import (
+    NO_TIMEOUT,
+    DeviceStatus,
+    FileHandler,
+    TaskHandler,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
@@ -170,7 +175,9 @@ class PSIDeviceBase(Device):
         status = self.on_complete()  # pylint: disable=assignment-from-no-return
         if isinstance(status, OphydStatusBase):
             return status
-        status = DeviceStatus(self)
+        # The fallback status is finished immediately; a timeout would only spawn
+        # a wait thread and make .done flip asynchronously.
+        status = DeviceStatus(self, timeout=NO_TIMEOUT)
         status.set_finished()
         return status
 
@@ -179,7 +186,7 @@ class PSIDeviceBase(Device):
         status = self.on_kickoff()  # pylint: disable=assignment-from-no-return
         if isinstance(status, OphydStatusBase):
             return status
-        status = DeviceStatus(self)
+        status = DeviceStatus(self, timeout=NO_TIMEOUT)
         status.set_finished()
         return status
 
