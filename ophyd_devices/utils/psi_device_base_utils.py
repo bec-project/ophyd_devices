@@ -15,6 +15,7 @@ from bec_lib.bec_errors import ExceptionWithErrorInfo
 from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
+from ophyd.ophydobj import OphydObject
 from ophyd.status import DeviceStatus as _DeviceStatus
 from ophyd.status import MoveStatus as _MoveStatus
 from ophyd.status import Status as _Status
@@ -216,9 +217,15 @@ def _get_default_timeout(obj) -> float | None:
     current = obj
     seen: set[int] = set()
     while current is not None and id(current) not in seen:
+        # Only walk real ophyd hierarchies; mocks mint a fresh object on every
+        # .parent access, which would defeat the seen-set cycle guard.
+        if not isinstance(current, OphydObject):
+            break
         seen.add(id(current))
         if isinstance(current, PSIDeviceBase):
-            return getattr(current, "_timeout")
+            timeout = getattr(current, "_timeout", None)
+            if timeout is not None:
+                return timeout
         current = getattr(current, "parent", None)
     return None
 
