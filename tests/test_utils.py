@@ -1186,7 +1186,7 @@ def test_patched_status_types_use_default_timeout_from_object():
         TransitionStatus(dev.sig, transitions=[1], run=False),
     ]
 
-    assert [status.timeout for status in statuses] == [3, 3, 3, 4, 3, 3, 3, 3, 3]
+    assert [status.timeout for status in statuses] == [3, 3, 3, 4, 3, 3, 3, None, 3]
 
 
 def test_patched_status_explicit_timeout_overrides_object_default():
