@@ -18,6 +18,7 @@ from ophyd.status import WaitTimeoutError
 from typeguard import TypeCheckError
 
 from ophyd_devices.devices.psi_motor import EpicsMotor
+from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.tests.utils import MockPV, patched_device
 from ophyd_devices.utils.bec_signals import (
     AsyncMultiSignal,
@@ -1148,6 +1149,72 @@ class Positioner(Device):
 
     def stop(self):
         pass
+
+
+class TimeoutDevice(PSIDeviceBase, Device):
+    sig = Cpt(Signal, value=0)
+
+    def __init__(self, *, timeout=3, **kwargs):
+        super().__init__(timeout=timeout, **kwargs)
+
+
+class TimeoutPositioner(PSIDeviceBase, Positioner):
+    def __init__(self, *, timeout=3, **kwargs):
+        super().__init__(timeout=timeout, **kwargs)
+
+
+class PlainTimeoutDevice(Device):
+    def __init__(self, *, timeout=3, **kwargs):
+        self._timeout = timeout
+        super().__init__(**kwargs)
+
+
+def test_patched_status_types_use_default_timeout_from_object():
+    """Patched status objects should use the object's default timeout."""
+    dev = TimeoutDevice(name="device", timeout=3)
+    pos = TimeoutPositioner(name="positioner", timeout=4)
+
+    statuses = [
+        StatusBase(obj=dev),
+        Status(obj=dev),
+        DeviceStatus(dev),
+        MoveStatus(pos, target=10),
+        TaskStatus(obj=dev),
+        SubscriptionStatus(dev.sig, callback=lambda *args, **kwargs: False, run=False),
+        CompareStatus(dev.sig, value=1, run=False),
+        ExceptionStatus(dev.sig, value=1, run=False),
+        TransitionStatus(dev.sig, transitions=[1], run=False),
+    ]
+
+    assert [status.timeout for status in statuses] == [3, 3, 3, 4, 3, 3, 3, 3, 3]
+
+
+def test_patched_status_explicit_timeout_overrides_object_default():
+    """Explicit status timeouts should take precedence over object defaults."""
+    dev = TimeoutDevice(name="device", timeout=3)
+    pos = TimeoutPositioner(name="positioner", timeout=4)
+
+    assert StatusBase(obj=dev, timeout=7).timeout == 7
+    assert Status(obj=dev, timeout=7).timeout == 7
+    assert DeviceStatus(dev, timeout=7).timeout == 7
+    assert MoveStatus(pos, target=10, timeout=7).timeout == 7
+    assert CompareStatus(dev.sig, value=1, timeout=7, run=False).timeout == 7
+
+
+def test_patched_status_ignores_signal_internal_timeout():
+    """Signal connection timeouts should not become status completion timeouts."""
+    sig = Signal(name="signal", value=0)
+    sig._timeout = 2
+
+    assert CompareStatus(sig, value=1, run=False).timeout is None
+
+
+def test_patched_status_ignores_plain_device_internal_timeout():
+    """Only PSIDeviceBase instances should provide default status timeouts."""
+    dev = PlainTimeoutDevice(name="device", timeout=3)
+
+    assert StatusBase(obj=dev).timeout is None
+    assert DeviceStatus(dev).timeout is None
 
 
 @pytest.mark.parametrize(

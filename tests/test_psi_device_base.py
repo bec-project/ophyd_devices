@@ -5,7 +5,8 @@ import time
 from unittest import mock
 
 import pytest
-from ophyd import Device
+from ophyd import Component as Cpt
+from ophyd import Device, Signal
 from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
@@ -22,6 +23,19 @@ class SimPositionerDevice(PSIDeviceBase, SimPositioner):
 
 class SimDevice(PSIDeviceBase, Device):
     """Simulated Device with PSI Device Base"""
+
+
+class TimeoutSignalDevice(PSIDeviceBase, Device):
+    """Device that exposes the base timeout as a signal."""
+
+    timeout = Cpt(Signal, value=10)
+
+    def __init__(self, timeout=10, **kwargs):
+        super().__init__(timeout=timeout, **kwargs)
+        self.timeout.subscribe(self._on_timeout_change, run=False)
+
+    def _on_timeout_change(self, value, **kwargs):
+        self._timeout = self._normalize_timeout(value)
 
 
 @pytest.fixture
@@ -80,6 +94,36 @@ def test_psi_device_base_init_with_device_manager():
     # device_manager should b passed to SimCamera through PSIDeviceBase
     device_2 = SimCamera(name="device", device_manager=dm)
     assert device_2.device_manager is dm
+
+
+def test_psi_device_base_timeout_init_arg():
+    """Test default timeout initialization."""
+    assert SimDevice(name="device")._timeout is None
+    assert SimDevice(name="device", timeout=3)._timeout == 3
+    assert SimDevice(name="device", timeout=0)._timeout is None
+
+
+def test_psi_device_base_timeout_signal_compatibility():
+    """Test that subclasses can expose timeout as a signal."""
+    device = TimeoutSignalDevice(name="device")
+
+    assert device._timeout == 10
+    assert device.timeout.get() == 10
+
+    device.timeout.set(5).wait()
+    assert device._timeout == 5
+
+    device.timeout.set(0).wait()
+    assert device.timeout.get() == 0
+    assert device._timeout is None
+
+
+def test_psi_device_base_fallback_statuses_use_default_timeout():
+    """Test fallback complete and kickoff statuses use the base timeout."""
+    device = SimDevice(name="device", timeout=3)
+
+    assert device.complete().timeout == 3
+    assert device.kickoff().timeout == 3
 
 
 def test_on_stage_hook(device):

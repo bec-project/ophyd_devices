@@ -104,6 +104,24 @@ def test_status_completed_when_req_done_sub_runs(mock_psi_positioner: PSISimpleP
     assert st.done
 
 
+def test_positioner_timeout_init_arg_survives_positioner_base_init():
+    """PSIDeviceBase timeout should remain the default move timeout."""
+    pos = PSISimplePositioner(name="positioner", prefix="SIM:MOTOR", deadband=0.0013, timeout=3)
+
+    assert pos._timeout == 3
+
+
+def test_positioner_move_uses_timeout_init_arg(mock_psi_positioner: PSISimplePositioner):
+    """Positioner move statuses should inherit the init timeout by default."""
+    mock_psi_positioner._timeout = 3
+    mock_psi_positioner.motor_done_move._read_pv.mock_data = 0
+    mock_psi_positioner._position = 0
+
+    st = mock_psi_positioner.move(1, wait=False)
+
+    assert st.timeout == 3
+
+
 def test_mdm_used_for_moving_if_available(mock_psi_positioner):
     mock_psi_positioner.wait_for_connection()
     mock_psi_positioner.motor_done_move._read_pv.mock_data = 0
