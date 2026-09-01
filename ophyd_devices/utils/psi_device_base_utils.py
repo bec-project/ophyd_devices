@@ -252,6 +252,12 @@ def _resolve_timeout(timeout, obj) -> float | None:
     if timeout is NO_TIMEOUT:
         return None
     if timeout is not None:
+        try:
+            timeout = float(timeout)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(
+                f"Status timeout must be a number, None or NO_TIMEOUT, got {timeout!r}"
+            ) from exc
         if not math.isfinite(timeout) or timeout <= 0:
             return None
         return timeout
