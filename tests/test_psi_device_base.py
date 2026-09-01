@@ -4,6 +4,7 @@ import threading
 import time
 from unittest import mock
 
+import numpy as np
 import pytest
 from ophyd import Component as Cpt
 from ophyd import Device, Signal
@@ -101,6 +102,15 @@ def test_psi_device_base_timeout_init_arg():
     assert SimDevice(name="device")._timeout is None
     assert SimDevice(name="device", timeout=3)._timeout == 3
     assert SimDevice(name="device", timeout=0)._timeout is None
+    assert SimDevice(name="device", timeout=-5)._timeout is None
+    assert SimDevice(name="device", timeout=float("nan"))._timeout is None
+    assert SimDevice(name="device", timeout=float("inf"))._timeout is None
+    assert SimDevice(name="device", timeout=np.int64(3))._timeout == 3.0
+    assert SimDevice(name="device", timeout=np.float32(3))._timeout == 3.0
+    with pytest.raises(TypeError):
+        SimDevice(name="device", timeout=True)
+    with pytest.raises(TypeError):
+        SimDevice(name="device", timeout="3")
 
 
 def test_psi_device_base_timeout_signal_compatibility():
