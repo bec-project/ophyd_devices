@@ -15,6 +15,7 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedE
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.tests.utils import get_mock_scan_info
+from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal, ProgressSignal
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -44,6 +45,45 @@ class NestedParentDevice(PSIDeviceBase):
     """PSI device with a plain ophyd child that contains a PSI subdevice."""
 
     container = Cpt(NonPSIParentDevice, "container:")
+
+
+class ChildWithFileEvent(PSIDeviceBase):
+    """PSI child with a root-scoped file event signal."""
+
+    file_event = Cpt(FileEventSignal)
+
+
+class ParentWithDuplicateFileEvent(PSIDeviceBase):
+    """PSI parent and child with duplicate root-scoped file event signals."""
+
+    file_event = Cpt(FileEventSignal)
+    child = Cpt(ChildWithFileEvent, "child:")
+
+
+class ChildWithProgress(PSIDeviceBase):
+    """PSI child with a root-scoped progress signal."""
+
+    progress = Cpt(ProgressSignal, name="progress")
+
+
+class ParentWithDuplicateProgress(PSIDeviceBase):
+    """PSI parent and child with duplicate root-scoped progress signals."""
+
+    progress = Cpt(ProgressSignal, name="progress")
+    child = Cpt(ChildWithProgress, "child:")
+
+
+class ChildWithPreview(PSIDeviceBase):
+    """PSI child with a named preview signal."""
+
+    preview = Cpt(PreviewSignal, name="preview", ndim=1)
+
+
+class ParentWithMultiplePreviews(PSIDeviceBase):
+    """PSI parent and child with multiple non-singleton preview signals."""
+
+    preview = Cpt(PreviewSignal, name="preview", ndim=1)
+    child = Cpt(ChildWithPreview, "child:")
 
 
 @pytest.fixture
@@ -179,6 +219,53 @@ def test_psi_subdevice_context_with_bec_device_manager_construction():
     assert parent.scan_info is dm.scan_info
     assert parent.container.child.device_manager is dm
     assert parent.container.child.scan_info is dm.scan_info
+
+
+def test_root_resolved_file_event_signal_is_unique_per_device_tree():
+    """Test duplicate root-scoped file event signals fail at construction time."""
+    with pytest.raises(RuntimeError, match="root-resolved BEC signal 'file_event'"):
+        ParentWithDuplicateFileEvent("root:", name="parent")
+
+
+def test_root_resolved_progress_signal_is_unique_per_device_tree():
+    """Test duplicate root-scoped progress signals fail at construction time."""
+    with pytest.raises(RuntimeError, match="root-resolved BEC signal 'progress'"):
+        ParentWithDuplicateProgress("root:", name="parent")
+
+
+def test_duplicate_root_resolved_signal_fails_with_bec_device_manager_construction():
+    """Test BEC construction rejects duplicate root-scoped BEC signals."""
+    dm = DMMock()
+    dm.scan_info = get_mock_scan_info(device=None)
+    config = {
+        "name": "parent",
+        "deviceClass": "tests.test_psi_device_base.ParentWithDuplicateFileEvent",
+        "deviceConfig": {"prefix": "root:"},
+    }
+
+    with (
+        mock.patch.object(
+            DeviceManagerDS, "_get_device_class", return_value=ParentWithDuplicateFileEvent
+        ),
+        pytest.raises(RuntimeError, match="root-resolved BEC signal 'file_event'"),
+    ):
+        DeviceManagerDS.construct_device_obj(config, dm)
+
+
+def test_multiple_previews_are_allowed_in_one_device_tree():
+    """Test non-singleton BEC signals can appear multiple times when named."""
+    parent = ParentWithMultiplePreviews("root:", name="parent")
+
+    assert parent.preview.parent is parent
+    assert parent.child.preview.parent is parent.child
+
+
+def test_root_resolved_signal_registry_is_stored_on_root_device():
+    """Test root-resolved BEC signal ownership is tracked on the root instance."""
+    parent = ChildWithFileEvent("root:", name="parent")
+
+    assert parent._bec_root_resolved_signals == {"file_event": ("file_event", parent.file_event)}
+    assert "_bec_root_resolved_signals" not in type(parent).__dict__
 
 
 def test_psi_subdevice_follows_parent_stage_and_unstage():

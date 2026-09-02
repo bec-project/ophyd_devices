@@ -103,6 +103,7 @@ class BECMessageSignal(Signal):
         enabled: bool = True,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
         signal_metadata: dict | None = None,
+        root_resolved_signal_key: str | None = None,
         **kwargs,
     ):
         """
@@ -136,6 +137,40 @@ class BECMessageSignal(Signal):
         self.signals = self._unify_signals(signals)
         self.signal_metadata = signal_metadata or {}
         self._bec_message_type = bec_message_type
+        self._root_resolved_signal_key = root_resolved_signal_key
+        self._register_root_resolved_signal()
+
+    def _register_root_resolved_signal(self) -> None:
+        """
+        Ensure root-scoped BEC signal classes are only present once per root device tree.
+
+        The BEC device server publishes these signals on endpoints keyed by the
+        root device name and signal type, so multiple instances under the same
+        root would race on the same stream.
+        """
+        if self._root_resolved_signal_key is None or self.parent is None:
+            return
+        root = self.root
+        if root is None:
+            return
+
+        root_resolved_signals = getattr(root, "_bec_root_resolved_signals", None)
+        if root_resolved_signals is None:
+            root_resolved_signals = {}
+            setattr(root, "_bec_root_resolved_signals", root_resolved_signals)
+
+        signal_info = root_resolved_signals.get(self._root_resolved_signal_key)
+        if signal_info is not None:
+            signal_name, signal = signal_info
+            if signal is self:
+                return
+            raise RuntimeError(
+                f"Cannot add {self.__class__.__name__} {self.name!r} to device tree "
+                f"rooted at {root.name!r}: root-resolved BEC signal "
+                f"{self._root_resolved_signal_key!r} already exists as {signal_name!r}."
+            )
+
+        root_resolved_signals[self._root_resolved_signal_key] = (self.dotted_name, self)
 
     def _unify_signals(
         self, signals: _SignalsTypes | Callable[[], _SignalsTypes]
@@ -268,6 +303,7 @@ class ProgressSignal(BECMessageSignal):
             signal_metadata=None,
             value=value,
             bec_message_type=messages.ProgressMessage,
+            root_resolved_signal_key="progress",
             **kwargs,
         )
 
@@ -399,6 +435,7 @@ class FileEventSignal(BECMessageSignal):
             signal_metadata=None,
             value=value,
             bec_message_type=messages.FileMessage,
+            root_resolved_signal_key="file_event",
             **kwargs,
         )
 
