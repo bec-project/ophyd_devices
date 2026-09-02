@@ -41,9 +41,9 @@ class PSIDeviceBase(Device):
 
     def __init__(
         self,
+        prefix: str = "",
         *,
         name: str,
-        prefix: str = "",
         scan_info: ScanInfo | None = None,
         device_manager: DeviceManagerBase | None = None,
         **kwargs,
@@ -58,7 +58,17 @@ class PSIDeviceBase(Device):
         # Make sure device_manager is not passed to super().__init__ if not specified
         # This is to avoid issues with ophyd.OphydObject.__init__ when the parent is ophyd.Device
         # and the device_manager is passed to it. This will cause a TypeError.
+        parent = kwargs.get("parent")
+        ancestor = parent
+        while ancestor is not None and (device_manager is None or scan_info is None):
+            if device_manager is None:
+                device_manager = getattr(ancestor, "device_manager", None)
+            if scan_info is None:
+                scan_info = getattr(ancestor, "scan_info", None)
+            ancestor = getattr(ancestor, "parent", None)
         self.device_manager = device_manager
+        if scan_info is not None:
+            self.scan_info = scan_info
         sig = inspect.signature(super().__init__)
         if "device_manager" in sig.parameters:
             super().__init__(device_manager=device_manager, prefix=prefix, name=name, **kwargs)

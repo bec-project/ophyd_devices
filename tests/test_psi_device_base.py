@@ -5,12 +5,16 @@ import time
 from unittest import mock
 
 import pytest
-from ophyd import Device
+from bec_server.device_server.devices.devicemanager import DeviceManagerDS
+from bec_server.device_server.tests.utils import DMMock
+from ophyd import Component as Cpt
+from ophyd import Device, Staged
 from ophyd.status import StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
+from ophyd_devices.tests.utils import get_mock_scan_info
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -22,6 +26,24 @@ class SimPositionerDevice(PSIDeviceBase, SimPositioner):
 
 class SimDevice(PSIDeviceBase, Device):
     """Simulated Device with PSI Device Base"""
+
+
+class ParentDevice(PSIDeviceBase):
+    """PSI device with a PSI subdevice."""
+
+    child = Cpt(PSIDeviceBase, "child:")
+
+
+class NonPSIParentDevice(Device):
+    """Plain ophyd device with a PSI subdevice."""
+
+    child = Cpt(PSIDeviceBase, "child:")
+
+
+class NestedParentDevice(PSIDeviceBase):
+    """PSI device with a plain ophyd child that contains a PSI subdevice."""
+
+    container = Cpt(NonPSIParentDevice, "container:")
 
 
 @pytest.fixture
@@ -80,6 +102,113 @@ def test_psi_device_base_init_with_device_manager():
     # device_manager should b passed to SimCamera through PSIDeviceBase
     device_2 = SimCamera(name="device", device_manager=dm)
     assert device_2.device_manager is dm
+
+
+def test_psi_device_base_can_be_created_as_component():
+    """Test PSIDeviceBase compatibility with ophyd Component.create_component."""
+    parent = ParentDevice("root:", name="parent")
+
+    assert parent.child.name == "parent_child"
+    assert parent.child.prefix == "root:child:"
+    assert parent.child.parent is parent
+
+
+def test_psi_subdevice_inherits_bec_context():
+    """Test PSI subdevices use the parent's BEC context by default."""
+    dm = mock.MagicMock()
+    scan_info = mock.MagicMock()
+    parent = ParentDevice("root:", name="parent", device_manager=dm, scan_info=scan_info)
+
+    assert parent.child.device_manager is dm
+    assert parent.child.scan_info is scan_info
+
+
+def test_psi_subdevice_under_plain_ophyd_parent_uses_mock_context():
+    """Test PSI subdevices outside BEC context keep the top-level mock fallback."""
+    parent = NonPSIParentDevice("root:", name="parent")
+
+    assert parent.child.device_manager is None
+    assert parent.child.scan_info is not None
+    assert parent.child.scan_info is not getattr(parent, "scan_info", None)
+
+
+def test_psi_subdevice_under_plain_ophyd_parent_can_inherit_explicit_context():
+    """Test plain parents can host PSI subdevices when they expose BEC context."""
+    dm = mock.MagicMock()
+    scan_info = mock.MagicMock()
+
+    class ContextParentDevice(Device):
+        child = Cpt(PSIDeviceBase, "child:")
+
+        def __init__(self, *args, **kwargs):
+            self.device_manager = dm
+            self.scan_info = scan_info
+            super().__init__(*args, **kwargs)
+
+    parent = ContextParentDevice("root:", name="parent")
+
+    assert parent.child.device_manager is dm
+    assert parent.child.scan_info is scan_info
+
+
+def test_psi_subdevice_walks_parent_chain_for_bec_context():
+    """Test nested PSI subdevices inherit BEC context from higher ancestors."""
+    dm = mock.MagicMock()
+    scan_info = mock.MagicMock()
+    parent = NestedParentDevice("root:", name="parent", device_manager=dm, scan_info=scan_info)
+
+    assert parent.container.child.device_manager is dm
+    assert parent.container.child.scan_info is scan_info
+
+
+def test_psi_subdevice_context_with_bec_device_manager_construction():
+    """Test BEC device-manager construction passes context to nested PSI subdevices."""
+    dm = DMMock()
+    dm.scan_info = get_mock_scan_info(device=None)
+    config = {
+        "name": "parent",
+        "deviceClass": "tests.test_psi_device_base.NestedParentDevice",
+        "deviceConfig": {"prefix": "root:"},
+    }
+
+    with mock.patch.object(DeviceManagerDS, "_get_device_class", return_value=NestedParentDevice):
+        parent, leftover_config = DeviceManagerDS.construct_device_obj(config, dm)
+
+    assert leftover_config == {}
+    assert parent.device_manager is dm
+    assert parent.scan_info is dm.scan_info
+    assert parent.container.child.device_manager is dm
+    assert parent.container.child.scan_info is dm.scan_info
+
+
+def test_psi_subdevice_follows_parent_stage_and_unstage():
+    """Test ophyd side-effects when PSIDeviceBase is used as a subdevice."""
+    parent = ParentDevice("root:", name="parent")
+
+    assert parent.staged == Staged.no
+    assert parent.child.staged == Staged.no
+
+    staged = parent.stage()
+    assert staged == [parent, parent.child]
+    assert parent.staged == Staged.yes
+    assert parent.child.staged == Staged.yes
+
+    unstaged = parent.unstage()
+    assert unstaged == [parent.child, parent]
+    assert parent.staged == Staged.no
+    assert parent.child.staged == Staged.no
+
+
+def test_psi_subdevice_stop_is_propagated_when_connected():
+    """Test parent stop propagates to connected PSI subdevices."""
+    parent = ParentDevice("root:", name="parent")
+
+    with mock.patch.object(PSIDeviceBase, "connected", new_callable=mock.PropertyMock) as connected:
+        connected.return_value = True
+        parent.stop()
+
+    assert parent.stopped is True
+    assert parent.child.stopped is True
 
 
 def test_on_stage_hook(device):
