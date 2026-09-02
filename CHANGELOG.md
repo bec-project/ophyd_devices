@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.45.0 (2026-09-02)
+
+### Features
+
+- **bec_signals**: Add root-resolved signal registration to prevent duplicates in device tree
+  ([`e2d0f44`](https://github.com/bec-project/ophyd_devices/commit/e2d0f44e5b18a471857b90582e6efcc44a4adc1e))
+
+- **psi_device_base**: Enhance initialization to support context inheritance for subdevices
+  ([`53ed6f8`](https://github.com/bec-project/ophyd_devices/commit/53ed6f875d74cbe6c789ae75c44013c47b8a5556))
+
+
 ## v1.44.2 (2026-07-27)
 
 ### Bug Fixes
