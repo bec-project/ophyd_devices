@@ -10,8 +10,9 @@ from typing import Callable
 import numpy as np
 import scipy as sp
 from bec_lib import bec_logger
-from ophyd import Signal, SignalRO
 from ophyd.ophydobj import Kind
+
+from ophyd_devices import Signal, SignalRO
 
 logger = bec_logger.logger
 
