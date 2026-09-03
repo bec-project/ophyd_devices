@@ -75,24 +75,29 @@ def mock_psi_positioner():
         (1, 1.0012, True),
     ],
 )
-@patch("ophyd_devices.interfaces.base_classes.psi_positioner_base.PositionerBase.move")
+@patch("ophyd_devices.interfaces.base_classes.psi_positioner_base.MoveStatusWithTolerance")
+@patch.object(PSISimplePositionerBase, "_setup_move")
 @patch("ophyd_devices.interfaces.base_classes.psi_positioner_base.MoveStatus")
 def test_instant_completion_within_deadband(
     mock_movestatus,
-    mock_super_move,
+    mock_setup_move,
+    mock_move_status_with_tolerance,
     mock_psi_positioner: PSISimplePositioner,
     start,
     end,
     in_deadband_expected,
 ):
     mock_psi_positioner._position = start
-    mock_psi_positioner.move(end)
+    mock_psi_positioner.move(end, wait=False)
 
     if in_deadband_expected:
         mock_movestatus.assert_called_with(ANY, ANY, done=True, success=True)
+        mock_move_status_with_tolerance.assert_not_called()
+        mock_setup_move.assert_not_called()
     else:
         mock_movestatus.assert_not_called()
-        mock_super_move.assert_called_once()
+        mock_move_status_with_tolerance.assert_called_once()
+        mock_setup_move.assert_called_once_with(end)
 
 
 def test_status_completed_when_req_done_sub_runs(mock_psi_positioner: PSISimplePositioner):
@@ -139,6 +144,19 @@ class ReadbackPositioner(PSISimplePositionerBase):
     user_setpoint = Cpt(FakeEpicsSignal, "S")
 
 
+class ReadbackPositionerWithTolerance(PSISimplePositionerBase):
+    user_readback = Cpt(FakeEpicsSignalRO, "R")
+    user_setpoint = Cpt(FakeEpicsSignal, "S")
+    tolerance = Cpt(Signal, value=0.001)
+
+
+class DoneSignalPositionerWithTolerance(PSISimplePositionerBase):
+    user_readback = Cpt(FakeEpicsSignalRO, "R")
+    user_setpoint = Cpt(FakeEpicsSignal, "S")
+    motor_done_move = Cpt(FakeEpicsSignalRO, "D")
+    tolerance = Cpt(Signal, value=0.001)
+
+
 @pytest.fixture()
 def mock_readback_positioner():
     name = "positioner"
@@ -147,6 +165,20 @@ def mock_readback_positioner():
         mock_cl.get_pv = MockPV
         mock_cl.thread_class = threading.Thread
         dev = ReadbackPositioner(name=name, prefix=prefix, deadband=0.0013)
+        patch_dual_pvs(dev)
+        dev.wait_for_connection()
+        dev._set_position(0)
+        yield dev
+
+
+@pytest.fixture()
+def mock_done_signal_positioner_with_tolerance():
+    name = "positioner"
+    prefix = "SIM:MOTOR"
+    with patch.object(ophyd, "cl") as mock_cl:
+        mock_cl.get_pv = MockPV
+        mock_cl.thread_class = threading.Thread
+        dev = DoneSignalPositionerWithTolerance(name=name, prefix=prefix, deadband=0.01)
         patch_dual_pvs(dev)
         dev.wait_for_connection()
         dev._set_position(0)
@@ -176,3 +208,28 @@ def test_done_move_based_on_readback(mock_readback_positioner, setpoint, move_po
 
     mock_readback_positioner.user_readback.sim_put(final_pos)
     assert st.done == completes
+
+
+def test_tolerance_success_with_done_signal_positioner(mock_done_signal_positioner_with_tolerance):
+    st = mock_done_signal_positioner_with_tolerance.move(5, wait=False)
+
+    mock_done_signal_positioner_with_tolerance.motor_done_move.sim_put(0)
+    mock_done_signal_positioner_with_tolerance.user_readback.sim_put(4.9995)
+    mock_done_signal_positioner_with_tolerance.motor_done_move.sim_put(1)
+
+    assert st.done
+    assert st.success
+    assert st.exception() is None
+
+
+def test_tolerance_failure_sets_move_status_exception(mock_done_signal_positioner_with_tolerance):
+    st = mock_done_signal_positioner_with_tolerance.move(5, wait=False)
+
+    mock_done_signal_positioner_with_tolerance.motor_done_move.sim_put(0)
+    mock_done_signal_positioner_with_tolerance.user_readback.sim_put(4.995)
+    mock_done_signal_positioner_with_tolerance.motor_done_move.sim_put(1)
+
+    assert st.done
+    assert not st.success
+    with pytest.raises(RuntimeError, match="outside of tolerance"):
+        st.wait(timeout=1)

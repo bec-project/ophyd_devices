@@ -44,6 +44,10 @@ dev = [
   "pytest-random-order~=1.1",
 ]
 
+ci = [
+  "caproto ~= 1.3",
+]
+
 
 
 [build-system]
