@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.46.0 (2026-09-03)
+
+### Features
+
+- **sim**: Simulated camera with negative values
+  ([`e650de0`](https://github.com/bec-project/ophyd_devices/commit/e650de06f828c7a57cbf1723ad55c3696b6e4fa0))
+
+
 ## v1.45.0 (2026-09-02)
 
 ### Features
