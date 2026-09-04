@@ -1,0 +1,74 @@
+# Demo devices for the PR #225 default-timeout findings (simulation only).
+#
+# Add them to the running BEC session from the IPython client (started in the
+# repository root, so the relative path resolves):
+#
+#     bec.config.add_to_session("audit/timeout_demo_config.yaml")
+#
+# The classes live in ophyd_devices/sim/timeout_demo.py.
+# `timeout` in deviceConfig is the new PSIDeviceBase constructor argument from the PR.
+
+demo_cam:
+  description: SimCamera whose exposure really takes `exposure` seconds (background task)
+  readoutPriority: async
+  deviceClass: ophyd_devices.sim.timeout_demo.TimeoutDemoCamera
+  deviceConfig:
+    device_access: true
+    timeout: 0.5
+    exposure: 1.0
+  deviceTags:
+    - detector
+    - timeout_demo
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
+demo_det:
+  description: Detector whose trigger is a DeviceStatus finished after `exposure` seconds
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.sim.timeout_demo.TimeoutDemoDetector
+  deviceConfig:
+    timeout: 0.5
+    exposure: 1.0
+  deviceTags:
+    - timeout_demo
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
+demo_watchdog:
+  description: Detector whose exposure is guarded by an ExceptionStatus watchdog
+  readoutPriority: monitored
+  deviceClass: ophyd_devices.sim.timeout_demo.TimeoutDemoWatchdogDetector
+  deviceConfig:
+    timeout: 0.5
+    exposure: 1.0
+  deviceTags:
+    - timeout_demo
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+
+demo_pos:
+  description: PSI positioner on fake EPICS signals whose moves never report done (config reaches ophyd's timeout setter)
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.sim.timeout_demo.TimeoutDemoPositioner
+  deviceConfig:
+    prefix: "SIM:DEMO:"
+    timeout: 0.5
+  deviceTags:
+    - timeout_demo
+  enabled: true
+  readOnly: false
+
+demo_pos_ctor:
+  description: Same positioner, timeout declared in __init__ (config reaches the PSIDeviceBase constructor)
+  readoutPriority: baseline
+  deviceClass: ophyd_devices.sim.timeout_demo.TimeoutDemoPositionerCtor
+  deviceConfig:
+    prefix: "SIM:DEMO2:"
+    timeout: 0.5
+  deviceTags:
+    - timeout_demo
+  enabled: true
+  readOnly: false
