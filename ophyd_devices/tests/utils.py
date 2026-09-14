@@ -118,9 +118,9 @@ class SocketMock:
         """Mock connect method"""
         print(f"connecting to {self.host} port {self.port}")
 
-    def _put(self, msg_bytes):
+    def put(self, msg):
         """Mock put method"""
-        self.buffer_put.append(msg_bytes)
+        self.buffer_put.append(msg)
         print(self.buffer_put)
 
     # pylint: disable=unused-argument
@@ -138,11 +138,7 @@ class SocketMock:
     def _initialize_socket(self):
         """Mock initialize socket method"""
 
-    def put(self, msg):
-        """Mock put method"""
-        return self._put(msg)
-
-    def receive(self, buffer_length=1024):
+    def receive(self, buffer_length=1024, *, timeout: float | None = None):
         """Mock receive method"""
         return self._recv(buffer_length=buffer_length)
 
