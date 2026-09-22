@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
+import time
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from functools import partial
-from time import time
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-from bec_lib.devicemanager import ScanInfo
 from bec_lib.logger import bec_logger
 from bec_lib.utils.rpc_utils import rgetattr
-from bec_server.scan_server.scans.scan_base import ScanInfo as ScanServerScanInfo
 from ophyd import Component as Cpt
 from ophyd import EpicsSignal, EpicsSignalRO, Kind, Signal
 from pydantic import ValidationError
@@ -26,29 +24,34 @@ from ophyd_devices.utils.bec_roi_signals.roi_processing import (
     ROIProcessing,
 )
 
-"""Utility functions for the devices."""
+if TYPE_CHECKING:
+    from bec_lib.devicemanager import ScanInfo
+    from bec_server.scan_server.scans.scan_base import ScanInfo as ScanServerScanInfo
+
+logger = bec_logger.logger
 
 
 def fetch_scan_info(scan_info: ScanInfo) -> ScanServerScanInfo:
-    """Fetch the scan parameters from the scan_info object and return them as a ScanServerScanInfo object."""
-    info = scan_info.msg.info
-    if isinstance(info["positions"], list):
+    """
+    Normalize the scan info of the current scan into the scan server's v4 ScanInfo model.
+
+    The input message is not modified. ``bec_server`` is imported lazily: it is available in
+    the device server, where this function is used, but is not a dependency of ophyd_devices.
+    """
+    # pylint: disable=import-outside-toplevel
+    from bec_server.scan_server.scans.scan_base import ScanInfo as _ScanServerScanInfo
+
+    info = deepcopy(scan_info.msg.info)
+    if isinstance(info.get("positions"), list):
         info["positions"] = np.array(info["positions"])
     info["num_monitored_readouts"] = scan_info.msg.num_monitored_readouts
     try:
-        msg = ScanServerScanInfo.model_validate(info)
-    except ValidationError:  # This means we have an old scan_info object.
-        info = deepcopy(info)
-        # We need to convert a few parameters manually.
+        return _ScanServerScanInfo.model_validate(info)
+    except ValidationError:  # old scan_info object: convert a few parameters manually
         info["scan_type"] = (
-            "hardware_triggered" if info["scan_type"] == "fly" else "software_triggered"
+            "hardware_triggered" if info.get("scan_type") == "fly" else "software_triggered"
         )
-        msg = ScanServerScanInfo.model_validate(info)
-
-    return msg
-
-
-logger = bec_logger.logger
+        return _ScanServerScanInfo.model_validate(info)
 
 
 class TSAcquireMode(IntEnum):
@@ -184,6 +187,7 @@ class ADROIProcessing(ROIProcessing):
         self._stats_subscriptions: dict[str, StatsSubscription] = {}
         self._missing_stats_paths: set[str] = set()
         self._config_update_in_progress = False
+        self._selection_subscription: int | None = None
         self.scan_server_scan_info: ScanServerScanInfo | None = None
 
     def get_scalar_outputs(self) -> list[str]:
@@ -201,17 +205,26 @@ class ADROIProcessing(ROIProcessing):
     def get_available_analysis_operations(self) -> list[str]:
         return list(NDPLUGIN_STATS_CONFIG.keys())
 
-    def wait_for_connection(self, *args, **kwargs):
-        super().wait_for_connection(*args, **kwargs)
-        # Subscribe stats plugin to ROI plugin,  the self.root.cam assumes cam to be available on root object, so we trust roi1 to be properly configured.
+    def on_connected(self):
+        """
+        Wire the ROI and Stats plugins to the camera and apply the current configuration.
+
+        Called by the PSIDeviceBase root device once all its signals are connected; the root
+        is expected to expose the camera as ``root.cam``.
+        """
         self.roi1.nd_array_port.put(self.root.cam.port_name.get())
         self.stats1.nd_array_port.put(self.roi1.port_name.get())
-        # ROIPlugin related callbacks
-        self.selected_operations.subscribe(
-            self._on_processing_selection_update,
-            event_type=self.selected_operations.SUB_VALUE,
-            run=False,
-        )
+        if self._selection_subscription is None:
+            self._selection_subscription = self.selected_operations.subscribe(
+                self._on_processing_selection_update,
+                event_type=self.selected_operations.SUB_VALUE,
+                run=False,
+            )
+        # TODO Consider using 'set' in future after wrapping EpicsSignal with proper set wrapper
+        self.stats1.ts_acquire_mode.put(TSAcquireMode.FIXED_LENGTH.value)
+        self.stats1.ts_read_mode.put(TSReadMode.PASSIVE.value)
+        if self.stats1.ts_acquire_status.get() == 1:
+            self.stats1.ts_acquire.put(0)  # stop a time series left over from a previous session
         self._apply_roi_configuration()
         self._sync_stats_subscriptions()
 
@@ -232,10 +245,11 @@ class ADROIProcessing(ROIProcessing):
 
     def _apply_roi_configuration(self) -> None:
         """Apply the BEC ROI geometry to the AreaDetector ROI plugin."""
-        self.roi1.min_xyz.min_x.put(int(self.x.get()))
-        self.roi1.min_xyz.min_y.put(int(self.y.get()))
-        self.roi1.size.x.put(int(self.width.get()))
-        self.roi1.size.y.put(int(self.height.get()))
+        x, y, width, height = self.get_roi()
+        self.roi1.min_xyz.min_x.put(x)
+        self.roi1.min_xyz.min_y.put(y)
+        self.roi1.size.x.put(width)
+        self.roi1.size.y.put(height)
 
     def _desired_stats_outputs(
         self,
@@ -331,7 +345,7 @@ class ADROIProcessing(ROIProcessing):
         **kwargs,
     ) -> None:
         """Publish a StatsPlugin update into the matching BEC result signal."""
-        if not self._is_operation_active(operation):
+        if not self.is_operation_active(operation):
             return
         if not self.scan_server_scan_info:
             return
@@ -341,171 +355,37 @@ class ADROIProcessing(ROIProcessing):
             * self.scan_server_scan_info.frames_per_trigger
         )
         if self.average_frames_per_trigger.get() is True:
+            # One value per trigger: average the time series of the frames of this trigger
             n_points = int(len(self.scan_server_scan_info.positions))
-            if isinstance(value, (list, np.ndarray)):
-                value = value / len(value)  # Average over the number of frames per trigger
-            value = float(value)  # Ensure the value is a float for list and np.ndarray types
+            value = float(np.mean(value))
 
-        if output_kind == "scalar":
-            async_update = {"type": "add", "max_shape": [n_points]}
-            self.result_scalar.put(
-                {result_name: {"value": value, "timestamp": timestamp or time.time()}},
-                async_update=async_update,
-            )
-        else:
-            async_update = {"type": "add", "max_shape": [n_points, None]}
-            self.result_waveform.put(
-                {result_name: {"value": value, "timestamp": timestamp or time.time()}},
-                async_update=async_update,
-            )
-
-    def _is_operation_active(self, operation: str) -> bool:
-        return bool(self.active.get()) and operation in self.selected_operations.get()
+        max_shape = [n_points] if output_kind == "scalar" else [n_points, None]
+        self.put_results(
+            output_kind,
+            {result_name: {"value": value, "timestamp": timestamp or time.time()}},
+            async_update={"type": "add", "max_shape": max_shape},
+        )
 
     ################
     ## Scan Hooks ##
     ################
 
-    def on_connected(self):
-        """Hook called when the device is connected."""
-        # TODO Consider using 'set' in future after wrapping EpicsSignal with proper set wrapper
-        self.stats1.ts_acquire_mode.put(TSAcquireMode.FIXED_LENGTH.value)
-        self.stats1.ts_read_mode.put(TSReadMode.PASSIVE.value)
-        if self.stats1.ts_acquire_status.get() == 0:
-            self.stats1.ts_acquire.put(0)  # Start timestamp acquisition
-
     def on_stage(self):
-        """Hook called when the device is staged."""
-        self.root: PSIDeviceBase
+        """Hook called when the device is staged. Must be forwarded by the root device."""
         self.scan_server_scan_info = fetch_scan_info(self.root.scan_info)
         self.stats1.ts_num_points.put(self.scan_server_scan_info.frames_per_trigger)
 
     def on_trigger(self) -> TransitionStatus:
-        """Hook called when the device is triggered."""
+        """Hook called when the device is triggered. Must be forwarded by the root device."""
         # TODO add hook, needs to be triggered before the detector acquire starts if it is triggered manually.
         status = TransitionStatus(self.stats1.ts_acquire_status, transitions=[1, 0])
         self.stats1.ts_acquire.put(1)  # Start timestamp acquisition
         return status
 
     def on_stop(self):
-        """Hook called when the device is stopped."""
+        """Hook called when the device is stopped. Must be forwarded by the root device."""
         self.stats1.ts_acquire.put(0)  # Stop timestamp acquisition
 
     def on_destroy(self):
-        """Hook called when the device is destroyed."""
+        """Hook called when the device is destroyed. Must be forwarded by the root device."""
         self._unsubscribe_all_stats()
-
-
-#####################
-### Test Detector ###
-#####################
-
-
-import threading
-import traceback
-from typing import TYPE_CHECKING
-
-from ophyd import ADBase
-
-from ophyd_devices import PreviewSignal, PSIDeviceBase
-from ophyd_devices.devices.areadetector.cam import SimDetectorCam
-from ophyd_devices.devices.areadetector.plugins import ImagePlugin_V35 as ImagePlugin
-
-if TYPE_CHECKING:
-    from bec_lib.devicemanager import ScanInfo
-    from bec_server.device_server.devices.devicemanager import DeviceManagerDS
-
-
-class MyDetector(PSIDeviceBase, ADBase):
-    cam = Cpt(SimDetectorCam, "cam1:")
-    image = Cpt(ImagePlugin, "image1:")
-    roi_processing = Cpt(
-        ADROIProcessing,
-        "",
-        kind="normal",
-        active=1,
-        roi_name="roi1",
-        x=400,
-        y=400,
-        width=100,
-        height=100,
-        selected_operations=["basic_statistics", "centroid"],
-    )
-
-    preview = Cpt(
-        PreviewSignal,
-        name="preview",
-        ndim=2,
-        num_rotation_90=0,
-        doc="Preview signal for the camera.",
-    )
-
-    def __init__(
-        self,
-        *,
-        name: str,
-        prefix: str = "",
-        scan_info: ScanInfo | None = None,
-        device_manager: DeviceManagerDS | None = None,
-        **kwargs,
-    ):
-        super().__init__(
-            name=name, prefix=prefix, scan_info=scan_info, device_manager=device_manager, **kwargs
-        )
-        self._poll_thread_kill_event = threading.Event()
-        self._poll_rate = 1.0  # Hz
-        self._unique_array_id = None
-        self._poll_thread = threading.Thread(
-            target=self._poll_array_data, daemon=True, name=f"{self.name}_poll_thread"
-        )
-
-    def wait_for_connection(self, *args, **kwargs):
-        super().wait_for_connection(*args, **kwargs)
-        self._poll_thread.start()
-
-    def _poll_array_data(self):
-        """Poll the array data for preview updates."""
-        while not self._poll_thread_kill_event.wait(1 / self._poll_rate):
-            try:
-                # First check if there is a new image
-                if self.image.unique_id.get() != self._unique_array_id:
-                    self._unique_array_id = self.image.unique_id.get()
-                else:
-                    logger.info(f"No new image for preview of {self.name}, skipping update.")
-                    continue  # No new image, skip update
-                # Get new image data
-                value = self.image.array_data.get()
-                if value is None:
-                    logger.info(f"No image data available for preview of {self.name}")
-                    continue
-
-                width = self.image.array_size.width.get()
-                height = self.image.array_size.height.get()
-                # Geometry correction for the image
-                data = np.reshape(value, (height, width))
-                logger.info(f"Setting preview data for {self.name} with shape {data.shape}")
-                self.preview.put(data)
-            except Exception:  # pylint: disable=broad-except
-                content = traceback.format_exc()
-                logger.error(
-                    f"Error while polling array data for preview of {self.name}: {content}"
-                )
-
-    def on_stage(self):
-        """Stage the detector and prepare for acquisition."""
-        self.roi_processing.on_stage()  # Stage the ROI processing
-
-    def on_trigger(self):
-        """Trigger the detector and wait for completion."""
-        self.roi_processing.on_trigger()  # Start timestamp acquisition
-
-    def on_stop(self):
-        """Stop the detector and timestamp acquisition."""
-        self.roi_processing.on_stop()  # Stop timestamp acquisition
-
-    def on_destroy(self):
-        """Clean up resources."""
-        self.roi_processing.on_destroy()  # Stop timestamp acquisition
-        self._poll_thread_kill_event.set()
-        if self._poll_thread.is_alive():
-            self._poll_thread.join(timeout=0.5)
