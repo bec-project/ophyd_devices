@@ -42,34 +42,33 @@ class SimCameraROIProcessing(ROIProcessing):
     def get_available_analysis_operations(self) -> list[str]:
         return list(SIM_CONFIG.keys())
 
-    def wait_for_connection(self, *args, **kwargs):
-        super().wait_for_connection(*args, **kwargs)
-        self.parent.image.subscribe(
-            self._on_image_update, event_type=self.parent.image.SUB_VALUE, run=False
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._image_subscription: int | None = None
+
+    def on_connected(self):
+        """Subscribe to image updates of the parent camera."""
+        if self._image_subscription is None:
+            self._image_subscription = self.parent.image.subscribe(
+                self._on_image_update, event_type=self.parent.image.SUB_VALUE, run=False
+            )
 
     def _on_image_update(self, value, **kwargs):
         """Callback for image updates."""
-        if not self.active.get():
-            return  # Do nothing if not enabled
-
+        if not self.is_operation_active("basic_statistics"):
+            return
         if not isinstance(value, np.ndarray):
             logger.warning(f"Received non-numpy array value: {value}")
             return  # Do nothing if not numpy array
-        if "basic_statistics" not in self.selected_operations.get():
-            return
         roi_image = self._extract_roi(value)
         if roi_image.size == 0:
             logger.warning(f"ROI {self.roi_name.get()} is outside image bounds or has zero size.")
             return
-        self.result_scalar.put(self._compute_basic_statistics(roi_image))
+        self.put_results("scalar", self._compute_basic_statistics(roi_image))
 
     def _extract_roi(self, image: np.ndarray) -> np.ndarray:
         """Return the configured rectangular ROI clipped to the image bounds."""
-        x = int(self.x.get())
-        y = int(self.y.get())
-        width = int(self.width.get())
-        height = int(self.height.get())
+        x, y, width, height = self.get_roi()
         if width <= 0 or height <= 0:
             return image[0:0, 0:0]
 

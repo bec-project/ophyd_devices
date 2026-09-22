@@ -1,12 +1,19 @@
+"""Abstract ROI processing sub-device shared by all ROI-capable detectors."""
+
 from __future__ import annotations
 
+import threading
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from bec_lib.messages import ROIAnalysisConfig, ROIAvailableAnalysisMessage, ROIConfigurationMessage
-from bec_lib.redis_connector import RedisConnector
+from bec_lib.messages import (
+    ROIAnalysisConfig,
+    ROIAvailableAnalysisMessage,
+    ROIConfig,
+    ROIConfigurationMessage,
+)
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, Signal
 
@@ -14,13 +21,17 @@ from ophyd_devices.utils.bec_roi_signals.signals import (
     AvailableOperationsSignal,
     ConfigUpdateReceivedSignal,
     SelectedOperationSignal,
+    get_root_connector,
 )
 from ophyd_devices.utils.bec_signals import DynamicSignal
 
 if TYPE_CHECKING:
     from bec_lib.connector import MessageObject
+    from bec_lib.redis_connector import RedisConnector
 
 logger = bec_logger.logger
+
+ResultKind = Literal["scalar", "waveform"]
 
 
 class ROIOperationConfig(TypedDict, total=False):
@@ -34,9 +45,34 @@ class ROIOperationConfig(TypedDict, total=False):
 
 LITERAL_ROI_PROCESSING_CONFIG = dict[str, ROIOperationConfig]
 
+#: Signals that can be initialised through kwargs of the Component, e.g. ``Cpt(MyROI, x=10, ...)``.
+CONFIG_SIGNAL_NAMES = ("active", "roi_name", "x", "y", "width", "height", "selected_operations")
+
 
 class ROIProcessing(Device, ABC):
-    """Abstract base class for ROI processing signals"""
+    """
+    Abstract base class for ROI processing sub-devices.
+
+    One ROIProcessing component describes a rectangular region of interest (``x``, ``y``,
+    ``width``, ``height`` in detector pixels), the analysis operations selected for it and
+    publishes the per-ROI results through the ``result_scalar`` and ``result_waveform``
+    DynamicSignals. The geometry and selection signals are configuration (``Kind.config``),
+    i.e. they end up in ``read_configuration()`` / the baseline, never in ``read()``.
+
+    Requirements on the root device:
+
+    - derive from :class:`~ophyd_devices.interfaces.base_classes.psi_device_base.PSIDeviceBase`:
+      it connects components flagged with ``REQUIRES_WAIT_FOR_CONNECTION`` and calls their
+      ``on_connected`` hook once all signals of the root are connected;
+    - provide a device manager with a Redis connector to receive configuration updates from
+      BEC (``MessageEndpoints.roi_config``) and to publish the available operations. Without a
+      connector (config validation, unit tests) the component still works locally.
+
+    Subclasses implement the three ``get_*`` methods, react to configuration changes by
+    overriding :meth:`_on_config_update` and publish results with :meth:`put_results`.
+    Scan hooks other than ``on_connected`` are not forwarded automatically; a root device
+    that needs them (e.g. ``ADROIProcessing``) calls them explicitly.
+    """
 
     REQUIRES_WAIT_FOR_CONNECTION = True
 
@@ -59,13 +95,13 @@ class ROIProcessing(Device, ABC):
         data_type="processed",
     )
 
-    active = Cpt(Signal, value=False, kind=Kind.normal)
-    roi_name = Cpt(Signal, value="roi", kind=Kind.normal)
-    x = Cpt(Signal, value=0, kind=Kind.normal)
-    y = Cpt(Signal, value=0, kind=Kind.normal)
-    width = Cpt(Signal, value=0, kind=Kind.normal)
-    height = Cpt(Signal, value=0, kind=Kind.normal)
-    selected_operations = Cpt(SelectedOperationSignal, value=[], kind=Kind.normal)
+    active = Cpt(Signal, value=False, kind=Kind.config)
+    roi_name = Cpt(Signal, value="roi", kind=Kind.config)
+    x = Cpt(Signal, value=0, kind=Kind.config)
+    y = Cpt(Signal, value=0, kind=Kind.config)
+    width = Cpt(Signal, value=0, kind=Kind.config)
+    height = Cpt(Signal, value=0, kind=Kind.config)
+    selected_operations = Cpt(SelectedOperationSignal, value=[], kind=Kind.config)
     available_operations = Cpt(AvailableOperationsSignal, kind=Kind.config)
     update_received = Cpt(ConfigUpdateReceivedSignal, kind=Kind.omitted)
 
@@ -74,13 +110,15 @@ class ROIProcessing(Device, ABC):
         super().__init__(*args, **kwargs)
         self._signal_kwargs = signal_kwargs
         self._connector: RedisConnector | None = None
+        self._config_lock = threading.RLock()
+        self._config_subscription: int | None = None
         self._update_result_signal_names()
 
     def _update_result_signal_names(self):
         """
         Update the signal names for the DynamicSignals "result_scalar" and "result_waveform" based on
-        the outputs defined in the subclass. This ensures that the signals.
-        Subclasses must specify every possible output signal in the get_scalar_outputs and get_waveform_outputs methods.
+        the outputs defined in the subclass. Subclasses must list every possible output signal in
+        get_scalar_outputs and get_waveform_outputs.
         """
         # pylint: disable=protected-access
         self.result_scalar.signals = self.result_scalar._unify_signals(self.get_scalar_outputs())
@@ -88,73 +126,89 @@ class ROIProcessing(Device, ABC):
             self.get_waveform_outputs()
         )
 
-    def _get_kwargs_for_signals(self, kwargs) -> tuple[dict, dict[str, dict]]:
+    @staticmethod
+    def _get_kwargs_for_signals(kwargs) -> tuple[dict, dict[str, Any]]:
         """
-        Utility method to extract kwargs for the signals defined in this class.
-        This allows to set initial values for the signals during initialization of the ROIProcessing device.
+        Split the Component kwargs into kwargs for the Device and initial values for the
+        configuration signals (see ``CONFIG_SIGNAL_NAMES``).
         """
-        ret_kwargs = {}
-        for k in ["active", "roi_name", "x", "y", "width", "height", "selected_operations"]:
-            if k in kwargs:
-                ret_kwargs[k] = kwargs.pop(k)
-        return kwargs, ret_kwargs
+        signal_kwargs = {k: kwargs.pop(k) for k in CONFIG_SIGNAL_NAMES if k in kwargs}
+        return kwargs, signal_kwargs
+
+    ############################
+    ## Connection / lifecycle ##
+    ############################
+
+    @property
+    def redis_connected(self) -> bool:
+        """Return whether the component can exchange ROI messages with BEC."""
+        return self._connector is not None
 
     def wait_for_connection(self, all_signals=False, timeout=5):
         """
-        Wait for the ROI processing signal to be connected to Redis. The root device must ensure
-        that wait_for_connection is called when connecting the device. Otherwise, the ROIProcessing
-        component will not work properly.
-
-        The root device also needs a device_manager and a RedisConnector available.
-        Please use PSIDeviceBase as a base class for your root device to ensure this is the case.
-        -> ophyd_devices.interfaces.base_classes.psi_device_base.PSIDeviceBase
+        Connect the component. Called by the PSIDeviceBase root device before it connects
+        its own signals; the root then calls :meth:`on_connected` once everything is connected.
         """
-        self._connector: RedisConnector | None = (
-            self.root.device_manager.connector if hasattr(self.root, "device_manager") else None
-        )
+        self._connector = get_root_connector(self)
         if self._connector is None:
-            raise RuntimeError(
-                f"Signal {self.name} is not connected to Redis, please provide a Redis Connector during the initialization."
+            logger.warning(
+                f"{self.name}: root device {self.root.name} has no Redis connector; "
+                "ROI configuration updates from BEC are disabled."
             )
-        super().wait_for_connection(all_signals, timeout)
-        # Setup initial values for the signal as provided in the kwargs during initialization
+        self.update_received.wait_for_connection()
+        super().wait_for_connection(all_signals=all_signals, timeout=timeout)
+        # Apply the initial values given as Component kwargs
         for signal_name, value in self._signal_kwargs.items():
-            signal = getattr(self, signal_name)
-            signal.put(value)
-
-        # Connect to relevant endpoint for ROI configuration updates
-        self.update_received.subscribe(
-            self._on_config_update, event_type=self.update_received.SUB_VALUE, run=False
-        )
-        self._connector.register(
-            MessageEndpoints.roi_config(device=self.root.name, signal=self.dotted_name),
-            cb=self._receive_roi_configuration_message,
-        )
+            getattr(self, signal_name).put(value)
+        if self._config_subscription is None:
+            self._config_subscription = self.update_received.subscribe(
+                self._on_config_update, event_type=self.update_received.SUB_VALUE, run=False
+            )
         self._publish_available_analysis()
         if self.active.get():
-            msg = ROIConfigurationMessage(
+            self._on_config_update(self.current_configuration())
+
+    def on_connected(self) -> None:
+        """
+        Called by the PSIDeviceBase root device after all its signals are connected.
+        Subclasses that need to talk to hardware (EPICS plugins, backends) do it here.
+        """
+
+    ########################
+    ## Configuration API  ##
+    ########################
+
+    def current_configuration(self) -> ROIConfigurationMessage:
+        """Return the current ROI configuration as a ROIConfigurationMessage."""
+        with self._config_lock:
+            return ROIConfigurationMessage(
                 device=self.root.name,
                 signal=self.dotted_name,
-                active=self.active.get(),
+                active=bool(self.active.get()),
                 name=self.roi_name.get(),
-                roi_config={
-                    "x": self.x.get(),
-                    "y": self.y.get(),
-                    "width": self.width.get(),
-                    "height": self.height.get(),
-                },
-                selected_operations=self.selected_operations.get(),
+                roi_config=ROIConfig(
+                    x=int(self.x.get()),
+                    y=int(self.y.get()),
+                    width=int(self.width.get()),
+                    height=int(self.height.get()),
+                ),
+                selected_operations=list(self.selected_operations.get()),
             )
-            self._on_config_update(msg)  # Apply the initial configuration if active is True
 
-    def destroy(self):
-        """Clean up the ROI processing signal and unregister from Redis."""
-        if self._connector is not None:
-            self._connector.unregister(
-                MessageEndpoints.roi_config(device=self.root.name, signal=self.dotted_name),
-                cb=self._receive_roi_configuration_message,
+    def get_roi(self) -> tuple[int, int, int, int]:
+        """Return the ROI rectangle as ``(x, y, width, height)``, read atomically."""
+        with self._config_lock:
+            return (
+                int(self.x.get()),
+                int(self.y.get()),
+                int(self.width.get()),
+                int(self.height.get()),
             )
-        super().destroy()
+
+    def is_operation_active(self, operation: str) -> bool:
+        """Return whether the ROI is active and the given operation is selected."""
+        with self._config_lock:
+            return bool(self.active.get()) and operation in self.selected_operations.get()
 
     @abstractmethod
     def get_scalar_outputs(self) -> list[str]:
@@ -186,11 +240,12 @@ class ROIProcessing(Device, ABC):
         )
 
     def _publish_available_analysis(self) -> None:
-        """Publish the available ROI analysis operations and result signals."""
+        """Publish the available ROI analysis operations and result signals (if connected to BEC)."""
         if self._connector is None:
-            raise RuntimeError(
-                f"Signal {self.name} is not connected to Redis and cannot publish ROI analysis."
+            logger.debug(
+                f"{self.name}: not connected to Redis, skipping available-analysis publish."
             )
+            return
         message = ROIAvailableAnalysisMessage(
             device=self.root.name,
             signal=self.dotted_name,
@@ -201,25 +256,58 @@ class ROIProcessing(Device, ABC):
             message,
         )
 
-    def _receive_roi_configuration_message(self, message: MessageObject):
+    ##############
+    ## Results  ##
+    ##############
+
+    def put_results(
+        self, kind: ResultKind, results: dict[str, dict], async_update: dict | None = None
+    ) -> None:
         """
-        Receive a ROI configuration message and update the ROI processing signal accordingly.
+        Publish ROI results keyed by result name, i.e. by the names returned from
+        ``get_scalar_outputs`` / ``get_waveform_outputs``.
+
+        DynamicSignal names a lone sub-signal after the signal itself
+        (``<device>_<roi>_result_scalar`` instead of ``<device>_<roi>_result_scalar_<result>``);
+        this method hides that convention from subclasses.
 
         Args:
-            message (MessageObject): The received message object containing the ROI configuration.
+            kind: "scalar" for ``result_scalar`` or "waveform" for ``result_waveform``.
+            results: ``{result_name: {"value": ..., "timestamp": ...}}``; a subset of the outputs.
+            async_update: optional async_update metadata, defaults to the signal's own.
         """
-        message: ROIConfigurationMessage = message.value
-        if message.device != self.root.name or message.signal != self.dotted_name:
-            logger.warning(
-                f"Ignoring ROI configuration for {message.device}.{message.signal}; "
-                f"this ROIProcessing is {self.root.name}.{self.dotted_name}."
+        if kind == "scalar":
+            signal, outputs = self.result_scalar, self.get_scalar_outputs()
+        elif kind == "waveform":
+            signal, outputs = self.result_waveform, self.get_waveform_outputs()
+        else:
+            raise ValueError(f"Unknown result kind {kind!r}; expected 'scalar' or 'waveform'.")
+        unknown = [name for name in results if name not in outputs]
+        if unknown:
+            raise ValueError(
+                f"Unknown {kind} result(s) {unknown} for {self.name}; available: {outputs}."
             )
+        if not results:
             return
-        self.update_received.put(message)
+        if len(outputs) == 1:
+            payload = {signal.name: results[outputs[0]]}
+        else:
+            payload = dict(results)
+        signal.put(payload, async_update=async_update)
+
+    ##############################
+    ## Configuration reception  ##
+    ##############################
+
+    def _receive_roi_configuration_message(self, message: MessageObject) -> None:
+        """Forward a ROI configuration message to the update signal (kept for API compatibility)."""
+        # pylint: disable=protected-access
+        self.update_received._receive_roi_configuration_message(message)
 
     def _on_config_update(self, value: ROIConfigurationMessage, **kwargs):
         """
-        Callback for when a new ROI configuration message is received.
+        Callback for a newly released ROI configuration message. Subclasses extend this to
+        forward the configuration to their backend.
 
         Args:
             value (ROIConfigurationMessage): The received ROI configuration message.
@@ -228,10 +316,11 @@ class ROIProcessing(Device, ABC):
             raise TypeError(
                 f"Expected ROIConfigurationMessage, got {type(value).__name__} instead."
             )
-        self.active.put(value.active)
-        self.roi_name.put(value.name)
-        self.x.put(value.roi_config.x)
-        self.y.put(value.roi_config.y)
-        self.width.put(value.roi_config.width)
-        self.height.put(value.roi_config.height)
-        self.selected_operations.put(value.selected_operations)
+        with self._config_lock:
+            self.active.put(value.active)
+            self.roi_name.put(value.name)
+            self.x.put(value.roi_config.x)
+            self.y.put(value.roi_config.y)
+            self.width.put(value.roi_config.width)
+            self.height.put(value.roi_config.height)
+            self.selected_operations.put(value.selected_operations)

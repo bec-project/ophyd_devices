@@ -1,3 +1,5 @@
+"""Helper signals used by :class:`~ophyd_devices.utils.bec_roi_signals.roi_processing.ROIProcessing`."""
+
 from __future__ import annotations
 
 import threading
@@ -13,6 +15,18 @@ if TYPE_CHECKING:
     from bec_lib.redis_connector import MessageObject, RedisConnector
 
 logger = bec_logger.logger
+
+
+def get_root_connector(obj) -> RedisConnector | None:
+    """
+    Return the Redis connector of the root device, or None.
+
+    Devices are constructed without a device manager by the config validation tools
+    (``static_device_test``) and in unit tests. ROI components must keep working in that
+    case, they just cannot exchange configuration messages with BEC.
+    """
+    device_manager = getattr(obj.root, "device_manager", None)
+    return getattr(device_manager, "connector", None)
 
 
 class SelectedOperationSignal(Signal):
@@ -46,14 +60,20 @@ class AvailableOperationsSignal(SignalRO):
 
 class ConfigUpdateReceivedSignal(Signal):
     """
-    Signal to publish ROI configuration updates. Based on the updated configuration,
-    updates will be published right away or blocked until released.
+    Signal carrying ROI configuration updates.
+
+    On connection the signal registers itself on the ``roi_config`` endpoint of its
+    ROIProcessing parent and on ``scan_status``. Updates arriving while a scan is open are
+    held back (if the message asks for it) and released once the scan is no longer open.
+    Without a Redis connector on the root device the signal still works locally, i.e.
+    ``put``/``set`` apply immediately, but nothing is received from BEC.
     """
 
     def __init__(self, name, parent=None, **kwargs):
         super().__init__(name=name, parent=parent, **kwargs)
         self._update_received = False
         self._connector: RedisConnector | None = None
+        self._roi_endpoint = None
         self._metadata["connected"] = False
         self._next_config = None
         self._next_config_kwargs = None
@@ -75,34 +95,62 @@ class ConfigUpdateReceivedSignal(Signal):
         """Return the latest blocked update without publishing it."""
         return self._next_config
 
+    @property
+    def connected(self) -> bool:
+        """Return whether the signal is connected. This is a pure query without side effects."""
+        return bool(self._metadata.get("connected")) and not self._destroyed
+
+    @property
+    def redis_connected(self) -> bool:
+        """Return whether the signal is registered on the Redis endpoints."""
+        return self._connector is not None and self._metadata.get("connected") is True
+
+    def wait_for_connection(self, *args, **kwargs):
+        """
+        Register on the Redis endpoints of the root device and mark the signal as connected.
+
+        Idempotent. If the root device has no Redis connector, the signal is marked connected
+        anyway so that the device can be used without BEC (config validation, tests).
+        """
+        if self._metadata.get("connected") is True:
+            return
+        self._connector = get_root_connector(self)
+        if self._connector is None:
+            logger.warning(
+                f"{self.name}: the root device has no Redis connector; ROI configuration updates "
+                "from BEC are disabled for this signal."
+            )
+            self._metadata["connected"] = True
+            return
+        self._roi_endpoint = MessageEndpoints.roi_config(
+            device=self.root.name, signal=self.parent.dotted_name
+        )
+        self._connector.register(MessageEndpoints.scan_status(), cb=self._handle_scan_status_update)
+        self._connector.register(self._roi_endpoint, cb=self._receive_roi_configuration_message)
+        self._metadata["connected"] = True
+
     def destroy(self):
-        """Clean up the signal and unregister from Redis."""
-        if self._connector is not None and self._metadata.get("connected") is True:
+        """Unregister from Redis and destroy the signal."""
+        if self.redis_connected:
             self._connector.unregister(
                 MessageEndpoints.scan_status(), cb=self._handle_scan_status_update
+            )
+            self._connector.unregister(
+                self._roi_endpoint, cb=self._receive_roi_configuration_message
             )
         self._metadata["connected"] = False
         super().destroy()
 
-    @property
-    def connected(self) -> bool:
-        """Return whether the signal is connected to Redis."""
-        if self._destroyed:
-            return False
-        if self._metadata.get("connected") is not True:
-            self.wait_for_connection()
-        return self._metadata.get("connected", False)
-
-    def wait_for_connection(self, *args, **kwargs):
-        self._connector: RedisConnector | None = (
-            self.root.device_manager.connector if hasattr(self.root, "device_manager") else None
-        )
-        if self._connector is None:
-            raise RuntimeError(
-                f"Signal {self.name} is not connected to Redis, please provide a Redis Connector during the initialization."
+    def _receive_roi_configuration_message(self, message: MessageObject) -> None:
+        """Redis callback for ROI configuration messages addressed to the parent ROIProcessing."""
+        msg: ROIConfigurationMessage = message.value
+        if msg.device != self.root.name or msg.signal != self.parent.dotted_name:
+            logger.warning(
+                f"Ignoring ROI configuration for {msg.device}.{msg.signal}; "
+                f"this ROIProcessing is {self.root.name}.{self.parent.dotted_name}."
             )
-        self._metadata["connected"] = True
-        self._connector.register(MessageEndpoints.scan_status(), cb=self._handle_scan_status_update)
+            return
+        self.put(msg)
 
     def _handle_scan_status_update(self, message: MessageObject):
         msg: ScanStatusMessage = message.value
@@ -133,9 +181,7 @@ class ConfigUpdateReceivedSignal(Signal):
                 super().put(value, **kwargs)
             except Exception:
                 self._next_config = value
-                self._next_config_kwargs = dict(
-                    timestamp=None, force=False, metadata=None, timeout=None
-                )
+                self._next_config_kwargs = kwargs
                 self._update_received = True
                 raise
             return value
@@ -160,7 +206,7 @@ class ConfigUpdateReceivedSignal(Signal):
         """
         if self._metadata.get("connected") is not True:
             raise RuntimeError(
-                f"Signal {self.name} is not connected to Redis and cannot publish updates."
+                f"Signal {self.name} is not connected; call wait_for_connection on the root device first."
             )
         with self._update_lock:
             self.check_value(value)

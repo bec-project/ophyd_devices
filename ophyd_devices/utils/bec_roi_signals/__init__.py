@@ -1,1 +1,6 @@
-from .roi_processing import LITERAL_ROI_PROCESSING_CONFIG, ROIProcessing
+from .roi_processing import (
+    CONFIG_SIGNAL_NAMES,
+    LITERAL_ROI_PROCESSING_CONFIG,
+    ROIOperationConfig,
+    ROIProcessing,
+)

@@ -3,13 +3,18 @@
 # pylint: disable=protected-access,redefined-outer-name,too-many-arguments
 
 from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from bec_server.device_server.tests.utils import DMMock
+from ophyd import Component as Cpt
 
-from ophyd_devices.sim.sim_camera import SimCamera
+from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
+from ophyd_devices.sim.sim_camera import SimCamera, SimCameraROIProcessing
+from ophyd_devices.utils.bec_roi_signals import ROIProcessing
 
 
 @pytest.fixture(scope="function")
@@ -215,3 +220,128 @@ def test_sim_camera_image_update_does_not_publish_when_roi_inactive(roi_processi
     roi_processing._on_image_update(np.ones((3, 3)))
 
     assert roi_processing.result_scalar.get() is None
+
+
+def test_roi_configuration_signals_are_config_kind(camera_with_roi):
+    """Test that the ROI geometry/selection never shows up in read(), only in read_configuration()."""
+    assert camera_with_roi.read() == {}
+    configuration = camera_with_roi.read_configuration()
+    for name in ("active", "roi_name", "x", "y", "width", "height", "selected_operations"):
+        assert f"camera_roi_processing_{name}" in configuration
+
+
+def test_roi_processing_without_device_manager_works_locally():
+    """Test that a device without device manager (config validation, tests) still connects."""
+    cam = SimCamera(name="camera")
+    try:
+        cam.wait_for_connection()
+        roi = cam.roi_processing
+        assert cam.connected is True
+        assert roi.redis_connected is False
+        assert roi.update_received.redis_connected is False
+        assert cam.read() == {}
+        roi.update_received.put(_roi_config_message(x=11, width=12))
+        assert roi.x.get() == 11
+        assert roi.width.get() == 12
+    finally:
+        cam.destroy()
+
+
+def test_update_signal_registers_and_unregisters_redis_endpoints():
+    """Test that the update signal owns the Redis registrations and removes them on destroy."""
+    dm = DMMock()
+    dm.connector.register = mock.MagicMock()
+    dm.connector.unregister = mock.MagicMock()
+    cam = SimCamera(name="camera", device_manager=dm)
+    cam.wait_for_connection()
+    roi_endpoint = MessageEndpoints.roi_config(device="camera", signal="roi_processing")
+    registered = [call.args[0] for call in dm.connector.register.call_args_list]
+    assert roi_endpoint in registered
+    assert MessageEndpoints.scan_status() in registered
+    assert cam.roi_processing.update_received.redis_connected is True
+
+    cam.destroy()
+
+    unregistered = [call.args[0] for call in dm.connector.unregister.call_args_list]
+    assert roi_endpoint in unregistered
+    assert MessageEndpoints.scan_status() in unregistered
+    assert cam.roi_processing.update_received.redis_connected is False
+
+
+def test_on_connected_is_forwarded_to_roi_component():
+    """Test that PSIDeviceBase calls on_connected of ROI components after connecting."""
+    with mock.patch.object(SimCameraROIProcessing, "on_connected") as on_connected:
+        cam = SimCamera(name="camera", device_manager=DMMock())
+        try:
+            on_connected.assert_not_called()
+            cam.wait_for_connection()
+            on_connected.assert_called_once()
+        finally:
+            cam.destroy()
+
+
+class _SingleOutputROI(ROIProcessing):
+    def get_scalar_outputs(self) -> list[str]:
+        return ["counts"]
+
+    def get_waveform_outputs(self) -> list[str]:
+        return ["spectrum"]
+
+    def get_available_analysis_operations(self) -> list[str]:
+        return ["xes"]
+
+
+class _SingleOutputRoot(PSIDeviceBase):
+    roi = Cpt(_SingleOutputROI, active=True, selected_operations=["xes"], width=4, height=4)
+
+
+@pytest.fixture
+def single_output_root():
+    dev = _SingleOutputRoot(name="root", device_manager=DMMock())
+    dev.wait_for_connection()
+    yield dev
+    dev.destroy()
+
+
+def test_put_results_handles_single_output_signal_naming(single_output_root):
+    """Test that results keyed by result name work when a DynamicSignal has one sub-signal."""
+    roi = single_output_root.roi
+    roi.put_results("scalar", {"counts": {"value": 3.0, "timestamp": 1.0}})
+    roi.put_results(
+        "waveform",
+        {"spectrum": {"value": np.arange(5), "timestamp": 1.0}},
+        async_update={"type": "add", "max_shape": [None, 5]},
+    )
+
+    assert list(roi.result_scalar.get().signals) == ["root_roi_result_scalar"]
+    assert roi.result_scalar.get().signals["root_roi_result_scalar"]["value"] == 3.0
+    waveform = roi.result_waveform.get()
+    assert list(waveform.signals) == ["root_roi_result_waveform"]
+    assert waveform.metadata["async_update"] == {"type": "add", "max_shape": [None, 5]}
+
+
+def test_put_results_rejects_unknown_result_names(single_output_root):
+    """Test that unknown result names are rejected instead of silently published."""
+    with pytest.raises(ValueError, match="Unknown scalar result"):
+        single_output_root.roi.put_results("scalar", {"nope": {"value": 1, "timestamp": 1.0}})
+    with pytest.raises(ValueError, match="Unknown result kind"):
+        single_output_root.roi.put_results("image", {})
+
+
+def test_put_results_multi_output_keys_by_result_name(camera_with_roi):
+    """Test that multi-output signals accept result names and prefix them with the signal name."""
+    roi = camera_with_roi.roi_processing
+    roi.put_results("scalar", {"sum": {"value": 2.0, "timestamp": 1.0}})
+    assert list(roi.result_scalar.get().signals) == ["camera_roi_processing_result_scalar_sum"]
+
+
+def test_current_configuration_and_get_roi(roi_processing):
+    """Test the atomic accessors used by subclasses."""
+    roi_processing._on_config_update(_roi_config_message(name="beam", x=3, y=4, width=5, height=6))
+    assert roi_processing.get_roi() == (3, 4, 5, 6)
+    config = roi_processing.current_configuration()
+    assert config.name == "beam"
+    assert config.roi_config == messages.ROIConfig(x=3, y=4, width=5, height=6)
+    assert config.device == "camera"
+    assert config.signal == "roi_processing"
+    assert roi_processing.is_operation_active("basic_statistics") is True
