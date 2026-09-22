@@ -74,18 +74,30 @@ class PSIDeviceBase(Device):
         self.on_init()
 
     def wait_for_connection(self, *args, **kwargs):
-        """Wait for the device to be connected.
-
-        This method is called from BEC after the device is added to the device manager.
-        It waits for the device to be connected and then calls the on_connected method.
         """
-        for walk in self.walk_components():
-            if (
-                hasattr(walk.item.cls, "REQUIRES_WAIT_FOR_CONNECTION")
-                and walk.item.cls.REQUIRES_WAIT_FOR_CONNECTION is True
-            ):
-                getattr(self, walk.dotted_name).wait_for_connection(*args, **kwargs)
+        Wait for the device to be connected.
+
+        Components whose class sets ``REQUIRES_WAIT_FOR_CONNECTION = True`` (e.g. ROIProcessing)
+        are connected first, then the device's own signals. Once everything is connected, the
+        ``on_connected`` hook of those components is called, so they can talk to hardware.
+        The device's own ``on_connected`` is called by the device server afterwards.
+        """
+        components = self._components_requiring_connection()
+        for component in components:
+            component.wait_for_connection(*args, **kwargs)
         super().wait_for_connection(*args, **kwargs)
+        for component in components:
+            on_connected = getattr(component, "on_connected", None)
+            if callable(on_connected):
+                on_connected()
+
+    def _components_requiring_connection(self) -> list:
+        """Return the (nested) component instances flagged with ``REQUIRES_WAIT_FOR_CONNECTION``."""
+        components = []
+        for walk in self.walk_components():
+            if getattr(walk.item.cls, "REQUIRES_WAIT_FOR_CONNECTION", False) is True:
+                components.append(getattr(self, walk.dotted_name))
+        return components
 
     ########################################
     # Additional Properties and Attributes #
