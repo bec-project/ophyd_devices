@@ -1,5 +1,7 @@
 from unittest import mock
 
+from bec_lib import messages
+
 from ophyd_devices.utils.controller import Controller
 
 
@@ -48,7 +50,14 @@ def test_controller_with_multiple_axes(dm_with_devices):
     controller = Controller(
         socket_cls=socket_cls, socket_host="dummy", socket_port=123, device_manager=dm_with_devices
     )
+
+    def apply_config_update(action, config):
+        dm_with_devices.parse_config_message(
+            messages.DeviceConfigMessage(action=action, config=config)
+        )
+
     with mock.patch.object(controller.device_manager, "config_helper") as mock_config_helper:
+        mock_config_helper.send_config_request.side_effect = apply_config_update
         # Disable samx, samy first
         dm_with_devices.devices.get("samx").enabled = False
         dm_with_devices.devices.get("samy").enabled = False
