@@ -1,3 +1,8 @@
+from .utils.set_registry import install_signal_set_patch, set_registry
+
+# Do not import ophyd or anything else before patching the signal!
+install_signal_set_patch()
+
 from .devices.sls_devices import SLSInfo, SLSOperatorMessages
 from .sim.sim_camera import SimCamera, SimNegativeCamera
 from .sim.sim_monitor import SimMonitor, SimMonitorAsync

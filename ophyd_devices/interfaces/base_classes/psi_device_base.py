@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import inspect
 import time
+from functools import wraps
 from typing import TYPE_CHECKING, Callable
 
 from ophyd import Device, DeviceStatus, Staged, StatusBase
 
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+from ophyd_devices.utils.set_registry import set_registry
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
@@ -38,6 +40,23 @@ class PSIDeviceBase(Device):
     SUB_DEVICE_MONITOR_1D = "device_monitor_1d"
     SUB_DEVICE_MONITOR_2D = "device_monitor_2d"
     _default_sub = SUB_VALUE
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        stop = cls.stop
+        if stop is PSIDeviceBase.stop or getattr(stop, "_set_registry_stop_wrapper", None) is stop:
+            return
+
+        @wraps(stop)
+        def scoped_stop(self, *args, **stop_kwargs):
+            # Stop overrides (including inherited mixins) may do work before
+            # super().stop(). Capture once before that work can start new sets.
+            # Stopping any component deliberately cancels its entire device root.
+            with set_registry.stopping(self.root):
+                return stop(self, *args, **stop_kwargs)
+
+        setattr(scoped_stop, "_set_registry_stop_wrapper", scoped_stop)
+        cls.stop = scoped_stop
 
     def __init__(
         self,
@@ -165,11 +184,12 @@ class PSIDeviceBase(Device):
         Args:
             success (bool): True if the action was successful, False otherwise.
         """
-        self.on_stop()
-        self.stopped = True  # Set stopped flag to True, in case a custom stop method listens to stopped property
-        # Stop all stoppable status objects
-        self._stop_stoppable_status_objects()
-        super().stop(success=success)
+        # Whole-root cancellation is intentional even when stopping a child.
+        with set_registry.stopping(self.root):
+            self.on_stop()
+            self.stopped = True  # Custom stop methods may listen to this property.
+            self._stop_stoppable_status_objects()
+            super().stop(success=success)
 
     def destroy(self):
         """Destroy the device."""
