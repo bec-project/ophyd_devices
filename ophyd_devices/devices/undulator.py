@@ -94,10 +94,10 @@ class UndulatorGap(PVPositioner):
     SLS Undulator gap control
     """
 
-    setpoint = Cpt(UndulatorSetointSignal, suffix="GAP-SP")
+    setpoint = Cpt(UndulatorSetointSignal, suffix="GAP-SP", kind="normal", auto_monitor=True)
     readback = Cpt(EpicsSignalRO, suffix="GAP-RBV", kind="hinted", auto_monitor=True)
 
-    stop_signal = Cpt(UndulatorStopSignal, suffix="STOP")
+    stop_signal = Cpt(UndulatorStopSignal, suffix="STOP", auto_monitor=True)
     done = Cpt(EpicsSignalRO, suffix="DONE", auto_monitor=True)
 
     select_control = Cpt(EpicsSignalRO, suffix="SCTRL", auto_monitor=True)
