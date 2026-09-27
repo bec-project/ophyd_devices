@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.46.1 (2026-09-27)
+
+### Bug Fixes
+
+- Set auto_monitor for undulator
+  ([`27162e7`](https://github.com/bec-project/ophyd_devices/commit/27162e75eded2462490f79b8e0fc0c0281799b50))
+
+### Testing
+
+- Config updates should update the device
+  ([`d6ef21d`](https://github.com/bec-project/ophyd_devices/commit/d6ef21db90b5d3e5b3f04beabd49246cc1c71775))
+
+
 ## v1.46.0 (2026-09-03)
 
 ### Features
