@@ -10,7 +10,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "bec_lib~=3.74",
+  "bec_lib>=3.74",
   "h5py ~= 3.10",
   "hdf5plugin >=4.3, < 6.0",
   "numpy >= 1.24, <3.0",
@@ -43,7 +43,6 @@ dev = [
   "pylint~=3.0",
   "pytest-random-order~=1.1",
 ]
-
 
 
 [build-system]
