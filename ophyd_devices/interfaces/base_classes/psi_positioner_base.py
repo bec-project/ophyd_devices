@@ -8,7 +8,9 @@ from ophyd import Kind
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
 from ophyd.signal import EpicsSignalBase, Signal
+from ophyd.status import StatusTimeoutError, WaitTimeoutError
 from ophyd.status import wait as status_wait
+from ophyd.utils import UnknownStatusFailure
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
@@ -23,28 +25,65 @@ class MoveStatusWithTolerance(MoveStatus):
     """A MoveStatus that checks the final position against a tolerance if provided."""
 
     def __init__(self, positioner, *args, **kwargs):
-        self._tolerance_exception = None
+        self._completion_exception = None
         super().__init__(positioner, *args, **kwargs)
         self.positioner = positioner
 
     def _finished(self, success: bool = True, **kwargs):
-
-        if not success or self.positioner.user_readback is _OPTIONAL_SIGNAL:
+        if not success:
+            exc = UnknownStatusFailure(
+                f"The status {self!r} has failed. To obtain more specific, "
+                "helpful errors in the future, update the Device to use "
+                "set_exception(...) instead of _finished(success=False)."
+            )
+            return self._fail_move(exc)
+        if self.positioner.user_readback is _OPTIONAL_SIGNAL:
             return super()._finished(success=success, **kwargs)
 
-        tol = self.positioner.tolerance.get()
-        final_position = self.positioner.user_readback.get()
-        if abs(self.target - final_position) > tol:
+        try:
+            tol = self.positioner.tolerance.get()
+            skip_check = bool(tol == np.inf)
+            if not skip_check:
+                final_position = self.positioner.user_readback.get()
+                outside_tolerance = bool(abs(self.target - final_position) > tol)
+        except Exception as exc:
+            if isinstance(exc, (StatusTimeoutError, WaitTimeoutError)):
+                wrapped = RuntimeError(f"Final position check failed: {exc}")
+                wrapped.__cause__ = exc
+                exc = wrapped
+            return self._fail_move(exc, motion_completed=True)
+
+        if skip_check:
+            return super()._finished(success=success, **kwargs)
+        if outside_tolerance:
             exc = RuntimeError(
                 f"Move to {self.target} failed, "
                 f"final position {final_position} outside of tolerance {tol}"
             )
-            self._tolerance_exception = exc
-            return self.set_exception(exc)
+            return self._fail_move(exc, motion_completed=True)
         return super()._finished(success=success, **kwargs)
 
+    def _fail_move(self, exc: Exception, *, motion_completed: bool = False):
+        # The custom MoveStatus timeout is not a subclass of ophyd's
+        # StatusTimeoutError, so ophyd's set_exception() can overwrite it.
+        # Use the same lock as the timeout thread to keep the first failure.
+        with self._externally_initiated_completion_lock:
+            if self._externally_initiated_completion or self._exception is not None:
+                return
+            self._externally_initiated_completion = True
+            self._exception = exc
+            if motion_completed:
+                self._completion_exception = exc
+            self._trace_attributes["exception"] = exc
+            self._settled_event.set()
+
+        self._close_trace()
+        if self._callback_thread is None:
+            self._run_callbacks()
+
     def _handle_failure(self):
-        if self._tolerance_exception is not None and self._exception is self._tolerance_exception:
+        # Motion has already completed, so a stop here could issue another move.
+        if self._completion_exception is not None and self._exception is self._completion_exception:
             return
         super()._handle_failure()
 
