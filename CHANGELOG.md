@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.47.0 (2026-09-28)
+
+### Build System
+
+- Allow major releases of bec
+  ([`53648db`](https://github.com/bec-project/ophyd_devices/commit/53648db36ac3bb9587f9bb1fd96fecec3b7c62a0))
+
+### Continuous Integration
+
+- Add Python 3.14 to the test matrix
+  ([`5b0d51e`](https://github.com/bec-project/ophyd_devices/commit/5b0d51ea66251332c5fbe6c29c806cc315105315))
+
+### Features
+
+- **PSIPositionerBase**: Add support for put completion on setpoints
+  ([`4cbb3ce`](https://github.com/bec-project/ophyd_devices/commit/4cbb3ce9daa5414e59c3c7930916b0fd57bac3d5))
+
+
 ## v1.46.1 (2026-09-27)
 
 ### Bug Fixes
