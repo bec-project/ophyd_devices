@@ -142,7 +142,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         Args:
             name (str): (required) the name of the device
             limits (list | tuple | None): If given, a length-2 sequence within the range of which movement is allowed.
-            deadband (float | None): If given, set a soft deadband of this absolute value, within which positioner moves will return immediately. If the positioner has no motor_done_move signal, you must provide this.
+            deadband (float | None): If given, set a soft deadband of this absolute value, within which positioner moves will return immediately. If the positioner has no motor_done_move signal, you must provide this. It must not exceed the configured tolerance when moving.
             use_put_completion (bool | None): If given, use put completion on the setpoint signal to resolve the move status.
             override_suffixes (dict[str, str]): a dictionary of signal_name: pv_suffix which will replace the values in the signal classvar.
         """
@@ -294,13 +294,17 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         TimeoutError
             When motion takes longer than `timeout`
         ValueError
-            On invalid positions
+            On invalid positions or if the deadband exceeds the configured tolerance
         RuntimeError
             If motion fails other than timing out
         """
 
-        if self._deadband is not None and abs(position - self._position) < self._deadband:
-            return MoveStatus(self, position, done=True, success=True)
+        if self._deadband is not None:
+            tolerance = self.tolerance.get()
+            if self._deadband > tolerance:
+                raise ValueError(f"Deadband {self._deadband} must not exceed tolerance {tolerance}")
+            if abs(position - self._position) < self._deadband:
+                return MoveStatus(self, position, done=True, success=True)
 
         if timeout is None:
             timeout = self._timeout

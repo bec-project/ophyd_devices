@@ -178,7 +178,7 @@ def mock_done_signal_positioner_with_tolerance():
     with patch.object(ophyd, "cl") as mock_cl:
         mock_cl.get_pv = MockPV
         mock_cl.thread_class = threading.Thread
-        dev = DoneSignalPositionerWithTolerance(name=name, prefix=prefix, deadband=0.01)
+        dev = DoneSignalPositionerWithTolerance(name=name, prefix=prefix, deadband=0.001)
         patch_dual_pvs(dev)
         dev.wait_for_connection()
         dev._set_position(0)
@@ -287,3 +287,29 @@ def test_tolerance_checks_requested_target_even_if_setpoint_changes(
     assert st.target == 5
     with pytest.raises(RuntimeError, match="outside of tolerance"):
         st.wait(timeout=1)
+
+
+def test_move_rejects_tolerance_tighter_than_deadband_before_setpoint_write(
+    mock_done_signal_positioner_with_tolerance,
+):
+    dev = mock_done_signal_positioner_with_tolerance
+    dev.tolerance.put(0.0005)
+
+    with patch.object(dev.user_setpoint, "put", wraps=dev.user_setpoint.put) as put:
+        with pytest.raises(ValueError, match="tolerance"):
+            dev.move(5, wait=False)
+        put.assert_not_called()
+
+
+def test_equal_deadband_and_tolerance_allow_instant_success(
+    mock_done_signal_positioner_with_tolerance,
+):
+    dev = mock_done_signal_positioner_with_tolerance
+    assert dev.tolerance.get() == dev._deadband
+
+    with patch.object(dev.user_setpoint, "put", wraps=dev.user_setpoint.put) as put:
+        st = dev.move(0.0005, wait=False)
+        put.assert_not_called()
+
+    assert st.done
+    assert st.success
