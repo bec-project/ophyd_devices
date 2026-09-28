@@ -233,3 +233,57 @@ def test_tolerance_failure_sets_move_status_exception(mock_done_signal_positione
     assert not st.success
     with pytest.raises(RuntimeError, match="outside of tolerance"):
         st.wait(timeout=1)
+
+
+def test_tolerance_failure_after_motion_does_not_stop_or_rewrite_setpoint(
+    mock_done_signal_positioner_with_tolerance,
+):
+    dev = mock_done_signal_positioner_with_tolerance
+    st = dev.move(5, wait=False)
+    callbacks_finished = threading.Event()
+    st.add_callback(lambda _: callbacks_finished.set())
+
+    # The move itself already wrote the setpoint. Only watch for extra writes
+    # caused by handling a tolerance failure after motion has completed.
+    with (
+        patch.object(dev, "stop", wraps=dev.stop) as stop,
+        patch.object(dev.user_setpoint, "put", wraps=dev.user_setpoint.put) as put,
+    ):
+        dev.motor_done_move.sim_put(0)
+        dev.user_readback.sim_put(4.995)
+        dev.motor_done_move.sim_put(1)
+        assert callbacks_finished.wait(timeout=1)
+        stop.assert_not_called()
+        put.assert_not_called()
+
+    assert dev.user_setpoint.get() == 5
+    with pytest.raises(RuntimeError, match="outside of tolerance"):
+        st.wait(timeout=1)
+
+
+def test_unrelated_move_failure_still_stops_positioner(mock_done_signal_positioner_with_tolerance):
+    dev = mock_done_signal_positioner_with_tolerance
+    st = dev.move(5, wait=False)
+    callbacks_finished = threading.Event()
+    st.add_callback(lambda _: callbacks_finished.set())
+
+    with patch.object(dev, "stop", wraps=dev.stop) as stop:
+        st.set_exception(RuntimeError("move aborted"))
+        assert callbacks_finished.wait(timeout=1)
+        stop.assert_called_once()
+
+
+def test_tolerance_checks_requested_target_even_if_setpoint_changes(
+    mock_done_signal_positioner_with_tolerance,
+):
+    dev = mock_done_signal_positioner_with_tolerance
+    st = dev.move(5, wait=False)
+
+    dev.motor_done_move.sim_put(0)
+    dev.user_setpoint.put(4)
+    dev.user_readback.sim_put(4)
+    dev.motor_done_move.sim_put(1)
+
+    assert st.target == 5
+    with pytest.raises(RuntimeError, match="outside of tolerance"):
+        st.wait(timeout=1)

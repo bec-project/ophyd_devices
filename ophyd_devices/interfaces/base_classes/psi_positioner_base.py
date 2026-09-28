@@ -23,26 +23,30 @@ class MoveStatusWithTolerance(MoveStatus):
     """A MoveStatus that checks the final position against a tolerance if provided."""
 
     def __init__(self, positioner, *args, **kwargs):
+        self._tolerance_exception = None
         super().__init__(positioner, *args, **kwargs)
         self.positioner = positioner
 
     def _finished(self, success: bool = True, **kwargs):
 
-        # We need user_readback, user_setpoint, and tolerance to be defined to check the final position
-        if not success or any(
-            sig is _OPTIONAL_SIGNAL
-            for sig in (self.positioner.user_readback, self.positioner.user_setpoint)
-        ):
+        if not success or self.positioner.user_readback is _OPTIONAL_SIGNAL:
             return super()._finished(success=success, **kwargs)
 
         tol = self.positioner.tolerance.get()
-        if abs(self.positioner.user_setpoint.get() - self.positioner.user_readback.get()) > tol:  # type: ignore
+        final_position = self.positioner.user_readback.get()
+        if abs(self.target - final_position) > tol:
             exc = RuntimeError(
-                f"Move to {self.positioner.user_setpoint.get()} failed, "
-                f"final position {self.positioner.user_readback.get()} outside of tolerance {tol}"  # type: ignore
+                f"Move to {self.target} failed, "
+                f"final position {final_position} outside of tolerance {tol}"
             )
+            self._tolerance_exception = exc
             return self.set_exception(exc)
         return super()._finished(success=success, **kwargs)
+
+    def _handle_failure(self):
+        if self._tolerance_exception is not None and self._exception is self._tolerance_exception:
+            return
+        super()._handle_failure()
 
 
 class _SignalSentinel(object): ...
