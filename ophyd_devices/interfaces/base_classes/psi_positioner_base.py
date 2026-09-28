@@ -1,8 +1,7 @@
 from abc import ABC
-from typing import Self, TypedDict
+from typing import TypedDict
 
 from ophyd import Component as Cpt
-from ophyd import Device
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
 from ophyd.signal import EpicsSignalBase, Signal
@@ -150,7 +149,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
             self.user_readback.subscribe(self._pos_changed)
         if self.motor_done_move is not _OPTIONAL_SIGNAL:
             self.motor_done_move.subscribe(self._move_changed)
-        elif deadband is None:
+        elif deadband is None and self.use_put_complete is False:
             raise ValueError("Deadband must not be None for a device with no done signal")
 
         # Make the default alias for the user_readback the name of the motor itself
@@ -202,20 +201,31 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
             self._done_moving(success=status.success)
             self._move_completion_status = None
 
-        # set up an internal status to track the move
-        # and keep a ref so it doesn't get gc'd
-        if self.motor_done_move is not _OPTIONAL_SIGNAL:
-            # for a transition status, set it up before moving
-            self._move_completion_status = TransitionStatus(
+        def done_moving_pc(**kwargs):
+            self.log.debug("%s async motion done", self.name)
+            self._done_moving(success=True)
+
+        has_done_signal = self.motor_done_move is not _OPTIONAL_SIGNAL
+        completion_status = None
+        if has_done_signal:
+            # The transition status must start watching before the write.
+            completion_status = self._move_completion_status = TransitionStatus(
                 self.motor_done_move, transitions=[0, 1]
             )
-            self.user_setpoint.put(position, wait=False)
+
+        if not has_done_signal and self.use_put_complete:
+            self.user_setpoint.put(position, wait=False, use_complete=True, callback=done_moving_pc)
         else:
-            # for a subscription status, must update the setpoint before checking it
             self.user_setpoint.put(position, wait=False)
-            self._move_completion_status = SubscriptionStatus(self, callback=_manual_check_cb)
-        self.cancel_on_stop(self._move_completion_status)
-        self._move_completion_status.add_callback(_done_cb)
+            if not has_done_signal:
+                # The subscription status checks the updated setpoint.
+                completion_status = self._move_completion_status = SubscriptionStatus(
+                    self, callback=_manual_check_cb
+                )
+
+        if completion_status is not None:
+            self.cancel_on_stop(completion_status)
+            completion_status.add_callback(_done_cb)
 
         self.log.debug(f"{self.name}.user_setpoint = {position}")
 
@@ -257,7 +267,6 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         try:
             self._setup_move(position)
             self.log.debug(f"{self.name}.user_setpoint = {position}")
-            self.user_setpoint.put(position, wait=False)
             if wait:
                 status_wait(status)
         except KeyboardInterrupt:
@@ -285,7 +294,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         if self.motor_done_move is _OPTIONAL_SIGNAL:
             # if there is no motor_done_move, we came here from self._pos_changed with a value
             # based on whether whe are within the deadband
-            if not self._moving:
+            if not self._moving and not self.use_put_complete:
                 # we got a position update within the deadband of the setpoint, close out move statuses.
                 self._run_subs(
                     sub_type=self._SUB_REQ_DONE, timestamp=timestamp, value=value, **kwargs
@@ -297,9 +306,10 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         self._set_position(value)
         if self.motor_done_move is _OPTIONAL_SIGNAL:
             # No DMOV, so we compare to the setpoint to see if we are done
+            deadband = self._deadband or 0
             self._move_changed(
                 timestamp=timestamp,
-                value=(abs(self.user_setpoint.get() - value) < self._deadband),
+                value=(abs(self.user_setpoint.get() - value) < deadband),
                 **kwargs,
             )
 
