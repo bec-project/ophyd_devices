@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import operator
 import threading
+import time
 import traceback
 import uuid
 from enum import Enum
@@ -761,6 +762,11 @@ class TaskHandler:
         self._tasks = {}
         self._parent = parent
         self._lock = threading.RLock()
+        self._shutdown_lock = threading.RLock()
+        self._shutting_down = False
+        self._entered_tasks = set()
+        self._cancellable_tasks = set()
+        self._cancellation_requested = set()
 
     def submit_task(
         self,
@@ -784,9 +790,12 @@ class TaskHandler:
             name=f"task {task_status.task_id}",
             daemon=True,
         )
-        self._tasks.update({task_status.task_id: (task_status, thread)})
-        if run is True:
-            self.start_task(task_status)
+        with self._lock:
+            if self._shutting_down:
+                raise RuntimeError("Cannot submit a task during shutdown.")
+            self._tasks[task_status.task_id] = (task_status, thread)
+            if run is True:
+                self.start_task(task_status)
         return task_status
 
     def start_task(self, task_status: TaskStatus) -> None:
@@ -795,19 +804,31 @@ class TaskHandler:
         Args:
             task_status: The task status object.
         """
-        thread = self._tasks[task_status.task_id][1]
-        if thread.is_alive():
-            logger.warning(f"Task with ID {task_status.task_id} is already running.")
-            return
-        task_status.state = TaskState.RUNNING
-        thread.start()
+        with self._lock:
+            if self._shutting_down:
+                raise RuntimeError("Cannot start a task during shutdown.")
+            thread = self._tasks[task_status.task_id][1]
+            if thread.ident is not None:
+                logger.warning(f"Task with ID {task_status.task_id} was already started.")
+                return
+            task_status.state = TaskState.RUNNING
+            thread.start()
 
     def _wrap_task(
         self, task: Callable, task_args: tuple, task_kwargs: dict, task_status: TaskStatus
     ):
         """Wrap the task in a function"""
         try:
-            task(*task_args, **task_kwargs)
+            with self._lock:
+                self._entered_tasks.add(task_status.task_id)
+                if task_status.task_id in self._cancellation_requested:
+                    raise TaskKilledError()
+                self._cancellable_tasks.add(task_status.task_id)
+            try:
+                task(*task_args, **task_kwargs)
+            finally:
+                with self._lock:
+                    self._cancellable_tasks.discard(task_status.task_id)
         except TimeoutError as exc:
             content = traceback.format_exc()
             logger.warning(
@@ -820,8 +841,7 @@ class TaskHandler:
             task_status.set_exception(exc)
         except TaskKilledError as exc:
             exc = exc.__class__(
-                f"Task {task_status.task_id} was killed. ThreadID:"
-                f" {self._tasks[task_status.task_id][1].ident}"
+                f"Task {task_status.task_id} was killed. ThreadID: {threading.get_ident()}"
             )
             content = traceback.format_exc()
             logger.warning(
@@ -845,32 +865,107 @@ class TaskHandler:
         finally:
             with self._lock:
                 self._tasks.pop(task_status.task_id, None)
+                self._entered_tasks.discard(task_status.task_id)
+                self._cancellable_tasks.discard(task_status.task_id)
+                self._cancellation_requested.discard(task_status.task_id)
 
     def kill_task(self, task_status: TaskStatus) -> None:
-        """Kill the thread
+        """Cancel a pending task or request cancellation of a running task."""
+        with self._lock:
+            task_info = self._tasks.get(task_status.task_id)
+            if task_info is None:
+                return
+            thread = task_info[1]
+            if thread.ident is not None:
+                self._cancel_running_task_locked(task_status, thread)
+                return
+            self._tasks.pop(task_status.task_id)
+            task_status.state = TaskState.KILLED
 
-        task_status: The task status object.
-        """
-        thread = self._tasks[task_status.task_id][1]
-        exception_cls = TaskKilledError
+        # Completing the status may invoke callbacks that reenter the handler.
+        task_status.set_exception(TaskKilledError(f"Task {task_status.task_id} was killed."))
+
+    def _cancel_running_task_locked(
+        self, task_status: TaskStatus, thread: threading.Thread
+    ) -> None:
+        """Request cancellation of a started worker while ``self._lock`` is held."""
+        task_id = task_status.task_id
+        if not thread.is_alive() or task_status.done or task_id in self._cancellation_requested:
+            return
+
+        # A started thread may be before its wrapper, inside the callable, or
+        # completing its status. Only the callable can be interrupted safely.
+        if task_id not in self._entered_tasks:
+            self._cancellation_requested.add(task_id)
+            return
+        if task_id not in self._cancellable_tasks:
+            return
 
         ident = ctypes.c_long(thread.ident)
-        exc = ctypes.py_object(exception_cls)
         try:
-            res = set_async_exc(ident, exc)
-            if res == 0:
-                raise ValueError("Invalid thread ID")
-            if res > 1:
+            result = set_async_exc(ident, ctypes.py_object(TaskKilledError))
+            if result == 1:
+                self._cancellation_requested.add(task_id)
+                return
+            if result > 1:
                 set_async_exc(ident, None)
-                logger.warning(f"Exception raise while kille Thread {ident}; return value: {res}")
-        except Exception as e:  # pylint: disable=broad-except
-            logger.warning(f"Exception raised while killing thread {ident}: {e}")
+                logger.warning(
+                    f"Could not cancel task {task_id}: exception was raised in {result} threads."
+                )
+                return
+            logger.warning(f"Could not cancel task {task_id}: invalid thread ID.")
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"Exception raised while killing thread {ident}: {exc}")
 
-    def shutdown(self):
-        """Shutdown all tasks of task handler"""
+    def shutdown(self, timeout: float | None = 5.0) -> None:
+        """Cancel tasks and wait for active threads to exit.
+
+        Raises TimeoutError if an active task does not exit within ``timeout`` seconds.
+        The handler can be used again after shutdown.
+        """
+        if timeout is not None and timeout < 0:
+            raise ValueError("Shutdown timeout must be non-negative or None.")
+        with self._shutdown_lock:
+            tasks = self._begin_shutdown()
+            try:
+                deadline = None if timeout is None else time.monotonic() + timeout
+                for task_status, _ in tasks:
+                    self.kill_task(task_status)
+                self._wait_for_tasks(tasks, deadline)
+            finally:
+                with self._lock:
+                    self._shutting_down = False
+
+    def _begin_shutdown(self) -> tuple[tuple[TaskStatus, threading.Thread], ...]:
+        """Snapshot tasks and prevent new work while shutdown is in progress."""
         with self._lock:
-            for info in self._tasks.values():
-                self.kill_task(info[0])
+            if self._shutting_down:
+                raise RuntimeError("Task handler shutdown is already in progress.")
+            tasks = tuple(self._tasks.values())
+            if any(thread is threading.current_thread() for _, thread in tasks):
+                raise RuntimeError("A task cannot shut down its own handler.")
+            self._shutting_down = True
+            return tasks
+
+    def _wait_for_tasks(
+        self, tasks: tuple[tuple[TaskStatus, threading.Thread], ...], deadline: float | None
+    ) -> None:
+        """Wait for started workers and report any that survive the deadline."""
+        # Worker cleanup needs self._lock, so joins must happen outside that lock.
+        for _, thread in tasks:
+            if thread.ident is None:
+                continue
+            remaining = None if deadline is None else max(0, deadline - time.monotonic())
+            thread.join(remaining)
+
+        alive = [status.task_id for status, thread in tasks if thread.is_alive()]
+        if not alive:
+            return
+        with self._lock:
+            self._cancellation_requested.difference_update(
+                task_id for task_id in alive if task_id in self._cancellable_tasks
+            )
+        raise TimeoutError(f"Task threads did not stop during shutdown: {', '.join(alive)}")
 
 
 class FileHandler:

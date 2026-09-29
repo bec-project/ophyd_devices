@@ -16,6 +16,7 @@ from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal, ProgressSignal
+from ophyd_devices.utils.psi_device_base_utils import TaskKilledError, TaskState
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -96,6 +97,20 @@ def device_positioner():
 def device():
     """Fixture for Device"""
     yield SimDevice(name="device", prefix="test:")
+
+
+def test_psi_device_base_destroy_with_pending_task(device):
+    """A queued task must not prevent device destruction."""
+    ran = threading.Event()
+    status = device.task_handler.submit_task(ran.set, run=False)
+
+    device.destroy()
+
+    assert device.destroyed
+    assert not ran.is_set()
+    assert status.done
+    assert status.state == TaskState.KILLED
+    assert isinstance(status.exception(), TaskKilledError)
 
 
 def test_psi_device_base_wait_for_signals(device_positioner):
