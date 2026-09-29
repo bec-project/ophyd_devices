@@ -778,6 +778,8 @@ class TaskHandler:
     ) -> TaskStatus:
         """Submit a task to the task handler.
 
+        During shutdown, return a cancelled status and log a warning.
+
         Args:
             task: The task to run.
             run: Whether to run the task immediately.
@@ -792,23 +794,32 @@ class TaskHandler:
             daemon=True,
         )
         with self._lock:
-            if self._shutting_down:
-                raise RuntimeError("Cannot submit a task during shutdown.")
-            self._tasks[task_status.task_id] = (task_status, thread)
-            if run is True:
-                self.start_task(task_status)
+            if not self._shutting_down:
+                self._tasks[task_status.task_id] = (task_status, thread)
+                if run is True:
+                    self.start_task(task_status)
+                return task_status
+
+        logger.warning(f"Task with ID {task_status.task_id} was ignored during shutdown.")
+        task_status.state = TaskState.KILLED
+        task_status.set_exception(TaskKilledError(f"Task {task_status.task_id} was killed."))
         return task_status
 
     def start_task(self, task_status: TaskStatus) -> None:
-        """Start a task,
+        """Start a pending task, or warn and ignore it during shutdown.
 
         Args:
             task_status: The task status object.
         """
         with self._lock:
             if self._shutting_down:
-                raise RuntimeError("Cannot start a task during shutdown.")
-            thread = self._tasks[task_status.task_id][1]
+                logger.warning(f"Task with ID {task_status.task_id} was ignored during shutdown.")
+                return
+            task_info = self._tasks.get(task_status.task_id)
+            if task_info is None:
+                logger.warning(f"Task with ID {task_status.task_id} is no longer pending.")
+                return
+            thread = task_info[1]
             if task_status.task_id in self._cancelling_pending:
                 logger.warning(f"Task with ID {task_status.task_id} is being cancelled.")
                 return

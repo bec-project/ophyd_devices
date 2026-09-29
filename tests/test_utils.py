@@ -510,24 +510,51 @@ def test_utils_task_handler_shutdown_waits_for_pending_cancellation(task_handler
     assert not ran.is_set()
 
 
-def test_utils_task_handler_shutdown_rejects_callback_submission(task_handler):
-    """A completion callback cannot add new work during shutdown."""
+def test_utils_task_handler_shutdown_ignores_callback_submission(task_handler):
+    """A submission during shutdown returns a cancelled status without running."""
     ran = threading.Event()
-    rejected = threading.Event()
+    submitted = []
     status = task_handler.submit_task(lambda: None, run=False)
 
     def submit_from_callback(_):
-        try:
-            task_handler.submit_task(ran.set)
-        except RuntimeError:
-            rejected.set()
+        submitted.append(task_handler.submit_task(ran.set))
 
     status.add_callback(submit_from_callback)
-    task_handler.shutdown()
+    with mock.patch("ophyd_devices.utils.psi_device_base_utils.logger.warning") as warning:
+        task_handler.shutdown()
 
-    assert rejected.wait(1)
+    assert len(submitted) == 1
+    assert submitted[0].done
+    assert submitted[0].state == TaskState.KILLED
+    assert isinstance(submitted[0].exception(), TaskKilledError)
+    assert any("ignored during shutdown" in str(call) for call in warning.call_args_list)
     assert not ran.is_set()
     assert not task_handler._tasks
+
+
+def test_utils_task_handler_shutdown_ignores_callback_start(task_handler):
+    """A start request during shutdown leaves the queued task cancelled."""
+    ran = threading.Event()
+    first = task_handler.submit_task(lambda: None, run=False)
+    second = task_handler.submit_task(ran.set, run=False)
+    started_from_callback = threading.Event()
+
+    def start_from_callback(_):
+        task_handler.start_task(second)
+        started_from_callback.set()
+
+    first.add_callback(start_from_callback)
+    with mock.patch("ophyd_devices.utils.psi_device_base_utils.logger.warning") as warning:
+        task_handler.shutdown()
+
+    assert started_from_callback.is_set()
+    assert first.done and second.done
+    assert second.state == TaskState.KILLED
+    assert isinstance(second.exception(), TaskKilledError)
+    assert any("ignored during shutdown" in str(call) for call in warning.call_args_list)
+    assert not ran.is_set()
+    assert not task_handler._tasks
+    task_handler.start_task(second)
 
 
 def test_utils_task_handler_cancel_before_wrapper_starts(task_handler):
