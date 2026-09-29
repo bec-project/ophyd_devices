@@ -51,7 +51,7 @@ def test_panda_box_init(panda_box, _signal_aliases):
     """Test initialization of PandaBox, including default signal aliases."""
     assert panda_box.name == "panda_box"
     assert panda_box.host == "localhost"
-    all_signal_names = [name for name, _ in panda_box.data.signals]
+    all_signal_names = [name for name, _ in panda_box.data.signal_info.signals]
     for block in PANDA_AVAIL_PCAP_BLOCKS:
         for field in PANDA_AVAIL_PCAP_CAPTURE_FIELDS:
             signal_name = f"{block}.{field}"
