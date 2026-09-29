@@ -301,10 +301,10 @@ class PandaBox(PSIDeviceBase):
         """Initialize the PandaBox device. This method can be used to perform any additional initialization logic."""
         new_names = [
             self.signal_alias.get(original_name, original_name)
-            for original_name, _ in self.data.signals
+            for original_name, _ in self.data.signal_info.signals
         ]
         # Unify names for data
-        self.data.signals = self.data._unify_signals(new_names)
+        self.data.signal_info.signals = self.data._unify_signals(new_names)
 
     ##########################
     ### Public API methods ###

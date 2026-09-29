@@ -4,13 +4,16 @@ These signals emit BECMessage objects, which comply with the BEC message system.
 """
 
 import time
-from typing import Any, Callable, Literal, Type
+import warnings
+from collections.abc import Callable
+from typing import Any, Literal
 
 import numpy as np
 from bec_lib import messages
 from bec_lib.logger import bec_logger
+from bec_lib.messages import SignalInfo
 from ophyd import DeviceStatus, Kind, Signal
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 from typeguard import typechecked
 
 logger = bec_logger.logger
@@ -21,62 +24,13 @@ logger = bec_logger.logger
 
 
 __all__ = [
-    "ProgressSignal",
+    "AsyncMultiSignal",
+    "AsyncSignal",
+    "DynamicSignal",
     "FileEventSignal",
     "PreviewSignal",
-    "DynamicSignal",
-    "AsyncSignal",
-    "AsyncMultiSignal",
+    "ProgressSignal",
 ]
-
-
-class SignalInfo(BaseModel):
-    """
-    Base class for signal information.
-    This is used to store metadata about the signal.
-    """
-
-    data_type: Literal["raw", "processed"] = Field(
-        default="raw",
-        description="The data type of the signal indicates whether the signal is raw data or processed data.",
-    )
-    saved: bool = Field(default=True, description="Indicates whether the signal is saved to disk.")
-    ndim: Literal[0, 1, 2] | None = Field(
-        default=None,
-        description="The number of dimensions of the signal. If None, the signal is not expected to have a shape. "
-        "If set to 0, the signal is expected to be a scalar. For signals with multiple sub-signals, "
-        "ndim is expected to be valid for all sub-signals.",
-    )
-    scope: Literal["scan", "continuous"] = Field(
-        default="scan",
-        description="The scope of the signal indicates whether it is relevant for a specific "
-        "scan or provides continuous updates, independent of a scan.",
-    )
-    role: Literal["main", "preview", "diagnostic", "file_event", "progress"] = Field(
-        default="main",
-        description="The role of the signal provides context for its usage and allows other components to filter"
-        " or prioritize signals based on their intended function.",
-    )
-    enabled: bool = True
-    rpc_access: bool = Field(
-        default=False,
-        description="Indicates whether the signal is accessible via RPC. If False, the signal is not shown in the RPC interface.",
-    )
-    signals: list[tuple[str, int]] | None = Field(
-        default=None, description="List of sub-signals with their kinds."
-    )
-    signal_metadata: dict | None = Field(
-        default=None,
-        description="Metadata for the signal, which can include additional information about the signal's properties.",
-    )
-    acquisition_group: Literal["baseline", "monitored"] | str | None = Field(
-        default=None,
-        description="""Specifies the acquisition group of the signal.
-        It can be in sync with 'baseline' or 'monitored' groups mapping readoutPriority.
-        Or mapped to a custom tag that allows grouping signals for acquisition and plotting.
-        If None, the signal does not belong to any specific acquisition group.
-        """,
-    )
 
 
 _SignalsTypes = list[tuple[str, str | Kind]] | list[str] | str | None
@@ -92,7 +46,7 @@ class BECMessageSignal(Signal):
         self,
         name: str,
         *,
-        bec_message_type: Type[messages.BECMessage],
+        bec_message_type: type[messages.BECMessage],
         value: messages.BECMessage | dict | None = None,
         data_type: Literal["raw", "processed"] = "raw",
         saved: bool = True,
@@ -101,6 +55,7 @@ class BECMessageSignal(Signal):
         role: Literal["main", "preview", "diagnostic", "file_event", "progress"] = "main",
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
         enabled: bool = True,
+        use_alias: bool = False,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
         signal_metadata: dict | None = None,
         root_resolved_signal_key: str | None = None,
@@ -127,18 +82,70 @@ class BECMessageSignal(Signal):
             logger.warning("The 'kind' argument is ignored for BECMessageSignal. Please remove it.")
         super().__init__(name=name, value=value, shape=(), dtype=None, kind=Kind.omitted, **kwargs)
 
-        self.data_type = data_type
-        self.saved = saved
-        self.ndim = ndim if ndim is not None else 0
-        self.scope = scope
-        self.role = role
-        self.enabled = enabled
-        self.acquisition_group = acquisition_group
-        self.signals = self._unify_signals(signals)
-        self.signal_metadata = signal_metadata or {}
         self._bec_message_type = bec_message_type
+        self.signal_info = SignalInfo(
+            data_type=data_type,
+            saved=saved,
+            ndim=ndim if ndim is not None else 0,
+            scope=scope,
+            role=role,
+            enabled=enabled,
+            use_alias=use_alias,
+            signals=self._unify_signals(signals),
+            signal_metadata=signal_metadata or {},
+            acquisition_group=acquisition_group,
+        )
         self._root_resolved_signal_key = root_resolved_signal_key
         self._register_root_resolved_signal()
+
+    @property
+    def ndim(self) -> Literal[0, 1, 2] | None:
+        warnings.warn(
+            "BECMessageSignal.ndim is deprecated; use signal_info.ndim instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.signal_info.ndim
+
+    @ndim.setter
+    def ndim(self, value: Literal[0, 1, 2] | None) -> None:
+        warnings.warn(
+            "BECMessageSignal.ndim is deprecated; use signal_info.ndim instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.signal_info.ndim = value
+
+    @property
+    def signals(self) -> list[tuple[str, int]] | None:
+        warnings.warn(
+            "BECMessageSignal.signals is deprecated; use signal_info.signals instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.signal_info.signals
+
+    @signals.setter
+    def signals(self, value: list[tuple[str, int]] | None) -> None:
+        warnings.warn(
+            "BECMessageSignal.signals is deprecated; use signal_info.signals instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.signal_info.signals = value
+
+    @property
+    def signal_metadata(self) -> dict | None:
+        return self.signal_info.signal_metadata
+
+    @signal_metadata.setter
+    def signal_metadata(self, value: dict | None) -> None:
+        warnings.warn(
+            "BECMessageSignal.signal_metadata is deprecated; use signal_info.signal_metadata instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.signal_info.signal_metadata = value
 
     def _register_root_resolved_signal(self) -> None:
         """
@@ -157,7 +164,7 @@ class BECMessageSignal(Signal):
         root_resolved_signals = getattr(root, "_bec_root_resolved_signals", None)
         if root_resolved_signals is None:
             root_resolved_signals = {}
-            setattr(root, "_bec_root_resolved_signals", root_resolved_signals)
+            root._bec_root_resolved_signals = root_resolved_signals
 
         signal_info = root_resolved_signals.get(self._root_resolved_signal_key)
         if signal_info is not None:
@@ -192,7 +199,7 @@ class BECMessageSignal(Signal):
             out = [(signals, Kind.hinted.value)]
         else:
             if not isinstance(signals, list):
-                raise ValueError(
+                raise TypeError(
                     f"Signals must be a list of tuples or strings, got {type(signals).__name__}."
                 )
             out = []
@@ -219,18 +226,7 @@ class BECMessageSignal(Signal):
 
     def describe(self):
         out = super().describe()
-
-        out[self.name]["signal_info"] = SignalInfo(
-            data_type=self.data_type,  # type: ignore
-            saved=self.saved,
-            ndim=self.ndim,  # type: ignore
-            scope=self.scope,  # type: ignore
-            role=self.role,  # type: ignore
-            enabled=self.enabled,
-            signals=self.signals,
-            signal_metadata=self.signal_metadata,
-            acquisition_group=self.acquisition_group,
-        ).model_dump()
+        out[self.name]["signal_info"] = self.signal_info.model_dump()
         return out
 
     @property
@@ -615,23 +611,23 @@ class PreviewSignal(BECMessageSignal):
     @property
     def num_rotation_90(self) -> Literal[0, 1, 2, 3]:
         """Get the number of 90 degree counter-clockwise rotations applied to the data."""
-        return self.signal_metadata["num_rotation_90"]
+        return self.signal_info.signal_metadata["num_rotation_90"]
 
     @num_rotation_90.setter
     def num_rotation_90(self, value: Literal[0, 1, 2, 3]) -> None:
-        self.signal_metadata["num_rotation_90"] = value
+        self.signal_info.signal_metadata["num_rotation_90"] = value
 
     @property
     def transpose(self) -> bool:
         """Get whether the data is transposed."""
-        return self.signal_metadata["transpose"]
+        return self.signal_info.signal_metadata["transpose"]
 
     @transpose.setter
     def transpose(self, value: bool) -> None:
-        self.signal_metadata["transpose"] = value
+        self.signal_info.signal_metadata["transpose"] = value
 
     def _process_data(self, value: np.ndarray) -> np.ndarray:
-        if self.ndim == 1:
+        if self.signal_info.ndim == 1:
             return value
 
         if self.num_rotation_90:
@@ -727,6 +723,7 @@ class DynamicSignal(BECMessageSignal):
         value: messages.DeviceMessage | dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        use_alias: bool = False,
         **kwargs,
     ):
         """
@@ -738,6 +735,7 @@ class DynamicSignal(BECMessageSignal):
             signal_names (list[str] | Callable): Names of all signals. Can be a list or a callable.
             value (DeviceMessage | dict | None): The initial value of the signal. Defaults to None.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -778,6 +776,7 @@ class DynamicSignal(BECMessageSignal):
             ndim=kwargs.pop("ndim", 1),
             scope=kwargs.pop("scope", "scan"),
             role=kwargs.pop("role", "main"),
+            use_alias=use_alias,
             signals=signals,
             value=value,
             bec_message_type=kwargs.pop("bec_message_type", messages.DeviceMessage),
@@ -825,8 +824,8 @@ class DynamicSignal(BECMessageSignal):
                 metadata["async_update"] = self.async_update
             if acquisition_group is not None:
                 metadata["acquisition_group"] = acquisition_group
-            elif self.acquisition_group is not None:
-                metadata["acquisition_group"] = self.acquisition_group
+            elif self.signal_info.acquisition_group is not None:
+                metadata["acquisition_group"] = self.signal_info.acquisition_group
 
             msg = messages.DeviceMessage(signals=value, metadata=metadata)
         except ValidationError as exc:
@@ -842,7 +841,8 @@ class DynamicSignal(BECMessageSignal):
                 f"Async update must be provided for signal {self.name} of class {self.__class__.__name__}."
             )
         if not isinstance(msg.metadata["async_update"], dict):
-            raise ValueError(
+            # Preserve the existing exception type for callers.
+            raise ValueError(  # noqa: TRY004
                 f"Async update metadata must be a dict for signal {self.name} of class {self.__class__.__name__}."
             )
 
@@ -851,14 +851,16 @@ class DynamicSignal(BECMessageSignal):
 
     def _check_signals(self, msg: messages.DeviceMessage) -> None:
         """Check if all signals are valid, and if relevant metadata is also present."""
-        if len(self.signals) == 1:
+        if len(self.signal_info.signals) == 1:
             if self.name not in msg.signals:
                 raise ValueError(
                     f"Signal {self.name} not found in message {list(msg.signals.keys())}"
                 )
             return
         self._normalize_signals(msg)
-        available_signals = [f"{self.name}_{signal_name}" for signal_name, _ in self.signals]
+        available_signals = [
+            f"{self.name}_{signal_name}" for signal_name, _ in self.signal_info.signals
+        ]
         if self.strict_signal_validation:
             if set(msg.signals.keys()) != set(available_signals):
                 raise ValueError(
@@ -948,6 +950,7 @@ class AsyncMultiSignal(DynamicSignal):
         value: messages.DeviceMessage | dict | None = None,
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
+        use_alias: bool = False,
         **kwargs,
     ):
         """
@@ -960,6 +963,7 @@ class AsyncMultiSignal(DynamicSignal):
             signals (list[str] | Callable[[], list[str]]): The names of all sub-signals. Names will be prefixed with the group name.
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -1006,6 +1010,7 @@ class AsyncMultiSignal(DynamicSignal):
             async_update=async_update,
             max_size=max_size,
             acquisition_group=acquisition_group,
+            use_alias=use_alias,
             signals=signals,
             **kwargs,
         )
@@ -1025,6 +1030,7 @@ class AsyncSignal(DynamicSignal):
         value: messages.DeviceMessage | dict | None = None,
         acquisition_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
+        use_alias: bool = False,
         **kwargs,
     ):
         """
@@ -1036,6 +1042,7 @@ class AsyncSignal(DynamicSignal):
             max_size (int): The maximum size of the signal buffer. For ndim=2, this should be kept small to avoid large memory usage.
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -1077,6 +1084,7 @@ class AsyncSignal(DynamicSignal):
             async_update=async_update,
             max_size=max_size,
             acquisition_group=acquisition_group,
+            use_alias=use_alias,
             signals=None,
             **kwargs,
         )
@@ -1137,8 +1145,8 @@ class AsyncSignal(DynamicSignal):
     @property
     def max_size(self) -> int:
         """Get the maximum size of the signal buffer."""
-        return self.signal_metadata["max_size"]
+        return self.signal_info.signal_metadata["max_size"]
 
     @max_size.setter
     def max_size(self, value: int) -> None:
-        self.signal_metadata["max_size"] = value
+        self.signal_info.signal_metadata["max_size"] = value
