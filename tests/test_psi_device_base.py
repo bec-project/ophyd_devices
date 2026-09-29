@@ -113,6 +113,34 @@ def test_psi_device_base_destroy_with_pending_task(device):
     assert isinstance(status.exception(), TaskKilledError)
 
 
+def test_psi_device_base_destroy_after_task_shutdown_timeout(device):
+    """A blocked task must not prevent base-device destruction."""
+    started = threading.Event()
+    release = threading.Event()
+
+    def blocked_task():
+        started.set()
+        release.wait()
+
+    status = device.task_handler.submit_task(blocked_task)
+    worker = device.task_handler._tasks[status.task_id][1]
+    assert started.wait(1)
+    real_shutdown = device.task_handler.shutdown
+    try:
+        with mock.patch.object(
+            device.task_handler, "shutdown", side_effect=lambda: real_shutdown(timeout=0.01)
+        ):
+            with mock.patch(
+                "ophyd_devices.utils.psi_device_base_utils.set_async_exc", return_value=1
+            ):
+                device.destroy()
+        assert device.destroyed
+    finally:
+        release.set()
+        worker.join(timeout=1)
+    assert not worker.is_alive()
+
+
 def test_psi_device_base_wait_for_signals(device_positioner):
     """Test wait_for_signals method"""
     device: SimPositionerDevice = device_positioner

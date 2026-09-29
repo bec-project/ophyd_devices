@@ -320,8 +320,63 @@ def test_utils_task_handler_shutdown_waits_for_running_task(task_handler):
     assert status.state == TaskState.COMPLETED
 
 
+def test_utils_task_handler_shutdown_from_completion_callback(task_handler):
+    """A callback reentering shutdown must not block the worker being joined."""
+    started = threading.Event()
+    release = threading.Event()
+    cancellation_requested = threading.Event()
+    callback_done = threading.Event()
+    shutdown_done = threading.Event()
+    outcome = {}
+
+    def task():
+        started.set()
+        release.wait()
+
+    status = task_handler.submit_task(task)
+    worker = task_handler._tasks[status.task_id][1]
+    assert started.wait(1)
+
+    def callback(_):
+        task_handler.shutdown(timeout=0.1)
+        callback_done.set()
+
+    status.add_callback(callback)
+
+    def stop_handler():
+        try:
+            task_handler.shutdown(timeout=2)
+        except Exception as exc:  # pylint: disable=broad-except
+            outcome["exception"] = exc
+        finally:
+            shutdown_done.set()
+
+    def record_cancellation(*_):
+        cancellation_requested.set()
+        return 1
+
+    stopper = threading.Thread(target=stop_handler, daemon=True)
+    with mock.patch(
+        "ophyd_devices.utils.psi_device_base_utils.set_async_exc", side_effect=record_cancellation
+    ):
+        stopper.start()
+        try:
+            assert cancellation_requested.wait(1)
+            release.set()
+            assert callback_done.wait(1)
+            assert shutdown_done.wait(1)
+        finally:
+            release.set()
+            stopper.join(timeout=3)
+            worker.join(timeout=1)
+
+    assert "exception" not in outcome
+    assert not worker.is_alive()
+    assert status.done
+
+
 def test_utils_task_handler_shutdown_timeout(task_handler):
-    """A blocked worker causes an explicit timeout instead of a successful return."""
+    """A blocked worker produces a warning without preventing shutdown."""
     started = threading.Event()
     release = threading.Event()
 
@@ -334,9 +389,10 @@ def test_utils_task_handler_shutdown_timeout(task_handler):
     assert started.wait(1)
     try:
         with mock.patch("ophyd_devices.utils.psi_device_base_utils.set_async_exc", return_value=1):
-            with pytest.raises(TimeoutError, match="Task threads did not stop"):
+            with mock.patch("ophyd_devices.utils.psi_device_base_utils.logger.warning") as warning:
                 task_handler.shutdown(timeout=0.01)
         assert worker.is_alive()
+        assert any(status.task_id in str(call) for call in warning.call_args_list)
     finally:
         release.set()
         worker.join(timeout=1)
@@ -362,8 +418,7 @@ def test_utils_task_handler_can_retry_cancellation_after_timeout(task_handler):
     worker = task_handler._tasks[status.task_id][1]
     assert started.wait(1)
     try:
-        with pytest.raises(TimeoutError, match="Task threads did not stop"):
-            task_handler.shutdown(timeout=0.01)
+        task_handler.shutdown(timeout=0.01)
         first_wait.set()
         assert first_caught.wait(1)
         task_handler.kill_task(status)
@@ -375,6 +430,84 @@ def test_utils_task_handler_can_retry_cancellation_after_timeout(task_handler):
     assert status.done
     assert status.state == TaskState.KILLED
     assert isinstance(status.exception(), TaskKilledError)
+
+
+def test_utils_task_handler_can_retry_direct_cancellation(task_handler):
+    """A second kill request reaches a task that caught the first one."""
+    first_wait = threading.Event()
+    second_wait = threading.Event()
+    started = threading.Event()
+    first_caught = threading.Event()
+
+    def task():
+        started.set()
+        try:
+            first_wait.wait()
+        except TaskKilledError:
+            first_caught.set()
+        second_wait.wait()
+
+    status = task_handler.submit_task(task)
+    worker = task_handler._tasks[status.task_id][1]
+    assert started.wait(1)
+    try:
+        task_handler.kill_task(status)
+        first_wait.set()
+        assert first_caught.wait(1)
+        task_handler.kill_task(status)
+    finally:
+        second_wait.set()
+        worker.join(timeout=1)
+
+    assert not worker.is_alive()
+    assert status.done
+    assert status.state == TaskState.KILLED
+    assert isinstance(status.exception(), TaskKilledError)
+
+
+def test_utils_task_handler_shutdown_waits_for_pending_cancellation(task_handler):
+    """Shutdown observes a queued status that another thread is cancelling."""
+    completion_started = threading.Event()
+    finish_completion = threading.Event()
+    shutdown_done = threading.Event()
+    outcome = {}
+    ran = threading.Event()
+    status = task_handler.submit_task(ran.set, run=False)
+    original_set_exception = status.set_exception
+
+    def delayed_set_exception(exc):
+        completion_started.set()
+        finish_completion.wait()
+        original_set_exception(exc)
+
+    def stop_handler():
+        try:
+            task_handler.shutdown(timeout=1)
+        except Exception as exc:  # pylint: disable=broad-except
+            outcome["exception"] = exc
+        finally:
+            shutdown_done.set()
+
+    with mock.patch.object(status, "set_exception", side_effect=delayed_set_exception):
+        canceller = threading.Thread(target=task_handler.kill_task, args=(status,), daemon=True)
+        canceller.start()
+        assert completion_started.wait(1)
+        task_handler.start_task(status)
+        assert not ran.is_set()
+        stopper = threading.Thread(target=stop_handler, daemon=True)
+        stopper.start()
+        try:
+            assert not shutdown_done.wait(0.05)
+        finally:
+            finish_completion.set()
+            canceller.join(timeout=1)
+            stopper.join(timeout=2)
+
+    assert shutdown_done.is_set()
+    assert "exception" not in outcome
+    assert status.done
+    assert status.state == TaskState.KILLED
+    assert not ran.is_set()
 
 
 def test_utils_task_handler_shutdown_rejects_callback_submission(task_handler):
