@@ -8,4 +8,3 @@ from .sim_positioner import SimPositioner
 from .sim_signals import ReadOnlySignal, SetableSignal
 from .sim_test_devices import SimPositionerWithCommFailure, SimPositionerWithController
 from .sim_waveform import SimWaveform
-from .sim_xtreme import SynXtremeOtf
