@@ -786,8 +786,15 @@ def test_async_mon_on_trigger(async_monitor):
         assert mock_send.call_count == 1
 
 
-@pytest.mark.parametrize("mode", ["extend", "append"])
-def test_async_mon_send_data_to_bec(async_monitor, mode):
+@pytest.mark.parametrize(
+    "mode, expected_update",
+    [
+        ("add", {"type": "add", "max_shape": [None]}),
+        ("add_slice", {"type": "add_slice", "max_shape": [None, None], "index": 0}),
+        ("replace", {"type": "replace"}),
+    ],
+)
+def test_async_mon_send_data_to_bec(async_monitor, mode, expected_update):
     """Buffered readings are emitted through a BEC message signal."""
     async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
     async_monitor.async_update.put(mode)
@@ -797,11 +804,25 @@ def test_async_mon_send_data_to_bec(async_monitor, mode):
     async_monitor._send_data_to_bec()
     assert updates == [
         messages.DeviceMessage(
-            signals={async_monitor.data.name: {"value": [0, 5], "timestamp": 2}},
-            metadata={"async_update": {"type": "add", "max_shape": [None]}},
+            signals={async_monitor.data.name: {"value": [0, 5], "timestamp": [1, 2]}},
+            metadata={"async_update": expected_update},
         )
     ]
     assert async_monitor.data_buffer == {"value": [], "timestamp": []}
+    async_monitor.data_buffer.update({"value": [7], "timestamp": [3]})
+    async_monitor._send_data_to_bec()
+    assert updates[1].signals[async_monitor.data.name] == {"value": [7], "timestamp": [3]}
+    assert updates[1].metadata["async_update"] == expected_update
+    assert updates[0].signals[async_monitor.data.name] == {"value": [0, 5], "timestamp": [1, 2]}
+
+
+@pytest.mark.parametrize("mode", ["append", "extend", "invalid_mode"])
+def test_sim_async_update_rejects_invalid_modes(async_monitor, waveform, mode):
+    """Both simulators reject legacy and unknown update modes before acquisition."""
+    for device in [async_monitor, waveform]:
+        with pytest.raises(ValueError):
+            device.async_update.put(mode)
+        assert device.async_update.get() == "add"
 
 
 def test_async_monitor_progress_signal(async_monitor):
@@ -864,10 +885,19 @@ def test_waveform(waveform):
 
 
 @pytest.mark.parametrize(
-    "mode, expected_chunks", [("add", [[0, 1, 2, 3, 4]]), ("add_slice", [[0, 1], [2, 3], [4]])]
+    "mode, expected_chunks, expected_update",
+    [
+        ("add", [[0, 1, 2, 3, 4]], {"type": "add", "max_shape": [None]}),
+        (
+            "add_slice",
+            [[0, 1], [2, 3], [4]],
+            {"type": "add_slice", "index": 0, "max_shape": [None, 5]},
+        ),
+        ("replace", [[0, 1, 2, 3, 4]], {"type": "replace"}),
+    ],
 )
-def test_waveform_update_modes(waveform, mode, expected_chunks):
-    """Both update modes emit the expected asynchronous waveform chunks."""
+def test_waveform_update_modes(waveform, mode, expected_chunks, expected_update):
+    """All update modes emit the expected asynchronous waveform chunks."""
     waveform.sim.select_model("GaussianModel")
     waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
     with pytest.raises(ValueError):
@@ -884,11 +914,6 @@ def test_waveform_update_modes(waveform, mode, expected_chunks):
     assert len(updates) == len(expected_chunks)
     for msg, chunk in zip(updates, expected_chunks):
         assert np.array_equal(msg.signals[waveform.data.name]["value"], np.asarray(chunk))
-        expected_update = (
-            {"type": "add", "max_shape": [None]}
-            if mode == "add"
-            else {"type": "add_slice", "index": 0, "max_shape": [None, 5]}
-        )
         assert msg.metadata["async_update"] == expected_update
 
 
@@ -902,11 +927,12 @@ def test_waveform_update_modes(waveform, mode, expected_chunks):
         ),
         ("add_slice", None, {"async_update": {"type": "add", "max_shape": [None, 200]}}),
         ("add", 0, {"async_update": {"type": "add", "max_shape": [None]}}),
+        ("replace", None, {"async_update": {"type": "replace"}}),
     ],
 )
 def test_waveform_send_async_update(waveform, mode, index, expected_md):
     """Test the send_async_update method of SimWaveform."""
-    max_shape = expected_md["async_update"]["max_shape"]
+    max_shape = expected_md["async_update"].get("max_shape", [None])
     if len(max_shape) > 1:
         wv_shape = max_shape[1]
     else:

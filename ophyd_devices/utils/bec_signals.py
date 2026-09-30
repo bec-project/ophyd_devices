@@ -1084,7 +1084,7 @@ class AsyncSignal(DynamicSignal):
     def put(
         self,
         value: Any,
-        timestamp: float | None = None,
+        timestamp: float | list[float] | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         acquisition_group: str | None = None,
         **kwargs,
@@ -1094,11 +1094,11 @@ class AsyncSignal(DynamicSignal):
 
         Args:
             value (Any): The value to put.
-            timestamp (float | None): The timestamp of the value. If None, the current time is used.
+            timestamp (float | list[float] | None): A timestamp or per-reading timestamps. If None, the current time is used.
             async_update (dict[Literal["type", "max_shape", "index"], Any] | None): Additional metadata for asynchronous updates. Please refer to the class docstring for details.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal.
         """
-        timestamp = timestamp or time.time()
+        timestamp = time.time() if timestamp is None else timestamp
         super().put(
             value={self.name: {"value": value, "timestamp": timestamp}},
             async_update=async_update,
@@ -1109,7 +1109,7 @@ class AsyncSignal(DynamicSignal):
     def set(
         self,
         value: Any,
-        timestamp: float | None = None,
+        timestamp: float | list[float] | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         acquisition_group: str | None = None,
         **kwargs,
@@ -1119,7 +1119,7 @@ class AsyncSignal(DynamicSignal):
 
         Args:
             value (Any): The value to put.
-            timestamp (float | None): The timestamp of the value. If None, the current time is used.
+            timestamp (float | list[float] | None): A timestamp or per-reading timestamps. If None, the current time is used.
             async_update (dict[Literal["type", "max_shape", "index"], Any] | None): Additional metadata for asynchronous updates. Please refer to the class docstring for details.
             acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal.
         """

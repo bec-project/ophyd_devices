@@ -139,6 +139,15 @@ class SetableSignal(Signal):
                 self._active_callbacks.remove(sub_type)
 
 
+class AsyncUpdateSignal(SetableSignal):
+    """Select how asynchronous simulator data updates the current dataset."""
+
+    def check_value(self, value, **kwargs) -> None:
+        """Accept the update modes supported by BEC asynchronous signals."""
+        if value not in ["add", "add_slice", "replace"]:
+            raise ValueError(f"Invalid async_update type: {value} for signal {self.name}")
+
+
 class ReadOnlySignal(Signal):
     """Computed readback signal for simulated devices.
 

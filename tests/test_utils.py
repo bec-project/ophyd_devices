@@ -476,6 +476,17 @@ def test_utils_async_signal():
     assert reading_value["metadata"]["acquisition_group"] == "scan"
 
 
+@pytest.mark.parametrize("timestamp", [0.0, [1.0, 2.0]])
+@pytest.mark.parametrize("method", ["put", "set"])
+def test_utils_async_signal_preserves_timestamps(timestamp, method):
+    """Asynchronous signals preserve explicit and per-reading timestamps."""
+    signal = AsyncSignal(name="data", ndim=1, max_size=1000)
+    getattr(signal, method)(
+        [0, 5], timestamp=timestamp, async_update={"type": "add", "max_shape": [None]}
+    )
+    assert signal.get().signals[signal.name]["timestamp"] == timestamp
+
+
 def test_utils_file_event_signal():
     """Test FileEventSignal"""
     dev = Device(name="device")

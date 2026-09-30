@@ -13,37 +13,12 @@ from ophyd import Device, DeviceStatus, Kind, Staged
 from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
-from ophyd_devices.sim.sim_signals import SetableSignal
+from ophyd_devices.sim.sim_signals import AsyncUpdateSignal, SetableSignal
 from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_signals import AsyncMultiSignal, AsyncSignal, ProgressSignal
 from ophyd_devices.utils.errors import DeviceStopError
 
 logger = bec_logger.logger
-
-
-class AsyncUpdateSignal(SetableSignal):
-    """Async updated signal, with check for async_update type."""
-
-    def check_value(self, value, **kwargs) -> None:
-        """Check the value of the async_update signal."""
-        if value not in ["add_slice", "add"]:
-            raise ValueError(f"Invalid async_update type: {value} for signal {self.name}")
-
-    # FIXME: BEC issue #443 remove this method once tests in BEC are updated.
-    def put(self, value: Any) -> None:
-        """Put the value of the async_update signal."""
-        if value in ["append", "extend"]:
-            if value == "append":
-                logger.warning(
-                    f"Deprecated async_update of type {value} for signal {self.name}, falling back to 'add_slice'"
-                )
-                value = "add_slice"
-            elif value == "extend":
-                logger.warning(
-                    f"Deprecated async_update of type {value} for signal {self.name}, falling back to 'add'"
-                )
-                value = "add"
-        super().put(value)
 
 
 class SimWaveform(Device):
@@ -87,7 +62,7 @@ class SimWaveform(Device):
         acquisition_group="monitored",
     )
     data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
-    # Can be extend or append
+    # add extends the stream, add_slice assembles waveforms, replace keeps the latest waveform.
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
     progress = Cpt(ProgressSignal, name="progress")
     async_multi_data = Cpt(
@@ -116,8 +91,6 @@ class SimWaveform(Device):
         else:
             self.device_manager = bec_utils.DMMock()
 
-        self.connector = self.device_manager.connector
-        self._stream_ttl = 1800  # 30 min max
         self.stopped = False
         self._staged = Staged.no
         self._trigger_thread = None
@@ -178,7 +151,7 @@ class SimWaveform(Device):
                                 raise DeviceStopError(f"{self.name} was stopped")
                         self._slice_index += 1
                     # option add
-                    elif self.async_update.get() == "add":
+                    elif self.async_update.get() in ["add", "replace"]:
                         self._send_async_update(value=values)
                     else:
                         # This should never happen, but just in case
@@ -224,6 +197,8 @@ class SimWaveform(Device):
                 async_update = {"type": "add", "max_shape": [None, waveform_shape]}
         elif async_update_type == "add":
             async_update = {"type": "add", "max_shape": [None]}
+        elif async_update_type == "replace":
+            async_update = {"type": "replace"}
         else:
             raise ValueError(
                 f"Invalid async_update type: {async_update_type} for device {self.name}"
