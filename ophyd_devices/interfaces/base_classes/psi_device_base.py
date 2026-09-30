@@ -33,10 +33,6 @@ class PSIDeviceBase(Device):
     SUB_VALUE = "value"
     SUB_DONE_MOVING = "done_moving"
     SUB_MOTOR_IS_MOVING = "motor_is_moving"
-    SUB_PROGRESS = "progress"
-    SUB_FILE_EVENT = "file_event"
-    SUB_DEVICE_MONITOR_1D = "device_monitor_1d"
-    SUB_DEVICE_MONITOR_2D = "device_monitor_2d"
     _default_sub = SUB_VALUE
 
     def __init__(
