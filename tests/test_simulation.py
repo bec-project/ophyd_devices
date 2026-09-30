@@ -251,6 +251,7 @@ def test_init_async_monitor(async_monitor):
     """Test the __init__ method of SimMonitorAsync."""
     assert isinstance(async_monitor, SimMonitorAsync)
     assert isinstance(async_monitor, BECDeviceProtocol)
+    assert async_monitor.data.describe()[async_monitor.data.name]["signal_info"]["ndim"] == 1
 
 
 def test_signal_delay_device_start_resets_trigger_and_reaches_max(signal_delay_device):
@@ -785,28 +786,37 @@ def test_async_mon_on_trigger(async_monitor):
         assert mock_send.call_count == 1
 
 
-def test_async_mon_send_data_to_bec(async_monitor):
-    """Test the _send_data_to_bec method of SimMonitorAsync."""
+@pytest.mark.parametrize("mode", ["extend", "append"])
+def test_async_mon_send_data_to_bec(async_monitor, mode):
+    """Buffered readings are emitted through a BEC message signal."""
     async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
-    async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [0, 0]})
-    with mock.patch.object(async_monitor.connector, "xadd") as mock_xadd:
-        async_monitor._send_data_to_bec()
-        dev_msg = messages.DeviceMessage(
-            signals={async_monitor.readback.name: async_monitor.data_buffer},
+    async_monitor.async_update.put(mode)
+    async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [1, 2]})
+    updates = []
+    async_monitor.data.subscribe(lambda value, **kwargs: updates.append(value), run=False)
+    async_monitor._send_data_to_bec()
+    assert updates == [
+        messages.DeviceMessage(
+            signals={async_monitor.data.name: {"value": [0, 5], "timestamp": 2}},
             metadata={"async_update": {"type": "add", "max_shape": [None]}},
         )
+    ]
+    assert async_monitor.data_buffer == {"value": [], "timestamp": []}
 
-        call = [
-            mock.call(
-                MessageEndpoints.device_async_readback(
-                    scan_id=async_monitor.scan_info.msg.scan_id, device=async_monitor.name
-                ),
-                {"data": dev_msg},
-                expire=async_monitor._stream_ttl,
-            )
-        ]
-        assert mock_xadd.mock_calls == call
-        assert async_monitor.data_buffer["value"] == []
+
+def test_async_monitor_progress_signal(async_monitor):
+    """Trigger progress is emitted through the progress signal."""
+    async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
+    updates = []
+    async_monitor.progress.subscribe(lambda value, **kwargs: updates.append(value), run=False)
+    async_monitor._progress_update(1)
+    assert updates == [
+        messages.ProgressMessage(
+            value=1,
+            max_value=async_monitor.scan_info.msg.num_points,
+            done=async_monitor.scan_info.msg.num_points == 1,
+        )
+    ]
 
 
 def test_positioner_updated_timestamp(positioner):

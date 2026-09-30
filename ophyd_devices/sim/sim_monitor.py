@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-from bec_lib import messages
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, StatusBase
@@ -13,6 +11,7 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataMonitor
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
+from ophyd_devices.utils.bec_signals import AsyncSignal, ProgressSignal
 
 logger = bec_logger.logger
 
@@ -131,9 +130,10 @@ class SimMonitorAsyncControl(Device):
     readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
     current_trigger = Cpt(SetableSignal, value=BIT_DEPTH(0), kind=Kind.config)
     async_update = Cpt(SetableSignal, value="extend", kind=Kind.config)
+    data = Cpt(AsyncSignal, ndim=1, max_size=1000, doc="Buffered asynchronous readings")
+    progress = Cpt(ProgressSignal, doc="Scan progress")
 
     SUB_READBACK = "readback"
-    SUB_PROGRESS = "progress"
     _default_sub = SUB_READBACK
 
     def __init__(self, name, *, sim_init: dict = None, parent=None, device_manager=None, **kwargs):
@@ -141,7 +141,6 @@ class SimMonitorAsyncControl(Device):
             self.device_manager = device_manager
         else:
             self.device_manager = bec_utils.DMMock()
-        self.connector = self.device_manager.connector
         self.sim_init = sim_init
         self.sim = self.sim_cls(parent=self, **kwargs)
         self._registered_proxies = {}
@@ -178,7 +177,6 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
         super().__init__(
             name=name, scan_info=scan_info, parent=parent, device_manager=device_manager, **kwargs
         )
-        self._stream_ttl = 1800
         self._random_send_interval = None
         self._counter = 0
         self.prep_random_interval()
@@ -213,26 +211,15 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
         return status
 
     def _send_data_to_bec(self) -> None:
-        """Sends bundled data to BEC"""
+        """Emit buffered readings through the asynchronous data signal."""
         async_update = self.async_update.get()
         if async_update not in ["extend", "append"]:
             raise ValueError(f"Invalid async_update value for device {self.name}: {async_update}")
 
-        metadata = None
-        if async_update == "extend":
-            metadata = {"async_update": {"type": "add", "max_shape": [None]}}
-        elif async_update == "append":
-            metadata = {"async_update": {"type": "add", "max_shape": [None, None]}}
-
-        msg = messages.DeviceMessage(
-            signals={self.readback.name: self.data_buffer}, metadata=metadata
-        )
-        self.connector.xadd(
-            MessageEndpoints.device_async_readback(
-                scan_id=self.scan_info.msg.scan_id, device=self.name
-            ),
-            {"data": msg},
-            expire=self._stream_ttl,
+        self.data.put(
+            self.data_buffer["value"].copy(),
+            timestamp=self.data_buffer["timestamp"][-1],
+            async_update={"type": "add", "max_shape": [None]},
         )
         self.clear_buffer()
 
@@ -256,13 +243,7 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
         if not self.scan_info.msg:
             return
         max_value = self.scan_info.msg.num_points
-        # pylint: disable=protected-access
-        self._run_subs(
-            sub_type=self.SUB_PROGRESS,
-            value=value,
-            max_value=max_value,
-            done=bool(max_value == value),
-        )
+        self.progress.put(value=value, max_value=max_value, done=bool(max_value == value))
 
     def on_stop(self):
         """Stop the device."""
