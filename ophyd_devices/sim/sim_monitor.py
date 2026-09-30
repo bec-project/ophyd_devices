@@ -9,7 +9,7 @@ from ophyd import Device, Kind, StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataMonitor
-from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
+from ophyd_devices.sim.sim_signals import AsyncUpdateSignal, ReadOnlySignal, SetableSignal
 from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_signals import AsyncSignal, ProgressSignal
 
@@ -129,7 +129,7 @@ class SimMonitorAsyncControl(Device):
 
     readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
     current_trigger = Cpt(SetableSignal, value=BIT_DEPTH(0), kind=Kind.config)
-    async_update = Cpt(SetableSignal, value="extend", kind=Kind.config)
+    async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
     data = Cpt(AsyncSignal, ndim=1, max_size=1000, doc="Buffered asynchronous readings")
     progress = Cpt(ProgressSignal, doc="Scan progress")
 
@@ -168,7 +168,12 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
     A simulated device to mimic the behaviour of an asynchronous monitor.
 
     During a scan, this device will send data not in sync with the point ID to BEC,
-    but buffer data and send it in random intervals.s
+    but buffer data and send it at random intervals.
+
+    ``async_update`` selects how buffered readings are stored: ``add`` extends a
+    flat stream, ``add_slice`` assembles the chunks into row zero of the scan's
+    dataset, and ``replace`` retains the latest chunk. All modes preserve the
+    timestamp of each reading.
     """
 
     def __init__(
@@ -213,13 +218,19 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
     def _send_data_to_bec(self) -> None:
         """Emit buffered readings through the asynchronous data signal."""
         async_update = self.async_update.get()
-        if async_update not in ["extend", "append"]:
+        if async_update == "add":
+            update = {"type": "add", "max_shape": [None]}
+        elif async_update == "add_slice":
+            update = {"type": "add_slice", "max_shape": [None, None], "index": 0}
+        elif async_update == "replace":
+            update = {"type": "replace"}
+        else:
             raise ValueError(f"Invalid async_update value for device {self.name}: {async_update}")
 
         self.data.put(
             self.data_buffer["value"].copy(),
-            timestamp=self.data_buffer["timestamp"][-1],
-            async_update={"type": "add", "max_shape": [None]},
+            timestamp=self.data_buffer["timestamp"].copy(),
+            async_update=update,
         )
         self.clear_buffer()
 
