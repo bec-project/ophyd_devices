@@ -7,15 +7,13 @@ import traceback
 from typing import Any
 
 import numpy as np
-from bec_lib import messages
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
 from ophyd import Device, DeviceStatus, Kind, Staged
 from typeguard import typechecked
 
 from ophyd_devices.sim.sim_data import SimulatedDataWaveform
-from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
+from ophyd_devices.sim.sim_signals import SetableSignal
 from ophyd_devices.utils import bec_utils
 from ophyd_devices.utils.bec_signals import AsyncMultiSignal, AsyncSignal, ProgressSignal
 from ophyd_devices.utils.errors import DeviceStopError
@@ -73,9 +71,6 @@ class SimWaveform(Device):
     SHAPE = (1000,)
     BIT_DEPTH = np.uint16
 
-    SUB_MONITOR = "device_monitor_1d"
-    _default_sub = SUB_MONITOR
-
     exp_time = Cpt(SetableSignal, name="exp_time", value=1, kind=Kind.config)
     file_path = Cpt(SetableSignal, name="file_path", value="", kind=Kind.config)
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
@@ -83,13 +78,6 @@ class SimWaveform(Device):
     burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
 
     waveform_shape = Cpt(SetableSignal, name="waveform_shape", value=SHAPE, kind=Kind.config)
-    waveform = Cpt(
-        ReadOnlySignal,
-        name="waveform",
-        value=np.empty(SHAPE, dtype=BIT_DEPTH),
-        compute_readback=True,
-        kind=Kind.hinted,
-    )
     waveform_0d = Cpt(
         AsyncSignal,
         name="waveform_0d",
@@ -161,7 +149,6 @@ class SimWaveform(Device):
         This method can be called from BEC during a scan. It will acquire images and send them to BEC.
         Whether the trigger is send from BEC is determined by the softwareTrigger argument in the device config.
 
-        Here, we also run a callback on SUB_MONITOR to send the image data the device_monitor endpoint in BEC.
         """
         status = DeviceStatus(self)
         self.waveform_0d.put(
@@ -172,7 +159,8 @@ class SimWaveform(Device):
             try:
                 for _ in range(self.burst.get()):
                     # values of the Waveform
-                    values = self.waveform.get()
+                    self.sim.compute_sim_state(signal_name=self.data.name, compute_readback=True)
+                    values = self.sim.sim_state[self.data.name]["value"]
                     # add_slice option
                     if self.async_update.get() == "add_slice":
                         size = self.slice_size.get()
@@ -183,7 +171,6 @@ class SimWaveform(Device):
                             logger.info(
                                 f"Sending slice {i} of {self._slice_index} with length {len(value_slice)}"
                             )
-                            self._run_subs(sub_type=self.SUB_MONITOR, value=value_slice)
                             self._send_async_update(index=self._slice_index, value=value_slice)
                             if self.delay_slice_update is True:
                                 time.sleep(0.025)  # 25ms to be really fast
@@ -192,7 +179,6 @@ class SimWaveform(Device):
                         self._slice_index += 1
                     # option add
                     elif self.async_update.get() == "add":
-                        self._run_subs(sub_type=self.SUB_MONITOR, value=values)
                         self._send_async_update(value=values)
                     else:
                         # This should never happen, but just in case
@@ -243,19 +229,6 @@ class SimWaveform(Device):
                 f"Invalid async_update type: {async_update_type} for device {self.name}"
             )
 
-        # TODO remove once BEC e2e test async data is updated to use AsyncSignal 'data'
-        msg = messages.DeviceMessage(
-            signals={self.waveform.name: {"value": value, "timestamp": time.time()}},
-            metadata={"async_update": async_update},
-        )
-        # Send the message to BEC
-        self.connector.xadd(
-            MessageEndpoints.device_async_readback(
-                scan_id=self.scan_info.msg.scan_id, device=self.name
-            ),
-            {"data": msg},
-            expire=self._stream_ttl,
-        )
         self.data.put(value, async_update=async_update)
         self.async_multi_data.put(
             {"data1": {"value": value}, "data2": {"value": value}}, async_update=async_update

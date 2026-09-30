@@ -825,64 +825,61 @@ def test_waveform(waveform):
     """Test the SimWaveform class"""
     waveform.sim.select_model("GaussianModel")
     waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
-    data = waveform.waveform.get()
-    assert isinstance(data, np.ndarray)
-    assert data.shape == waveform.SHAPE
-    assert np.isclose(np.argmax(data), 500, atol=5)
-    waveform.waveform_shape.put(50)
-    data = waveform.waveform.get()
-    for model in waveform.sim.get_all_sim_models():
-        waveform.sim.select_model(model)
-        waveform.waveform.get()
-    # Now also test the async readback
-    mock_run_subs = waveform._run_subs = mock.MagicMock()
+    updates = []
+    waveform.data.subscribe(lambda value, **kwargs: updates.append(value), run=False)
     waveform.scan_info = get_mock_scan_info(device=waveform)
     waveform.scan_info.msg.scan_id = "test"
+    status_wait(waveform.trigger(), timeout=10)
+    data = updates[-1].signals[waveform.data.name]["value"]
+    assert isinstance(data, np.ndarray)
+    assert data.shape == waveform.SHAPE
+    assert data.dtype == waveform.BIT_DEPTH
+    assert np.isclose(np.argmax(data), 500, atol=5)
+    waveform.waveform_shape.put(50)
+    for model in waveform.sim.get_all_sim_models():
+        waveform.sim.select_model(model)
+        status_wait(waveform.trigger(), timeout=10)
+        data = updates[-1].signals[waveform.data.name]["value"]
+        assert data.shape == (50,)
+        assert data.dtype == waveform.BIT_DEPTH
+    # A trigger emits the waveform through the async data signal.
+    updates.clear()
     status = waveform.trigger()
-    timer = 0
-    while not status.done:
-        time.sleep(0.1)
-        timer += 0.1
-        if timer > 5:
-            raise TimeoutError("Trigger did not complete")
+    status_wait(status, timeout=10)
     assert status.done is True
-    assert mock_run_subs.call_count == 1
+    assert len(updates) == 1
+    assert isinstance(updates[0], messages.DeviceMessage)
+    assert updates[0].metadata["async_update"] == {"type": "add", "max_shape": [None]}
+    assert updates[0].signals[waveform.data.name]["value"].shape == (50,)
 
 
 @pytest.mark.parametrize(
-    "mode, mock_data, expected_calls",
-    [
-        (
-            "add",
-            np.zeros(5),
-            [{"sub_type": "device_monitor_1d", "value": np.zeros(5)}, {"value": np.zeros(5)}],
-        )
-    ],
+    "mode, expected_chunks", [("add", [[0, 1, 2, 3, 4]]), ("add_slice", [[0, 1], [2, 3], [4]])]
 )
-def test_waveform_update_modes(waveform, mode, mock_data, expected_calls):
-    """Test the add and add_slice update modes of the SimWaveform class"""
+def test_waveform_update_modes(waveform, mode, expected_chunks):
+    """Both update modes emit the expected asynchronous waveform chunks."""
     waveform.sim.select_model("GaussianModel")
     waveform.sim.params = {"amplitude": 500, "center": 500, "sigma": 10}
     with pytest.raises(ValueError):
         waveform.async_update.put("invalid_mode")
-    # Use add mode
+    waveform.waveform_shape.put(5)
+    waveform.slice_size.put(2)
     waveform.async_update.put(mode)
-    with (
-        mock.patch.object(waveform, "_run_subs") as mock_run_subs,
-        mock.patch.object(waveform, "_send_async_update") as mock_send_async_update,
-        mock.patch.object(waveform.waveform, "get", return_value=mock_data),
-    ):
-
+    updates = []
+    waveform.data.subscribe(lambda value, **kwargs: updates.append(value), run=False)
+    with mock.patch.object(waveform.sim, "_compute", return_value=np.arange(5)):
         status = waveform.trigger()
         status_wait(status, timeout=10)  # Raise if times out
-        assert status.done is True
-        # Run subs
-        assert mock_run_subs.call_args[1]["sub_type"] == expected_calls[0]["sub_type"]
-        assert np.array_equal(mock_run_subs.call_args[1]["value"], expected_calls[0]["value"])
-        # Send async update
-        assert np.array_equal(
-            mock_send_async_update.call_args[1]["value"], expected_calls[1]["value"]
+    assert status.success is True
+    assert len(updates) == len(expected_chunks)
+    for msg, chunk in zip(updates, expected_chunks):
+        assert np.array_equal(msg.signals[waveform.data.name]["value"], np.asarray(chunk))
+        expected_update = (
+            {"type": "add", "max_shape": [None]}
+            if mode == "add"
+            else {"type": "add_slice", "index": 0, "max_shape": [None, 5]}
         )
+        assert msg.metadata["async_update"] == expected_update
 
 
 @pytest.mark.parametrize(
