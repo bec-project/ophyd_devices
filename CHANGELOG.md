@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v1.47.1 (2026-10-01)
+
+### Bug Fixes
+
+- Migrate to add, add_slice and replace
+  ([`192c24b`](https://github.com/bec-project/ophyd_devices/commit/192c24b5f344560d9fbda3200b42deb80acf0ac3))
+
+- **monitor async**: Move from SUB_ to BECMessageSignal
+  ([`4c4967d`](https://github.com/bec-project/ophyd_devices/commit/4c4967d587b336bbf668cdcbd247a2035068c374))
+
+- **PSIDeviceBase**: Remove legacy subs
+  ([`65b490f`](https://github.com/bec-project/ophyd_devices/commit/65b490f734aa7d6f94efa9c3d5510a747867a328))
+
+### Chores
+
+- Remove outdated tests from xtreme
+  ([`559883f`](https://github.com/bec-project/ophyd_devices/commit/559883f8cab0ea0093e1dcbd4b479654c8e430de))
+
+- **waveform**: Remove legacy async publishing
+  ([`6205438`](https://github.com/bec-project/ophyd_devices/commit/6205438cc98d71501ce9c213ebd2a07a6fe20e9a))
+
+
 ## v1.47.0 (2026-09-28)
 
 ### Build System
