@@ -35,7 +35,7 @@ ophyd_test = "ophyd_devices:launch"
 
 [project.optional-dependencies]
 dev = [
-  "bec-server~=3.74",
+  "bec-server>=3.74",
   "pillow ~= 11.1",
   "black~=26.0",
   "isort~=5.13, >=5.13.2",
