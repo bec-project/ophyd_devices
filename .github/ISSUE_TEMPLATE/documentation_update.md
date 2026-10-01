@@ -2,15 +2,14 @@
 name: Documentation update request
 about: Suggest an update to the docs
 title: '[DOCS]: '
-type: documentation
-label: documentation
+labels: documentation
 assignees: ''
 
 ---
 
 ## Documentation Section
 
-[Specify the section or page of the documentation that needs updating]
+[Link the affected page in bec_docs or identify the README, device docstring, or example configuration in ophyd_devices.]
 
 ## Current Information
 

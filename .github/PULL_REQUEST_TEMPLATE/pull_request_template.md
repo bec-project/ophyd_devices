@@ -1,33 +1,33 @@
 ## Description
 
-[Provide a brief description of the changes introduced by this pull request.]
+[Describe the problem and resulting behavior.]
 
 ## Related Issues
 
-[Cite any related issues or feature requests that are addressed or resolved by this pull request. Link the associated issue, for example, with `fixes #123` or `closes #123`.]
+[Link resolved issues, companion PRs, and documentation updates.]
 
 ## Type of Change
 
-- Change 1
-- Change 2
+- [Change and affected behavior]
 
 ## How to test
 
-- Run unit tests
-- Open [widget] in designer and play around with the properties
+- [Test command or manual steps and expected outcomes]
+- [Checks performed and results]
+- [For device changes: hardware tested, or simulation/mock only]
 
 ## Potential side effects
 
-[Describe any potential side effects or risks of merging this PR.]
+[Describe compatibility changes, migration needs, or remaining limitations.]
 
 ## Screenshots / GIFs (if applicable)
 
-[Include any relevant screenshots or GIFs to showcase the changes made.]
+[Add relevant screenshots or before/after output.]
 
 ## Additional Comments
 
-[Add any additional comments or information that may be helpful for reviewers.]
+[Add context that helps reviewers assess the change.]
 
 ## Definition of Done
-- [ ] Documentation is up-to-date.
 
+- [ ] Documentation is up-to-date, or not applicable with a reason.
