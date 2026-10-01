@@ -3,14 +3,14 @@ name: Feature request
 about: Suggest an idea for this project
 title: '[FEAT]: '
 type: feature
-label: feature
+labels: feature
 assignees: ''
 
 ---
 
 ## Feature Summary
 
-[Provide a brief and clear summary of the new feature you are requesting]
+[Summarize the requested device support or feature. For hardware support, include the vendor and model and explain how it could be reused across beamlines.]
 
 ## Problem Description
 
@@ -42,7 +42,7 @@ assignees: ''
 
 ## Attachments
 
-[Include any relevant attachments, such as sketches, diagrams, or references that can help the development team understand your feature request better]
+[Include relevant hardware manuals, EPICS PV lists, protocol documentation, example configurations, or diagrams.]
 
 ## Additional Information
 

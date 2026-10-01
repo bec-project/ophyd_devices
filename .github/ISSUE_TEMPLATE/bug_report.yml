@@ -23,13 +23,25 @@ body:
   - type: input
     id: version
     attributes:
-      label: bec_widgets version
-      description: which version of BEC widgets was running?
+      label: ophyd_devices version
+      description: Which version of ophyd_devices was running?
   - type: input
     id: bec-version
     attributes:
       label: bec core version
       description: which version of BEC core was running?
+  - type: input
+    id: device
+    attributes:
+      label: Device class and hardware
+      description: >-
+        Include the device class, hardware model and firmware, or state simulation/mock only.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and device configuration
+      description: >-
+        Include Python/OS versions and a minimal device configuration, with credentials removed.
   - type: textarea
     id: extra
     attributes:
