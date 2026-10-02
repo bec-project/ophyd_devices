@@ -2,6 +2,7 @@
 name: Improvement request
 about: Suggest an improvement to existing functionality
 title: '[IMPROVEMENT]: '
+type: improvement
 labels: improvement
 assignees: ''
 ---
