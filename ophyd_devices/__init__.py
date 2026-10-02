@@ -11,6 +11,7 @@ from .sim.sim_flyer import SimFlyer
 
 SynFlyer = SimFlyer
 from .sim.sim import SynDeviceOPAAS, SynDynamicComponents
+from .sim.sim_async_gauss import SimAsyncGauss2D
 from .sim.sim_frameworks import DeviceProxy, H5ImageReplayProxy, SlitProxy
 from .sim.sim_signals import ReadOnlySignal
 from .sim.sim_waveform import SimWaveform
