@@ -62,6 +62,21 @@ def test_compute_intensity_peaks_at_the_centre(gauss):
     assert far == pytest.approx(gauss.background.get())
 
 
+def test_compute_intensity_adds_noise_when_enabled(gauss):
+    gauss.noise.put(5.0)
+    x = np.zeros(1000)
+    noisy = gauss.compute_intensity(x, x)
+    clean = gauss.compute_intensity(x, x, noise=False)
+    assert np.std(noisy - clean) == pytest.approx(5.0, rel=0.2)
+
+
+def test_complete_without_stage_computes_the_trajectory(gauss):
+    assert gauss._trajectory is None
+    gauss.complete().wait(timeout=5)
+    assert len(gauss._trajectory[0]) == 100
+    assert sum(len(msg.signals["gauss_data_x"]["value"]) for msg in gauss.emitted) == 100
+
+
 def test_stream_emits_all_sub_signals_together(gauss):
     gauss.stage()
     gauss.pre_scan()
