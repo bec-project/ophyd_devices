@@ -2,6 +2,7 @@
 name: Documentation update request
 about: Suggest an update to the docs
 title: '[DOCS]: '
+type: documentation
 labels: documentation
 assignees: ''
 
