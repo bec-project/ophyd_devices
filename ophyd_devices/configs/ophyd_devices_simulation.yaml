@@ -9,6 +9,17 @@ eiger:
   readOnly: false
   softwareTrigger: true
 
+gauss_async:
+  description: Async x/y positions and a 2D Gaussian streamed through one AsyncMultiSignal
+  readoutPriority: async
+  deviceClass: ophyd_devices.SimAsyncGauss2D
+  deviceConfig: {}
+  deviceTags:
+    - detector
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
+
 waveform:
   readoutPriority: async
   deviceClass: ophyd_devices.SimWaveform
