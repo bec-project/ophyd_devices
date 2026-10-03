@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.48.0 (2026-10-03)
+
+### Build System
+
+- **bec-server**: Allow v4 release
+  ([`976130f`](https://github.com/bec-project/ophyd_devices/commit/976130fd6d512d4c3c2ccc0fc9f201cb7871c93d))
+
+### Features
+
+- **sim**: Add SimAsyncGauss2D async multi-signal 2D gaussian device
+  ([`3a345e3`](https://github.com/bec-project/ophyd_devices/commit/3a345e357846f61d84f9f7b7660a80505f6799fb))
+
+### Testing
+
+- **sim**: Cover SimAsyncGauss2D noise and unstaged complete
+  ([`8403413`](https://github.com/bec-project/ophyd_devices/commit/8403413ca80a26de1e99b1446375d9943996d138))
+
+
 ## v1.47.1 (2026-10-01)
 
 ### Bug Fixes
