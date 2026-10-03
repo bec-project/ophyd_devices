@@ -15,6 +15,7 @@ from ophyd.status import MoveStatus as OphydMoveStatus
 from ophyd.status import Status as OphydStatus
 from ophyd.status import StatusBase as OphydStatusBase
 from ophyd.status import WaitTimeoutError
+from pydantic import ValidationError
 from typeguard import TypeCheckError
 
 from ophyd_devices.devices.psi_motor import EpicsMotor
@@ -27,6 +28,7 @@ from ophyd_devices.utils.bec_signals import (
     FileEventSignal,
     PreviewSignal,
     ProgressSignal,
+    SignalInfo,
 )
 from ophyd_devices.utils.psi_device_base_utils import (
     AndStatus,
@@ -252,6 +254,8 @@ def test_utils_bec_message_signal():
     assert signal._bec_message_type == messages.GUIInstructionMessage
     assert signal._readback is None
     assert signal.name == "bec_message_signal"
+    assert SignalInfo is messages.SignalInfo
+    assert type(signal.signal_info) is messages.SignalInfo
     assert signal.describe() == {
         "bec_message_signal": {
             "source": "BECMessageSignal:bec_message_signal",
@@ -268,6 +272,7 @@ def test_utils_bec_message_signal():
                 "signals": [("bec_message_signal", 5)],
                 "signal_metadata": {},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
@@ -288,6 +293,64 @@ def test_utils_bec_message_signal():
     # Put fails with wrong dict
     with pytest.raises(ValueError):
         signal.put({"wrong_key": "wrong_value"})
+
+
+def test_utils_dynamic_signal_metadata_compatibility():
+    """Legacy metadata access forwards to the shared signal model."""
+    signal = DynamicSignal(name="dynamic_signal", max_size=10, parent=Device(name="device"))
+
+    assert signal.signal_metadata is signal.signal_info.signal_metadata
+    signal.signal_metadata["expire"] = 120
+    assert signal.signal_info.signal_metadata["expire"] == 120
+
+    replacement = {"max_size": 25, "expire": 60}
+    with pytest.warns(DeprecationWarning, match=r"signal_info\.signal_metadata"):
+        signal.signal_metadata = replacement
+    assert signal.signal_info.signal_metadata == replacement
+    assert signal.signal_metadata == replacement
+    assert signal.describe()[signal.name]["signal_info"]["signal_metadata"] == replacement
+
+
+def test_utils_bec_message_signal_rejects_invalid_dimension_assignment():
+    signal = BECMessageSignal(
+        name="bec_message_signal", bec_message_type=messages.GUIInstructionMessage
+    )
+
+    with pytest.raises(ValidationError):
+        signal.signal_info.ndim = 3
+
+    assert signal.describe()[signal.name]["signal_info"]["ndim"] == 0
+
+
+def test_utils_bec_message_signal_deprecated_properties():
+    """Legacy dimension and signal attributes forward to signal_info with warnings."""
+    signal = DynamicSignal(
+        name="dynamic_signal", signals=["sig1", "sig2"], max_size=10, parent=Device(name="device")
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"signal_info\.ndim"):
+        assert signal.ndim == 1
+    with pytest.warns(DeprecationWarning, match=r"signal_info\.ndim"):
+        signal.ndim = 2
+    assert signal.signal_info.ndim == 2
+
+    with pytest.warns(DeprecationWarning, match=r"signal_info\.signals"):
+        assert signal.signals is signal.signal_info.signals
+    replacement = [("sig3", 1), ("sig4", 1)]
+    with pytest.warns(DeprecationWarning, match=r"signal_info\.signals"):
+        signal.signals = replacement
+    assert signal.signal_info.signals == replacement
+    assert signal.describe()[signal.name]["signal_info"]["ndim"] == 2
+    assert signal.describe()[signal.name]["signal_info"]["signals"] == replacement
+
+
+def test_utils_bec_message_signal_rejects_invalid_signals_type():
+    with pytest.raises(TypeError, match="Signals must be a list of tuples or strings"):
+        BECMessageSignal(
+            name="bec_message_signal",
+            bec_message_type=messages.GUIInstructionMessage,
+            signals=("sig1",),
+        )
 
 
 @pytest.mark.parametrize(
@@ -335,7 +398,7 @@ def test_utils_dynamic_signal():
     assert signal._bec_message_type == messages.DeviceMessage
     assert signal._readback is None
     assert signal.name == "dynamic_signal"
-    assert signal.signals == [("sig1", 1), ("sig2", 1)]
+    assert signal.signal_info.signals == [("sig1", 1), ("sig2", 1)]
     assert signal.describe() == {
         "dynamic_signal": {
             "source": "BECMessageSignal:dynamic_signal",
@@ -352,6 +415,7 @@ def test_utils_dynamic_signal():
                 "signals": [("sig1", 1), ("sig2", 1)],
                 "signal_metadata": {"max_size": 10},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
@@ -383,6 +447,22 @@ def test_utils_dynamic_signal():
     reading = signal.read()
     msg.metadata["acquisition_group"] = "fly-scan"
     assert reading[signal.name]["value"] == msg
+
+
+def test_utils_dynamic_signal_use_alias():
+    """Test that use_alias is preserved in signal_info."""
+    dev = Device(name="device")
+    signal = DynamicSignal(
+        name="dynamic_signal",
+        signals=["sig1", "sig2"],
+        value=None,
+        max_size=10,
+        parent=dev,
+        use_alias=True,
+    )
+
+    assert signal.signal_info.use_alias is True
+    assert signal.describe()["dynamic_signal"]["signal_info"]["use_alias"] is True
 
 
 def test_utils_dynamic_signal_with_defaults():
@@ -420,7 +500,7 @@ def test_utils_dynamic_signal_with_defaults():
     # Test init variations for single signal
     for signal in [["sig1"], "sig1", None]:
         signal = create_signal(signals=signal)
-        assert signal.signals == [(signal.name, ophyd.Kind.hinted.value)]
+        assert signal.signal_info.signals == [(signal.name, ophyd.Kind.hinted.value)]
 
 
 def test_utils_async_multi_signal():
@@ -448,6 +528,22 @@ def test_utils_async_multi_signal():
     reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
     assert reading_value["signals"] == msg_dict
     assert reading_value["metadata"]["async_update"] == {"type": "add", "max_shape": [None, 1000]}
+
+
+def test_utils_async_multi_signal_use_alias():
+    device = Device(name="device")
+    signal = AsyncMultiSignal(
+        name="async_multi_signal",
+        ndim=1,
+        max_size=1000,
+        signals=["sig1", "sig2"],
+        async_update={"type": "add", "max_shape": [None, 1000]},
+        parent=device,
+        use_alias=True,
+    )
+
+    assert signal.signal_info.use_alias is True
+    assert signal.describe()["async_multi_signal"]["signal_info"]["use_alias"] is True
 
 
 def test_utils_async_signal():
@@ -487,6 +583,21 @@ def test_utils_async_signal_preserves_timestamps(timestamp, method):
     assert signal.get().signals[signal.name]["timestamp"] == timestamp
 
 
+def test_utils_async_signal_use_alias():
+    device = Device(name="device")
+    signal = AsyncSignal(
+        name="async_signal",
+        ndim=1,
+        max_size=1000,
+        async_update={"type": "add", "max_shape": [None, 200]},
+        parent=device,
+        use_alias=True,
+    )
+
+    assert signal.signal_info.use_alias is True
+    assert signal.describe()["async_signal"]["signal_info"]["use_alias"] is True
+
+
 def test_utils_file_event_signal():
     """Test FileEventSignal"""
     dev = Device(name="device")
@@ -511,6 +622,7 @@ def test_utils_file_event_signal():
                 "signals": [("file_event_signal", 5)],
                 "signal_metadata": {},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
@@ -542,7 +654,7 @@ def test_utils_preview_1d_signal():
     """Test Preview1DSignal"""
     dev = Device(name="device")
     signal = PreviewSignal(name="preview_1d_signal", ndim=1, value=None, parent=dev)
-    assert signal.ndim == 1
+    assert signal.signal_info.ndim == 1
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DevicePreviewMessage
     assert signal._readback is None
@@ -563,6 +675,7 @@ def test_utils_preview_1d_signal():
                 "signals": [("preview_1d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
@@ -605,7 +718,7 @@ def test_utils_preview_2d_signal():
     """Test Preview2DSignal"""
     dev = Device(name="device")
     signal = PreviewSignal(name="preview_2d_signal", ndim=2, value=None, parent=dev)
-    assert signal.ndim == 2
+    assert signal.signal_info.ndim == 2
     assert signal.parent == dev
     assert signal._bec_message_type == messages.DevicePreviewMessage
     assert signal._readback is None
@@ -626,6 +739,7 @@ def test_utils_preview_2d_signal():
                 "signals": [("preview_2d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
@@ -727,6 +841,7 @@ def test_utils_progress_signal():
                 "signals": [("progress_signal", 5)],
                 "signal_metadata": {},
                 "acquisition_group": None,
+                "use_alias": False,
             },
         }
     }
