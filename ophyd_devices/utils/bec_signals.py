@@ -9,9 +9,11 @@ from typing import Any, Callable, Literal, Type
 import numpy as np
 from bec_lib import messages
 from bec_lib.logger import bec_logger
-from ophyd import DeviceStatus, Kind, Signal
+from ophyd import DeviceStatus, Kind
 from pydantic import BaseModel, Field, ValidationError
 from typeguard import typechecked
+
+from ophyd_devices.devices.epics_signals import Signal
 
 logger = bec_logger.logger
 # pylint: disable=arguments-differ

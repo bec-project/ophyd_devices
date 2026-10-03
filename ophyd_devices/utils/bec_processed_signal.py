@@ -16,8 +16,10 @@ import inspect
 import time
 from typing import TYPE_CHECKING, Any, Callable, Literal, Self
 
-from ophyd import Component, Device, Signal, SignalRO
+from ophyd import Component, Device
 from pydantic import BaseModel, model_validator
+
+from ophyd_devices.devices.epics_signals import Signal, SignalRO
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_server.device_server.devices.devicemanager import DeviceManagerDS, DSDevice
@@ -42,6 +44,9 @@ def find_device_config_in_session(name: str, device_manager: DeviceManagerDS) ->
     if config is None:
         raise ConnectionError(f"Device '{name}' not found in current session config.")
     return config
+
+
+__all__ = ["ProcessedSignalModel", "BECProcessedSignal"]
 
 
 class ProcessedSignalModel(BaseModel):
