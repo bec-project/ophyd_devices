@@ -21,6 +21,8 @@ from ophyd.status import Status as _Status
 from ophyd.status import StatusBase as _StatusBase
 from ophyd.utils import StatusTimeoutError
 
+from .ophyd_callback_patch import callback_name, object_name
+
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import ScanStatusMessage
     from ophyd import Device, Signal
@@ -42,6 +44,15 @@ __all__ = [
 ]
 
 logger = bec_logger.logger
+
+
+def _log_callback_exception(status, exc: Exception) -> None:
+    """Retain the traceback in callback logs even when only the message is forwarded."""
+    logger.error(
+        f"Error in {type(status).__name__} callback {callback_name(status.callback)} "
+        f"for {object_name(status.obj)}: {exc}\n{traceback.format_exc()}"
+    )
+
 
 set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
 
@@ -426,7 +437,7 @@ class SubscriptionStatus(StatusBase):
         try:
             success = self.callback(*args, **kwargs)
         except Exception as e:
-            logger.error(f"Error in SubscriptionStatus callback: {e}")
+            _log_callback_exception(self, e)
             self.set_exception(e)
             return
         if success:
@@ -539,7 +550,7 @@ class CompareStatus(SubscriptionStatus):
                 )
             return self.op_map[self._operation_success](value, self._value)
         except Exception as e:
-            logger.error(f"Error in CompareStatus callback: {e}")
+            _log_callback_exception(self, e)
             self.set_exception(e)
             return False
 
@@ -594,7 +605,7 @@ class ExceptionStatus(CompareStatus):
                 )
             return False
         except Exception as e:
-            logger.error(f"Error in ExceptionStatus callback: {e}")
+            _log_callback_exception(self, e)
             self.set_exception(e)
             return False
 
@@ -694,7 +705,7 @@ class TransitionStatus(SubscriptionStatus):
             return self._index >= len(self._transitions)
         except Exception as e:
             # Catch any exception if the value comparison fails, e.g. value is numpy array
-            logger.error(f"Error in TransitionStatus callback: {e}")
+            _log_callback_exception(self, e)
             self.set_exception(e)
             return False
 
