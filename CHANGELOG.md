@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v1.49.0 (2026-10-03)
+
+### Chores
+
+- Add gh templates
+  ([`cc275d7`](https://github.com/bec-project/ophyd_devices/commit/cc275d76d5e3ae605c7923596a40f0f70609389c))
+
+- Set issue types in issue templates
+  ([`a0f36dd`](https://github.com/bec-project/ophyd_devices/commit/a0f36dd785d47bca210cb7c9fbb6a825121896c9))
+
+### Documentation
+
+- **AGENTS**: Update repository guidelines for clarity and structure
+  ([`d2e1bf8`](https://github.com/bec-project/ophyd_devices/commit/d2e1bf8dfd55bb3f5a8a039578d27af7e14df06f))
+
+### Features
+
+- **agents**: Curated AGENTS.md and CLAUDE.md files added with best practives for the project
+  ([`1e3b344`](https://github.com/bec-project/ophyd_devices/commit/1e3b344f68142721272cce3f86e106e45c5f97e2))
+
+
 ## v1.48.0 (2026-10-03)
 
 ### Build System
