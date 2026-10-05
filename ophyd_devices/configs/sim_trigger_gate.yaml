@@ -1,0 +1,9 @@
+# Test-only gate: call arm() before a scan, then release() or stop() its third trigger.
+queue_control_gate:
+  description: Simulated trigger gate for deterministic queue-control tests
+  deviceClass: ophyd_devices.sim.SimTriggerWithGate
+  deviceConfig: {}
+  readoutPriority: monitored
+  softwareTrigger: true
+  enabled: true
+  readOnly: false
