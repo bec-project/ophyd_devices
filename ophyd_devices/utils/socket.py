@@ -232,9 +232,14 @@ class SocketIO:
                 f"Could not connect to {self.host}:{self.port} within {time.time()-start_time:.2f} seconds"
             )
 
-    def _put(self, msg_bytes):
-        logger.debug(f"put message: {msg_bytes}")
-        return self.sock.send(msg_bytes)
+    def put(self, msg: bytes) -> None:
+        """Send all bytes to the socket, raising if the send fails."""
+        logger.debug(f"put message: {msg}")
+        if self.sock is None:
+            raise ConnectionError(
+                "Socket is not connected. Call 'connect()' to establish a connection."
+            )
+        self.sock.sendall(msg)
 
     def _recv(self, buffer_length=1024):
         msg = self.sock.recv(buffer_length)
@@ -245,11 +250,17 @@ class SocketIO:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(self.socket_timeout)
 
-    def put(self, msg):
-        return self._put(msg)
-
-    def receive(self, buffer_length=1024):
-        return self._recv(buffer_length=buffer_length)
+    def receive(self, buffer_length=1024, *, timeout: float | None = None):
+        """Receive data, optionally limiting this read to the remaining response time."""
+        if timeout is None:
+            return self._recv(buffer_length=buffer_length)
+        previous_timeout = self.sock.gettimeout()
+        read_timeout = timeout if previous_timeout is None else min(timeout, previous_timeout)
+        self.sock.settimeout(read_timeout)
+        try:
+            return self._recv(buffer_length=buffer_length)
+        finally:
+            self.sock.settimeout(previous_timeout)
 
     def open(self, timeout: int = 10):
         """
@@ -279,8 +290,8 @@ class SocketMock:
     def connect(self, timeout: int = 10):
         print(f"connecting to {self.host} port {self.port}")
 
-    def _put(self, msg_bytes):
-        self.buffer_put = msg_bytes
+    def put(self, msg):
+        self.buffer_put = msg
         print(self.buffer_put)
 
     def _recv(self, buffer_length=1024):
@@ -296,10 +307,7 @@ class SocketMock:
     def _initialize_socket(self):
         pass
 
-    def put(self, msg):
-        return self._put(msg)
-
-    def receive(self, buffer_length=1024):
+    def receive(self, buffer_length=1024, *, timeout: float | None = None):
         return self._recv(buffer_length=buffer_length)
 
     def open(self, timeout: int = 10):
