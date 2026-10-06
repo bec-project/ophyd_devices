@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.50.1 (2026-10-06)
+
+### Bug Fixes
+
+- Include traceback context in ophyd callback logs
+  ([`2285364`](https://github.com/bec-project/ophyd_devices/commit/2285364282b210094814b59a3b1bad58985bf163))
+
+
 ## v1.50.0 (2026-10-06)
 
 ### Features
