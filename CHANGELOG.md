@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.50.0 (2026-10-06)
+
+### Features
+
+- **bec signals**: Expose signal_info as proper model
+  ([`1134021`](https://github.com/bec-project/ophyd_devices/commit/1134021d0d82c145a42c0a67cfaa6b878247596d))
+
+
 ## v1.49.0 (2026-10-03)
 
 ### Chores
