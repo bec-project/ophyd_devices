@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.51.0 (2026-10-06)
+
+### Features
+
+- **undulator**: Add alpha and harmonic control with extensible validations
+  ([`a753407`](https://github.com/bec-project/ophyd_devices/commit/a7534078e54c972289f994e9718b0fdc60c66231))
+
+
 ## v1.50.1 (2026-10-06)
 
 ### Bug Fixes
