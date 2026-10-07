@@ -276,7 +276,7 @@ class PandaBox(PSIDeviceBase):
         self.data_thread_run_event = threading.Event()
 
         # Acquisition group of the PandaBox data.
-        self._acquisition_group = "panda"
+        self._correlation_group = "panda"
 
         # Timeouts for wait operations in seconds
         self._stage_timeout_in_s = 3
@@ -724,7 +724,7 @@ class PandaBox(PSIDeviceBase):
             data (FrameData): The frame data received from the PandaBox. This contains the actual data acquired from the PandaBox.
         """
         out = self.convert_frame_data(frame_data=data)
-        self.data.put(out, acquisition_group=self._acquisition_group)
+        self.data.put(out, correlation_group=self._correlation_group)
 
     def _get_signal_names_allowed_for_capture(self) -> list[str]:
         """Utility method to get a list of all signal keys that CAN BE CONFIGURED for capture on the PandaBox."""
