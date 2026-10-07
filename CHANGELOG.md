@@ -148,7 +148,7 @@
 
 ### Bug Fixes
 
-- **sim_waveform**: Add acquisition_group to waveform_0d component
+- **sim_waveform**: Add correlation_group to waveform_0d component
   ([`42ea005`](https://github.com/bec-project/ophyd_devices/commit/42ea005769d1ce7bb2ea893b728245edbfeff17d))
 
 ### Documentation
@@ -901,7 +901,7 @@ Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
 
 ### Features
 
-- **bec-signals**: Add acquisition group to BECMessageSignal and SignalInfo
+- **bec-signals**: Add correlation group to BECMessageSignal and SignalInfo
   ([`9b51b22`](https://github.com/bec-project/ophyd_devices/commit/9b51b22671a6ff2b78576f75834c061d6835d8af))
 
 ### Refactoring

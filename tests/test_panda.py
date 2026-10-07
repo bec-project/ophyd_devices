@@ -171,7 +171,7 @@ def test_panda_receive_frame_data(panda_box, _signal_aliases):
         }
         md = {
             "async_update": {"type": "add", "max_shape": [None]},
-            "acquisition_group": panda_box._acquisition_group,
+            "correlation_group": panda_box._correlation_group,
         }
         d = panda_box.data.read()
         assert d[panda_box.data.name]["value"].metadata == md, "Metadata mismatch"
@@ -214,7 +214,7 @@ def test_panda_on_destroy(panda_box):
 
 
 def test_panda_on_stage_on_unstage(panda_box):
-    """Test that on_stage sets the acquisition group."""
+    """Test that on_stage sets the correlation group."""
     panda_box.panda_state = PandaState.DISARMED
     panda_box.stage()
     assert panda_box.data_thread_run_event.is_set(), "Data thread run event not set"
@@ -308,7 +308,7 @@ def test_panda_get_signal_names_configured_for_capture(panda_box):
 
 
 def test_panda_pre_scan_status_callback(panda_box):
-    """Test that pre_scan_status_callback sets the acquisition group."""
+    """Test that pre_scan_status_callback sets the correlation group."""
     with mock.patch.object(panda_box, "_arm") as mock_arm:
         # I. Called with status that is not done, should do nothing
         status = StatusBase(obj=panda_box)

@@ -53,7 +53,7 @@ class BECMessageSignal(Signal):
         ndim: Literal[0, 1, 2] | None = None,
         scope: Literal["scan", "continuous"] = "scan",
         role: Literal["main", "preview", "diagnostic", "file_event", "progress"] = "main",
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         enabled: bool = True,
         use_alias: bool = False,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
@@ -93,7 +93,7 @@ class BECMessageSignal(Signal):
             use_alias=use_alias,
             signals=self._unify_signals(signals),
             signal_metadata=signal_metadata or {},
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
         )
         self._root_resolved_signal_key = root_resolved_signal_key
         self._register_root_resolved_signal()
@@ -722,7 +722,7 @@ class DynamicSignal(BECMessageSignal):
         signals: list[str] | Callable[[], list[str]] | str | None = None,
         value: messages.DeviceMessage | dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         use_alias: bool = False,
         **kwargs,
     ):
@@ -734,7 +734,7 @@ class DynamicSignal(BECMessageSignal):
             max_size (int): The maximum number of entries in the signal group. This is required for BEC to know how much data to expect.
             signal_names (list[str] | Callable): Names of all signals. Can be a list or a callable.
             value (DeviceMessage | dict | None): The initial value of the signal. Defaults to None.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
@@ -780,7 +780,7 @@ class DynamicSignal(BECMessageSignal):
             signals=signals,
             value=value,
             bec_message_type=kwargs.pop("bec_message_type", messages.DeviceMessage),
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             signal_metadata={"max_size": max_size},
             **kwargs,
         )
@@ -792,7 +792,7 @@ class DynamicSignal(BECMessageSignal):
         *,
         metadata: dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         **kwargs,
     ) -> None:
         """
@@ -806,12 +806,12 @@ class DynamicSignal(BECMessageSignal):
             value (dict | DeviceMessage): The dynamic device data.
             metadata (dict | None): Additional metadata.
             async_update (dict[Literal["type", "max_shape", "index"], Any] | None): Additional metadata for asynchronous updates.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
         """
         if isinstance(value, messages.DeviceMessage):
-            if metadata is not None or async_update is not None or acquisition_group is not None:
+            if metadata is not None or async_update is not None or correlation_group is not None:
                 logger.warning(
-                    "Ignoring metadata, async_update and acquisition_group arguments when value is a DeviceMessage."
+                    "Ignoring metadata, async_update and correlation_group arguments when value is a DeviceMessage."
                 )
             self._check_signals(value)
             self._check_async_update(value)
@@ -822,10 +822,10 @@ class DynamicSignal(BECMessageSignal):
                 metadata["async_update"] = async_update
             elif self.async_update is not None:
                 metadata["async_update"] = self.async_update
-            if acquisition_group is not None:
-                metadata["acquisition_group"] = acquisition_group
-            elif self.signal_info.acquisition_group is not None:
-                metadata["acquisition_group"] = self.signal_info.acquisition_group
+            if correlation_group is not None:
+                metadata["correlation_group"] = correlation_group
+            elif self.signal_info.correlation_group is not None:
+                metadata["correlation_group"] = self.signal_info.correlation_group
 
             msg = messages.DeviceMessage(signals=value, metadata=metadata)
         except ValidationError as exc:
@@ -909,7 +909,7 @@ class DynamicSignal(BECMessageSignal):
         *,
         metadata: dict | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         **kwargs,
     ) -> DeviceStatus:
         """
@@ -927,7 +927,7 @@ class DynamicSignal(BECMessageSignal):
             value,
             metadata=metadata,
             async_update=async_update,
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             **kwargs,
         )
         status = DeviceStatus(device=self)
@@ -948,7 +948,7 @@ class AsyncMultiSignal(DynamicSignal):
         max_size: int,
         signals: list[str] | Callable[[], list[str]],
         value: messages.DeviceMessage | dict | None = None,
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         use_alias: bool = False,
         **kwargs,
@@ -962,7 +962,7 @@ class AsyncMultiSignal(DynamicSignal):
             max_size (int): The maximum size of the signal buffer. For ndim=2, this should be kept small to avoid large memory usage.
             signals (list[str] | Callable[[], list[str]]): The names of all sub-signals. Names will be prefixed with the group name.
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
@@ -1009,7 +1009,7 @@ class AsyncMultiSignal(DynamicSignal):
             bec_message_type=messages.DeviceMessage,
             async_update=async_update,
             max_size=max_size,
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             use_alias=use_alias,
             signals=signals,
             **kwargs,
@@ -1028,7 +1028,7 @@ class AsyncSignal(DynamicSignal):
         ndim: Literal[0, 1, 2],
         max_size: int,
         value: messages.DeviceMessage | dict | None = None,
-        acquisition_group: Literal["baseline", "monitored"] | str | None = None,
+        correlation_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         use_alias: bool = False,
         **kwargs,
@@ -1041,7 +1041,7 @@ class AsyncSignal(DynamicSignal):
             ndim (Literal[0, 1, 2]): The number of dimensions of the signals.
             max_size (int): The maximum size of the signal buffer. For ndim=2, this should be kept small to avoid large memory usage.
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal group.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
@@ -1083,7 +1083,7 @@ class AsyncSignal(DynamicSignal):
             bec_message_type=messages.DeviceMessage,
             async_update=async_update,
             max_size=max_size,
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             use_alias=use_alias,
             signals=None,
             **kwargs,
@@ -1094,7 +1094,7 @@ class AsyncSignal(DynamicSignal):
         value: Any,
         timestamp: float | list[float] | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
-        acquisition_group: str | None = None,
+        correlation_group: str | None = None,
         **kwargs,
     ) -> None:
         """
@@ -1104,13 +1104,13 @@ class AsyncSignal(DynamicSignal):
             value (Any): The value to put.
             timestamp (float | list[float] | None): A timestamp or per-reading timestamps. If None, the current time is used.
             async_update (dict[Literal["type", "max_shape", "index"], Any] | None): Additional metadata for asynchronous updates. Please refer to the class docstring for details.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal.
         """
         timestamp = time.time() if timestamp is None else timestamp
         super().put(
             value={self.name: {"value": value, "timestamp": timestamp}},
             async_update=async_update,
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             **kwargs,
         )
 
@@ -1119,7 +1119,7 @@ class AsyncSignal(DynamicSignal):
         value: Any,
         timestamp: float | list[float] | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
-        acquisition_group: str | None = None,
+        correlation_group: str | None = None,
         **kwargs,
     ) -> DeviceStatus:
         """
@@ -1129,13 +1129,13 @@ class AsyncSignal(DynamicSignal):
             value (Any): The value to put.
             timestamp (float | list[float] | None): A timestamp or per-reading timestamps. If None, the current time is used.
             async_update (dict[Literal["type", "max_shape", "index"], Any] | None): Additional metadata for asynchronous updates. Please refer to the class docstring for details.
-            acquisition_group (Literal["baseline", "monitored"] | str | None): The acquisition group of the signal.
+            correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal.
         """
         self.put(
             value=value,
             timestamp=timestamp,
             async_update=async_update,
-            acquisition_group=acquisition_group,
+            correlation_group=correlation_group,
             **kwargs,
         )
         status = DeviceStatus(device=self)
