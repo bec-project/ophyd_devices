@@ -59,7 +59,7 @@ class SimWaveform(Device):
         ndim=0,
         max_size=1000,
         kind=Kind.hinted,
-        acquisition_group="monitored",
+        correlation_group="monitored",
     )
     data = Cpt(AsyncSignal, name="data", ndim=1, max_size=1000)
     # add extends the stream, add_slice assembles waveforms, replace keeps the latest waveform.

@@ -271,7 +271,7 @@ def test_utils_bec_message_signal():
                 "rpc_access": False,
                 "signals": [("bec_message_signal", 5)],
                 "signal_metadata": {},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
@@ -414,7 +414,7 @@ def test_utils_dynamic_signal():
                 "rpc_access": False,
                 "signals": [("sig1", 1), ("sig2", 1)],
                 "signal_metadata": {"max_size": 10},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
@@ -442,10 +442,10 @@ def test_utils_dynamic_signal():
     with pytest.raises(TypeCheckError):
         signal.put({"wrong_key": "wrong_value"})
 
-    # Set with acquisition group
-    signal.put(msg, acquisition_group="fly-scan")
+    # Set with correlation group
+    signal.put(msg, correlation_group="fly-scan")
     reading = signal.read()
-    msg.metadata["acquisition_group"] = "fly-scan"
+    msg.metadata["correlation_group"] = "fly-scan"
     assert reading[signal.name]["value"] == msg
 
 
@@ -467,7 +467,7 @@ def test_utils_dynamic_signal_use_alias():
 
 def test_utils_dynamic_signal_with_defaults():
     """
-    Test DynamicSignal with async_update and acquisition group defaults. If only
+    Test DynamicSignal with async_update and correlation group defaults. If only
     one sub-signal is provided for the dynamic signal, the name of the sub-signal
     will be used in the signals dict and a warning will be issued that the sub-signal
     name is being ignored.
@@ -481,7 +481,7 @@ def test_utils_dynamic_signal_with_defaults():
         value=None,
         max_size=10,
         async_update={"type": "add", "max_shape": [None, 1000]},
-        acquisition_group="fly-scanning",
+        correlation_group="fly-scanning",
     )
     signal = create_signal(signals=["sig1", "sig2"])
     val = np.random.random(1000)
@@ -491,11 +491,11 @@ def test_utils_dynamic_signal_with_defaults():
     reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
     assert reading_value["signals"] == msg_dict
     assert reading_value["metadata"]["async_update"] == {"type": "add", "max_shape": [None, 1000]}
-    assert reading_value["metadata"]["acquisition_group"] == "fly-scanning"
+    assert reading_value["metadata"]["correlation_group"] == "fly-scanning"
 
-    signal.put(msg_dict, acquisition_group="different-group")
+    signal.put(msg_dict, correlation_group="different-group")
     reading = signal.read()
-    assert reading[signal.name]["value"].metadata["acquisition_group"] == "different-group"
+    assert reading[signal.name]["value"].metadata["correlation_group"] == "different-group"
 
     # Test init variations for single signal
     for signal in [["sig1"], "sig1", None]:
@@ -559,7 +559,7 @@ def test_utils_async_signal():
     signal.put(
         val,
         async_update={"type": "add_slice", "max_shape": [None, 1000], "index": 1},
-        acquisition_group="scan",
+        correlation_group="scan",
     )
     reading = signal.read()
     reading_value = reading[signal.name]["value"].model_dump(exclude={"timestamp"})
@@ -569,7 +569,7 @@ def test_utils_async_signal():
         "max_shape": [None, 1000],
         "index": 1,
     }
-    assert reading_value["metadata"]["acquisition_group"] == "scan"
+    assert reading_value["metadata"]["correlation_group"] == "scan"
 
 
 @pytest.mark.parametrize("timestamp", [0.0, [1.0, 2.0]])
@@ -621,7 +621,7 @@ def test_utils_file_event_signal():
                 "rpc_access": False,
                 "signals": [("file_event_signal", 5)],
                 "signal_metadata": {},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
@@ -674,7 +674,7 @@ def test_utils_preview_1d_signal():
                 "rpc_access": False,
                 "signals": [("preview_1d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
@@ -738,7 +738,7 @@ def test_utils_preview_2d_signal():
                 "rpc_access": False,
                 "signals": [("preview_2d_signal", 5)],
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
@@ -840,7 +840,7 @@ def test_utils_progress_signal():
                 "rpc_access": False,
                 "signals": [("progress_signal", 5)],
                 "signal_metadata": {},
-                "acquisition_group": None,
+                "correlation_group": None,
                 "use_alias": False,
             },
         }
