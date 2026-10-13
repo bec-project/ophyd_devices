@@ -92,6 +92,98 @@ def test_epics_motor_move(mock_epics_motor):
         assert isinstance(status.exception(), RuntimeError)
 
 
+@pytest.mark.parametrize("motor_class", [EpicsMotor, EpicsMotorEC])
+@pytest.mark.parametrize(
+    "tolerance, target, actual, success",
+    [
+        (None, 5, 2, True),  # Default tolerance is disabled.
+        (-0.5, 5, 2, True),
+        (0.25, 5, 4.875, True),
+        (0.25, 5, 4.75, True),  # The boundary is inclusive.
+        (0.25, 5, 4.5, False),
+        (0.25, 5, 5.5, False),
+        (0, 5, 5, True),
+        (0, 5, 4.999, False),
+        (0.25, 100000, 99999.5, False),  # No relative tolerance at large positions.
+    ],
+)
+def test_epics_motor_move_tolerance(motor_class, tolerance, target, actual, success):
+    """DMOV must fail a move outside an enabled absolute position tolerance."""
+    with patched_device(motor_class, name="test_motor", prefix="SIM:MOTOR") as motor:
+        assert motor.tolerance.get() == -1
+        assert motor.tolerance.kind == ophyd.Kind.config
+        assert "test_motor_tolerance" in motor.read_configuration()
+        assert "test_motor_tolerance" not in motor.read()
+        if tolerance is not None:
+            motor.tolerance.put(tolerance)
+        motor.user_setpoint._metadata["lower_ctrl_limit"] = -200000
+        motor.user_setpoint._metadata["upper_ctrl_limit"] = 200000
+        motor.motor_mode.put(SpmgStates.GO)
+        motor.user_readback._read_pv.set_severity(ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM)
+        motor.user_readback._metadata["severity"] = ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM
+
+        status = motor.move(target)
+        motor.motor_done_move._read_pv.mock_data = 0
+        assert not status.done
+        motor.user_readback._read_pv.mock_data = actual
+        assert not status.done
+        motor.motor_done_move._read_pv.mock_data = 1
+
+        if success:
+            status.wait(timeout=5)
+        else:
+            with pytest.raises(RuntimeError, match="stopped at .*expected .*tolerance:"):
+                status.wait(timeout=5)
+        assert status.done
+        assert status.success is success
+
+
+@pytest.mark.parametrize("motor_class", [EpicsMotor, EpicsMotorEC])
+def test_epics_motor_tolerance_uses_requested_target(motor_class):
+    """An IOC setpoint reset must not hide a move that stopped short of its target."""
+    with patched_device(motor_class, name="test_motor", prefix="SIM:MOTOR") as motor:
+        motor.tolerance.put(0.01)
+        motor.motor_mode.put(SpmgStates.GO)
+        motor.user_setpoint._metadata["lower_ctrl_limit"] = -10
+        motor.user_setpoint._metadata["upper_ctrl_limit"] = 10
+        motor.user_readback._read_pv.set_severity(ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM)
+        motor.user_readback._metadata["severity"] = ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM
+
+        status = motor.move(5)
+        motor.motor_done_move._read_pv.mock_data = 0
+        motor.user_readback._read_pv.mock_data = 2
+        # The motor record synchronizes VAL to RBV after an external stop.
+        motor.user_setpoint._read_pv.mock_data = 2
+        motor.motor_done_move._read_pv.mock_data = 1
+
+        with pytest.raises(RuntimeError, match="stopped at 2, expected 5"):
+            status.wait(timeout=5)
+        assert not status.success
+
+        # A subsequent move must use its own target, not the previous one.
+        status = motor.move(6)
+        motor.motor_done_move._read_pv.mock_data = 0
+        motor.user_readback._read_pv.mock_data = 6
+        motor.motor_done_move._read_pv.mock_data = 1
+        status.wait(timeout=5)
+        assert status.success
+
+
+def test_epics_motor_tolerance_preserves_limit_failure(mock_epics_motor):
+    """An existing motion error takes precedence over the position tolerance failure."""
+    motor = mock_epics_motor
+    motor.tolerance.put(0)
+    motor.user_readback._read_pv.set_severity(ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM)
+    motor.user_readback._metadata["severity"] = ophyd.utils.epics_pvs.AlarmSeverity.NO_ALARM
+    motor.user_setpoint._read_pv.mock_data = 5
+    motor.low_limit_switch._read_pv.mock_data = 1
+
+    success, exception = motor._check_motion_status()
+
+    assert not success
+    assert "low limit switch" in str(exception)
+
+
 def test_move_epics_motor_ec(mock_epics_motor_ec):
     """Test the move method of EpicsMotorEC."""
     motor_ec = mock_epics_motor_ec
