@@ -358,12 +358,20 @@ class EpicsMotorEC(EpicsMotor):
     def _check_motion_status(self) -> tuple[bool, Exception | None]:
         success, exception = super()._check_motion_status()
         if not success:
-            # Additionally check for ECMC errors
-            error = self.error.get(use_monitor=False)
-            if error:
+            try:
+                # Additionally check for ECMC errors
+                error = self.error.get(use_monitor=False)
+                if error:
+                    success = False
+                    message_text = self.message_text.get(use_monitor=False)
+                    exception = RuntimeError(
+                        f"Motor {self.name} reported ECMC error '{message_text}'"
+                    )
+            except Exception as e:
                 success = False
-                message_text = self.message_text.get(use_monitor=False)
-                exception = RuntimeError(f"Motor {self.name} reported ECMC error '{message_text}'")
+                exception = RuntimeError(
+                    f"Motor {self.name} failed to read ECMC error status after motion: {e}"
+                )
         return success, exception
 
     def move(self, position, wait=False, **kwargs) -> MoveStatus:
