@@ -91,6 +91,12 @@ class EpicsMotor(OphydEpicsMotor):
         Signal, value=0, kind=Kind.config, doc="Settle time after move completion in seconds"
     )
     timeout = Cpt(Signal, kind=Kind.config, doc="Timeout for move completion in seconds.")
+    tolerance = Cpt(
+        Signal,
+        value=-1,
+        kind=Kind.config,
+        doc="Maximum final position error in engineering units; negative values disable the check.",
+    )
 
     def __init__(
         self,
@@ -103,6 +109,7 @@ class EpicsMotor(OphydEpicsMotor):
         parent=None,
         **kwargs,
     ):
+        self._move_target = None
         super().__init__(
             prefix=prefix,
             name=name,
@@ -164,6 +171,23 @@ class EpicsMotor(OphydEpicsMotor):
                     severity,
                 )
 
+        tolerance = self.tolerance.get()
+        if success and tolerance >= 0 and self._move_target is not None:
+            try:
+                target = self._move_target
+                actual = self.user_readback.get(use_monitor=False)
+                if not np.isclose(actual, target, atol=tolerance, rtol=0):
+                    success = False
+                    exc = RuntimeError(
+                        f"Motor {self.name} stopped at {actual}, expected {target} "
+                        f"(tolerance: {tolerance})"
+                    )
+            except Exception as e:
+                success = False
+                exc = RuntimeError(
+                    f"Motor {self.name} failed to read back position after motion: {e}"
+                )
+
         return success, exc
 
     def _move_changed(self, timestamp=None, value=None, sub_type=None, **kwargs):
@@ -188,6 +212,7 @@ class EpicsMotor(OphydEpicsMotor):
 
     def _done_moving(self, success=True, timestamp=None, value=None, **kwargs):
         """Overload PositionerBase._done_moving to pass kwargs to _SUB_REQ_DONE callbacks."""
+        self._move_target = None
         if success:
             self._run_subs(sub_type=self.SUB_DONE, timestamp=timestamp, value=value)
 
@@ -243,6 +268,7 @@ class EpicsMotor(OphydEpicsMotor):
 
         self.subscribe(set_status, event_type=self._SUB_REQ_DONE, run=False)
 
+        self._move_target = position
         self.user_setpoint.put(position, wait=False)
         try:
             if wait:
