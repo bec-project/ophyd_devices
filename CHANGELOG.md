@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.52.0 (2026-10-14)
+
+### Bug Fixes
+
+- **epics_motor**: Improve error handling in motion status check
+  ([`4e62211`](https://github.com/bec-project/ophyd_devices/commit/4e62211469d7fbcf3c0ea5c90d2514bd4ce4fd88))
+
+### Documentation
+
+- Update device list
+  ([`2141d54`](https://github.com/bec-project/ophyd_devices/commit/2141d541b915562deb9d530d6d41ebb8e4585b1d))
+
+### Features
+
+- **psi motor**: Add optional tolerance signal
+  ([`446aba4`](https://github.com/bec-project/ophyd_devices/commit/446aba46065c4429cf01b96b1e2b3d445cb124cb))
+
+
 ## v1.51.0 (2026-10-06)
 
 ### Features
