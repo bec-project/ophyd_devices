@@ -78,6 +78,13 @@ class BECMessageSignal(Signal):
         kwargs.pop("dtype", None)  # Ignore dtype if specified
         kwargs.pop("shape", None)  # Ignore shape if specified
         kind = kwargs.pop("kind", None)  # Ignore kind if specified
+        acquisition_group = kwargs.pop("acquisition_group", None)
+        if acquisition_group is not None:
+            logger.warning(
+                "The 'acquisition_group' argument is deprecated for BECMessageSignal. Please use 'correlation_group' instead."
+            )
+            if correlation_group is None:
+                correlation_group = acquisition_group
         if kind is not None:
             logger.warning("The 'kind' argument is ignored for BECMessageSignal. Please remove it.")
         super().__init__(name=name, value=value, shape=(), dtype=None, kind=Kind.omitted, **kwargs)
