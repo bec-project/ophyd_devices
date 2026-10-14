@@ -8,6 +8,8 @@ import ophyd
 import pytest
 from bec_lib import messages
 from bec_lib.bec_errors import ExceptionWithErrorInfo
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.serialization import MsgpackSerialization
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsSignalRO, Signal
 from ophyd.status import DeviceStatus as OphydDeviceStatus
@@ -273,6 +275,7 @@ def test_utils_bec_message_signal():
                 "signal_metadata": {},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
@@ -293,6 +296,108 @@ def test_utils_bec_message_signal():
     # Put fails with wrong dict
     with pytest.raises(ValueError):
         signal.put({"wrong_key": "wrong_value"})
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(
+            partial(BECMessageSignal, bec_message_type=messages.GUIInstructionMessage), id="message"
+        ),
+        pytest.param(partial(DynamicSignal, max_size=10), id="dynamic"),
+        pytest.param(partial(AsyncSignal, ndim=1, max_size=10), id="async"),
+        pytest.param(
+            partial(AsyncMultiSignal, ndim=1, max_size=10, signals=["sig1", "sig2"]),
+            id="async-multi",
+        ),
+        pytest.param(partial(PreviewSignal, ndim=2), id="preview"),
+        pytest.param(ProgressSignal, id="progress"),
+        pytest.param(FileEventSignal, id="file-event"),
+    ]
+)
+def bec_signal(request):
+    """Instantiate each BEC signal family with its own parent device."""
+    signal = request.param(name="data", parent=Device(name="device"), correlation_group="monitored")
+    yield signal
+    signal.destroy()
+
+
+@pytest.mark.parametrize("transport_kind", ["unavailable", "empty", "redis", "zmq", "both"])
+def test_utils_bec_signal_transports(bec_signal, transport_kind):
+    """Publisher-populated transports survive describe() and BEC message serialization."""
+    assert bec_signal.signal_info.transports is None
+    endpoint = MessageEndpoints.device_preview("device", bec_signal.name)
+    redis = messages.RedisSignalTransport.from_endpoint_info(endpoint)
+    zmq = messages.ZMQSignalTransport(
+        address="tcp://localhost:5555", topic="preview", encoder="bec-v1"
+    )
+    transports = {
+        "unavailable": None,
+        "empty": [],
+        "redis": [redis],
+        "zmq": [zmq],
+        "both": [redis, zmq],
+    }[transport_kind]
+    # Publishers may supply either typed descriptors or their serialized dictionaries.
+    bec_signal.signal_info.transports = (
+        [transport.model_dump() for transport in transports] if transports is not None else None
+    )
+    described = bec_signal.describe()[bec_signal.name]["signal_info"]
+    expected = (
+        [transport.model_dump() for transport in transports] if transports is not None else None
+    )
+    assert described["transports"] == expected
+    assert described["correlation_group"] == "monitored"
+    assert "acquisition_group" not in described
+    assert messages.SignalInfo.model_validate(described) == bec_signal.signal_info
+
+    message = messages.DeviceInfoMessage(device="device", info=described)
+    restored = messages.DeviceInfoMessage.model_validate_json(message.model_dump_json())
+    restored_info = messages.SignalInfo.model_validate(restored.info)
+    assert restored_info == bec_signal.signal_info
+    assert restored_info.transports == transports
+
+    snapshot = messages.ScanDeviceInfoMessage(
+        scan_id="scan-id",
+        devices={
+            "device": messages.DeviceRuntimeInfo(signal_info={"data": bec_signal.signal_info})
+        },
+    )
+    restored_snapshot = MsgpackSerialization.loads(MsgpackSerialization.dumps(snapshot))
+    assert restored_snapshot.devices["device"].signal_info["data"] == bec_signal.signal_info
+
+    # Runtime replacement must not leave stale routes in subsequent descriptions.
+    bec_signal.signal_info.transports = []
+    assert bec_signal.describe()[bec_signal.name]["signal_info"]["transports"] == []
+    bec_signal.signal_info.transports = None
+    assert bec_signal.describe()[bec_signal.name]["signal_info"]["transports"] is None
+
+
+@pytest.mark.parametrize(
+    "descriptor",
+    [
+        {"transport": "unknown"},
+        {"transport": "redis", "endpoint": "preview"},
+        {"transport": "zmq", "address": "tcp://localhost:5555"},
+        {
+            "transport": "zmq",
+            "address": "tcp://localhost:5555",
+            "socket_type": "pull",
+            "topic": "preview",
+            "encoder": "bec-v1",
+        },
+    ],
+)
+def test_utils_bec_signal_rejects_invalid_transports(bec_signal, descriptor):
+    """Invalid publisher descriptors fail without changing the signal's current routes."""
+    transport = messages.ZMQSignalTransport(
+        address="tcp://localhost:5555", socket_type="pull", connection_mode="bind", encoder="bec-v1"
+    )
+    bec_signal.signal_info.transports = [transport]
+    with pytest.raises(ValidationError):
+        bec_signal.signal_info.transports = [descriptor]
+    assert bec_signal.describe()[bec_signal.name]["signal_info"]["transports"] == [
+        transport.model_dump()
+    ]
 
 
 def test_utils_dynamic_signal_metadata_compatibility():
@@ -416,6 +521,7 @@ def test_utils_dynamic_signal():
                 "signal_metadata": {"max_size": 10},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
@@ -442,11 +548,11 @@ def test_utils_dynamic_signal():
     with pytest.raises(TypeCheckError):
         signal.put({"wrong_key": "wrong_value"})
 
-    # Set with correlation group
+    # A prebuilt message retains its own metadata; keyword overrides are ignored.
     signal.put(msg, correlation_group="fly-scan")
     reading = signal.read()
-    msg.metadata["correlation_group"] = "fly-scan"
     assert reading[signal.name]["value"] == msg
+    assert "correlation_group" not in reading[signal.name]["value"].metadata
 
 
 def test_utils_dynamic_signal_use_alias():
@@ -623,6 +729,7 @@ def test_utils_file_event_signal():
                 "signal_metadata": {},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
@@ -676,6 +783,7 @@ def test_utils_preview_1d_signal():
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
@@ -740,6 +848,7 @@ def test_utils_preview_2d_signal():
                 "signal_metadata": {"num_rotation_90": 0, "transpose": False},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
@@ -842,6 +951,7 @@ def test_utils_progress_signal():
                 "signal_metadata": {},
                 "correlation_group": None,
                 "use_alias": False,
+                "transports": None,
             },
         }
     }
