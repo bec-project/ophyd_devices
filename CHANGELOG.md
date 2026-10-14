@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v1.52.1 (2026-10-14)
+
+### Bug Fixes
+
+- Map acquisition_group to acquisition_group
+  ([`5c122f4`](https://github.com/bec-project/ophyd_devices/commit/5c122f4a7c0b662752be478ad8a9988e85f6638c))
+
+- **signals**: Rename acquisition_group to correlation_group
+  ([`b556271`](https://github.com/bec-project/ophyd_devices/commit/b556271159d360bbb6eb384bbc7ba4c8be673f5a))
+
+### Build System
+
+- Update the min bec dependency to >=4.2
+  ([`8fa3826`](https://github.com/bec-project/ophyd_devices/commit/8fa3826b075bd9f5e57c319abd1081e502be4df2))
+
+### Testing
+
+- **signals**: Cover Redis and ZMQ transport metadata
+  ([`797491a`](https://github.com/bec-project/ophyd_devices/commit/797491a240c82ad907ee262c8fddb4859bc8f380))
+
+
 ## v1.52.0 (2026-10-14)
 
 ### Bug Fixes
