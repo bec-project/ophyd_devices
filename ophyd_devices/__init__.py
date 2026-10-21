@@ -4,6 +4,7 @@ install_ophyd_callback_patch()
 
 from .devices.sls_devices import SLSInfo, SLSOperatorMessages
 from .sim.sim_camera import SimCamera, SimNegativeCamera
+from .sim.sim_jpeg_camera import SimJpegCamera
 from .sim.sim_monitor import SimMonitor, SimMonitorAsync
 
 SynAxisMonitor = SimMonitor

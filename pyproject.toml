@@ -34,6 +34,7 @@ documentation = "https://bec.readthedocs.org"
 ophyd_test = "ophyd_devices:launch"
 
 [project.optional-dependencies]
+jpeg = ["simplejpeg~=1.8"]
 dev = [
   "bec-server>=4.2.0",
   "pillow ~= 11.1",

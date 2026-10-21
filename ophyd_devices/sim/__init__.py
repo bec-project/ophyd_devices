@@ -1,5 +1,6 @@
 from .sim_camera import SimCamera, SimNegativeCamera
 from .sim_flyer import SimFlyer
+from .sim_jpeg_camera import SimJpegCamera
 
 SynFlyer = SimFlyer
 from .sim_async_gauss import SimAsyncGauss2D

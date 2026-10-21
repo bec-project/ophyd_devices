@@ -1,0 +1,14 @@
+# Simulated camera streaming live JPEG (or raw) preview frames, see ophyd_devices/sim/sim_jpeg_camera.py
+# Change the stream from the BEC client, e.g.
+#   dev.jpeg_cam.configure_stream(width=4096, height=4096, encoding="jpeg_gray", quality=75)
+jpeg_cam:
+  description: Simulated camera streaming live JPEG preview frames
+  readoutPriority: on_request
+  deviceClass: ophyd_devices.sim.sim_jpeg_camera.SimJpegCamera
+  deviceConfig:
+    live_on_connect: true
+  deviceTags:
+    - detector
+  enabled: true
+  readOnly: false
+  softwareTrigger: false
