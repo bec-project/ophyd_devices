@@ -37,10 +37,26 @@ _SignalsTypes = list[tuple[str, str | Kind]] | list[str] | str | None
 
 
 class BECMessageSignal(Signal):
+    """Custom signal accepting BECMessage objects or convertible dictionaries.
+
+    Subscribe to ``SUB_SIGNAL_INFO_CHANGED`` with ophyd's standard ``subscribe``
+    API to observe metadata updates independently of preview/data values. The
+    setters on this base class and PreviewSignal emit the event. After modifying
+    signal_info directly or in place, or in another subclass's metadata setter,
+    call ``notify_signal_info_changed`` explicitly.
+
+    Example::
+
+        signal.subscribe(on_info_changed,
+                         event_type=signal.SUB_SIGNAL_INFO_CHANGED, run=False)
+        signal.transports = [transport]
+
+    Callbacks receive ``obj`` (this signal), ``value`` (a SignalInfo snapshot), and
+    ophyd's usual event/timestamp arguments. Declaring transports in the constructor
+    does not emit a change event; the initial description already includes them.
     """
-    Custom signal class that accepts BECMessage objects as values.
-    Dictionaries are also accepted if convertible to the correct BECMessage type.
-    """
+
+    SUB_SIGNAL_INFO_CHANGED = "signal_info_changed"
 
     def __init__(
         self,
@@ -58,6 +74,7 @@ class BECMessageSignal(Signal):
         use_alias: bool = False,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
         signal_metadata: dict | None = None,
+        transports: list[messages.SignalTransport] | None = None,
         root_resolved_signal_key: str | None = None,
         **kwargs,
     ):
@@ -101,9 +118,35 @@ class BECMessageSignal(Signal):
             signals=self._unify_signals(signals),
             signal_metadata=signal_metadata or {},
             correlation_group=correlation_group,
+            transports=transports,
         )
         self._root_resolved_signal_key = root_resolved_signal_key
         self._register_root_resolved_signal()
+
+    def notify_signal_info_changed(self) -> None:
+        """Emit an ophyd metadata event with an independent SignalInfo snapshot.
+
+        Call this after direct or nested signal_info edits. Public metadata
+        setters call it automatically; ordinary data put() calls do not.
+        """
+        self._run_subs(
+            sub_type=self.SUB_SIGNAL_INFO_CHANGED, value=self.signal_info.model_copy(deep=True)
+        )
+
+    @property
+    def transports(self) -> list[messages.SignalTransport] | None:
+        """Available consumer subscriptions, included in describe() signal metadata.
+
+        None retains legacy routing. Descriptors advertise existing subscriptions;
+        assigning them does not open sockets or start a publisher. Replace the
+        list to update and validate metadata when a dynamic endpoint is resolved.
+        """
+        return self.signal_info.transports
+
+    @transports.setter
+    def transports(self, value: list[messages.SignalTransport] | None) -> None:
+        self.signal_info.transports = value
+        self.notify_signal_info_changed()
 
     @property
     def ndim(self) -> Literal[0, 1, 2] | None:
@@ -122,6 +165,7 @@ class BECMessageSignal(Signal):
             stacklevel=2,
         )
         self.signal_info.ndim = value
+        self.notify_signal_info_changed()
 
     @property
     def signals(self) -> list[tuple[str, int]] | None:
@@ -140,6 +184,7 @@ class BECMessageSignal(Signal):
             stacklevel=2,
         )
         self.signal_info.signals = value
+        self.notify_signal_info_changed()
 
     @property
     def signal_metadata(self) -> dict | None:
@@ -153,6 +198,7 @@ class BECMessageSignal(Signal):
             stacklevel=2,
         )
         self.signal_info.signal_metadata = value
+        self.notify_signal_info_changed()
 
     def _register_root_resolved_signal(self) -> None:
         """
@@ -571,7 +617,29 @@ class FileEventSignal(BECMessageSignal):
 
 
 class PreviewSignal(BECMessageSignal):
-    """Signal to emit preview data."""
+    """Preview data and transport descriptors advertised to BEC consumers.
+
+    Pass ``transports`` to describe subscriptions provided by an external detector
+    or a device-owned publisher. This is metadata, not a request to create a ZMQ
+    socket. A publisher binding a dynamic port can assign ``preview.transports``
+    after binding. Both forms populate ``signal_info.transports`` in describe().
+
+    For example, an existing ADZMQ publisher can be advertised declaratively::
+
+        preview = Cpt(
+            PreviewSignal,
+            name="preview",
+            ndim=2,
+            transports=[messages.ZMQSignalTransport(
+                address="tcp://detector-host:5555",
+                encoder="adzmq-array-1.0",
+            )],
+        )
+
+    Include a Redis descriptor built with ``RedisSignalTransport.from_endpoint_info``
+    and ``MessageEndpoints.device_preview`` if Redis is also available. None leaves
+    existing consumer routing unchanged; descriptors do not suppress Redis callbacks.
+    """
 
     def __init__(
         self,
@@ -581,6 +649,7 @@ class PreviewSignal(BECMessageSignal):
         num_rotation_90: Literal[0, 1, 2, 3] = 0,
         transpose: bool = False,
         value: dict | None = None,
+        transports: list[messages.SignalTransport] | None = None,
         **kwargs,
     ):
         """
@@ -593,6 +662,8 @@ class PreviewSignal(BECMessageSignal):
             ndim (Literal[1, 2]): The number of dimensions.
             num_rotation_90 (Literal[0, 1, 2, 3]): The number of 90 degree counter-clockwise rotations to apply to the data for visualization.
             transpose (bool): Whether to transpose the data for visualization.
+            transports (list[SignalTransport] | None): Consumer subscription descriptors.
+                None retains legacy routing; supplying descriptors does not start a publisher.
             value (DeviceMonitorMessage | dict | None): The initial value of the signal. Defaults to None.
 
         Example:
@@ -612,6 +683,7 @@ class PreviewSignal(BECMessageSignal):
             value=value,
             bec_message_type=messages.DevicePreviewMessage,
             signal_metadata={"num_rotation_90": num_rotation_90, "transpose": transpose},
+            transports=transports,
             **kwargs,
         )
 
@@ -623,6 +695,7 @@ class PreviewSignal(BECMessageSignal):
     @num_rotation_90.setter
     def num_rotation_90(self, value: Literal[0, 1, 2, 3]) -> None:
         self.signal_info.signal_metadata["num_rotation_90"] = value
+        self.notify_signal_info_changed()
 
     @property
     def transpose(self) -> bool:
@@ -632,6 +705,7 @@ class PreviewSignal(BECMessageSignal):
     @transpose.setter
     def transpose(self, value: bool) -> None:
         self.signal_info.signal_metadata["transpose"] = value
+        self.notify_signal_info_changed()
 
     def _process_data(self, value: np.ndarray) -> np.ndarray:
         if self.signal_info.ndim == 1:
