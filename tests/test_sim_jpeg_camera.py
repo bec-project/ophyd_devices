@@ -94,3 +94,26 @@ def test_destroy_joins_stream_thread(jpeg_cam):
     assert thread.is_alive()
     jpeg_cam.destroy()
     assert not thread.is_alive()
+
+
+def test_frames_report_sensor_shape(jpeg_cam):
+    jpeg_cam.configure_stream(width=64, height=48, encoding="raw")
+    _, metadata = jpeg_cam.make_frame()
+    assert metadata["sensor_shape"] == [4096, 4096]
+    cam = SimJpegCamera(name="small_cam", sensor_shape=(1000, 800))
+    try:
+        assert cam.make_frame()[1]["sensor_shape"] == [1000, 800]
+    finally:
+        cam.destroy()
+
+
+@pytest.mark.parametrize("shape", [(128, 128), (256, 512), (400, 300)])
+def test_pattern_stays_put_in_sensor_coordinates(shape):
+    """The beam stop sits at the same sensor position for any preview size."""
+    sensor = (4096, 4096)
+    frame = DiffractionFrameSource().next_frame(shape, sensor)
+    h, w = shape
+    # sample around the beam stop centre at (0.52, 0.48) of the sensor
+    row, col = int(0.52 * h), int(0.48 * w)
+    assert frame[row, col] < 10
+    assert frame[int(0.2 * h), int(0.2 * w)] > 0

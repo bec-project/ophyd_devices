@@ -11,9 +11,13 @@ gaps, a beam stop and Poisson noise. Frame size, encoding, JPEG quality, frame r
 JPEG frames are sent through the regular preview signal as a flat uint8 array holding the
 JPEG bytes. The message metadata says how to read it:
 
-``{"encoding": "jpeg", "shape": [h, w], "channels": 1 | 3, ...}``
+``{"encoding": "jpeg", "shape": [h, w], "channels": 1 | 3, "sensor_shape": [H, W], ...}``
 
 Raw frames are sent as a 2D uint16 array with ``{"encoding": "raw", ...}``.
+
+The frame size is the preview resolution of a fixed sensor (``sensor_shape``, 4096 x 4096 by
+default). The pattern stays at the same sensor position whatever the preview resolution, so a
+viewer can show frames, crosshair and ROIs in sensor pixel coordinates.
 """
 
 from __future__ import annotations
@@ -111,6 +115,7 @@ class DiffractionFrameSource:
     def __init__(self, seed: int = 0):
         self._rng = np.random.default_rng(seed)
         self._shape: tuple[int, int] | None = None
+        self._sensor_shape: tuple[int, int] | None = None
         self._frames: list[np.ndarray] = []
         self._counter = 0
 
@@ -119,18 +124,20 @@ class DiffractionFrameSource:
         """Shape of the frames currently generated."""
         return self._shape
 
-    def _build(self, shape: tuple[int, int]) -> None:
+    def _build(self, shape: tuple[int, int], sensor_shape: tuple[int, int]) -> None:
         h, w = shape
-        y = np.arange(h, dtype=np.float32)[:, None]
-        x = np.arange(w, dtype=np.float32)[None, :]
-        cy, cx = h * 0.52, w * 0.48
-        r = np.hypot(y - cy, x - cx) / max(h, w)
+        sh, sw = sensor_shape
+        # pixel centres in sensor pixels, so the pattern does not move with the preview size
+        y = ((np.arange(h, dtype=np.float32) + 0.5) * (sh / h))[:, None]
+        x = ((np.arange(w, dtype=np.float32) + 0.5) * (sw / w))[None, :]
+        cy, cx = sh * 0.52, sw * 0.48
+        r = np.hypot(y - cy, x - cx) / max(sh, sw)
         lam = 40 * np.exp(-r * 6) + 5
         for r0, amp in ((0.08, 300), (0.15, 220), (0.22, 160), (0.31, 120)):
             lam += amp * np.exp(-((r - r0) ** 2) / (2 * 0.003**2))
         # beam stop: a disc and its holder arm
         lam[r < 0.025] = 0.5
-        arm = (np.abs(y - cy) < max(2, h * 0.006)) & (x > cx)
+        arm = (np.abs(y - cy) < max(sh / h, sh * 0.006)) & (x > cx)
         lam[np.broadcast_to(arm, lam.shape)] = 0.5
         frames = []
         n_spots = max(50, int(300 * h * w / 2048**2))
@@ -139,25 +146,31 @@ class DiffractionFrameSource:
             sy, sx = self._rng.integers(0, h, n_spots), self._rng.integers(0, w, n_spots)
             frame[sy, sx] += self._rng.integers(1000, 30000, n_spots)
             frame = np.clip(frame, 0, 65535).astype(np.uint16)
-            # module gaps, like a tiled detector
-            frame[:, w // 2 - 4 : w // 2 + 4] = 0
-            frame[h // 2 - 2 : h // 2 + 2, :] = 0
+            # module gaps, like a tiled detector, at least one preview pixel wide
+            frame[:, np.abs(x[0] - sw / 2) <= max(4, 0.5 * sw / w)] = 0
+            frame[np.abs(y[:, 0] - sh / 2) <= max(2, 0.5 * sh / h), :] = 0
             frames.append(frame)
         self._frames = frames
         self._shape = shape
+        self._sensor_shape = sensor_shape
 
-    def next_frame(self, shape: tuple[int, int]) -> np.ndarray:
+    def next_frame(
+        self, shape: tuple[int, int], sensor_shape: tuple[int, int] | None = None
+    ) -> np.ndarray:
         """
         Return the next frame of the given shape.
 
         Args:
             shape (tuple[int, int]): Frame height and width.
+            sensor_shape (tuple[int, int] | None): Sensor height and width the frame is a
+                preview of. Defaults to the frame shape.
 
         Returns:
             np.ndarray: (h, w) uint16 frame.
         """
-        if shape != self._shape:
-            self._build(shape)
+        sensor_shape = tuple(sensor_shape) if sensor_shape is not None else tuple(shape)
+        if shape != self._shape or sensor_shape != self._sensor_shape:
+            self._build(shape, sensor_shape)
         self._counter += 1
         frame = self._frames[self._counter % NOISE_FRAMES]
         angle = self._counter * 0.15
@@ -183,6 +196,8 @@ class SimJpegCameraControl(Device):
         doc="Counts mapped to 255 in JPEG modes; 0 uses the 99.9th percentile of each frame",
     )
     live = Cpt(Signal, value=False, kind=Kind.config, doc="Whether the live stream is running")
+    sensor_width = Cpt(Signal, value=4096, kind=Kind.config, doc="Sensor width in pixels")
+    sensor_height = Cpt(Signal, value=4096, kind=Kind.config, doc="Sensor height in pixels")
     preview = Cpt(PreviewSignal, name="preview", ndim=2, num_rotation_90=0)
 
 
@@ -197,6 +212,7 @@ class SimJpegCamera(PSIDeviceBase, SimJpegCameraControl):
         scan_info=None,
         device_manager=None,
         live_on_connect: bool = False,
+        sensor_shape: tuple[int, int] | None = None,
         **kwargs,
     ):
         """
@@ -205,6 +221,8 @@ class SimJpegCamera(PSIDeviceBase, SimJpegCameraControl):
             scan_info: Scan info passed by BEC.
             device_manager: Device manager passed by BEC.
             live_on_connect (bool): Start the live stream as soon as the device is connected.
+            sensor_shape (tuple[int, int] | None): Sensor height and width in pixels that the
+                preview frames are scaled from. Defaults to 4096 x 4096.
         """
         self._live_on_connect = live_on_connect
         self._source = DiffractionFrameSource()
@@ -213,6 +231,9 @@ class SimJpegCamera(PSIDeviceBase, SimJpegCameraControl):
         self._thread: threading.Thread | None = None
         self._frame_id = 0
         super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
+        if sensor_shape is not None:
+            self.sensor_height.put(int(sensor_shape[0]))
+            self.sensor_width.put(int(sensor_shape[1]))
 
     ########################################
     #  Beamline Specific Implementations   #
@@ -347,6 +368,8 @@ class SimJpegCamera(PSIDeviceBase, SimJpegCameraControl):
             "frame_rate": float(self.frame_rate.get()),
             "max_counts": float(self.jpeg_max_counts.get()),
             "live": bool(self.live.get()),
+            "sensor_width": int(self.sensor_width.get()),
+            "sensor_height": int(self.sensor_height.get()),
         }
 
     def _start_thread(self) -> None:
@@ -384,14 +407,16 @@ class SimJpegCamera(PSIDeviceBase, SimJpegCameraControl):
         """
         settings = self.stream_settings()
         shape = (settings["height"], settings["width"])
+        sensor_shape = (settings["sensor_height"], settings["sensor_width"])
         t_capture = time.time()
         t0 = time.perf_counter()
-        frame = self._source.next_frame(shape)
+        frame = self._source.next_frame(shape, sensor_shape)
         generate_ms = (time.perf_counter() - t0) * 1e3
         self._frame_id += 1
         metadata = {
             "encoding": "raw",
             "shape": list(shape),
+            "sensor_shape": list(sensor_shape),
             "frame_id": self._frame_id,
             "timestamp_capture": t_capture,
             "raw_nbytes": int(frame.nbytes),
