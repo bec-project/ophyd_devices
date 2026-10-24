@@ -5,7 +5,10 @@ Module for undulator control
 from __future__ import annotations
 
 import enum
+import functools
+from numbers import Real
 
+import numpy as np
 from bec_lib.logger import bec_logger
 from ophyd import EpicsSignal, EpicsSignalRO, PVPositioner
 from ophyd.device import Component as Cpt
@@ -146,8 +149,25 @@ class UndulatorBase(PVPositioner):
             self.setpoint.name = self.name
 
     def move(self, position, wait=True, timeout=None, moved_cb=None):
-        """Validate control and use DONE to determine movement completion."""
+        """Skip an unchanged setpoint while idle; no actual readback is available.
+
+        This also skips retries after a stopped move if its setpoint is unchanged.
+        """
         self.validate_control()
+        self.check_value(position)
+        is_done = self.done is None or self.done.get() == self.done_value
+        matches = False
+        if is_done:
+            setpoint = self.setpoint.get()
+            if isinstance(setpoint, Real) and isinstance(position, Real):
+                matches = np.isclose(setpoint, position)
+            else:
+                matches = setpoint == position
+        if matches:
+            status = MoveStatus(self, position, done=True, success=True)
+            if moved_cb is not None:
+                status.add_callback(functools.partial(moved_cb, obj=self))
+            return status
         return super().move(position, wait=wait, timeout=timeout, moved_cb=moved_cb)
 
     def validate_control(self) -> None:
@@ -200,15 +220,17 @@ class UndulatorGap(UndulatorBase):
     select_control = Cpt(EpicsSignalRO, suffix="SCTRL", auto_monitor=True)
 
     def move(self, position, wait=True, timeout=None, moved_cb=None):
+        self.validate_control()
         # If it is already there, undulator will not move. The done flag
         # will not change, the moving change callback will not be called.
         # The status will not change.
         if self._position is not None and abs(position - self._position) < 0.0008:
-            self.validate_control()
             logger.info(
                 f"Undulator gap {self.name} already close to position {position}, not moving."
             )
             status = MoveStatus(self, position, done=True, success=True)
+            if moved_cb is not None:
+                status.add_callback(functools.partial(moved_cb, obj=self))
             return status
 
-        return super().move(position, wait=wait, timeout=timeout, moved_cb=moved_cb)
+        return PVPositioner.move(self, position, wait=wait, timeout=timeout, moved_cb=moved_cb)
