@@ -4,7 +4,13 @@ import pytest
 from ophyd import Component as Cpt
 from ophyd import EpicsSignalRO
 
-from ophyd_devices.devices.undulator import UndulatorAlpha, UndulatorGap, UndulatorHarmonic
+from ophyd_devices.devices.undulator import (
+    UndulatorAlpha,
+    UndulatorBase,
+    UndulatorGap,
+    UndulatorHarmonic,
+    UndulatorSetpointSignal,
+)
 from ophyd_devices.tests.utils import patched_device
 
 
@@ -78,6 +84,49 @@ def test_deadband_shortcut_applies_only_to_gap(
     else:
         mock_movestatus.assert_not_called()
         mock_super_move.assert_called_once()
+
+
+@pytest.mark.parametrize("method", ["move", "set"])
+def test_gap_deadband_shortcut_calls_moved_callback(method):
+    with patched_device(UndulatorGap, name="gap", prefix="TEST:") as und:
+        und.select_control._read_pv.mock_data = 1
+        und.readback._read_pv.mock_data = 5
+        moved_cb = mock.Mock()
+        with mock.patch.object(und.setpoint, "put") as put:
+            status = getattr(und, method)(5.0007, wait=False, moved_cb=moved_cb)
+
+        status.wait(timeout=1)
+        assert status.success
+        put.assert_not_called()
+        moved_cb.assert_called_once_with(status, obj=und)
+        und.destroy()
+
+
+def test_gap_retry_after_stop_moves_when_readback_is_off_target():
+    with patched_device(UndulatorGap, name="gap", prefix="TEST:") as und:
+        und.select_control._read_pv.mock_data = 1
+        und.done._read_pv.mock_data = 1
+        und.readback._read_pv.mock_data = 3
+        first = und.set(5)
+        und.done._read_pv.mock_data = 0
+        und.stop()
+        und.done._read_pv.mock_data = 1
+        first.wait(timeout=1)
+        moved_cb = mock.Mock()
+
+        with mock.patch.object(und.setpoint, "put", wraps=und.setpoint.put) as put:
+            retry = und.set(5, moved_cb=moved_cb)
+
+        put.assert_called_once_with(5, wait=True)
+        assert not retry.done
+        moved_cb.assert_not_called()
+        und.done._read_pv.mock_data = 0
+        und.readback._read_pv.mock_data = 5
+        und.done._read_pv.mock_data = 1
+        retry.wait(timeout=1)
+        assert retry.success
+        moved_cb.assert_called_once_with(retry, obj=und)
+        und.destroy()
 
 
 def test_undulator_raises_when_disabled(mock_undulator):
@@ -203,26 +252,45 @@ def test_harmonic_moves_while_busy_wait_for_done_and_can_stop(mock_harmonic, tar
     assert status.success
 
 
-def test_harmonic_retry_after_stop_writes_target_and_waits_for_done(mock_harmonic):
+def test_harmonic_unchanged_retry_after_stop_completes_without_write(mock_harmonic):
     und = mock_harmonic
     first = und.set(5)
     und.done._read_pv.mock_data = 0
     und.stop()
     und.done._read_pv.mock_data = 1
     first.wait(timeout=1)
-    moved_cb = mock.Mock()
 
-    with mock.patch.object(und.setpoint, "put", wraps=und.setpoint.put) as put:
-        retry = und.move(5, wait=False, moved_cb=moved_cb)
+    with mock.patch.object(und.setpoint, "put") as put:
+        retry = und.move(5, wait=False)
+        retry.wait(timeout=1)
 
-    put.assert_called_once_with(5, wait=True)
-    assert not retry.done
-    moved_cb.assert_not_called()
-    und.done._read_pv.mock_data = 0
-    und.done._read_pv.mock_data = 1
-    retry.wait(timeout=1)
+    put.assert_not_called()
     assert retry.success
-    moved_cb.assert_called_once_with(retry, obj=und)
+
+
+@pytest.mark.parametrize("device_class", [UndulatorAlpha, UndulatorHarmonic])
+@pytest.mark.parametrize("method", ["move", "set"])
+@pytest.mark.parametrize("busy", [False, True])
+@pytest.mark.parametrize("position", [5, 5.0, 5.00000001])
+def test_unchanged_setpoint_shortcut(device_class, method, busy, position):
+    with patched_device(device_class, name="undulator", prefix="TEST:") as und:
+        und.select_control._read_pv.mock_data = 1
+        und.done._read_pv.mock_data = 0 if busy else 1
+        und.setpoint._read_pv.mock_data = 5
+        moved_cb = mock.Mock()
+        with mock.patch.object(und.setpoint, "put", wraps=und.setpoint.put) as put:
+            status = getattr(und, method)(position, wait=False, timeout=1, moved_cb=moved_cb)
+        if busy:
+            put.assert_called_once_with(position, wait=True)
+            assert not status.done
+            moved_cb.assert_not_called()
+            und.done._read_pv.mock_data = 1
+        else:
+            put.assert_not_called()
+        status.wait(timeout=1)
+        assert status.success
+        moved_cb.assert_called_once_with(status, obj=und)
+        und.destroy()
 
 
 @pytest.mark.parametrize(
@@ -264,3 +332,37 @@ def test_scalar_and_list_conditions(mock_validated_undulator, target, value, all
         und.stop()
         assert und.setpoint.get() == 0
         assert und.stop_signal.get() == 0
+
+
+@pytest.mark.parametrize(
+    "setpoint, target, matches",
+    [
+        (0, 0, True),
+        (0, 1, False),
+        ("open", "open", True),
+        ("open", "closed", False),
+        (0, "open", False),
+        ("open", 0, False),
+    ],
+)
+def test_base_without_done_checks_setpoint(setpoint, target, matches):
+    class UndulatorWithoutDone(UndulatorBase):
+        put_complete = True
+
+        setpoint = Cpt(UndulatorSetpointSignal, "SETPOINT")
+        select_control = Cpt(EpicsSignalRO, "SCTRL")
+
+    with patched_device(UndulatorWithoutDone, name="undulator", prefix="TEST:") as und:
+        und.select_control._read_pv.mock_data = 1
+        und.setpoint._read_pv.mock_data = setpoint
+        assert und.done is None
+        with mock.patch("ophyd_devices.devices.undulator.PVPositioner.move") as parent_move:
+            status = und.move(target, wait=False)
+        if matches:
+            parent_move.assert_not_called()
+            assert status.done
+            assert status.success
+        else:
+            parent_move.assert_called_once_with(target, wait=False, timeout=None, moved_cb=None)
+            assert status is parent_move.return_value
+        und.destroy()
