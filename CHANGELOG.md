@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.52.2 (2026-10-26)
+
+### Bug Fixes
+
+- **undulator**: Early return if setpoint is on target
+  ([`fa82350`](https://github.com/bec-project/ophyd_devices/commit/fa823501f2f96991ba6cf6904414a74e41de0b9a))
+
+
 ## v1.52.1 (2026-10-14)
 
 ### Bug Fixes
