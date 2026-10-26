@@ -9,6 +9,7 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataCamera, SimulatedDataNegativeCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
+from ophyd_devices.utils.adzmq_preview import ADZMQPreviewPublisher
 from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
 
 logger = bec_logger.logger
@@ -27,6 +28,16 @@ class SimCameraControl(Device):
     file_pattern = Cpt(SetableSignal, name="file_pattern", value="", kind=Kind.config)
     frames = Cpt(SetableSignal, name="frames", value=1, kind=Kind.config)
     burst = Cpt(SetableSignal, name="burst", value=1, kind=Kind.config)
+    preview_jpeg_compression = Cpt(
+        SetableSignal,
+        name="preview_jpeg_compression",
+        value=False,
+        kind=Kind.config,
+        doc=(
+            "Enable lossy 8-bit JPEG for ZMQ previews only; "
+            "non-uint8 data is normalized per frame."
+        ),
+    )
 
     image_shape = Cpt(SetableSignal, name="image_shape", value=SHAPE, kind=Kind.config)
     image = Cpt(
@@ -40,7 +51,19 @@ class SimCameraControl(Device):
     file_event = Cpt(FileEventSignal)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
-    def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
+    # Explicit constructor options are required for deviceConfig forwarding.
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self,
+        name,
+        *,
+        parent=None,
+        sim_init: dict = None,
+        device_manager=None,
+        preview_zmq_bind_address: str = "tcp://127.0.0.1:*",
+        preview_zmq_connect_address: str | None = None,
+        **kwargs,
+    ):
         self.sim_init = sim_init
         self.device_manager = device_manager
         self._registered_proxies = {}
@@ -49,6 +72,10 @@ class SimCameraControl(Device):
         super().__init__(name=name, parent=parent, **kwargs)
         if self.sim_init:
             self.sim.set_init(self.sim_init)
+        self._preview_publisher = ADZMQPreviewPublisher(self.preview)
+        self._preview_publisher.configure_zmq(
+            preview_zmq_bind_address, preview_zmq_connect_address, self.preview_jpeg_compression.get
+        )
 
     @property
     def registered_proxies(self) -> None:
@@ -64,6 +91,19 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
 
     >>> camera = SimCamera(name="camera")
 
+    ZMQ preview publishing starts in ``on_connected()``, using a dynamically
+    assigned localhost TCP port by default. ``preview.signal_info.transports``
+    then advertises Redis and ADZMQ subscriptions. For remote consumers, set
+    ``preview_zmq_bind_address="tcp://*:5555"`` and
+    ``preview_zmq_connect_address="tcp://camera-host:5555"`` in deviceConfig.
+    The device server invokes on_connected; standalone users must call it and
+    must destroy the camera to release the publisher.
+
+    Set ``preview_jpeg_compression`` to True to encode future ZMQ previews as
+    quality-90 grayscale JPEG. Non-uint8 images are normalized to 0..255 per frame;
+    the header records source_dtype and display_range. This is lossy display data.
+    Redis previews, image readback, and HDF5 data retain their original arrays.
+
     Parameters
     ----------
     name (string)           : Name of the device. This is the only required argument, passed on to all signals of the device.
@@ -74,9 +114,32 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
 
     """
 
-    def __init__(self, name: str, scan_info=None, device_manager=None, **kwargs):
-        super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
+    # Keep deviceConfig transport options explicit for device-server construction.
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self,
+        name: str,
+        scan_info=None,
+        device_manager=None,
+        *,
+        preview_zmq_bind_address: str = "tcp://127.0.0.1:*",
+        preview_zmq_connect_address: str | None = None,
+        **kwargs,
+    ):
+        super().__init__(
+            name=name,
+            scan_info=scan_info,
+            device_manager=device_manager,
+            preview_zmq_bind_address=preview_zmq_bind_address,
+            preview_zmq_connect_address=preview_zmq_connect_address,
+            **kwargs,
+        )
         self.file_path = None
+
+    def on_connected(self) -> None:
+        """Start the ZMQ preview publisher after connection and advertise its URI."""
+        super().on_connected()
+        self._preview_publisher.start_zmq()
 
     def on_trigger(self) -> StatusBase:
         """Trigger the camera to acquire images.
@@ -154,6 +217,11 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         """Stop the camera acquisition."""
         self.task_handler.shutdown()
         self.on_unstage()
+
+    def on_destroy(self) -> None:
+        """Release the preview publisher and preserve inherited destruction hooks."""
+        self._preview_publisher.destroy()
+        super().on_destroy()
 
 
 class SimNegativeCamera(SimCamera):

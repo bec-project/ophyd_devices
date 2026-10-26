@@ -10,10 +10,12 @@ classifiers = [
 ]
 
 dependencies = [
-  "bec_lib>=4.2",
+  "bec_lib>=4.3",
   "h5py ~= 3.10",
   "hdf5plugin >=4.3, < 6.0",
   "numpy >= 1.24, <3.0",
+  "Pillow>=10,<14",
+  "pyzmq>=25,<28",
   "ophyd ~= 1.10",
   "pandablocks ~= 0.10",
   "prettytable ~= 3.9",
@@ -36,7 +38,6 @@ ophyd_test = "ophyd_devices:launch"
 [project.optional-dependencies]
 dev = [
   "bec-server>=4.2.0",
-  "pillow ~= 11.1",
   "black~=26.0",
   "isort~=5.13, >=5.13.2",
   "coverage~=7.0",
