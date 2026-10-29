@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import inspect
 import time
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ophyd import Device, DeviceStatus, Staged, StatusBase
+from ophyd.utils.errors import InvalidState
 
 from ophyd_devices.tests.utils import get_mock_scan_info
-from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler, destroy_subdevices
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
@@ -131,7 +133,7 @@ class PSIDeviceBase(Device):
         status = self.on_pre_scan()  # pylint: disable=assignment-from-no-return
         return status
 
-    def trigger(self) -> DeviceStatus | StatusBase:
+    def trigger(self) -> StatusBase:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Trigger the device."""
         super_trigger = super().trigger()
         status = self.on_trigger()  # pylint: disable=assignment-from-no-return
@@ -168,11 +170,25 @@ class PSIDeviceBase(Device):
         super().stop(success=success)
 
     def destroy(self):
-        """Destroy the device."""
-        self.on_destroy()  # Call the on_destroy method
-        self._stop_stoppable_status_objects()
-        self.task_handler.shutdown()
-        return super().destroy()
+        """Release root and child resources even when a shutdown hook fails."""
+        if self.destroyed:
+            return
+        errors = []
+        for cleanup in (
+            self.on_destroy,
+            self._stop_stoppable_status_objects,
+            self.task_handler.shutdown,
+            lambda: destroy_subdevices(self),
+            super().destroy,
+        ):
+            try:
+                cleanup()
+            except Exception as error:  # noqa: BLE001 - always finish resource cleanup.
+                errors.append(error)
+        if errors:
+            for error in errors[1:]:
+                errors[0].add_note(f"Additional device cleanup failure: {error!r}")
+            raise errors[0]
 
     ########################################
     # Stoppable Status Objects Management   #
@@ -205,10 +221,13 @@ class PSIDeviceBase(Device):
         This method will cancel all status objects that have been registered
         to be stopped when the device is stopped.
         """
-        for status in self._stoppable_status_objects:
+        statuses, self._stoppable_status_objects = self._stoppable_status_objects, []
+        for status in statuses:
             if not status.done:
-                status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
-        self._clear_stoppable_status_objects()
+                try:
+                    status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
+                except InvalidState:
+                    pass  # A completion callback already committed this status.
 
     ########################################
     # Utility Method to wait for signals   #

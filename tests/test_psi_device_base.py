@@ -392,3 +392,47 @@ def test_stoppable_status_not_done(device):
 
     assert status.done is True
     assert status.success is False
+
+
+def test_destroy_finishes_child_cleanup_when_root_hook_fails():
+    from ophyd import Component, Device, Signal
+
+    cleaned = []
+
+    class Child(Device):
+        value = Component(Signal, value=0)
+
+        def destroy(self):
+            cleaned.append(not self.value._destroyed)
+            super().destroy()
+
+    class Root(PSIDeviceBase):
+        child = Component(Child)
+
+        def on_destroy(self):
+            raise RuntimeError("shutdown hook failed")
+
+    root = Root(name="root")
+    child = root.child
+    with pytest.raises(RuntimeError, match="shutdown hook failed"):
+        root.destroy()
+    assert cleaned == [True]
+    assert child.value._destroyed
+    assert root.destroyed
+    root.destroy()
+
+
+def test_cancel_status_while_success_is_settling(device):
+    from ophyd import Signal
+
+    from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus
+
+    signal = Signal(name="value", value=0)
+    status = SubscriptionStatus(
+        signal, lambda *, value, **_: value == 1, run=False, settle_time=0.1, timeout=1
+    )
+    device.cancel_on_stop(status)
+    signal.put(1)
+    device._stop_stoppable_status_objects()
+    assert not device._stoppable_status_objects
+    status.wait(timeout=1)

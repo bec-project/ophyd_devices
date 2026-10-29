@@ -710,6 +710,31 @@ class TransitionStatus(SubscriptionStatus):
             return False
 
 
+def destroy_subdevices(device: Device) -> None:
+    """Close instantiated child devices before their parent disconnects leaf signals.
+
+    Ophyd's Device.destroy only walks signals. Traverse plain grouping Devices
+    explicitly; custom destroy methods remain responsible for their own resources.
+    PSI devices and ROIProcessing call this helper from their destroy methods.
+    """
+    from ophyd import Device
+
+    errors = []
+    for child in tuple(device._signals.values()):
+        if not isinstance(child, Device) or child._destroyed:
+            continue
+        try:
+            if type(child).destroy is Device.destroy:
+                destroy_subdevices(child)
+            child.destroy()
+        except Exception as error:  # noqa: BLE001 - close all children before reporting failure.
+            errors.append(error)
+    if errors:
+        for error in errors[1:]:
+            errors[0].add_note(f"Additional child cleanup failure: {error!r}")
+        raise errors[0]
+
+
 class TaskState(str, Enum):
     """Possible task states"""
 
