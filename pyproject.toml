@@ -18,6 +18,7 @@ dependencies = [
   "pandablocks ~= 0.10",
   "prettytable ~= 3.9",
   "pyepics ~= 3.5, >=3.5.10",
+  "pyzmq >=25, <28",
   "pytest ~= 8.0",
   "pyyaml ~= 6.0",
   "std_daq_client ~= 1.3",
