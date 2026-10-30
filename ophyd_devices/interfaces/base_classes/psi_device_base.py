@@ -7,6 +7,7 @@ from __future__ import annotations
 import inspect
 import time
 from collections.abc import Callable
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from ophyd import Device, DeviceStatus, Staged, StatusBase
@@ -74,6 +75,7 @@ class PSIDeviceBase(Device):
             super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
         self._stoppable_status_objects: list[StatusBase] = []
+        self._stoppable_status_lock = Lock()
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
         if scan_info is None:
@@ -196,14 +198,32 @@ class PSIDeviceBase(Device):
 
     def cancel_on_stop(self, status: StatusBase) -> None:
         """
-        Register a status object to be cancelled when the device is stopped.
+        Register unfinished work for cancellation when the device is stopped.
+
+        Completed statuses are removed automatically, including statuses that finish
+        during registration. Completion and stop may run on different threads; the
+        registry lock protects bookkeeping without holding a lock during cancellation
+        or callback invocation. Registering the same pending status twice is harmless.
 
         Args:
             status (StatusBase): The status object to be cancelled.
         """
         if not isinstance(status, StatusBase):
             raise TypeError("status must be an instance of StatusBase")
-        self._stoppable_status_objects.append(status)
+        with self._stoppable_status_lock:
+            if status.done or status in self._stoppable_status_objects:
+                return
+            self._stoppable_status_objects.append(status)
+
+        def discard(completed: StatusBase) -> None:
+            with self._stoppable_status_lock:
+                try:
+                    self._stoppable_status_objects.remove(completed)
+                except ValueError:
+                    pass  # Stop or cleanup has already detached this status.
+
+        # add_callback also invokes discard if completion raced with registration.
+        status.add_callback(discard)
 
     def _clear_stoppable_status_objects(self) -> None:
         """
@@ -212,7 +232,8 @@ class PSIDeviceBase(Device):
         This is useful to reset the list of status objects that should be cancelled
         when the device is stopped.
         """
-        self._stoppable_status_objects = []
+        with self._stoppable_status_lock:
+            self._stoppable_status_objects = []
 
     def _stop_stoppable_status_objects(self) -> None:
         """
@@ -221,7 +242,8 @@ class PSIDeviceBase(Device):
         This method will cancel all status objects that have been registered
         to be stopped when the device is stopped.
         """
-        statuses, self._stoppable_status_objects = self._stoppable_status_objects, []
+        with self._stoppable_status_lock:
+            statuses, self._stoppable_status_objects = self._stoppable_status_objects, []
         for status in statuses:
             if not status.done:
                 try:

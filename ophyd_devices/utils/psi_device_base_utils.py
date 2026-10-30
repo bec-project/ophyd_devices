@@ -711,24 +711,59 @@ class TransitionStatus(SubscriptionStatus):
 
 
 def destroy_subdevices(device: Device) -> None:
-    """Close instantiated child devices before their parent disconnects leaf signals.
+    """
+    Destroy instantiated children without pre-empting custom owner cleanup.
 
-    Ophyd's Device.destroy only walks signals. Traverse plain grouping Devices
-    explicitly; custom destroy methods remain responsible for their own resources.
-    PSI devices and ROIProcessing call this helper from their destroy methods.
+    Plain Ophyd Device.destroy disconnects descendant signals without invoking child
+    device destructors. For an ordinary grouping Device with no destroy override,
+    traverse its children first. Invoke a custom destructor before its descendants,
+    so the owner can stop workers or flush data while child resources remain usable.
+
+    Custom grouping destructors must call this helper after their own cleanup and
+    before super().destroy() when child cleanup needs connected signals::
+
+        def destroy(self):
+            self.flush_owned_resources()
+            try:
+                destroy_subdevices(self)
+            finally:
+                super().destroy()
+
+    PSIDeviceBase already provides this ordering through on_destroy. After a custom
+    destructor returns or fails, traverse remaining descendants as best-effort cleanup;
+    this cannot reconnect signals an uncooperative destructor already disconnected.
+    Only instantiated components are visited, including descendants of groups already
+    marked destroyed. Continue after cleanup failures and report the first error with
+    subsequent failures attached as notes.
+
+    Args:
+        device (Device): Parent whose instantiated child devices should be destroyed.
+
+    Raises:
+        Exception: A descendant cleanup fails, after remaining cleanups are attempted.
     """
     from ophyd import Device
 
     errors = []
     for child in tuple(device._signals.values()):
-        if not isinstance(child, Device) or child._destroyed:
+        if not isinstance(child, Device):
             continue
-        try:
-            if type(child).destroy is Device.destroy:
+        ordinary_group = type(child).destroy is Device.destroy
+        if ordinary_group:
+            try:
                 destroy_subdevices(child)
-            child.destroy()
-        except Exception as error:  # noqa: BLE001 - close all children before reporting failure.
-            errors.append(error)
+            except Exception as error:  # noqa: BLE001 - still destroy this group and siblings.
+                errors.append(error)
+        if not child._destroyed:
+            try:
+                child.destroy()
+            except Exception as error:  # noqa: BLE001 - finish all child cleanup.
+                errors.append(error)
+        if not ordinary_group:
+            try:
+                destroy_subdevices(child)
+            except Exception as error:  # noqa: BLE001 - recover children a custom owner missed.
+                errors.append(error)
     if errors:
         for error in errors[1:]:
             errors[0].add_note(f"Additional child cleanup failure: {error!r}")
