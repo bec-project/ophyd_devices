@@ -1,32 +1,39 @@
+"""
+Selectable ROI analysis and dynamic results built on shared ROI configuration.
+"""
+
 from __future__ import annotations
 
-import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.logger import bec_logger
 from bec_lib.messages import ROIAnalysisConfig, ROIAvailableAnalysisMessage, ROIConfigurationMessage
-from bec_lib.redis_connector import RedisConnector
 from ophyd import Component as Cpt
-from ophyd import Device, Kind, Signal
+from ophyd import Kind, Signal
 
+from ophyd_devices.utils.bec_roi_signals.roi import ROI
 from ophyd_devices.utils.bec_roi_signals.signals import (
     AvailableOperationsSignal,
-    ConfigUpdateReceivedSignal,
     SelectedOperationSignal,
 )
 from ophyd_devices.utils.bec_signals import DynamicSignal
-from ophyd_devices.utils.psi_device_base_utils import destroy_subdevices
-
-if TYPE_CHECKING:
-    from bec_lib.connector import MessageObject
-
-logger = bec_logger.logger
 
 
 class ROIOperationConfig(TypedDict, total=False):
-    """Configuration for one selectable ROI analysis operation."""
+    """
+    Describe the signals and controls belonging to one ROI analysis operation.
+
+    Attributes:
+        scalar_outputs (list[str]): Scalar result names produced by the operation.
+        waveform_outputs (list[str]): Array result names produced by the operation.
+        enable_signal (str | None): Backend signal attribute enabling the operation,
+            or None when it has no independent enable control.
+        source_signals (dict[str, str]): Map result names to backend signal paths.
+            Backends use these paths when subscribing to or reading their results.
+
+    All fields are optional; a concrete backend supplies the fields it needs.
+    """
 
     scalar_outputs: list[str]
     waveform_outputs: list[str]
@@ -37,8 +44,24 @@ class ROIOperationConfig(TypedDict, total=False):
 LITERAL_ROI_PROCESSING_CONFIG = dict[str, ROIOperationConfig]
 
 
-class ROIProcessing(Device, ABC):
-    """Abstract base class for ROI processing signals"""
+class ROIProcessing(ROI, ABC):
+    """
+    Add analysis selection and dynamic results to shared ROI configuration.
+
+    Subclasses declare all supported operations and scalar/waveform result names.
+    They also own acquisition and result publication; this base only creates result
+    signals, validates selections and publishes analysis capabilities. Configuration
+    requests, shape restrictions, scan deferral and confirmed configuration publication
+    are inherited from ROI. Use ROI directly for configuration-only backends.
+
+    Attributes:
+        result_scalar (DynamicSignal): Scalar result stream, with one-dimensional
+            append semantics across acquisitions.
+        result_waveform (DynamicSignal): Waveform result stream, with two-dimensional
+            append semantics across acquisitions and samples.
+        selected_operations (SelectedOperationSignal): Configurable analysis selection.
+        available_operations (AvailableOperationsSignal): Read-only supported operations.
+    """
 
     result_scalar = Cpt(
         DynamicSignal,
@@ -59,33 +82,100 @@ class ROIProcessing(Device, ABC):
         data_type="processed",
     )
 
-    active = Cpt(Signal, value=False, kind=Kind.normal)
-    roi_name = Cpt(Signal, value="roi", kind=Kind.normal)
-    x = Cpt(Signal, value=0, kind=Kind.normal)
-    y = Cpt(Signal, value=0, kind=Kind.normal)
-    width = Cpt(Signal, value=0, kind=Kind.normal)
-    height = Cpt(Signal, value=0, kind=Kind.normal)
-    selected_operations = Cpt(SelectedOperationSignal, value=[], kind=Kind.normal)
+    selected_operations = Cpt(
+        SelectedOperationSignal, config_key="selected_operations", value=[], kind=Kind.config
+    )
     available_operations = Cpt(AvailableOperationsSignal, kind=Kind.config)
-    update_received = Cpt(ConfigUpdateReceivedSignal, kind=Kind.omitted)
 
-    def __init__(self, *args, **kwargs):
-        kwargs, signal_kwargs = self._get_kwargs_for_signals(kwargs)
+    def __init__(self, *args, selected_operations: list[str] | None = None, **kwargs) -> None:
+        """
+        Create processing signals and record the initial analysis selection.
+
+        No backend communication or Redis subscriptions occur during construction.
+        The selection is applied by on_connected(), and result names are derived from
+        get_scalar_outputs() and get_waveform_outputs().
+
+        Args:
+            *args (Any): Positional device arguments forwarded to ROI.
+            selected_operations (list[str] | None): Initial analysis operation names.
+                None selects no operations. The selection is validated after connection.
+            **kwargs (Any): ROI configuration and ophyd.Device arguments, including
+                roi_config, allowed_roi_config_types, active, roi_name, name and parent.
+        """
         super().__init__(*args, **kwargs)
-        self._signal_kwargs = signal_kwargs
-        self._connector: RedisConnector | None = None
-        self._roi_connection_initialized = False
-        self._config_subscription = None
-        self._config_registered = False
-        # Publish statistics under the ROI name, without internal container labels.
+        self._signal_kwargs["selected_operations"] = selected_operations or []
         self.result_scalar.name = self.name
         self._update_result_signal_names()
 
+    def on_connected(self) -> None:
+        """
+        Initialize ROI configuration and publish available analysis capabilities.
+
+        The owning device calls this method after connection. The inherited initializer
+        validates/applies the initial configuration and registers request subscriptions.
+        This method then publishes operation and output metadata. Successful repeated
+        calls do nothing; failed initialization can be retried without duplicate request
+        subscriptions.
+
+        Raises:
+            Exception: Inherited initialization or analysis metadata publication fails.
+                The initialization flag is reset before the exception is propagated.
+        """
+        if self._roi_connection_initialized:
+            return
+        try:
+            super().on_connected()
+            self._publish_available_analysis()
+        except Exception:
+            self._roi_connection_initialized = False
+            raise
+
+    def _configuration_message(self) -> ROIConfigurationMessage:
+        """
+        Add the current analysis selection to the complete ROI snapshot.
+
+        Returns:
+            ROIConfigurationMessage: The inherited shape/name/enablement snapshot with a
+                copied list of selected processing operations.
+        """
+        message = super()._configuration_message()
+        message.selected_operations = list(self.selected_operations.get())
+        return message
+
+    def _validate_selected_operations(self, operations: list[str]) -> None:
+        """
+        Check an analysis selection against this backend's advertised operations.
+
+        Args:
+            operations (list[str]): Proposed operation names.
+
+        Raises:
+            ValueError: Any requested operation is not available on this backend.
+        """
+        self.selected_operations.check_value(operations)
+
+    def _on_config_update(self, value: ROIConfigurationMessage, **kwargs) -> None:
+        """
+        Record the applied shape, enablement, name and processing selection.
+
+        Backend subclasses apply hardware settings before calling this implementation.
+        Configuration validation is inherited from ROI; publication is performed by the
+        request application path after the complete update succeeds.
+
+        Args:
+            value (ROIConfigurationMessage): Complete configuration applied to the backend.
+            **kwargs (Any): Additional application context forwarded to ROI.
+        """
+        super()._on_config_update(value, **kwargs)
+        Signal.put(self.selected_operations, value.selected_operations, force=True)
+
     def _update_result_signal_names(self):
         """
-        Update the signal names for the DynamicSignals "result_scalar" and "result_waveform" based on
-        the outputs defined in the subclass. This ensures that the signals.
-        Subclasses must specify every possible output signal in the get_scalar_outputs and get_waveform_outputs methods.
+        Initialize dynamic result schemas from the subclass's declared output names.
+
+        Declare every possible result in get_scalar_outputs() and get_waveform_outputs(),
+        including results belonging to currently unselected operations. This keeps signal
+        metadata discoverable before any acquisition has produced data.
         """
         # pylint: disable=protected-access
         self.result_scalar.signals = self.result_scalar._unify_signals(self.get_scalar_outputs())
@@ -93,105 +183,53 @@ class ROIProcessing(Device, ABC):
             self.get_waveform_outputs()
         )
 
-    def _get_kwargs_for_signals(self, kwargs) -> tuple[dict, dict[str, dict]]:
-        """
-        Utility method to extract kwargs for the signals defined in this class.
-        This allows to set initial values for the signals during initialization of the ROIProcessing device.
-        """
-        ret_kwargs = {}
-        for k in ["active", "roi_name", "x", "y", "width", "height", "selected_operations"]:
-            if k in kwargs:
-                ret_kwargs[k] = kwargs.pop(k)
-        return kwargs, ret_kwargs
-
-    def on_connected(self) -> None:
-        """Initialize Redis integration after EPICS connection, once per instance.
-
-        The owning device calls this hook explicitly from its on_connected hook.
-        Standalone callers may invoke it directly after wait_for_connection().
-        The root must expose a device_manager with a connector.
-        """
-        if self._roi_connection_initialized:
-            return
-        self._connector: RedisConnector | None = (
-            self.root.device_manager.connector if hasattr(self.root, "device_manager") else None
-        )
-        if self._connector is None:
-            raise RuntimeError(
-                f"Signal {self.name} is not connected to Redis, please provide a Redis Connector during the initialization."
-            )
-        self.update_received.on_connected()
-        # Setup initial values for the signal as provided in the kwargs during initialization
-        for signal_name, value in self._signal_kwargs.items():
-            signal = getattr(self, signal_name)
-            signal.put(value)
-
-        # Connect to relevant endpoint for ROI configuration updates
-        if self._config_subscription is None:
-            self._config_subscription = self.update_received.subscribe(
-                self._apply_requested_config, event_type=self.update_received.SUB_VALUE, run=False
-            )
-        if not self._config_registered:
-            self._connector.register(
-                MessageEndpoints.roi_config_request(device=self.root.name, signal=self.dotted_name),
-                cb=self._receive_roi_configuration_message,
-            )
-            self._config_registered = True
-        self._publish_available_analysis()
-        if self.active.get():
-            msg = ROIConfigurationMessage(
-                device=self.root.name,
-                signal=self.dotted_name,
-                active=self.active.get(),
-                name=self.roi_name.get(),
-                roi_config={
-                    "x": self.x.get(),
-                    "y": self.y.get(),
-                    "width": self.width.get(),
-                    "height": self.height.get(),
-                },
-                selected_operations=self.selected_operations.get(),
-            )
-            self._on_config_update(msg)  # Apply the initial configuration if active is True
-        self._publish_configuration()
-        self._roi_connection_initialized = True
-
-    def destroy(self):
-        """Clean up the ROI processing signal and unregister from Redis."""
-        if self._destroyed:
-            return
-        if self._connector is not None and self._config_registered:
-            self._connector.unregister(
-                MessageEndpoints.roi_config_request(device=self.root.name, signal=self.dotted_name),
-                cb=self._receive_roi_configuration_message,
-            )
-        self._config_registered = False
-        destroy_subdevices(self)
-        super().destroy()
-
     @abstractmethod
     def get_scalar_outputs(self) -> list[str]:
         """
-        Returns a list of strings with all possible scalar output signals for the ROI processing signal.
-        All possible outputs must be listed, although not all of them have to be there at the same time.
+        Declare every scalar result supported by this backend.
+
+        Implementations must include outputs of unselected operations as well as selected
+        ones. This method is called during construction and must not communicate with
+        hardware or depend on acquired data.
+
+        Returns:
+            list[str]: Scalar result names used to build result_scalar's dynamic schema.
+                Return an empty list when the backend has no scalar results.
         """
 
     @abstractmethod
     def get_waveform_outputs(self) -> list[str]:
         """
-        Returns a list of strings with all possible waveform output signals for the ROI processing signal.
-        All possible outputs must be listed, although not all of them have to be there at the same time.
+        Declare every waveform result supported by this backend.
+
+        Include outputs of all available operations. This method is called during
+        construction and must not communicate with hardware or depend on acquired data.
+
+        Returns:
+            list[str]: Waveform result names used to build result_waveform's dynamic schema.
+                Return an empty list when the backend has no waveform results.
         """
 
     @abstractmethod
     def get_available_analysis_operations(self) -> list[str]:
         """
-        Returns a list of strings with all possible analysis operations for the ROI processing signal.
-        All possible operations must be listed, although not all of them have to be active at the same time.
+        Declare the analysis operations that users may select.
+
+        The selection signal uses this method for validation, and the metadata publisher
+        uses it for discovery. Implementations must not require hardware communication.
+
+        Returns:
+            list[str]: Supported operation names, including currently unselected operations.
         """
 
     def compile_roi_analysis_config(self) -> ROIAnalysisConfig:
-        """Compile the ROI analysis configuration from the available operations and outputs."""
+        """
+        Build discovery metadata for supported operations and result streams.
+
+        Returns:
+            ROIAnalysisConfig: Available operation names and the complete scalar/waveform
+                output schemas. No backend acquisition or publication is performed.
+        """
         return ROIAnalysisConfig(
             available_operations=self.get_available_analysis_operations(),
             waveform_results=self.get_waveform_outputs(),
@@ -199,7 +237,16 @@ class ROIProcessing(Device, ABC):
         )
 
     def _publish_available_analysis(self) -> None:
-        """Publish the available ROI analysis operations and result signals."""
+        """
+        Publish processing capabilities on this ROI's analysis discovery endpoint.
+
+        Advertise all supported operations and results independently of the current
+        selection, so clients can offer configuration and plotting controls.
+
+        Raises:
+            RuntimeError: No Redis connector has been assigned during connection setup.
+            Exception: Compiling or publishing analysis metadata fails.
+        """
         if self._connector is None:
             raise RuntimeError(
                 f"Signal {self.name} is not connected to Redis and cannot publish ROI analysis."
@@ -213,61 +260,3 @@ class ROIProcessing(Device, ABC):
             MessageEndpoints.available_roi_analysis(device=self.root.name, signal=self.dotted_name),
             message,
         )
-
-    def _publish_configuration(self) -> None:
-        """Publish the current configuration, never an unprocessed request."""
-        if self._connector is None:
-            return
-        self._connector.set_and_publish(
-            MessageEndpoints.roi_config(device=self.root.name, signal=self.dotted_name),
-            ROIConfigurationMessage(
-                metadata={"timestamp": time.time()},
-                device=self.root.name,
-                signal=self.dotted_name,
-                name=self.roi_name.get(),
-                active=bool(self.active.get()),
-                roi_config={key: getattr(self, key).get() for key in ("x", "y", "width", "height")},
-                selected_operations=self.selected_operations.get(),
-            ),
-        )
-
-    def _apply_requested_config(self, value: ROIConfigurationMessage, **kwargs) -> None:
-        """Publish only after the complete backend implementation succeeds."""
-        self._on_config_update(value, **kwargs)
-        self._publish_configuration()
-
-    def _receive_roi_configuration_message(self, message: MessageObject):
-        """
-        Receive a ROI configuration message and update the ROI processing signal accordingly.
-
-        Args:
-            message (MessageObject): The received message object containing the ROI configuration.
-        """
-        message: ROIConfigurationMessage = message.value
-        if message.device != self.root.name or message.signal != self.dotted_name:
-            logger.warning(
-                f"Ignoring ROI configuration for {message.device}.{message.signal}; "
-                f"this ROIProcessing is {self.root.name}.{self.dotted_name}."
-            )
-            return
-        self.update_received.put(message)
-
-    def _on_config_update(self, value: ROIConfigurationMessage, **kwargs):
-        """
-        Callback for when a new ROI configuration message is received.
-
-        Args:
-            value (ROIConfigurationMessage): The received ROI configuration message.
-        """
-        if not isinstance(value, ROIConfigurationMessage):
-            raise TypeError(
-                f"Expected ROIConfigurationMessage, got {type(value).__name__} instead."
-            )
-        self.selected_operations.check_value(value.selected_operations)
-        self.active.put(value.active)
-        self.roi_name.put(value.name)
-        self.x.put(value.roi_config.x)
-        self.y.put(value.roi_config.y)
-        self.width.put(value.roi_config.width)
-        self.height.put(value.roi_config.height)
-        self.selected_operations.put(value.selected_operations)

@@ -1,7 +1,10 @@
 """Simulated 2D camera device"""
 
+from typing import Any, ClassVar
+
 import numpy as np
 from bec_lib.logger import bec_logger
+from bec_lib.messages import RectROIConfig
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, StatusBase
 
@@ -26,6 +29,26 @@ SIM_CONFIG: LITERAL_ROI_PROCESSING_CONFIG = {
 
 class SimCameraROIProcessing(ROIProcessing):
     """ROI processing signal for simulated camera setups."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Create a simulated ROI restricted to axis-aligned rectangles.
+
+        Args:
+            *args (Any): Positional arguments forwarded to ROIProcessing.
+            **kwargs (Any): ROIProcessing arguments, including roi_config and the
+                optional allowed_roi_config_types restriction. Only RectROIConfig
+                is supported for both initial configurations and later requests.
+
+        Raises:
+            ValueError: allowed_roi_config_types permits an unsupported shape.
+            TypeError: The initial configuration is not a rectangle.
+        """
+        allowed = kwargs.get("allowed_roi_config_types")
+        if allowed is not None and any(cls is not RectROIConfig for cls in allowed):
+            raise ValueError("Simulated camera ROI processing only supports RectROIConfig")
+        kwargs["allowed_roi_config_types"] = (RectROIConfig,) if allowed is None else allowed
+        super().__init__(*args, **kwargs)
 
     def get_scalar_outputs(self) -> list[str]:
         scalar_outpus = []
@@ -77,10 +100,10 @@ class SimCameraROIProcessing(ROIProcessing):
 
     def _extract_roi(self, image: np.ndarray) -> np.ndarray:
         """Return the configured rectangular ROI clipped to the image bounds."""
-        x = int(self.x.get())
-        y = int(self.y.get())
-        width = int(self.width.get())
-        height = int(self.height.get())
+        config = self._roi_config
+        if not isinstance(config, RectROIConfig):
+            raise TypeError("Simulated camera ROI extraction requires RectROIConfig")
+        x, y, width, height = config.x, config.y, config.width, config.height
         if width <= 0 or height <= 0:
             return image[0:0, 0:0]
 
@@ -107,7 +130,7 @@ class SimCameraROIProcessing(ROIProcessing):
 class SimCameraControl(Device):
     """SimCamera Control layer"""
 
-    USER_ACCESS = ["sim", "registered_proxies"]
+    USER_ACCESS: ClassVar[list[str]] = ["sim", "registered_proxies"]
 
     sim_cls = SimulatedDataCamera
     SHAPE = (100, 100)
@@ -130,7 +153,9 @@ class SimCameraControl(Device):
     file_event = Cpt(FileEventSignal)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
-    def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
+    def __init__(
+        self, name, *, parent=None, sim_init: dict | None = None, device_manager=None, **kwargs
+    ):
         self.sim_init = sim_init
         self.device_manager = device_manager
         self._registered_proxies = {}
@@ -168,12 +193,9 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
         SimCameraROIProcessing,
         name="roi_processing",
         active=True,
-        x=25,
-        y=25,
-        width=50,
-        height=50,
+        roi_config={"type": "rect", "x": 25, "y": 25, "width": 50, "height": 50},
         selected_operations=["basic_statistics"],
-        kind=Kind.normal,
+        kind=Kind.config,
     )
 
     def __init__(self, name: str, scan_info=None, device_manager=None, **kwargs):
