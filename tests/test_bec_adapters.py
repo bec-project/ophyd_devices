@@ -438,3 +438,402 @@ def test_configuring_limits_does_not_require_prewrite_reads(provider):
     provider.wrap(raw).configure({"limits": [-1, 2]})
     assert raw.low_limit_travel.written == -1
     assert raw.high_limit_travel.written == 2
+
+
+def test_failed_set_submission_stops_partially_started_native_hardware(provider):
+    error = RuntimeError("response lost after hardware started")
+
+    class PartialSet(Signal):
+        running = False
+        stopped = False
+        stop_done = threading.Event()
+
+        def set(self, value, **kwargs):
+            self.running = True
+            raise error
+
+        def stop(self, **kwargs):
+            self.running = False
+            self.stopped = True
+            self.stop_done.set()
+
+    raw = PartialSet(name="motor")
+    with pytest.raises(RuntimeError) as failure:
+        provider.wrap(raw).set(1)
+    assert failure.value is error
+    assert raw.stop_done.wait(2)
+    assert raw.stopped
+    assert not raw.running
+
+
+def test_batched_array_invalidation_does_not_copy_or_retain_native_buffer(provider):
+    import numpy as np
+
+    copies = []
+
+    class TrackedArray(np.ndarray):
+        def __deepcopy__(self, memo):
+            copies.append(self.nbytes)
+            return np.array(self)
+
+    class Waveform(Device):
+        data = Cpt(Signal, value=0)
+
+    raw = Waveform(name="waveform")
+    raw.data._auto_monitor = True
+    events = []
+    provider.wrap(raw).subscribe(events.append)
+    raw.data.put(np.arange(10000).view(TrackedArray))
+    provider.events.submit(lambda: None).result(2)
+    assert copies == []
+    assert events[-1].kind == EventKind.READBACK
+    assert events[-1].value is None
+
+
+def test_legacy_value_conversion_has_no_provider_or_logging_side_effects():
+    import logging
+    from types import SimpleNamespace
+
+    from ophyd_devices.bec_adapters import convert_value
+
+    logger = logging.getLogger("ophyd")
+    original = list(logger.handlers)
+    marker = logging.NullHandler()
+    logger.addHandler(marker)
+    try:
+        assert convert_value(SimpleNamespace(enum_strs=("off", "on"), name="choice"), 1.0) == 1
+        assert marker in logger.handlers
+    finally:
+        logger.handlers[:] = original
+
+
+def test_flush_reports_only_this_tree_new_errors_and_cannot_wait_on_event_owner(provider):
+    first, second = [provider.wrap(Tree(name=name)) for name in ("first", "second")]
+
+    def failed(event):
+        if event.kind == EventKind.MESSAGE:
+            raise RuntimeError("file publication failed")
+
+    token = first.subscribe(failed)
+    first.device.file.put(file_path="file.h5", done=True, successful=True)
+    second.flush_events(2)
+    with pytest.raises(RuntimeError, match="file publication failed"):
+        first.flush_events(2)
+    first.flush_events(2)  # An acknowledged old failure must not poison later requests.
+    future = provider.events.submit(first.flush_events, 0.1)
+    with pytest.raises(RuntimeError, match="own worker"):
+        future.result(2)
+    # Disposal retains the original accepted-message failure accounting.
+    with pytest.raises(RuntimeError, match="file publication failed"):
+        token.close()
+
+
+def test_read_generated_peer_notifications_do_not_feed_back_across_roots(provider):
+    class PeerSignal(Signal):
+        peer = None
+
+        def get(self, **kwargs):
+            if self.peer is not None:
+                self.peer._run_subs(sub_type=self.peer.SUB_VALUE, value=self._readback)
+            return super().get(**kwargs)
+
+    first, second = PeerSignal(name="first", value=0), PeerSignal(name="second", value=0)
+    first.peer, second.peer = second, first
+    handlers = {raw.name: provider.wrap(raw) for raw in (first, second)}
+    received = []
+    done = threading.Event()
+
+    def callback(event):
+        received.append(event.source.root)
+        if len(received) < 10:
+            handlers[event.source.root].read()
+        done.set()
+
+    tokens = [handler.subscribe_readback(callback) for handler in handlers.values()]
+    # Discard initial run=True subscriptions before exercising a producer update.
+    provider.events.submit(lambda: None).result(2)
+    received.clear()
+    first.put(1)
+    assert done.wait(2)
+    for token in tokens:
+        token.close()
+    assert received == ["first", "second"]
+
+
+def test_failed_set_does_not_wait_for_native_failure_stop(provider):
+    entered, release, stopped = threading.Event(), threading.Event(), threading.Event()
+
+    class PartialSet(Signal):
+        def set(self, value, **kwargs):
+            raise ValueError("submission failed")
+
+        def stop(self, **kwargs):
+            entered.set()
+            assert release.wait(2)
+            stopped.set()
+
+    raw = PartialSet(name="motor")
+    try:
+        with pytest.raises(ValueError, match="submission failed"):
+            provider.wrap(raw).set(1)
+        assert entered.wait(2)
+        assert not stopped.is_set()
+    finally:
+        release.set()
+    assert stopped.wait(2)
+
+
+def test_idle_tree_fence_does_not_wait_for_an_unrelated_blocked_callback(provider):
+    first, second = [provider.wrap(Tree(name=name)) for name in ("first", "second")]
+    first.subscribe(lambda event: None)
+    entered, release = threading.Event(), threading.Event()
+    second.subscribe(lambda event: (entered.set(), release.wait(2)))
+    second.device.file.put(file_path="second.h5", done=True, successful=True)
+    assert entered.wait(2)
+    try:
+        first.flush_events(0.03)
+    finally:
+        release.set()
+
+
+def test_acknowledged_delivery_failures_release_payloads_and_keep_bounded_summary():
+    import numpy as np
+    from bec_lib.device_backend import DeviceEvent, DeviceIdentity, EventKind, MessageChannel
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+
+        def failed(event):
+            raise RuntimeError("publication unavailable")
+
+        token = EventSubscription(executor, failed)
+        references = []
+        for index in range(3):
+            message = messages.DevicePreviewMessage(
+                data=np.arange(100000), signal="preview", device="detector"
+            )
+            references.append(weakref.ref(message.data))
+            token.emit(
+                DeviceEvent(
+                    DeviceIdentity("detector"),
+                    EventKind.MESSAGE,
+                    message=message,
+                    channel=MessageChannel.PREVIEW,
+                )
+            )
+        del message
+        token.wait_for_fence(token.fence(), 2)
+        assert len(token.take_delivery_errors()) == 1
+        executor.submit(lambda: None).result(2)  # The last delivery frame has returned.
+        gc.collect()
+        assert all(reference() is None for reference in references)
+        assert len(token._errors) == 1
+        assert token._failure_count == 3
+        with pytest.raises(RuntimeError, match="publication unavailable"):
+            token.close()
+
+
+def test_first_changed_peer_is_published_with_causal_feedback_guard(provider):
+    from ophyd_devices import ComputedSignal
+    from ophyd_devices.sim.sim_signals import SetableSignal
+
+    peer = SetableSignal(name="peer", value=0)
+    computed = ComputedSignal(name="computed")
+    computed.input_signals = [peer]
+    computed.compute_method = "def compute(signal): return signal.get()"
+    events = []
+    token = provider.wrap(peer).subscribe_readback(events.append)
+    provider.events.submit(lambda: None).result(2)
+    events.clear()
+    peer._value = 5
+    provider.wrap(computed).read()
+    token.wait_for_fence(token.fence(), 2)
+    assert [event.value for event in events] == [5]
+    token.close()
+
+
+def test_tree_close_drains_owned_failed_submission_recovery(provider):
+    entered, release, closed = threading.Event(), threading.Event(), threading.Event()
+
+    class PartialSet(Signal):
+        def set(self, value, **kwargs):
+            raise ValueError("submission failed")
+
+        def stop(self, **kwargs):
+            entered.set()
+            assert release.wait(2)
+
+    handler = provider.wrap(PartialSet(name="motor"))
+    with pytest.raises(ValueError, match="submission failed"):
+        handler.set(1)
+    assert entered.wait(2)
+    closer = threading.Thread(target=lambda: (handler.close(), closed.set()))
+    closer.start()
+    try:
+        assert not closed.wait(0.05)
+        release.set()
+        assert closed.wait(2)
+    finally:
+        release.set()
+        closer.join(2)
+    assert handler._closed
+
+
+def test_acknowledging_an_old_fence_preserves_later_delivery_failures():
+    with ThreadPoolExecutor(max_workers=1) as executor:
+
+        def failed(event):
+            raise RuntimeError(str(event.value))
+
+        token = EventSubscription(executor, failed)
+        token.emit(DeviceEvent(DeviceIdentity("device"), EventKind.READBACK, value="first"))
+        first = token.fence()
+        token.emit(DeviceEvent(DeviceIdentity("device"), EventKind.READBACK, value="second"))
+        second = token.fence()
+        token.wait_for_fence(second, 2)
+        assert "first" in str(token.take_delivery_errors(first)[0])
+        assert "second" in str(token.take_delivery_errors(second)[0])
+        assert token._failures.first is None
+        assert token.take_delivery_errors(second) == []
+        with pytest.raises(RuntimeError, match="first"):
+            token.close()
+
+
+def test_idle_failed_publication_keeps_bounded_accounting_without_completions(monkeypatch):
+    from bec_lib.logger import bec_logger
+
+    monkeypatch.setattr(bec_logger.logger, "error", lambda *args, **kwargs: None)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+
+        def failed(event):
+            raise RuntimeError("publication unavailable")
+
+        token = EventSubscription(executor, failed)
+        for _ in range(2000):
+            token.emit(DeviceEvent(DeviceIdentity("device"), EventKind.READBACK))
+        fence = token.fence()
+        token.wait_for_fence(fence, 2)
+        assert token._failure_count == 2000
+        assert len(token._errors) == 1
+        assert token._failures.first is not None
+        assert token._failures.last is not None
+        assert len(token._fences) == 1
+        assert len(token.take_delivery_errors(fence)) == 1
+        assert token._failures.first is None
+        del fence
+        gc.collect()
+        assert not token._fences
+        with pytest.raises(RuntimeError, match="publication unavailable"):
+            token.close()
+
+
+def test_recovery_fences_new_tree_commands_but_allows_reads_and_observation(provider):
+    from ophyd_devices.bec_adapters.ophyd import DeviceRecoveryError
+
+    entered, release = threading.Event(), threading.Event()
+
+    class PartialSet(Signal):
+        def set(self, value, **kwargs):
+            if value == 0:
+                raise ValueError("submission failed")
+            return super().set(value, **kwargs)
+
+        def stop(self, **kwargs):
+            entered.set()
+            assert release.wait(2)
+
+    class RecoveringTree(Device):
+        target = Cpt(PartialSet, value=0)
+        peer = Cpt(Signal, value=0)
+
+    root = provider.wrap(RecoveringTree(name="tree"))
+    target = root.resolve("target")
+    with pytest.raises(ValueError, match="submission failed"):
+        target.set(0)
+    assert entered.wait(2)
+    try:
+        with pytest.raises(DeviceRecoveryError, match="retry"):
+            target.set(1)
+        with pytest.raises(DeviceRecoveryError):
+            root.resolve("peer").set(2)
+        with pytest.raises(DeviceRecoveryError):
+            root.trigger()
+        assert root.read()["tree_target"]["value"] == 0
+        token = target.subscribe_readback(lambda event: None)
+        token.close()
+        independent = provider.wrap(Signal(name="other", value=0))
+        independent.set(3).result(2)
+        assert independent.read()["other"]["value"] == 3
+    finally:
+        release.set()
+    with root._idle:
+        assert root._idle.wait_for(lambda: root._recovering == 0, 2)
+    target.set(1).result(2)
+
+
+def test_failed_recovery_submission_preserves_original_error_and_releases_admission(
+    provider, monkeypatch
+):
+    class PartialSet(Signal):
+        def set(self, value, **kwargs):
+            raise ValueError("original submission failure")
+
+    handler = provider.wrap(PartialSet(name="motor"))
+
+    def rejected(*args, **kwargs):
+        raise RuntimeError("executor unavailable")
+
+    monkeypatch.setattr(provider.recovery, "submit", rejected)
+    with pytest.raises(ValueError, match="original submission failure") as caught:
+        handler.set(1)
+    assert "executor unavailable" in caught.value.__notes__[0]
+    assert handler._inflight == 0
+    assert handler._recovering == 0
+
+
+def test_tree_native_unsubscribe_failure_keeps_live_ownership_for_retry(provider, monkeypatch):
+    raw = Tree(name="tree")
+    handler = provider.wrap(raw)
+    token = handler.subscribe(lambda event: None)
+    provider.events.submit(lambda: None).result(2)
+    original = raw.file.clear_sub
+
+    def rejected(*args, **kwargs):
+        raise RuntimeError("native removal failed")
+
+    monkeypatch.setattr(raw.file, "clear_sub", rejected)
+    with pytest.raises(RuntimeError, match="native removal failed"):
+        handler.close()
+    assert not raw._destroyed
+    assert not handler._closed
+    assert provider._handlers[id(raw)] is handler
+    assert token in handler._subscriptions
+    monkeypatch.setattr(raw.file, "clear_sub", original)
+    handler.close()
+    assert raw._destroyed
+    assert handler._closed
+    assert not provider._handlers
+
+
+def test_failed_provider_shutdown_keeps_global_command_fence(provider, monkeypatch):
+    raw = Signal(name="signal", value=0)
+    handler = provider.wrap(raw)
+    handler.subscribe_readback(lambda event: None)
+    provider.events.submit(lambda: None).result(2)
+    original = raw.clear_sub
+
+    def rejected(*args, **kwargs):
+        raise RuntimeError("native removal failed")
+
+    monkeypatch.setattr(raw, "clear_sub", rejected)
+    try:
+        with pytest.raises(RuntimeError, match="native removal failed"):
+            provider.close()
+        assert not raw._destroyed
+        with pytest.raises(DeviceClosedError, match="closing"):
+            handler.set(7)
+        assert handler.read()["signal"]["value"] == 0
+    finally:
+        monkeypatch.setattr(raw, "clear_sub", original)
+        provider.close()
+    assert raw._destroyed
+    assert provider._closed

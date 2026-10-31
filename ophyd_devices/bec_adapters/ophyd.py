@@ -19,6 +19,7 @@ from bec_lib.device_backend import (
     ConfigurationResult,
     DeviceEvent,
     DeviceIdentity,
+    EventContext,
     EventKind,
     MessageChannel,
     Operation,
@@ -31,6 +32,7 @@ from bec_lib.utils.rpc_utils import rgetattr
 from ophyd import Signal
 from ophyd.device import Staged
 from ophyd.ophydobj import Kind
+from ophyd.status import DeviceStatus as NativeDeviceStatus
 from ophyd.status import StatusBase
 
 from ophyd_devices.bec_adapters.events import EventSubscription
@@ -39,6 +41,7 @@ from ophyd_devices.bec_adapters.serialization import (
     get_device_info,
     is_serializable,
 )
+from ophyd_devices.bec_adapters.values import convert_value
 from ophyd_devices.utils import bec_signals as bms
 
 if TYPE_CHECKING:
@@ -49,12 +52,16 @@ class DeviceClosedError(RuntimeError):
     """Device ownership ended before an observed operation completed."""
 
 
+class DeviceRecoveryError(RuntimeError):
+    """A prior failed command still owns native stop/recovery for this tree."""
+
+
 P = ParamSpec("P")
 R = TypeVar("R")
 
 
 def _admitted(
-    method: Callable[Concatenate[OphydHandler, P], R],
+    method: Callable[Concatenate[OphydHandler, P], R], *, during_recovery: bool = False
 ) -> Callable[Concatenate[OphydHandler, P], R]:
     """Serialize admission/native method invocation, never an acquisition await."""
 
@@ -62,8 +69,12 @@ def _admitted(
     def invoke(self: OphydHandler, *args: P.args, **kwargs: P.kwargs) -> R:
         owner = self.provider.owner(self)
         with owner._admission:
-            if owner._closing or owner._closed:
+            if self.provider._closing or owner._closing or owner._closed:
                 raise DeviceClosedError("Device is closing")
+            if owner._recovering and not during_recovery:
+                raise DeviceRecoveryError(
+                    "Device is stopping after a failed command; retry after recovery"
+                )
             owner._inflight += 1
         try:
             return method(self, *args, **kwargs)
@@ -73,6 +84,13 @@ def _admitted(
                 owner._idle.notify_all()
 
     return invoke
+
+
+def _admitted_observation(
+    method: Callable[Concatenate[OphydHandler, P], R],
+) -> Callable[Concatenate[OphydHandler, P], R]:
+    """Keep resolution and event observation available while recovery owns commands."""
+    return _admitted(method, during_recovery=True)
 
 
 class OphydHandler:  # pylint: disable=too-many-public-methods
@@ -87,6 +105,7 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
         self._admission = threading.RLock()
         self._idle = threading.Condition(self._admission)
         self._inflight = 0
+        self._recovering = 0
         self._pending: set[Operation[None]] = set()
 
     @property
@@ -139,7 +158,7 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
             return ReadCategory.NORMAL
         return ReadCategory.OMITTED if kind == Kind.omitted else ReadCategory.MIXED
 
-    @_admitted
+    @_admitted_observation
     def resolve(self, path: str) -> OphydHandler:
         """Resolve a child path while retaining the requested target identity."""
         return self.provider.wrap(rgetattr(self.device, path)) if path else self
@@ -257,18 +276,24 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
     @_admitted
     def set(self, value: Any) -> Completion[None]:
         """Submit a native write/move and return its neutral completion."""
-        return self.operation(self.device.set(self.convert_value(value)))
+        try:
+            return self.operation(self.device.set(self.convert_value(value)))
+        except Exception as error:
+            # Preserve the native failure-stop policy, but own the possibly
+            # blocking stop outside request and completion workers.
+            def failed_submission(error: Exception = error) -> None:
+                failure = NativeDeviceStatus(device=self.device)
+                failure.set_exception(error)
+
+            try:
+                self.provider.recover_failed_set(self, failed_submission)
+            except Exception as cleanup_error:
+                error.add_note(f"Native failure recovery could not be scheduled: {cleanup_error!r}")
+            raise
 
     def convert_value(self, value: Any) -> Any:
         """Preserve integral-float enum conversion, including numpy scalars."""
-        choices = getattr(self.device, "enum_strs", None)
-        if choices and isinstance(value, float):
-            if not value.is_integer():
-                raise ValueError(
-                    f"Cannot convert float {value} to enum index for {self.device.name}. Value must be an integer to select one of the enum strings: {choices}."
-                )
-            return int(value)
-        return value
+        return convert_value(self.device, value)
 
     @_admitted
     def trigger(self) -> Completion[None]:
@@ -327,14 +352,19 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
         identity = self.provider.wrap(device).identity
 
         def callback(*_args, value=None, **_kwargs):
-            if kind in (
-                EventKind.READBACK,
-                EventKind.CONFIGURATION,
-                EventKind.LIMITS,
-            ) and self.provider.is_reading(identity.root):
+            ancestry = self.provider.read_roots()
+            if (
+                kind in (EventKind.READBACK, EventKind.CONFIGURATION, EventKind.LIMITS)
+                and identity.root in ancestry
+            ):
                 return
             if not getattr(device, "connected", True):
                 return
+            event_context = (
+                subscription.context()
+                if kind == EventKind.MESSAGE and subscription.context is not None
+                else None
+            )
             # Producers may reuse messages and ndarray buffers immediately after put.
             # Snapshot exactly once before the off-owner handoff.
             message = value.model_copy(deep=True) if kind == EventKind.MESSAGE else None
@@ -348,20 +378,33 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
                     identity,
                     kind,
                     batched,
-                    value=None if message is not None else copy.deepcopy(value),
+                    value=(
+                        copy.deepcopy(value)
+                        if kind == EventKind.MOTION or subscription.registration == "readback"
+                        else None
+                    ),
                     message=message,
                     channel=channel,
                     signal_metadata=metadata,
-                )
+                    context=event_context,
+                ),
+                ancestry=ancestry,
             )
 
         device.subscribe(callback, event_type=event_type, run=run)
         subscription.own(lambda: device.clear_sub(callback, event_type=event_type))
 
-    @_admitted
-    def subscribe(self, callback: Callable[[DeviceEvent], None]) -> EventSubscription:
+    @_admitted_observation
+    def subscribe(
+        self,
+        callback: Callable[[DeviceEvent], None],
+        *,
+        context: Callable[[], EventContext] | None = None,
+    ) -> EventSubscription:
         """Register pushed events and return the owned disposal token."""
-        subscription = EventSubscription(self.provider.events, callback)
+        subscription = EventSubscription(
+            self.provider.events, callback, context=context, delivery_scope=self.provider.receiving
+        )
         self._subscriptions.append(subscription)
         subscription.on_close = lambda: (
             self._subscriptions.remove(subscription)
@@ -427,10 +470,16 @@ class OphydHandler:  # pylint: disable=too-many-public-methods
                 elif child.kind == Kind.config:
                     self._listen(subscription, child, EventKind.CONFIGURATION, batched=True)
 
-    @_admitted
+    def flush_events(self, timeout: float = 10) -> None:
+        """Fence accepted service publication without changing native outcomes."""
+        self.provider.flush_tree_events(self, timeout)
+
+    @_admitted_observation
     def subscribe_readback(self, callback: Callable[[DeviceEvent], None]) -> EventSubscription:
         """Register temporary requested-target readback observation."""
-        subscription = EventSubscription(self.provider.events, callback)
+        subscription = EventSubscription(
+            self.provider.events, callback, delivery_scope=self.provider.receiving
+        )
         subscription.registration = "readback"
         self._subscriptions.append(subscription)
         subscription.on_close = lambda: (

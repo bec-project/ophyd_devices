@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import inspect
 import threading
-from collections.abc import Callable, Mapping
+import time
+from collections.abc import Callable, Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from typing import Any
 
 import ophyd
-from bec_lib import plugin_helper
+from bec_lib import bec_logger, plugin_helper
 from bec_lib.bec_errors import DeviceConfigError
 from bec_lib.device_backend import DeviceHandler
 from ophyd import OphydObject, Signal
@@ -20,6 +21,7 @@ from ophyd.signal import EpicsSignalBase
 
 import ophyd_devices as opd
 from ophyd_devices.bec_adapters.diagnostics import OphydCallbackMonitor
+from ophyd_devices.bec_adapters.events import EventDeliveryError, EventSubscription
 from ophyd_devices.bec_adapters.logging import configure_logging
 from ophyd_devices.bec_adapters.ophyd import DeviceClosedError, OphydHandler
 
@@ -31,6 +33,7 @@ class OphydProvider:
         configure_logging()
         self.events = ThreadPoolExecutor(max_workers=1, thread_name_prefix="BECDeviceEvents")
         self.callbacks = ThreadPoolExecutor(max_workers=4, thread_name_prefix="BECDeviceCompletion")
+        self.recovery = ThreadPoolExecutor(max_workers=4, thread_name_prefix="BECDeviceRecovery")
         self._lock = threading.RLock()
         self._close_lock = threading.RLock()
         self._construction_idle = threading.Condition(self._lock)
@@ -170,6 +173,40 @@ class OphydProvider:
 
         future.add_done_callback(finished)
 
+    def recover_failed_set(self, handler: OphydHandler, callback: Callable[[], None]) -> None:
+        """Own native failure cleanup without occupying request/completion workers.
+
+        The admitted set caller retains the tree until this work is registered.
+        Tree shutdown drains this work before native destruction and retains
+        ownership if its bounded admission drain times out.
+        """
+        owner = self.owner(handler)
+        with owner._idle:
+            owner._inflight += 1
+            owner._recovering += 1
+
+        def recover() -> None:
+            try:
+                callback()
+            except Exception:
+                bec_logger.logger.exception(
+                    f"Native failure recovery failed for {handler.identity.qualified_name}"
+                )
+            finally:
+                with owner._idle:
+                    owner._inflight -= 1
+                    owner._recovering -= 1
+                    owner._idle.notify_all()
+
+        try:
+            self.recovery.submit(recover)
+        except Exception:
+            with owner._idle:
+                owner._inflight -= 1
+                owner._recovering -= 1
+                owner._idle.notify_all()
+            raise
+
     def error_device(self, error: BaseException) -> str | None:
         """Identify the native owner of an error, when available."""
         tb = error.__traceback__
@@ -181,12 +218,13 @@ class OphydProvider:
         return None
 
     @contextmanager
-    def reading(self, root: str):
+    def reading(self, root: str) -> Iterator[None]:
         """Suppress only same-thread invalidations caused by the snapshot being read.
 
         Computed legacy signals can emit value updates from get(). Their original
         inline callback guard prevented recursive reads; queued delivery needs an
-        explicit snapshot scope. Transport updates on other threads are unaffected.
+        explicit snapshot scope, including inline updates from read dependencies.
+        Transport updates on other threads are unaffected.
         """
         active = getattr(self._reads, "active", {})
         self._reads.active = active
@@ -198,15 +236,66 @@ class OphydProvider:
             if not active[root]:
                 active.pop(root)
 
-    def is_reading(self, root: str) -> bool:
-        """Whether this thread is taking a snapshot for the configured root."""
-        return bool(getattr(self._reads, "active", {}).get(root))
+    def read_roots(self) -> frozenset[str]:
+        """Return the causal snapshot ancestry for this ingress/delivery thread."""
+        return frozenset(getattr(self._reads, "active", {})) | getattr(
+            self._reads, "causal_roots", frozenset()
+        )
+
+    @contextmanager
+    def receiving(self, roots: frozenset[str]) -> Iterator[None]:
+        """Retain read causality across queued callbacks, without suppressing new peers."""
+        previous = getattr(self._reads, "causal_roots", frozenset())
+        self._reads.causal_roots = previous | roots
+        try:
+            yield
+        finally:
+            self._reads.causal_roots = previous
 
     def owner(self, handler: OphydHandler) -> OphydHandler:
         """Return the registered root ownership domain without admitting new work."""
         root = getattr(handler.device, "root", handler.device)
         with self._lock:
             return self._handlers.get(id(root), handler)
+
+    def flush_tree_events(self, handler: OphydHandler, timeout: float) -> None:
+        """Fence this tree's accepted work within one budget, independently of idle peers."""
+        if threading.current_thread().name.startswith("BECDeviceEvents"):
+            raise RuntimeError("Cannot wait for event delivery from its own worker")
+        deadline = time.monotonic() + timeout
+        with self._lock:
+            if self._closed:
+                return
+            owner = self.owner(handler)
+            fences = [
+                (subscription, subscription.fence())
+                for item in self._handlers.values()
+                if self.owner(item) is owner
+                for subscription in item._subscriptions
+            ]
+        errors = []
+        for subscription, sequence in fences:
+            subscription.wait_for_fence(sequence, max(0, deadline - time.monotonic()))
+            errors.extend(subscription.take_delivery_errors(sequence))
+        if errors:
+            raise errors[0]
+
+    @staticmethod
+    def _restore_subscriptions(
+        owner: OphydHandler,
+        registrations: list[tuple[OphydHandler, EventSubscription]],
+        error: Exception,
+    ) -> None:
+        """Restore live ownership after cleanup/destruction fails, retaining retry diagnostics."""
+        with owner._admission:
+            owner._closing = False
+        for item, subscription in registrations:
+            try:
+                subscription.resume(
+                    lambda item=item, subscription=subscription: item._register_events(subscription)
+                )
+            except Exception as restore_error:
+                error.add_note(f"Subscription restoration failed: {restore_error!r}")
 
     def close_tree(self, handler: OphydHandler) -> None:  # pylint: disable=too-many-branches
         """Fence submission, drain every descendant and settle pending observers."""
@@ -225,38 +314,38 @@ class OphydProvider:
             registrations = [
                 (item, subscription) for item in tree for subscription in item._subscriptions
             ]
+
             for item in tree:
                 for subscription in tuple(item._subscriptions):
                     try:
                         subscription.suspend()
+                    except EventDeliveryError:
+                        # Historical publication failure is not resource failure.
+                        # Direct token disposal reports it; tree teardown logs it.
+                        pass
                     except TimeoutError:
                         # Keep ownership/infrastructure for a retry; never perform an
                         # unbounded Executor.shutdown after a bounded drain failure.
                         raise
                     except Exception as error:
                         errors.append(error)
+            if errors:
+                self._restore_subscriptions(owner, registrations, errors[0])
+                raise errors[0]
             try:
                 destroy = getattr(owner.device, "destroy", None)
                 if destroy is not None:
                     destroy()
             except Exception as error:
-                # Preserve a live legacy device after failed disable and allow retry.
-                # Subscription registrations were removed before the failed destroy.
-                with owner._admission:
-                    owner._closing = False
-                for item, subscription in registrations:
-                    try:
-                        subscription.resume(
-                            lambda item=item, subscription=subscription: item._register_events(
-                                subscription
-                            )
-                        )
-                    except Exception as restore_error:
-                        error.add_note(f"Subscription restoration failed: {restore_error!r}")
+                self._restore_subscriptions(owner, registrations, error)
                 raise
             for _, subscription in registrations:
                 try:
                     subscription.close()
+                except EventDeliveryError as error:
+                    bec_logger.logger.warning(
+                        f"Device closed with historical publication failure: {error}"
+                    )
                 except Exception as error:
                     errors.append(error)
             with owner._admission:
@@ -308,6 +397,7 @@ class OphydProvider:
                     raise TimeoutError("Timed out draining device completion callbacks")
             self.events.shutdown(wait=True)
             self.callbacks.shutdown(wait=True)
+            self.recovery.shutdown(wait=True)
             with self._lock:
                 self._closed = True
                 self._handlers.clear()
