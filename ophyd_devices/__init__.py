@@ -25,6 +25,7 @@ from ophyd import EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV
 
 from .devices.psi_motor import EpicsMotor, EpicsMotorEC, EpicsUserMotorVME
 from .devices.softpositioner import SoftPositioner
+from .interfaces.base_classes.camera_base import CameraBase as CameraBase
 from .interfaces.base_classes.psi_device_base import PSIDeviceBase
 from .utils.bec_device_base import BECDeviceBase
 from .utils.bec_processed_signal import *

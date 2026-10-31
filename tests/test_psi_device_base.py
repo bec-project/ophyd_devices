@@ -12,6 +12,7 @@ from ophyd import Component as Cpt
 from ophyd import Device, Staged
 from ophyd.status import StatusBase
 
+from ophyd_devices.interfaces.base_classes.camera_base import CameraBase
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError, PSIDeviceBase
 from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
@@ -769,6 +770,124 @@ def test_native_stage_failure_can_unstage_for_rollback():
     finally:
         root.destroy()
         gain.destroy()
+
+
+@pytest.fixture
+def destruction_camera():
+    """
+    Provide observable camera input and a real preview timer without hardware I/O.
+    """
+
+    class Camera(CameraBase):
+        def on_init(self) -> None:
+            self.acquiring = False
+            self.live_starts = 0
+
+        def on_live_mode_starts(self) -> None:
+            self.check_cancelled()
+            self.acquiring = True
+            self.live_starts += 1
+
+        def on_live_mode_stops(self) -> None:
+            self.acquiring = False
+
+        def on_stop(self) -> None:
+            self.stopped = True
+            self.stop_live(update_preference=False).wait(timeout=self.io_timeout)
+
+        def on_destroy(self) -> None:
+            self.live_enabled.unsubscribe(self._live_subscription)
+            self.on_stop()
+
+    camera = Camera(name="camera", redis_update_frequency=20, io_timeout=1)
+    yield camera
+    camera._poll_stop.set()
+    if camera._poll_thread is not None:
+        camera._poll_thread.join(timeout=1)
+    camera.destroy()
+
+
+@pytest.mark.parametrize("cleanup_fails", [False, True])
+def test_camera_cannot_restart_between_destroy_cleanup_steps(
+    destruction_camera, cleanup_fails, monkeypatch
+):
+    """
+    Destruction retains exclusive ownership after the camera hook has stopped live input.
+    """
+    camera = destruction_camera
+    camera.start_live().wait(timeout=1)
+    preview = camera._poll_thread
+    entered, release = threading.Event(), threading.Event()
+
+    def shutdown() -> None:
+        entered.set()
+        assert release.wait(timeout=2)
+        if cleanup_fails:
+            raise RuntimeError("task shutdown failed")
+
+    monkeypatch.setattr(camera.task_handler, "shutdown", shutdown)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        destroying = pool.submit(camera.destroy)
+        try:
+            assert entered.wait(timeout=1)
+            assert not camera.acquiring
+            assert preview is not None and not preview.is_alive()
+            for setup in (camera.start_live, camera.stage):
+                with pytest.raises(DeviceStoppedError, match="destruction has begun"):
+                    setup()
+            camera.start_polling()
+            assert camera._poll_thread is preview
+            camera.destroy()  # An overlapping call must not run cleanup again.
+        finally:
+            release.set()
+        if cleanup_fails:
+            with pytest.raises(RuntimeError, match="task shutdown failed"):
+                destroying.result(timeout=2)
+        else:
+            destroying.result(timeout=2)
+
+    assert camera.destroyed
+    assert camera.live_starts == 1
+    assert not camera.acquiring
+    for setup in (camera.start_live, camera.stage):
+        with pytest.raises(DeviceStoppedError, match="destruction has begun"):
+            setup()
+    camera.start_polling()
+    assert camera._poll_thread is preview
+    assert not preview.is_alive()
+    camera.destroy()
+
+
+def test_live_start_acknowledged_after_destroy_cannot_restart_preview(
+    destruction_camera, monkeypatch
+):
+    """
+    A live request already awaiting acknowledgement cannot revive a destroyed camera.
+    """
+    camera = destruction_camera
+    entered = threading.Event()
+    acknowledged = StatusBase()
+    original_start = camera.on_live_mode_starts
+
+    def start() -> StatusBase:
+        original_start()
+        entered.set()
+        return acknowledged
+
+    monkeypatch.setattr(camera, "on_live_mode_starts", start)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        starting = pool.submit(camera.start_live)
+        try:
+            assert entered.wait(timeout=1)
+            assert camera.acquiring
+            camera.destroy()
+        finally:
+            acknowledged.set_finished()
+        with pytest.raises(DeviceStoppedError):
+            starting.result(timeout=2)
+    assert camera.destroyed
+    assert not camera.acquiring
+    assert camera._poll_thread is None
 
 
 def test_failed_native_destroy_can_retry_without_allowing_setup():
