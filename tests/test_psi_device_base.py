@@ -392,3 +392,111 @@ def test_stoppable_status_not_done(device):
 
     assert status.done is True
     assert status.success is False
+
+
+def test_cancel_status_while_success_is_settling(device):
+    from ophyd import Signal
+
+    from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus
+
+    signal = Signal(name="value", value=0)
+    status = SubscriptionStatus(
+        signal, lambda *, value, **_: value == 1, run=False, settle_time=0.1, timeout=1
+    )
+    device.cancel_on_stop(status)
+    released = threading.Event()
+    status.add_callback(lambda _: released.set())
+    signal.put(1)
+    device._stop_stoppable_status_objects()
+    status.wait(timeout=1)
+    assert released.wait(timeout=1)
+    assert not device._stoppable_status_objects
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_completed_statuses_are_removed_from_cancellation_registry(device, failed):
+    """
+    Successful and failed operations release their registry entries immediately.
+    """
+    status = StatusBase()
+    device.cancel_on_stop(status)
+    device.cancel_on_stop(status)
+    assert device._stoppable_status_objects == [status]
+    if failed:
+        status.set_exception(RuntimeError("acquisition failed"))
+    else:
+        status.set_finished()
+    assert device._stoppable_status_objects == []
+    device.cancel_on_stop(status)
+    assert device._stoppable_status_objects == []
+
+
+def test_status_completing_during_registration_is_not_retained(device):
+    """
+    Completion between insertion and callback registration still removes the entry.
+    """
+    status = StatusBase()
+    add_callback = status.add_callback
+
+    def finish_before_callback(callback):
+        status.set_finished()
+        add_callback(callback)
+
+    with mock.patch.object(status, "add_callback", side_effect=finish_before_callback):
+        device.cancel_on_stop(status)
+    assert not device._stoppable_status_objects
+
+
+def test_concurrent_status_completion_and_stop_cancel_all_pending_work(device):
+    """
+    Concurrent removal cannot skip statuses in the detached cancellation batch.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ophyd.utils.errors import InvalidState
+
+    statuses = [StatusBase() for _ in range(50)]
+    for status in statuses:
+        device.cancel_on_stop(status)
+    barrier = threading.Barrier(2)
+
+    def complete():
+        barrier.wait(timeout=2)
+        for status in statuses:
+            try:
+                status.set_finished()
+            except InvalidState:
+                pass  # Stop won completion of this particular operation.
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        completed = pool.submit(complete)
+        barrier.wait(timeout=2)
+        device._stop_stoppable_status_objects()
+        completed.result(timeout=2)
+    assert all(status.done for status in statuses)
+    assert not device._stoppable_status_objects
+
+
+def test_native_stage_failure_can_unstage_for_rollback():
+    from ophyd import Signal
+
+    root = PSIDeviceBase(name="root")
+    gain = Signal(name="gain", value=1)
+    root.stage_sigs[gain] = 2
+    original = gain.set
+
+    def set_gain(value, **kwargs):
+        if value == 2:
+            raise RuntimeError("stage setting failed")
+        return original(value, **kwargs)
+
+    try:
+        with (
+            mock.patch.object(gain, "set", side_effect=set_gain),
+            pytest.raises(RuntimeError, match="stage setting failed"),
+        ):
+            root.stage()
+        assert root.staged == Staged.no
+    finally:
+        root.destroy()
+        gain.destroy()

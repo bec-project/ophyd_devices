@@ -6,9 +6,11 @@ from __future__ import annotations
 
 import inspect
 import time
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ophyd import Device, DeviceStatus, Staged, StatusBase
+from ophyd.utils.errors import InvalidState
 
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
@@ -131,7 +133,7 @@ class PSIDeviceBase(Device):
         status = self.on_pre_scan()  # pylint: disable=assignment-from-no-return
         return status
 
-    def trigger(self) -> DeviceStatus | StatusBase:
+    def trigger(self) -> StatusBase:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Trigger the device."""
         super_trigger = super().trigger()
         status = self.on_trigger()  # pylint: disable=assignment-from-no-return
@@ -180,14 +182,30 @@ class PSIDeviceBase(Device):
 
     def cancel_on_stop(self, status: StatusBase) -> None:
         """
-        Register a status object to be cancelled when the device is stopped.
+        Register unfinished work for cancellation when the device is stopped.
+
+        Completed statuses are removed automatically, including statuses that finish
+        during registration. Registering the same pending status twice is harmless.
+        After stop returns, new work may be registered without staging the device again.
+        Pending cancellation cleanup remains owned until it finishes.
 
         Args:
             status (StatusBase): The status object to be cancelled.
         """
         if not isinstance(status, StatusBase):
             raise TypeError("status must be an instance of StatusBase")
+        if status.done or status in self._stoppable_status_objects:
+            return
         self._stoppable_status_objects.append(status)
+
+        def discard(completed: StatusBase) -> None:
+            try:
+                self._stoppable_status_objects.remove(completed)
+            except ValueError:
+                pass  # Explicit registry cleanup has already removed this status.
+
+        # add_callback also invokes discard if completion raced with registration.
+        status.add_callback(discard)
 
     def _clear_stoppable_status_objects(self) -> None:
         """
@@ -200,15 +218,17 @@ class PSIDeviceBase(Device):
 
     def _stop_stoppable_status_objects(self) -> None:
         """
-        Stop all registered stoppable status objects.
+        Cancel a snapshot of registered statuses so callbacks can remove entries.
 
-        This method will cancel all status objects that have been registered
-        to be stopped when the device is stopped.
+        Pending statuses remain registered until their completion callbacks run.
         """
-        for status in self._stoppable_status_objects:
+        statuses = tuple(self._stoppable_status_objects)
+        for status in statuses:
             if not status.done:
-                status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
-        self._clear_stoppable_status_objects()
+                try:
+                    status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
+                except InvalidState:
+                    pass  # A completion callback already committed this status.
 
     ########################################
     # Utility Method to wait for signals   #
