@@ -1,7 +1,10 @@
 """Simulated 2D camera device"""
 
+from typing import Any, ClassVar
+
 import numpy as np
 from bec_lib.logger import bec_logger
+from bec_lib.messages import RectROIConfig
 from ophyd import Component as Cpt
 from ophyd import Device, Kind, StatusBase
 
@@ -9,15 +12,125 @@ from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataCamera, SimulatedDataNegativeCamera
 from ophyd_devices.sim.sim_signals import ReadOnlySignal, SetableSignal
 from ophyd_devices.sim.sim_utils import H5Writer
+from ophyd_devices.utils.bec_roi_signals import LITERAL_ROI_PROCESSING_CONFIG, ROIProcessing
 from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
 
 logger = bec_logger.logger
+
+SIM_CONFIG: LITERAL_ROI_PROCESSING_CONFIG = {
+    "basic_statistics": {
+        "scalar_outputs": ["sum", "mean", "min", "max"],
+        "waveform_outputs": [],
+        "enable_signal": None,
+        "source_signals": {},
+    }
+}
+
+
+class SimCameraROIProcessing(ROIProcessing):
+    """ROI processing signal for simulated camera setups."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Create a simulated ROI restricted to axis-aligned rectangles.
+
+        Args:
+            *args (Any): Positional arguments forwarded to ROIProcessing.
+            **kwargs (Any): ROIProcessing arguments, including roi_config and the
+                optional allowed_roi_config_types restriction. Only RectROIConfig
+                is supported for both initial configurations and later requests.
+
+        Raises:
+            ValueError: allowed_roi_config_types permits an unsupported shape.
+            TypeError: The initial configuration is not a rectangle.
+        """
+        allowed = kwargs.get("allowed_roi_config_types")
+        if allowed is not None and any(cls is not RectROIConfig for cls in allowed):
+            raise ValueError("Simulated camera ROI processing only supports RectROIConfig")
+        kwargs["allowed_roi_config_types"] = (RectROIConfig,) if allowed is None else allowed
+        super().__init__(*args, **kwargs)
+
+    def get_scalar_outputs(self) -> list[str]:
+        scalar_outpus = []
+        for v in SIM_CONFIG.values():
+            scalar_outpus.extend(v["scalar_outputs"])
+        return scalar_outpus
+
+    def get_waveform_outputs(self) -> list[str]:
+        waveform_outputs = []
+        for v in SIM_CONFIG.values():
+            waveform_outputs.extend(v["waveform_outputs"])
+        return waveform_outputs
+
+    def get_available_analysis_operations(self) -> list[str]:
+        return list(SIM_CONFIG.keys())
+
+    def on_connected(self) -> None:
+        """Subscribe to camera images after connection."""
+        if getattr(self, "_image_subscription", None) is not None:
+            return
+        super().on_connected()
+        self._image_subscription = self.parent.image.subscribe(
+            self._on_image_update, event_type=self.parent.image.SUB_VALUE, run=False
+        )
+
+    def destroy(self) -> None:
+        """Release the camera image subscription owned by this ROI."""
+        subscription = getattr(self, "_image_subscription", None)
+        if subscription is not None:
+            self.parent.image.unsubscribe(subscription)
+            self._image_subscription = None
+        super().destroy()
+
+    def _on_image_update(self, value, **kwargs):
+        """Callback for image updates."""
+        if not self.active.get():
+            return  # Do nothing if not enabled
+
+        if not isinstance(value, np.ndarray):
+            logger.warning(f"Received non-numpy array value: {value}")
+            return  # Do nothing if not numpy array
+        if "basic_statistics" not in self.selected_operations.get():
+            return
+        roi_image = self._extract_roi(value)
+        if roi_image.size == 0:
+            logger.warning(f"ROI {self.roi_name.get()} is outside image bounds or has zero size.")
+            return
+        self.put_results("scalar", self._compute_basic_statistics(roi_image))
+
+    def _extract_roi(self, image: np.ndarray) -> np.ndarray:
+        """Return the configured rectangular ROI clipped to the image bounds."""
+        config = self._roi_config
+        if not isinstance(config, RectROIConfig):
+            raise TypeError("Simulated camera ROI extraction requires RectROIConfig")
+        x, y, width, height = config.x, config.y, config.width, config.height
+        if width <= 0 or height <= 0:
+            return image[0:0, 0:0]
+
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(image.shape[1], x + width)
+        y1 = min(image.shape[0], y + height)
+        if x1 <= x0 or y1 <= y0:
+            return image[0:0, 0:0]
+        return image[y0:y1, x0:x1]
+
+    def _compute_basic_statistics(self, image: np.ndarray) -> dict[str, dict[str, float]]:
+        """Compute basic statistics for the given image."""
+        timestamp = self.parent.image.timestamp
+        values = {
+            "sum": {"value": float(np.sum(image)), "timestamp": timestamp},
+            "mean": {"value": float(np.mean(image)), "timestamp": timestamp},
+            "min": {"value": float(np.min(image)), "timestamp": timestamp},
+            "max": {"value": float(np.max(image)), "timestamp": timestamp},
+        }
+        return {name: values[name] for name in self.get_scalar_outputs() if name in values}
 
 
 class SimCameraControl(Device):
     """SimCamera Control layer"""
 
-    USER_ACCESS = ["sim", "registered_proxies"]
+    USER_ACCESS: ClassVar[list[str]] = ["sim", "registered_proxies"]
 
     sim_cls = SimulatedDataCamera
     SHAPE = (100, 100)
@@ -40,7 +153,9 @@ class SimCameraControl(Device):
     file_event = Cpt(FileEventSignal)
     write_to_disk = Cpt(SetableSignal, name="write_to_disk", value=False, kind=Kind.config)
 
-    def __init__(self, name, *, parent=None, sim_init: dict = None, device_manager=None, **kwargs):
+    def __init__(
+        self, name, *, parent=None, sim_init: dict | None = None, device_manager=None, **kwargs
+    ):
         self.sim_init = sim_init
         self.device_manager = device_manager
         self._registered_proxies = {}
@@ -74,6 +189,15 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
 
     """
 
+    roi_processing = Cpt(
+        SimCameraROIProcessing,
+        name="roi_processing",
+        active=True,
+        roi_config={"type": "rect", "x": 25, "y": 25, "width": 50, "height": 50},
+        selected_operations=["basic_statistics"],
+        kind=Kind.config,
+    )
+
     def __init__(self, name: str, scan_info=None, device_manager=None, **kwargs):
         super().__init__(name=name, scan_info=scan_info, device_manager=device_manager, **kwargs)
         self.file_path = None
@@ -98,6 +222,10 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
 
         status = self.task_handler.submit_task(trigger_cam)
         return status
+
+    def on_connected(self) -> None:
+        """Initialize the simulated camera's ROI subscriptions after connection."""
+        self.roi_processing.on_connected()
 
     def on_stage(self) -> None:
         """Stage the camera for upcoming scan
@@ -139,7 +267,7 @@ class SimCamera(PSIDeviceBase, SimCameraControl):
                 file_path=self.file_path,
                 done=True,
                 successful=True,
-                hinted_location={"data": "/entry/data/data"},
+                hinted_h5_entries={"data": "/entry/data/data"},
             )
 
         status = self.task_handler.submit_task(complete_cam)

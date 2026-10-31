@@ -11,7 +11,6 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.devicemanager import ScanInfo
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import compile_file_components
 from bec_server.device_server.tests.utils import DMMock
 from ophyd import Device, Signal
@@ -678,7 +677,7 @@ def test_cam_stage_h5writer(camera):
         # mock_h5_writer.prepare
 
 
-def test_cam_complete(camera):
+def test_cam_complete(camera, tmp_path):
     """Test the complete method of SimCamera."""
     finished_event = threading.Event()
 
@@ -692,10 +691,13 @@ def test_cam_complete(camera):
         assert status.success is True
         assert mock_h5_writer.on_complete.call_count == 0
         camera.write_to_disk.put(True)
+        camera.file_path = str(tmp_path / "camera.h5")
         status = camera.complete()
         status.add_callback(finished_cb)
         finished_event.wait()
+        status.wait(timeout=1)
         assert mock_h5_writer.on_complete.call_count == 1
+        assert camera.file_event.get().hinted_h5_entries == {"data": "/entry/data/data"}
 
 
 def test_cam_trigger(camera):
