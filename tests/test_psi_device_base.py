@@ -2,6 +2,7 @@
 
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 import pytest
@@ -16,6 +17,7 @@ from ophyd_devices.sim.sim_camera import SimCamera
 from ophyd_devices.sim.sim_positioner import SimPositioner
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal, ProgressSignal
+from ophyd_devices.utils.psi_device_base_utils import destroy_subdevices
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -392,3 +394,395 @@ def test_stoppable_status_not_done(device):
 
     assert status.done is True
     assert status.success is False
+
+
+def test_destroy_finishes_child_cleanup_when_root_hook_fails():
+    from ophyd import Component, Device, Signal
+
+    cleaned = []
+
+    class Child(Device):
+        value = Component(Signal, value=0)
+
+        def destroy(self):
+            cleaned.append(not self.value._destroyed)
+            super().destroy()
+
+    class Root(PSIDeviceBase):
+        child = Component(Child)
+
+        def on_destroy(self):
+            raise RuntimeError("shutdown hook failed")
+
+    root = Root(name="root")
+    child = root.child
+    with pytest.raises(RuntimeError, match="shutdown hook failed"):
+        root.destroy()
+    assert cleaned == [True]
+    assert child.value._destroyed
+    assert root.destroyed
+    root.destroy()
+
+
+def test_cancel_status_while_success_is_settling(device):
+    from ophyd import Signal
+
+    from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus
+
+    signal = Signal(name="value", value=0)
+    status = SubscriptionStatus(
+        signal, lambda *, value, **_: value == 1, run=False, settle_time=0.1, timeout=1
+    )
+    device.cancel_on_stop(status)
+    released = threading.Event()
+    status.add_callback(lambda _: released.set())
+    signal.put(1)
+    device._stop_stoppable_status_objects()
+    status.wait(timeout=1)
+    assert released.wait(timeout=1)
+    assert not device._stoppable_status_objects
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_completed_statuses_are_removed_from_cancellation_registry(device, failed):
+    """
+    Successful and failed operations release their registry entries immediately.
+    """
+    status = StatusBase()
+    device.cancel_on_stop(status)
+    device.cancel_on_stop(status)
+    assert device._stoppable_status_objects == [status]
+    if failed:
+        status.set_exception(RuntimeError("acquisition failed"))
+    else:
+        status.set_finished()
+    assert device._stoppable_status_objects == []
+    device.cancel_on_stop(status)
+    assert device._stoppable_status_objects == []
+
+
+def test_status_completing_during_registration_is_not_retained(device):
+    """
+    Completion between insertion and callback registration still removes the entry.
+    """
+    status = StatusBase()
+    add_callback = status.add_callback
+
+    def finish_before_callback(callback):
+        status.set_finished()
+        add_callback(callback)
+
+    with mock.patch.object(status, "add_callback", side_effect=finish_before_callback):
+        device.cancel_on_stop(status)
+    assert not device._stoppable_status_objects
+
+
+def test_concurrent_status_completion_and_stop_cancel_all_pending_work(device):
+    """
+    Concurrent removal cannot skip statuses in the detached cancellation batch.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ophyd.utils.errors import InvalidState
+
+    statuses = [StatusBase() for _ in range(50)]
+    for status in statuses:
+        device.cancel_on_stop(status)
+    barrier = threading.Barrier(2)
+
+    def complete():
+        barrier.wait(timeout=2)
+        for status in statuses:
+            try:
+                status.set_finished()
+            except InvalidState:
+                pass  # Stop won completion of this particular operation.
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        completed = pool.submit(complete)
+        barrier.wait(timeout=2)
+        device._stop_stoppable_status_objects()
+        completed.result(timeout=2)
+    assert all(status.done for status in statuses)
+    assert not device._stoppable_status_objects
+
+
+def test_cooperative_groups_destroy_resources_before_disconnecting_signals():
+    """
+    Explicit child cleanup preserves owner order, signal access and lazy components.
+    """
+    from ophyd import Signal
+
+    cleaned = []
+
+    class Resource(Device):
+        value = Cpt(Signal, value=1)
+
+        def destroy(self):
+            cleaned.append((self.name, not self.value._destroyed))
+            super().destroy()
+
+    class InnerGroup(Device):
+        resource = Cpt(Resource)
+        unused = Cpt(Resource, lazy=True)
+
+        def destroy(self):
+            cleaned.append((self.name, True))
+            try:
+                destroy_subdevices(self)
+            finally:
+                super().destroy()
+
+    class OuterGroup(Device):
+        inner = Cpt(InnerGroup)
+
+        def destroy(self):
+            cleaned.append((self.name, True))
+            try:
+                destroy_subdevices(self)
+            finally:
+                super().destroy()
+
+    class Root(PSIDeviceBase):
+        group = Cpt(OuterGroup)
+
+    root = Root(name="root")
+    resource = root.group.inner.resource
+    root.destroy()
+    assert cleaned == [
+        ("root_group", True),
+        ("root_group_inner", True),
+        ("root_group_inner_resource", True),
+    ]
+    assert resource._destroyed
+    assert "unused" not in root.group.inner._signals
+    root.destroy()
+    assert len(cleaned) == 3
+
+
+def test_destroy_preserves_nested_psi_hook_access_to_live_child_signals():
+    """
+    Nested PSI devices retain ownership of hook-before-child shutdown ordering.
+    """
+    from ophyd import Signal
+
+    cleaned = []
+
+    class Resource(Device):
+        value = Cpt(Signal, value=1)
+
+        def destroy(self):
+            cleaned.append("resource")
+            super().destroy()
+
+    class Child(PSIDeviceBase):
+        resource = Cpt(Resource)
+
+        def on_destroy(self):
+            assert not self.resource.value._destroyed
+            cleaned.append("child hook")
+
+    class Group(Device):
+        child = Cpt(Child)
+
+        def destroy(self):
+            cleaned.append("group")
+            try:
+                destroy_subdevices(self)
+            finally:
+                super().destroy()
+
+    class Root(PSIDeviceBase):
+        group = Cpt(Group)
+
+    root = Root(name="root")
+    root.destroy()
+    assert cleaned == ["group", "child hook", "resource"]
+
+
+def test_destroy_continues_groups_and_siblings_after_nested_cleanup_failure():
+    """
+    A failed resource cannot skip its grouping destructor or independent siblings.
+    """
+    cleaned = []
+
+    class Resource(Device):
+        def destroy(self):
+            cleaned.append(self.name)
+            super().destroy()
+            if self.attr_name == "broken":
+                raise RuntimeError("resource shutdown failed")
+
+    class Group(Device):
+        broken = Cpt(Resource)
+        sibling = Cpt(Resource)
+
+        def destroy(self):
+            cleaned.append(self.name)
+            super().destroy()
+            raise RuntimeError("group shutdown failed")
+
+    class Root(PSIDeviceBase):
+        group = Cpt(Group)
+        sibling = Cpt(Resource)
+
+    root = Root(name="root")
+    with pytest.raises(RuntimeError, match="group shutdown failed") as failure:
+        root.destroy()
+    assert cleaned == ["root_group", "root_group_broken", "root_group_sibling", "root_sibling"]
+    assert "resource shutdown failed" in " ".join(failure.value.__notes__)
+    assert root.destroyed
+
+
+def test_destroy_checks_descendants_of_previously_destroyed_custom_group():
+    """
+    Ophyd can mark a group destroyed without running any descendant destroy methods.
+    """
+    cleaned = []
+
+    class Resource(Device):
+        def destroy(self):
+            cleaned.append(self.name)
+            super().destroy()
+
+    class Group(Device):
+        resource = Cpt(Resource)
+
+        def destroy(self):
+            super().destroy()
+
+    class Root(PSIDeviceBase):
+        group = Cpt(Group)
+
+    root = Root(name="root")
+    resource = root.group.resource
+    root.group.destroy()
+    assert not resource._destroyed
+    root.destroy()
+    assert cleaned == ["root_group_resource"]
+    assert resource._destroyed
+
+
+def test_custom_group_flushes_child_resource_before_child_destruction():
+    """
+    Owner cleanup can use a child handle, then explicitly release child resources.
+    """
+    import io
+
+    from ophyd import Signal
+
+    calls = []
+
+    class Resource(Device):
+        value = Cpt(Signal, value=1)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.handle = io.BytesIO()
+
+        def destroy(self):
+            assert not self.value._destroyed
+            calls.append(("resource", self.handle.getvalue()))
+            self.handle.close()
+            super().destroy()
+
+    class Group(Device):
+        resource = Cpt(Resource)
+        unused = Cpt(Resource, lazy=True)
+
+        def destroy(self):
+            self.resource.handle.write(b"final record")
+            calls.append(("group", self.resource.handle.closed))
+            try:
+                destroy_subdevices(self)
+            finally:
+                super().destroy()
+
+    class Root(PSIDeviceBase):
+        group = Cpt(Group)
+
+    root = Root(name="root")
+    resource = root.group.resource
+    root.destroy()
+    assert calls == [("group", False), ("resource", b"final record")]
+    assert resource.handle.closed
+    assert resource.value._destroyed
+    assert "unused" not in root.group._signals
+    root.destroy()
+    assert len(calls) == 2
+
+
+def test_stop_cancels_statuses_and_attempts_native_shutdown_after_hook_failure():
+    """
+    A failing custom stop hook cannot skip interruption state, cancellation or child shutdown.
+    """
+    root = PSIDeviceBase(name="root")
+    pending = StatusBase()
+    root.cancel_on_stop(pending)
+    observed = []
+
+    def failing_hook():
+        observed.append(root.stopped)
+        raise RuntimeError("custom stop failed")
+
+    try:
+        with (
+            mock.patch.object(root, "on_stop", side_effect=failing_hook),
+            mock.patch.object(
+                Device, "stop", autospec=True, side_effect=TimeoutError("native stop failed")
+            ) as native,
+        ):
+            with pytest.raises(RuntimeError, match="custom stop failed") as error:
+                root.stop()
+            native.assert_called_once_with(root, success=False)
+        assert observed == [False]  # Preserve the hook's original entry-state contract.
+        assert root.stopped
+        assert pending.done
+        with pytest.raises(DeviceStoppedError):
+            pending.wait(timeout=1)
+        assert not root._stoppable_status_objects
+        assert "native stop failed" in " ".join(error.value.__notes__)
+    finally:
+        root.destroy()
+
+
+def test_native_stage_failure_can_unstage_for_rollback():
+    from ophyd import Signal
+
+    root = PSIDeviceBase(name="root")
+    gain = Signal(name="gain", value=1)
+    root.stage_sigs[gain] = 2
+    original = gain.set
+
+    def set_gain(value, **kwargs):
+        if value == 2:
+            raise RuntimeError("stage setting failed")
+        return original(value, **kwargs)
+
+    try:
+        with (
+            mock.patch.object(gain, "set", side_effect=set_gain),
+            pytest.raises(RuntimeError, match="stage setting failed"),
+        ):
+            root.stage()
+        assert root.staged == Staged.no
+    finally:
+        root.destroy()
+        gain.destroy()
+
+
+def test_failed_native_destroy_can_retry_without_allowing_setup():
+    """
+    Failed native cleanup remains retryable while destruction permanently retires setup.
+    """
+    root = PSIDeviceBase(name="root")
+    with mock.patch.object(Device, "destroy", side_effect=RuntimeError("native destroy failed")):
+        with pytest.raises(RuntimeError, match="native destroy failed"):
+            root.destroy()
+    assert not root.destroyed
+    assert root._destroying
+    with pytest.raises(DeviceStoppedError, match="destruction has begun"):
+        root.stage()
+    root.destroy()
+    assert root.destroyed
+    root.destroy()
