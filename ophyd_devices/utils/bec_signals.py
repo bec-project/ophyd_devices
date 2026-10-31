@@ -651,6 +651,7 @@ class PreviewSignal(BECMessageSignal):
         value: list | np.ndarray | dict | messages.DevicePreviewMessage,
         *,
         metadata: dict | None = None,
+        oriented: bool = False,
         **kwargs,
     ) -> None:
         """
@@ -662,13 +663,15 @@ class PreviewSignal(BECMessageSignal):
         Args:
             value (list | np.ndarray | dict | self._bec_message_type): The preview data. Must be 1D.
             metadata (dict | None): Additional metadata. If dict or self._bec_message_type is passed, it will be ignored.
+            oriented (bool): Data already has the desired orientation; skip host transforms.
         """
 
         signal_name = self.dotted_name or self.name
         device_name = self.parent.name
 
         if isinstance(value, messages.DevicePreviewMessage):
-            value.data = self._process_data(value.data)
+            if not oriented:
+                value.data = self._process_data(value.data)
             return super().put(value, **kwargs)
 
         if isinstance(value, dict):
@@ -677,13 +680,15 @@ class PreviewSignal(BECMessageSignal):
 
             value["device"] = device_name
             value["signal"] = signal_name
-            value["data"] = self._process_data(value["data"])
+            if not oriented:
+                value["data"] = self._process_data(value["data"])
             return super().put(value, **kwargs)
 
         if isinstance(value, (list, np.ndarray)):
             if not isinstance(value, np.ndarray):
                 value = np.array(value)
-            value = self._process_data(value)
+            if not oriented:
+                value = self._process_data(value)
             try:
                 msg = messages.DevicePreviewMessage(
                     data=value, device=device_name, signal=signal_name, metadata=metadata or {}
