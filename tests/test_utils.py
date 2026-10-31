@@ -203,39 +203,41 @@ def test_utils_task_handler_task_successful(task_handler):
 
 
 def test_utils_task_handler_shutdown(task_handler):
-    """Test to shutdown the handler"""
+    """Cancel both active tasks and wait for their callbacks and worker exits."""
+    started = [threading.Event(), threading.Event()]
+    release = [threading.Event(), threading.Event()]
+    finished = [threading.Event(), threading.Event()]
 
-    task_completed_cb1 = threading.Event()
-    task_completed_cb2 = threading.Event()
+    def task(index):
+        started[index].set()
+        release[index].wait()
 
-    def finished_cb1():
-        task_completed_cb1.set()
+    statuses = [task_handler.submit_task(task, task_args=(index,)) for index in range(2)]
+    threads = [task_handler._tasks[status.task_id][1] for status in statuses]
+    for index, status in enumerate(statuses):
+        status.add_callback(lambda _status, index=index: finished[index].set())
+    try:
+        assert all(event.wait(timeout=1) for event in started)
+        wake_worker = {thread.ident: event for thread, event in zip(threads, release)}
 
-    def finished_cb2():
-        task_completed_cb2.set()
+        def cancel(ident, _exception):
+            # Wake cooperative workers at the cancellation request. Native exception
+            # delivery is covered by test_utils_task_handler_task_killed.
+            wake_worker[ident.value].set()
+            return 1
 
-    def cb1():
-        for _ in range(1000):
-            time.sleep(0.2)
-
-    def cb2():
-        for _ in range(1000):
-            time.sleep(0.2)
-
-    status1 = task_handler.submit_task(cb1)
-    status1.add_callback(finished_cb1)
-    status2 = task_handler.submit_task(cb2)
-    status2.add_callback(finished_cb2)
-    assert len(task_handler._tasks) == 2
-    assert status1.state == TaskState.RUNNING
-    assert status2.state == TaskState.RUNNING
-    task_handler.shutdown()
-    task_completed_cb1.wait()
-    task_completed_cb2.wait()
-    assert len(task_handler._tasks) == 0
-    assert status1.state == TaskState.KILLED
-    assert status2.state == TaskState.KILLED
-    assert status1.exception().__class__ == TaskKilledError
+        with mock.patch("ophyd_devices.utils.psi_device_base_utils.set_async_exc", cancel):
+            task_handler.shutdown()
+        assert all(event.is_set() for event in finished)
+        assert all(not thread.is_alive() for thread in threads)
+        assert not task_handler._tasks
+        assert all(status.state == TaskState.KILLED for status in statuses)
+        assert all(isinstance(status.exception(), TaskKilledError) for status in statuses)
+    finally:
+        for event in release:
+            event.set()
+        for thread in threads:
+            thread.join(timeout=1)
 
 
 ##########################################
