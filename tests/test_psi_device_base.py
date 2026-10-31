@@ -392,3 +392,37 @@ def test_stoppable_status_not_done(device):
 
     assert status.done is True
     assert status.success is False
+
+
+def test_stop_cancels_statuses_and_attempts_native_shutdown_after_hook_failure():
+    """
+    A failing custom stop hook cannot skip interruption state, cancellation or child shutdown.
+    """
+    root = PSIDeviceBase(name="root")
+    pending = StatusBase()
+    root.cancel_on_stop(pending)
+    observed = []
+
+    def failing_hook():
+        observed.append(root.stopped)
+        raise RuntimeError("custom stop failed")
+
+    try:
+        with (
+            mock.patch.object(root, "on_stop", side_effect=failing_hook),
+            mock.patch.object(
+                Device, "stop", autospec=True, side_effect=TimeoutError("native stop failed")
+            ) as native,
+        ):
+            with pytest.raises(RuntimeError, match="custom stop failed") as error:
+                root.stop()
+            native.assert_called_once_with(root, success=False)
+        assert observed == [False]  # Preserve the hook's original entry-state contract.
+        assert root.stopped
+        assert pending.done
+        with pytest.raises(DeviceStoppedError):
+            pending.wait(timeout=1)
+        assert not root._stoppable_status_objects
+        assert "native stop failed" in " ".join(error.value.__notes__)
+    finally:
+        root.destroy()
