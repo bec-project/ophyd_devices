@@ -7,7 +7,10 @@ import operator
 import threading
 import traceback
 import uuid
+from collections.abc import Iterable
+from contextvars import copy_context
 from enum import Enum
+from itertools import chain
 from typing import TYPE_CHECKING, Callable, Literal
 
 from bec_lib import messages
@@ -15,11 +18,13 @@ from bec_lib.bec_errors import ExceptionWithErrorInfo
 from bec_lib.file_utils import get_full_path
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
+from ophyd.status import AndStatus as _AndStatus
 from ophyd.status import DeviceStatus as _DeviceStatus
 from ophyd.status import MoveStatus as _MoveStatus
 from ophyd.status import Status as _Status
 from ophyd.status import StatusBase as _StatusBase
 from ophyd.utils import StatusTimeoutError
+from ophyd.utils.errors import InvalidState, WaitTimeoutError
 
 from .ophyd_callback_patch import callback_name, object_name
 
@@ -41,6 +46,9 @@ __all__ = [
     "Status",
     "StatusBase",
     "SubscriptionStatus",
+    "SequenceStatus",
+    "all_statuses",
+    "release_statuses",
 ]
 
 logger = bec_logger.logger
@@ -264,6 +272,66 @@ class StatusBase(_StatusBase):
         return super().set_exception(exc)
 
 
+def _sequence_exception(error: Exception) -> Exception:
+    """Normalize native wait errors at the owned-operation boundary."""
+    if isinstance(error, WaitTimeoutError):
+        converted = TimeoutError(str(error))
+        converted.__cause__ = error
+        for note in getattr(error, "__notes__", ()):
+            converted.add_note(note)
+        return converted
+    return error
+
+
+def _status_failure(status: _StatusBase | None) -> Exception | None:
+    """
+    Find a committed failure before child callbacks or nested cleanup have finished.
+
+    Read failure reservations without acquiring child locks: a native completion
+    callback may already hold that child's lock while entering its parent.
+    """
+    pending = [] if status is None else [status]
+    visited = set()
+    while pending:
+        child = pending.pop()
+        if id(child) in visited:
+            continue
+        visited.add(id(child))
+        error = child._exception
+        if error is None and isinstance(child, _OwnedAndStatus):
+            error = child._completion_error
+        if error is None and isinstance(child, SequenceStatus):
+            error = child._sequence_error
+        if isinstance(error, type) and issubclass(error, Exception):
+            error = error()
+        if error is not None:
+            return error
+        if child.done:
+            continue
+        if isinstance(child, SequenceStatus):
+            active_child = child._active_child
+            if active_child is not None:
+                pending.append(active_child)
+        elif isinstance(child, (AndStatus, _OwnedAndStatus, _AndStatus)):
+            pending.extend((child.right, child.left))
+    return None
+
+
+def _check_task_ownership(statuses: Iterable[_StatusBase], owner: str) -> None:
+    """Validate cancellation ownership before attaching callbacks to child statuses."""
+    pending = list(statuses)
+    seen = set()
+    while pending:
+        status = pending.pop()
+        if id(status) in seen:
+            continue
+        seen.add(id(status))
+        if isinstance(status, TaskStatus):
+            raise TypeError(f"{owner} cannot own a TaskStatus")
+        if isinstance(status, _OwnedAndStatus):
+            pending.extend(status._owned_children())
+
+
 class AndStatus(StatusBase):
     """
     A Status that has composes two other Status objects using logical and.
@@ -352,6 +420,464 @@ class AndStatus(StatusBase):
             cleanup()
 
 
+class _OwnedAndStatus(AndStatus):
+    """Private conjunction owning acknowledgements returned by all_statuses()."""
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+        _check_task_ownership(self._owned_children(), "AndStatus")
+        self._completion_started = False
+        self._completion_error: Exception | None = None
+        StatusBase.__init__(self)
+        self._trace_attributes["left"] = self.left._trace_attributes
+        self._trace_attributes["right"] = self.right._trace_attributes
+
+        self.left.add_callback(self._child_finished)
+        self.right.add_callback(self._child_finished)
+        # A sequence or failure watcher may have committed its error while its
+        # cleanup/callback is still pending. Do not wait for another child event.
+        error = self._first_child_failure()
+        if error is not None:
+            self.set_exception(error)
+
+    def _child_finished(self, _status: _StatusBase) -> None:
+        """
+        Reserve a terminal outcome before cleanup can invoke child callbacks again.
+        """
+        with self._lock:
+            if self._completion_started or self._externally_initiated_completion or self.done:
+                return
+            error = self._first_child_failure()
+            if error is None:
+                if not self._required_statuses_succeeded():
+                    return
+                self._completion_started = True
+        if error is not None:
+            self.set_exception(error)
+            return
+        cleanup_error = None
+        try:
+            self._cleanup()
+        except Exception as error:  # noqa: BLE001 - report resource cleanup failure.
+            cleanup_error = error
+        # A failure watcher may commit its error before its callback runs. Check
+        # again after detaching it and before publishing successful completion.
+        with self._lock:
+            error = self._first_child_failure()
+            if error is None:
+                error = cleanup_error
+            elif cleanup_error is not None:
+                error.add_note(f"Composite cleanup also failed: {cleanup_error!r}")
+            self._completion_error = error
+        if error is None:
+            super().set_finished()
+        else:
+            self._finish_failure(error)
+
+    def set_exception(self, exc: Exception | type[Exception]) -> None:
+        """
+        Fail after owned cleanup; repeated or reentrant cancellation keeps the first error.
+
+        Args:
+            exc (Exception | type[Exception]): Original failure or cancellation. A child
+                failure already committed before this call takes precedence.
+        """
+        if isinstance(exc, type) and issubclass(exc, Exception):
+            exc = exc()
+        if not isinstance(exc, Exception):
+            raise ValueError(f"Expected an Exception, got {exc!r}")
+        with self._lock:
+            if self._completion_started or self._externally_initiated_completion or self.done:
+                return
+            # Reentrant owner.stop() can arrive before a failed child's callback
+            # because that child is still completing its own failure cleanup.
+            error = self._first_child_failure()
+            if error is None:
+                error = exc
+            self._completion_error = error
+            self._completion_started = True
+        self._finish_failure(error)
+
+    def _finish_failure(self, error: Exception) -> None:
+        """
+        Cancel children outside the bookkeeping lock, then await their cleanup.
+        """
+
+        def complete(_status=None):
+            with self._lock:
+                if self.done or self._externally_initiated_completion:
+                    return
+            try:
+                super(_OwnedAndStatus, self).set_exception(_sequence_exception(error))
+            except InvalidState:
+                pass  # Another terminal completion won after the bookkeeping check.
+
+        settled = self._cancel_owned_children(error)
+        if settled is None:
+            complete()
+        else:
+            settled.add_callback(complete)
+
+    def _cancel_owned_children(self, error: Exception) -> StatusBase | None:
+        return _cancel_statuses(self._owned_children(), error)
+
+    def _owned_children(self) -> tuple[_StatusBase, ...]:
+        children = (self.left, self.right)
+        return children
+
+    def _first_child_failure(self) -> Exception | None:
+        """
+        Inspect committed errors, including failures whose cleanup has not settled yet.
+        """
+        for child in (self.left, self.right):
+            error = _status_failure(child)
+            if error is not None:
+                return error
+        return None
+
+
+def all_statuses(statuses: Iterable[_StatusBase]) -> _StatusBase:
+    """
+    Combine independent acknowledgements, succeeding immediately for an empty input.
+
+    Task statuses cannot be owned. Invalid inputs remain with their original owners.
+
+    Args:
+        statuses (Iterable[ophyd.status.StatusBase]): Statuses already started by their
+            owners. A single status is returned unchanged; larger inputs use AndStatus,
+            with ownership of their cancellation and subscription cleanup. Pairwise
+            construction keeps large collections below Python's recursion limit.
+
+    Returns:
+        ophyd.status.StatusBase: Combined acknowledgement, or an already-successful
+            StatusBase when there is no work to wait for.
+    """
+    children = tuple(statuses)
+    if any(not isinstance(child, _StatusBase) for child in children):
+        raise TypeError("all_statuses requires status objects")
+    if not children:
+        ready = StatusBase()
+        ready.set_finished()
+        return ready
+    if len(children) == 1:
+        return children[0]
+    _check_task_ownership(children, "all_statuses")
+    required = tuple(child for child in children if getattr(child, "blocks_success", True))
+    if not required:
+        return _balanced_statuses(children)
+    combined = _balanced_statuses(required)
+    # Failure-only subtrees would otherwise succeed and detach their watchers
+    # during construction. Keep each watcher attached to all required work.
+    watched = tuple(
+        _OwnedAndStatus(combined, child)
+        for child in children
+        if not getattr(child, "blocks_success", True)
+    )
+    return _balanced_statuses(watched) if watched else combined
+
+
+def _balanced_statuses(children: tuple[_StatusBase, ...]) -> _StatusBase:
+    """
+    Combine a nonempty collection without building a linear callback/cleanup stack.
+    """
+    while len(children) > 1:
+        paired = []
+        for index in range(0, len(children), 2):
+            left = children[index]
+            paired.append(
+                _OwnedAndStatus(left, children[index + 1]) if index + 1 < len(children) else left
+            )
+        children = tuple(paired)
+    return children[0]
+
+
+def release_statuses(statuses: Iterable[StatusBase], *, reason: str) -> None:
+    """
+    Fail unfinished watchers and release their subscriptions after setup fails.
+
+    Use when an operation fails before returning its watchers to the owning
+    sequence. Already-finished watchers still have their subscriptions released.
+    Concurrent completion is tolerated; other errors propagate to the caller.
+
+    Args:
+        statuses (Iterable[StatusBase]): Watchers created by the failed operation,
+            in cleanup order.
+        reason (str): Failure message assigned to each unfinished watcher.
+    """
+    for status in statuses:
+        if not status.done:
+            try:
+                status.set_exception(RuntimeError(reason))
+            except InvalidState:
+                pass  # A monitor completion was already scheduled.
+        status._cleanup()
+
+
+def _cancel_statuses(statuses: Iterable[_StatusBase], error: Exception) -> StatusBase | None:
+    """
+    Release owned children and await sequences/composites which perform their own cleanup.
+    """
+    pending = []
+    seen = set()
+
+    def cancel(status):
+        if id(status) in seen:
+            return
+        seen.add(id(status))
+        if not status.done and _status_failure(status) is None:
+            try:
+                status.set_exception(RuntimeError("Status operation interrupted"))
+            except Exception as cleanup_error:  # noqa: BLE001 - release every child.
+                if not isinstance(cleanup_error, InvalidState):
+                    error.add_note(f"Cancelling sequence child failed: {cleanup_error!r}")
+        if isinstance(status, SequenceStatus):
+            # Sequences have no constructor timeout and acknowledge their owned
+            # asynchronous cleanup before they can complete.
+            pending.append(status)
+            return
+        if isinstance(status, _OwnedAndStatus):
+            # Owned children acknowledge their own asynchronous cleanup.
+            for child in status._owned_children():
+                cancel(child)
+            return
+        if isinstance(status, AndStatus):
+            for child in (status.left, status.right):
+                if not getattr(child, "blocks_success", True):
+                    cancel(child)
+            return
+        cleanup = getattr(status, "_cleanup", None)
+        if cleanup is not None:
+            try:
+                cleanup()
+            except Exception as cleanup_error:  # noqa: BLE001 - continue cleanup.
+                error.add_note(f"Releasing sequence child failed: {cleanup_error!r}")
+
+    for status in statuses:
+        cancel(status)
+    if not pending:
+        return None
+    settled = StatusBase(description="Nested status cleanup finished")
+    remaining = set(pending)
+    lock = threading.Lock()
+
+    def completed(status):
+        nested_error = status.exception(timeout=0)
+        with lock:
+            if nested_error is not error:
+                for note in tuple(getattr(nested_error, "__notes__", ())):
+                    error.add_note(f"Nested sequence cleanup: {note}")
+            remaining.discard(status)
+            last = not remaining
+        if last:
+            settled.set_finished()
+
+    for status in pending:
+        status.add_callback(completed)
+    return settled
+
+
+class SequenceStatus(StatusBase):
+    """
+    Run operations in order, waiting for each returned status before starting the next.
+
+    Each step is a callable returning a status or None. None means the operation
+    finished synchronously. Operations run in the caller or child callback thread;
+    this class creates no worker and does not make blocking I/O asynchronous.
+    Each operation inherits the context variables present at construction, including
+    when a preceding status completes on another thread.
+
+    The sequence owns the statuses returned by its steps. Failure or set_exception()
+    prevents future steps, cancels owned subscriptions, and runs on_failure exactly
+    once before reporting failure. An asynchronous cleanup status is awaited too.
+    Device failure cleanup must only reset signals; it must not call stage(),
+    unstage(), or start another acquisition. Return pending reset acknowledgements
+    to this sequence instead of registering them again with cancel_on_stop().
+    Steps and cleanup must return acknowledgements that do not own a TaskStatus.
+    Cancellation during a synchronous step waits for that call to return, then cancels
+    its result. Steps must still serialize hardware writes with stop themselves.
+
+    Child timeouts apply normally. There is deliberately no sequence-wide timeout:
+    it could report completion before the owned failure cleanup had finished.
+    """
+
+    def __init__(
+        self,
+        obj: Device | None = None,
+        *,
+        steps: Iterable[Callable[[], _StatusBase | None]],
+        on_failure: Callable[[Exception], _StatusBase | None] | None = None,
+        description: str | None = None,
+        run: bool = True,
+    ) -> None:
+        """
+        Create a sequence and optionally start its first operation immediately.
+
+        Args:
+            obj (Device | None): Device associated with status diagnostics.
+            steps (Iterable[Callable[[], StatusBase | None]]): Operations to start in
+                declaration order. Pass callables, not already-started status objects.
+            on_failure (Callable[[Exception], StatusBase | None] | None): Cleanup receiving
+                the original failure. Cleanup errors are attached as notes to that error.
+            description (str | None): Human-readable status description.
+            run (bool): Start immediately when True. Use False to register cancellation
+                and store the sequence on its owner before calling run().
+        """
+        operations = tuple(steps)
+        if any(not callable(step) for step in operations):
+            raise TypeError("SequenceStatus steps must be callables")
+        if on_failure is not None and not callable(on_failure):
+            raise TypeError("on_failure must be callable")
+        super().__init__(obj, description=description)
+        self._sequence_lock = threading.RLock()
+        self._steps = iter(operations)
+        self._context = copy_context()
+        self._on_failure = on_failure
+        self._active_child: _StatusBase | None = None
+        self._sequence_error: Exception | None = None
+        self._started = False
+        self._driving = False
+        self._failing = False
+        self._finalizing = False
+        if run:
+            self.run()
+
+    def run(self) -> None:
+        """
+        Start once; calls after startup or completion are harmless.
+        """
+        with self._sequence_lock:
+            if self._started or self._finalizing or self.done:
+                return
+            self._started = True
+        self._drive()
+
+    def set_exception(self, exc: Exception | type[Exception]) -> None:
+        """
+        Abort future operations and report failure only after owned cleanup finishes.
+
+        Args:
+            exc (Exception | type[Exception]): Original failure or cancellation reason.
+                The first failure wins; subsequent cancellation requests are harmless.
+        """
+        if isinstance(exc, type) and issubclass(exc, Exception):
+            exc = exc()
+        if not isinstance(exc, Exception):
+            raise TypeError(f"Expected an Exception, got {exc!r}")
+        with self._sequence_lock:
+            if self._finalizing or self.done or self._sequence_error is not None:
+                return
+            error = _status_failure(self._active_child)
+            self._sequence_error = exc if error is None else error
+        self._drive()
+
+    def set_finished(self) -> None:
+        """
+        Reject external success: only finishing every step can succeed a sequence.
+        """
+        raise RuntimeError("SequenceStatus succeeds only after all of its steps finish")
+
+    def _cleanup(self) -> None:
+        self.set_exception(RuntimeError("Sequence no longer needed by its parent"))
+
+    def _child_done(self, _status: _StatusBase) -> None:
+        self._drive()
+
+    def _record_failure(self, error: Exception) -> None:
+        with self._sequence_lock:
+            if self._sequence_error is None:
+                self._sequence_error = error
+            elif error is not self._sequence_error:
+                self._sequence_error.add_note(f"Sequence cleanup also failed: {error!r}")
+
+    def _cancel_owned(self, child: _StatusBase | None, error: Exception) -> _StatusBase | None:
+        """Release owned subscriptions and await nested sequence cleanup, if needed."""
+        return None if child is None else _cancel_statuses((child,), error)
+
+    def _drive(self) -> None:
+        """Trampoline completed steps without recursion or holding locks during I/O."""
+        with self._sequence_lock:
+            if self._driving or self._finalizing or self.done:
+                return
+            self._driving = True
+        while True:
+            with self._sequence_lock:
+                if self._sequence_error is not None and not self._failing:
+                    child, error, cleanup = (
+                        self._active_child,
+                        self._sequence_error,
+                        self._on_failure,
+                    )
+                    self._active_child = None
+                    self._on_failure = None
+                    self._failing = True
+                    self._steps = iter(
+                        (
+                            lambda child=child, error=error: self._cancel_owned(child, error),
+                            lambda cleanup=cleanup, error=error: (
+                                cleanup(error) if cleanup is not None else None
+                            ),
+                        )
+                    )
+                child = self._active_child
+                if child is not None and not child.done:
+                    # Release drive ownership atomically with checking pending work.
+                    # Completion callbacks can then acquire it without losing a wakeup.
+                    self._driving = False
+                    return
+                if child is None:
+                    try:
+                        step = next(self._steps)
+                    except StopIteration:
+                        self._finalizing = True
+                        self._driving = False
+                        self._steps = iter(())
+                        self._on_failure = None
+                        error = self._sequence_error
+                        break
+            if child is not None:
+                try:
+                    child.wait(timeout=0)
+                except Exception as error:  # noqa: BLE001 - forward child/cleanup failure.
+                    self._record_failure(error)
+                    with self._sequence_lock:
+                        if self._failing:
+                            self._active_child = None
+                            # A failed cleanup composite can still own a nested
+                            # sequence whose asynchronous cleanup has not finished.
+                            # Release and await that work before reporting failure.
+                            original = self._sequence_error
+                            assert original is not None
+                            self._steps = chain(
+                                (
+                                    lambda child=child, error=original: self._cancel_owned(
+                                        child, error
+                                    ),
+                                ),
+                                self._steps,
+                            )
+                else:
+                    with self._sequence_lock:
+                        self._active_child = None
+                continue
+            try:
+                result = self._context.copy().run(step)
+                if result is not None and not isinstance(result, _StatusBase):
+                    raise TypeError("SequenceStatus steps must return a status or None")
+                if result is not None:
+                    _check_task_ownership((result,), "SequenceStatus")
+                with self._sequence_lock:
+                    self._active_child = result
+                if result is not None:
+                    result.add_callback(self._child_done)
+            except Exception as error:  # noqa: BLE001 - keep cleanup on the same path.
+                self._record_failure(error)
+        if error is None:
+            super().set_finished()
+        else:
+            super().set_exception(_sequence_exception(error))
+
+
 class Status(_Status):
     """Thin wrapper around StatusBase to add __and__ operator."""
 
@@ -428,12 +954,30 @@ class SubscriptionStatus(StatusBase):
         # Store device and attribute information
         self.callback = callback
         self.obj = obj
+        self._cleanup_requested = False
         # Start timeout thread in the background
         super().__init__(obj=obj, timeout=timeout, settle_time=settle_time, description=description)
-        self.obj.subscribe(self.check_value, event_type=event_type, run=run)
+        try:
+            self.obj.subscribe(self.check_value, event_type=event_type, run=run)
+        except Exception as error:
+            try:
+                self._cleanup()
+            except Exception as cleanup_error:  # noqa: BLE001 - preserve setup failure.
+                error.add_note(f"Subscription cleanup also failed: {cleanup_error!r}")
+            try:
+                self.set_exception(error)
+            except InvalidState:
+                pass  # Timeout already committed its terminal failure.
+            raise
+        else:
+            # Timeout cleanup may have run before subscribe registered anything.
+            if self._cleanup_requested:
+                self.obj.clear_sub(self.check_value)
 
     def check_value(self, *args, **kwargs):
         """Update the status object"""
+        if self._cleanup_requested:
+            return
         try:
             success = self.callback(*args, **kwargs)
         except Exception as e:
@@ -454,6 +998,7 @@ class SubscriptionStatus(StatusBase):
         return super()._handle_failure()
 
     def _cleanup(self) -> None:
+        self._cleanup_requested = True
         self.obj.clear_sub(self.check_value)
 
 
@@ -708,6 +1253,80 @@ class TransitionStatus(SubscriptionStatus):
             _log_callback_exception(self, e)
             self.set_exception(e)
             return False
+
+
+def destroy_subdevices(device: Device) -> None:
+    """
+    Destroy instantiated children without pre-empting custom owner cleanup.
+
+    Plain Ophyd Device.destroy disconnects descendant signals without invoking child
+    device destructors. For an ordinary grouping Device with no destroy override,
+    traverse its children first. Invoke a custom destructor before its descendants,
+    so the owner can stop workers or flush data while child resources remain usable.
+
+    Custom grouping destructors must call this helper after their own cleanup and
+    before super().destroy() when child cleanup needs connected signals::
+
+        def destroy(self):
+            self.flush_owned_resources()
+            destroy_subdevices(self)
+            super().destroy()
+
+    Owners such as CameraBase provide this ordering in their destroy method. After a
+    custom destructor returns or fails, traverse remaining descendants as best-effort cleanup;
+    this cannot reconnect signals an uncooperative destructor already disconnected.
+    Only instantiated components are visited, including descendants of groups already
+    marked destroyed. Continue after cleanup failures and report the first error with
+    subsequent failures attached as notes. DeviceCleanupBlockedError is a safety barrier:
+    leave that subtree's signals connected and propagate it before native destruction.
+    Custom owners must also respect this barrier rather than destroying in a finally.
+
+    Args:
+        device (Device): Parent whose instantiated child devices should be destroyed.
+
+    Raises:
+        Exception: A descendant cleanup fails, after remaining cleanups are attempted.
+    """
+    from ophyd import Device
+
+    errors = []
+    for child in tuple(device._signals.values()):
+        if not isinstance(child, Device):
+            continue
+        ordinary_group = type(child).destroy is Device.destroy
+        if ordinary_group:
+            try:
+                destroy_subdevices(child)
+            except DeviceCleanupBlockedError as error:
+                errors.append(error)
+                continue  # Its descendants still need this group's connected signals.
+            except Exception as error:  # noqa: BLE001 - still destroy this group and siblings.
+                errors.append(error)
+        if not child._destroyed:
+            try:
+                child.destroy()
+            except DeviceCleanupBlockedError as error:
+                errors.append(error)
+                continue  # Do not bypass the owner's refusal to release live resources.
+            except Exception as error:  # noqa: BLE001 - finish all child cleanup.
+                errors.append(error)
+        if not ordinary_group:
+            try:
+                destroy_subdevices(child)
+            except Exception as error:  # noqa: BLE001 - recover children a custom owner missed.
+                errors.append(error)
+    if errors:
+        primary = next((e for e in errors if isinstance(e, DeviceCleanupBlockedError)), errors[0])
+        for error in errors:
+            if error is not primary:
+                primary.add_note(f"Additional child cleanup failure: {error!r}")
+        raise primary
+
+
+class DeviceCleanupBlockedError(RuntimeError):
+    """
+    Device resources are still in use; destruction must wait and may be retried.
+    """
 
 
 class TaskState(str, Enum):

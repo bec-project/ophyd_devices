@@ -6,9 +6,11 @@ from __future__ import annotations
 
 import inspect
 import time
+from threading import Lock
 from typing import TYPE_CHECKING, Callable
 
 from ophyd import Device, DeviceStatus, Staged, StatusBase
+from ophyd.utils.errors import InvalidState
 
 from ophyd_devices.tests.utils import get_mock_scan_info
 from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
@@ -72,6 +74,7 @@ class PSIDeviceBase(Device):
             super().__init__(prefix=prefix, name=name, **kwargs)
         self._stopped = False
         self._stoppable_status_objects: list[StatusBase] = []
+        self._stoppable_status_lock = Lock()
         self.task_handler = TaskHandler(parent=self)
         self.file_utils = FileHandler()
         if scan_info is None:
@@ -161,11 +164,25 @@ class PSIDeviceBase(Device):
         Args:
             success (bool): True if the action was successful, False otherwise.
         """
-        self.on_stop()
-        self.stopped = True  # Set stopped flag to True, in case a custom stop method listens to stopped property
-        # Stop all stoppable status objects
-        self._stop_stoppable_status_objects()
-        super().stop(success=success)
+        errors = []
+        try:
+            self.on_stop()
+        except Exception as error:  # noqa: BLE001 - cancellation must survive hook failure.
+            errors.append(error)
+        finally:
+            self.stopped = True
+        for cleanup in (
+            self._stop_stoppable_status_objects,
+            lambda: super(PSIDeviceBase, self).stop(success=success),
+        ):
+            try:
+                cleanup()
+            except Exception as error:  # noqa: BLE001 - attempt every shutdown action.
+                errors.append(error)
+        if errors:
+            for error in errors[1:]:
+                errors[0].add_note(f"Additional device stop failure: {error!r}")
+            raise errors[0]
 
     def destroy(self):
         """Destroy the device."""
@@ -187,16 +204,17 @@ class PSIDeviceBase(Device):
         """
         if not isinstance(status, StatusBase):
             raise TypeError("status must be an instance of StatusBase")
-        self._stoppable_status_objects.append(status)
+        with self._stoppable_status_lock:
+            if status.done or status in self._stoppable_status_objects:
+                return
+            self._stoppable_status_objects.append(status)
 
-    def _clear_stoppable_status_objects(self) -> None:
-        """
-        Clear all registered stoppable status objects.
+        def discard(completed):
+            with self._stoppable_status_lock:
+                if completed in self._stoppable_status_objects:
+                    self._stoppable_status_objects.remove(completed)
 
-        This is useful to reset the list of status objects that should be cancelled
-        when the device is stopped.
-        """
-        self._stoppable_status_objects = []
+        status.add_callback(discard)
 
     def _stop_stoppable_status_objects(self) -> None:
         """
@@ -205,10 +223,14 @@ class PSIDeviceBase(Device):
         This method will cancel all status objects that have been registered
         to be stopped when the device is stopped.
         """
-        for status in self._stoppable_status_objects:
-            if not status.done:
-                status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
-        self._clear_stoppable_status_objects()
+        with self._stoppable_status_lock:
+            statuses = tuple(self._stoppable_status_objects)
+        for status in statuses:
+            if not status.done and status._exception is None:
+                try:
+                    status.set_exception(DeviceStoppedError(f"Device {self.name} has been stopped"))
+                except InvalidState:
+                    pass  # Completion may already be committed on its callback thread.
 
     ########################################
     # Utility Method to wait for signals   #
