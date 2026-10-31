@@ -66,6 +66,7 @@ exclude_lines = [
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
+exclude = ["/.autonomous", "/SPECIFICATION.md", "/ARCHITECTURE.md", "/PLAN.md", "/PROGRESS.md", "/device_test_reports"]
 
 [tool.isort]
 profile = "black"
