@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.53.0 (2026-11-12)
+
+### Features
+
+- **signals**: Notify subscribers when signal metadata changes
+  ([`c08203d`](https://github.com/bec-project/ophyd_devices/commit/c08203d41603f063452d43af180b5206f6665bbb))
+
+
 ## v1.52.2 (2026-10-26)
 
 ### Bug Fixes
