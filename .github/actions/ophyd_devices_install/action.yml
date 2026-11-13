@@ -40,6 +40,6 @@ runs:
       shell: bash
       run: |
         pip install uv
-        uv pip install --system -e ./ophyd_devices[dev]
+        uv pip install --system -e ./ophyd_devices[dev,ci]
         uv pip install --system -e ./bec/bec_lib[dev]
         uv pip install --system -e ./bec/bec_server[dev]

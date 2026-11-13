@@ -1,16 +1,91 @@
+import functools
 from abc import ABC
 from typing import TypedDict
 
+import numpy as np
 from ophyd import Component as Cpt
+from ophyd import Kind
 from ophyd.device import required_for_connection
 from ophyd.positioner import PositionerBase
 from ophyd.signal import EpicsSignalBase, Signal
-from ophyd.status import MoveStatus
+from ophyd.status import StatusTimeoutError, WaitTimeoutError
 from ophyd.status import wait as status_wait
+from ophyd.utils import UnknownStatusFailure
 from ophyd.utils.epics_pvs import AlarmSeverity, fmt_time
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
-from ophyd_devices.utils.psi_device_base_utils import SubscriptionStatus, TransitionStatus
+from ophyd_devices.utils.psi_device_base_utils import (
+    MoveStatus,
+    SubscriptionStatus,
+    TransitionStatus,
+)
+
+
+class MoveStatusWithTolerance(MoveStatus):
+    """A MoveStatus that checks the final position against a tolerance if provided."""
+
+    def __init__(self, positioner, *args, **kwargs):
+        self._completion_exception = None
+        super().__init__(positioner, *args, **kwargs)
+        self.positioner = positioner
+
+    def _finished(self, success: bool = True, **kwargs):
+        if not success:
+            exc = UnknownStatusFailure(
+                f"The status {self!r} has failed. To obtain more specific, "
+                "helpful errors in the future, update the Device to use "
+                "set_exception(...) instead of _finished(success=False)."
+            )
+            return self._fail_move(exc)
+        if self.positioner.user_readback is _OPTIONAL_SIGNAL:
+            return super()._finished(success=success, **kwargs)
+
+        try:
+            tol = self.positioner.tolerance.get()
+            skip_check = bool(tol == np.inf)
+            if not skip_check:
+                final_position = self.positioner.user_readback.get()
+                outside_tolerance = bool(abs(self.target - final_position) > tol)
+        except Exception as exc:
+            if isinstance(exc, (StatusTimeoutError, WaitTimeoutError)):
+                wrapped = RuntimeError(f"Final position check failed: {exc}")
+                wrapped.__cause__ = exc
+                exc = wrapped
+            return self._fail_move(exc, motion_completed=True)
+
+        if skip_check:
+            return super()._finished(success=success, **kwargs)
+        if outside_tolerance:
+            exc = RuntimeError(
+                f"Move to {self.target} failed, "
+                f"final position {final_position} outside of tolerance {tol}"
+            )
+            return self._fail_move(exc, motion_completed=True)
+        return super()._finished(success=success, **kwargs)
+
+    def _fail_move(self, exc: Exception, *, motion_completed: bool = False):
+        # The custom MoveStatus timeout is not a subclass of ophyd's
+        # StatusTimeoutError, so ophyd's set_exception() can overwrite it.
+        # Use the same lock as the timeout thread to keep the first failure.
+        with self._externally_initiated_completion_lock:
+            if self._externally_initiated_completion or self._exception is not None:
+                return
+            self._externally_initiated_completion = True
+            self._exception = exc
+            if motion_completed:
+                self._completion_exception = exc
+            self._trace_attributes["exception"] = exc
+            self._settled_event.set()
+
+        self._close_trace()
+        if self._callback_thread is None:
+            self._run_callbacks()
+
+    def _handle_failure(self):
+        # Motion has already completed, so a stop here could issue another move.
+        if self._completion_exception is not None and self._exception is self._completion_exception:
+            return
+        super()._handle_failure()
 
 
 class _SignalSentinel(object): ...
@@ -78,9 +153,13 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
     velocity: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_stop: EpicsSignalBase = _OPTIONAL_SIGNAL
     motor_done_move: EpicsSignalBase = _OPTIONAL_SIGNAL
+    tolerance = Cpt(Signal, value=np.inf, kind=Kind.config)
 
     stop_value = 1  # The value to put to the stop PV (if set) to make the motor stop
     done_value = 1  # The value expected to be reported by motor_done_move when the move is done
+    moving_value = int(
+        not done_value
+    )  # The value expected to be reported by motor_done_move when the move is in progress
     use_put_complete = False  # Whether to use put-completion for the setpoint for the move status
 
     def __init__(
@@ -102,7 +181,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         Args:
             name (str): (required) the name of the device
             limits (list | tuple | None): If given, a length-2 sequence within the range of which movement is allowed.
-            deadband (float | None): If given, set a soft deadband of this absolute value, within which positioner moves will return immediately. If the positioner has no motor_done_move signal, you must provide this.
+            deadband (float | None): If given, set a soft deadband of this absolute value, within which positioner moves will return immediately. If the positioner has no motor_done_move signal, you must provide this. It must not exceed the configured tolerance when moving.
             use_put_completion (bool | None): If given, use put completion on the setpoint signal to resolve the move status.
             override_suffixes (dict[str, str]): a dictionary of signal_name: pv_suffix which will replace the values in the signal classvar.
         """
@@ -210,7 +289,7 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         if has_done_signal:
             # The transition status must start watching before the write.
             completion_status = self._move_completion_status = TransitionStatus(
-                self.motor_done_move, transitions=[0, 1]
+                self.motor_done_move, transitions=[self.moving_value, self.done_value]
             )
 
         if not has_done_signal and self.use_put_complete:
@@ -254,15 +333,35 @@ class PSISimplePositionerBase(ABC, PSIDeviceBase, PositionerBase):
         TimeoutError
             When motion takes longer than `timeout`
         ValueError
-            On invalid positions
+            On invalid positions or if the deadband exceeds the configured tolerance
         RuntimeError
             If motion fails other than timing out
         """
 
-        if self._deadband is not None and abs(position - self._position) < self._deadband:
-            return MoveStatus(self, position, done=True, success=True)
+        if self._deadband is not None:
+            tolerance = self.tolerance.get()
+            if self._deadband > tolerance:
+                raise ValueError(f"Deadband {self._deadband} must not exceed tolerance {tolerance}")
+            if abs(position - self._position) < self._deadband:
+                return MoveStatus(self, position, done=True, success=True)
 
-        status = super().move(position, timeout=timeout, moved_cb=moved_cb)
+        if timeout is None:
+            timeout = self._timeout
+
+        self.check_value(position)
+
+        self._run_subs(sub_type=self._SUB_REQ_DONE, success=False)
+        self._reset_sub(self._SUB_REQ_DONE)
+
+        status = MoveStatusWithTolerance(
+            self, position, timeout=timeout, settle_time=self._settle_time
+        )
+
+        if moved_cb is not None:
+            status.add_callback(functools.partial(moved_cb, obj=self))
+            # the status object will run this callback when finished
+
+        self.subscribe(status._finished, event_type=self._SUB_REQ_DONE, run=False)
         # TDDO: Here create subs for resolving the status
         try:
             self._setup_move(position)
