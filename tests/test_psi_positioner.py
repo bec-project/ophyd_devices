@@ -33,6 +33,29 @@ def test_cannot_isntantiate_without_required_signals():
     assert dev.user_setpoint.get() == 0
 
 
+def test_standalone_move_after_stop_can_complete():
+    class Motor(PSISimplePositionerBase):
+        user_setpoint = Cpt(FakeEpicsSignal, "VAL")
+        user_readback = Cpt(FakeEpicsSignalRO, "RBV")
+        motor_done_move = Cpt(FakeEpicsSignalRO, "DMOV")
+
+    motor = Motor(name="motor", deadband=0.001)
+    try:
+        motor._position = 0
+        motor.motor_done_move.sim_put(1)
+        motor.stop()
+        status = motor.move(1, wait=False)
+        assert not status.done
+        assert motor.user_setpoint.get() == 1
+        motor.motor_done_move.sim_put(0)
+        motor.user_readback.sim_put(1)
+        motor.motor_done_move.sim_put(1)
+        status.wait(timeout=1)
+        assert status.success
+    finally:
+        motor.destroy()
+
+
 def test_override_suffixes():
     pos = PSISimplePositioner(
         name="name",
