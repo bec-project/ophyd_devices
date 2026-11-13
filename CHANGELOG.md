@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.53.1 (2026-11-13)
+
+### Bug Fixes
+
+- **sim**: Stop pacing the async gauss stream at complete
+  ([`363a84a`](https://github.com/bec-project/ophyd_devices/commit/363a84abd912c2c4e1ba348f4e0a473ddc40e6c2))
+
+### Continuous Integration
+
+- Report source and test line counts on pull requests
+  ([`907f6bf`](https://github.com/bec-project/ophyd_devices/commit/907f6bf5283dfbd6daa16fe4f1a1f378d062a404))
+
+
 ## v1.53.0 (2026-11-12)
 
 ### Features
