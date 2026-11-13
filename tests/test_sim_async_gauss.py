@@ -1,6 +1,7 @@
 """Tests for the simulated asynchronous 2D Gaussian device."""
 
 import threading
+import time
 
 import numpy as np
 import pytest
@@ -106,12 +107,43 @@ def test_complete_without_pre_scan_still_streams(gauss):
     assert sum(len(msg.signals["gauss_data_x"]["value"]) for msg in gauss.emitted) == 100
 
 
+def test_complete_sends_the_remaining_samples_without_waiting(gauss):
+    """A scan shorter than the stream does not wait for it: complete ends the pacing."""
+    gauss.rate.put(50.0)  # 100 samples would take 2 s
+    gauss.chunk_size.put(10)
+    gauss.stage()
+    gauss.pre_scan()
+    time.sleep(0.1)  # the scan runs: a few chunks arrive at the configured rate
+    assert 0 < len(gauss.emitted) < 10
+
+    started = time.monotonic()
+    gauss.complete().wait(timeout=5)
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.5
+    x = np.concatenate([msg.signals["gauss_data_x"]["value"] for msg in gauss.emitted])
+    np.testing.assert_allclose(x, gauss._trajectory[0])  # every sample, in order
+    assert gauss.progress.get().done
+    gauss.unstage()
+    assert not any(t.name == "gauss_stream" for t in threading.enumerate())
+
+
+def test_stream_keeps_its_rate_until_complete(gauss):
+    gauss.rate.put(50.0)
+    gauss.chunk_size.put(10)
+    gauss.stage()
+    gauss.pre_scan()
+    time.sleep(0.5)
+    assert 2 <= len(gauss.emitted) <= 4  # 5 chunks per second, not all at once
+    gauss.unstage()
+
+
 def test_stop_cancels_a_running_stream(gauss):
     gauss.rate.put(50.0)
     gauss.chunk_size.put(1)
     gauss.stage()
     gauss.pre_scan()
-    status = gauss.complete()
+    status = gauss._stream_status
     gauss.stop()
     gauss.stop()  # repeated calls are safe
     with pytest.raises(DeviceStoppedError):

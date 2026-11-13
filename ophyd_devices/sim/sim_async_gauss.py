@@ -122,9 +122,11 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
 
     The three values are sub-signals of the ``data`` AsyncMultiSignal (``<name>_data_x``,
     ``<name>_data_y``, ``<name>_data_intensity``). They are emitted together in chunks of
-    ``chunk_size`` samples at ``rate`` samples per second, starting at ``pre_scan``;
-    ``complete`` resolves when all ``num_points`` samples have been sent. The trajectory
-    and the Gaussian are configured through the config signals of the device.
+    ``chunk_size`` samples at ``rate`` samples per second, starting at ``pre_scan``.
+    ``complete`` ends the pacing: the samples that are still left are sent at once, so
+    that every scan gets all ``num_points`` samples and a scan shorter than
+    ``num_points / rate`` seconds does not wait for the stream. The trajectory and the
+    Gaussian are configured through the config signals of the device.
     """
 
     USER_ACCESS = ["compute_intensity"]
@@ -136,6 +138,8 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
         self._stream_thread: threading.Thread | None = None
         self._stream_status: DeviceStatus | None = None
         self._stop_event = threading.Event()
+        # Ends a pacing wait of the stream early: set by a stop and by complete.
+        self._wake_event = threading.Event()
 
     def compute_intensity(self, x, y, noise: bool = True) -> np.ndarray:
         """
@@ -185,6 +189,7 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
         """
         self._stop_stream()
         self._stop_event.clear()
+        self._wake_event.clear()
         self._stream_status = None
         self._trajectory = compute_trajectory(
             pattern=str(self.pattern.get()),
@@ -206,9 +211,15 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
         """Called when the device is triggered."""
 
     def on_complete(self) -> DeviceStatus | StatusBase | None:
-        """Called to inquire if a device has completed a scans. Resolves after the last sample."""
+        """
+        Called to inquire if a device has completed a scans. Resolves after the last sample.
+
+        The scan is over, so the stream stops keeping its pace and sends what is left.
+        """
         # Scans that skip pre_scan still get their data.
-        return self._start_stream()
+        status = self._start_stream()
+        self._wake_event.set()
+        return status
 
     def on_kickoff(self) -> DeviceStatus | StatusBase | None:
         """Called to kickoff a device for a fly scan. Has to be called explicitly."""
@@ -243,6 +254,7 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
     def _stop_stream(self) -> None:
         """Interrupt the running stream; safe to call repeatedly."""
         self._stop_event.set()
+        self._wake_event.set()
         thread, self._stream_thread = self._stream_thread, None
         if thread is not None and thread is not threading.current_thread():
             thread.join()
@@ -256,7 +268,9 @@ class SimAsyncGauss2D(PSIDeviceBase, SimAsyncGauss2DControl):
             period = chunk / max(float(self.rate.get()), 1e-6)
             next_emit = time.monotonic()
             for start in range(0, total, chunk):
-                if self._stop_event.wait(timeout=max(0.0, next_emit - time.monotonic())):
+                # Woken early by a stop or by complete; after complete nothing is paced.
+                self._wake_event.wait(timeout=max(0.0, next_emit - time.monotonic()))
+                if self._stop_event.is_set():
                     return
                 next_emit += period
                 x, y = x_all[start : start + chunk], y_all[start : start + chunk]
