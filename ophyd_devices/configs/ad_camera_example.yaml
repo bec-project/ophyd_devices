@@ -1,0 +1,167 @@
+# Default simDetector setup, followed by alternative settings for the SAME device.
+# Merge a recipe's shown fields into adsim; do not add multiple devices sharing the IOC.
+#
+# readoutPriority defines the acquisition lifecycle:
+#   on_request: retain live behavior; no scan capture.
+#   baseline: one finite burst in pre_scan after staging; one averaged value per ROI.
+#   monitored: one finite burst per BEC trigger.
+#   async: independent acquisition from stage until complete.
+# For async, acquisition_source selects internal clock / external pulses.
+# acquisition_mode independently selects fixed / continuous acquisition.
+# BEC's softwareTrigger flag must be true for monitored and false for async;
+# inconsistent combinations are rejected. It is not another acquisition selector.
+
+adsim:
+  description: |
+    Monitored step-scan camera with live preview outside scans and two ROI/Stats pairs.
+    Staging pauses live acquisition, applies scan timing and arms the HDF5 file.
+    Each BEC trigger acquires frames_per_trigger frames and publishes their ROI
+    statistics through dynamic signals before its trigger status completes.
+    Completion drains remaining data and closes the file. Successful unstage
+    resumes live mode using scan timing. acquisition_source and acquisition_mode
+    apply only to async acquisition; monitored always uses finite internal bursts.
+  deviceClass: ophyd_devices.sim.sim_ad_camera.SimADCamera
+  deviceConfig:
+    prefix: 'BEC:SIM:'
+    # Optional mount translation. IOC paths change; file events retain the BEC path.
+    # The IOC must be able to write to the mapped directory.
+    # hdf5_path_mapping:
+    #   /beamline/bec/data: /data
+    live_enabled: true
+    # Frame saving is checked at stage; false leaves HDF5 unarmed, but keeps previews.
+    save_frame_data: true
+    # ROI signal_info.saved value. False keeps streaming/plots without file persistence.
+    # Change through BEC deviceConfig between scans so metadata is refreshed.
+    # Individual ROI components can override saved at creation.
+    save_roi_data: true
+    acquisition_source: internal  # internal | external; async only.
+    acquisition_mode: continuous  # fixed | continuous; async only.
+    # Fixed async: scan num_points * frames_per_trigger, or manual controller NumImages.
+    # True selects scan exposure/period AND frames_per_trigger. AD AcquirePeriod is
+    # scan exp_time; AcquireTime subtracts max(scan readout_time, detector_readout_time).
+    # False reads exposure, period and burst size from the current controller PVs.
+    use_scan_timing: true
+    # On return to live: true keeps resolved scan timing; false restores pre-scan
+    # controller exposure/period. This flag does not restore burst size.
+    live_follows_scan_timing: true
+    # Optional Redis image/ROI previews in live mode. 0 disables the preview timer.
+    # IOC ZMQ publication is independent; this does not create a ZMQ publisher.
+    redis_update_frequency: 0
+    preview_transports:
+      preview:
+        - transport: zmq
+          address: tcp://127.0.0.1:5555
+          socket_type: sub
+          connection_mode: connect
+          encoder: array-1.0
+    detector_readout_time: 0.0
+    async_frame_limit: null  # Async ROI samples per scan; null uses IOC waveform capacity.
+  connectionTimeout: 30
+  enabled: true
+  readOnly: false
+  softwareTrigger: true
+  readoutPriority: monitored
+  onFailure: raise
+  deviceTags:
+    - simulation
+
+# Alternative: async acquisition on the camera's internal clock
+#
+# description: |
+#   Staging arms fixed ROI buffers and HDF5 capture, then starts the camera in
+#   Continuous image mode. Frames arrive independently of scan steps. New ROI
+#   values stream through async dynamic signals. BEC does not call trigger().
+#   Completion stops input, drains ROIs and closes the file without an exact HDF5 count.
+#   With ROI outputs selected, total samples must fit the IOC waveform capacity.
+# deviceConfig:
+#   acquisition_source: internal
+#   acquisition_mode: continuous
+# softwareTrigger: false
+# readoutPriority: async
+
+# Alternative: async acquisition driven by external pulses
+# Requires a camera with a configured external_trigger_mode; NOT SimADCamera.
+#
+# description: |
+#   Staging selects the driver's external trigger mode, arms ROI/HDF5 capture and
+#   starts Acquire so the camera can accept external pulses. Keep the pulse source
+#   quiet until staging readiness completes. BEC does not trigger the camera.
+#   ROI statistics stream through async dynamic signals. Completion stops input,
+#   drains ROIs and closes the file without an exact HDF5 count requirement. Pulse generator,
+#   connector and polarity settings belong in the concrete camera's hooks.
+# deviceConfig:
+#   acquisition_source: external
+#   acquisition_mode: continuous
+# softwareTrigger: false
+# readoutPriority: async
+
+# Alternative: fixed-count async acquisition (internal or external)
+# External source requires a configured external_trigger_mode; use internal for SimADCamera.
+#
+# description: |
+#   Stage arms ROI/HDF5 capture and starts a Multiple acquisition. With scan timing,
+#   NumImages is num_points * frames_per_trigger; with use_scan_timing false, keep
+#   the controller's NumImages as the total. Acquisition begins on the internal clock
+#   or accepts external pulses according to acquisition_source. BEC trigger calls do
+#   not reacquire. Complete waits for camera idle and rejects a short frame count;
+#   it then drains ROIs and waits for every expected HDF5 frame before closing.
+#   Missing external pulses time out rather than silently truncate the acquisition.
+# deviceConfig:
+#   acquisition_source: internal  # Change to external for externally triggered detectors.
+#   acquisition_mode: fixed
+#   use_scan_timing: true
+# softwareTrigger: false
+# readoutPriority: async
+
+# Alternative: one baseline acquisition
+#
+# description: |
+#   After staging, pre_scan acquires one finite burst using frames_per_trigger. Each
+#   ROI publishes a single averaged value with baseline correlation through its
+#   dynamic signal. Subsequent trigger calls do not acquire another burst.
+#   Completion closes the HDF5 file; successful unstage resumes live if enabled.
+#   acquisition_source and acquisition_mode are ignored. No external triggering support is required.
+# softwareTrigger: false
+# readoutPriority: baseline
+
+# Alternative: preview-only / on-request camera
+#
+# description: |
+#   The camera retains live behavior during scans. Staging does not apply scan
+#   timing or arm scan ROI/HDF5 capture. Completion leaves live mode running.
+#   acquisition_source and acquisition_mode are ignored. With redis_update_frequency 2, the optional timer
+#   samples the image and current scalar ROI statistics at up to 2 Hz; live ROI
+#   previews do not use TS buffers. IOC ZMQ streaming is independent of this timer.
+# deviceConfig:
+#   live_enabled: true
+#   redis_update_frequency: 2
+# softwareTrigger: false
+# readoutPriority: on_request
+
+# Timing variation: manual scan timing, separate live timing
+# Can be combined with the acquisition recipes above.
+#
+# description: |
+#   Use the controller's exposure, period and NumImages as manual scan settings
+#   instead of incoming scan timing/burst parameters. Monitored/baseline bursts use
+#   NumImages as their burst size; fixed async uses it as the scan total. Continuous
+#   async runs until completion. On return to live,
+#   restore the exposure/period saved before the scan. To use scan settings during
+#   scans but restore manual live timing afterwards, set use_scan_timing true and
+#   keep live_follows_scan_timing false.
+# deviceConfig:
+#   use_scan_timing: false
+#   live_follows_scan_timing: false
+
+# Persistence variation: preview and ROI plots without saving either data stream
+# Update save_roi_data through BEC deviceConfig between scans.
+#
+# description: |
+#   Do not arm the HDF5 plugin. Mark ROI result signals with signal_info.saved false
+#   so BEC's file writer skips them. ROI capture, dynamic publication, scan plots and
+#   image previews remain active. Change ROI saving between scans through the BEC
+#   configuration API; the refreshed saved metadata is used by the next scan.
+#   save_frame_data is sampled at stage and does not interrupt an open scan file.
+# deviceConfig:
+#   save_frame_data: false
+#   save_roi_data: false
