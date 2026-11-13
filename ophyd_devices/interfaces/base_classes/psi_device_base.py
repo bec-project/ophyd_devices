@@ -13,7 +13,7 @@ from ophyd import Device, DeviceStatus, Staged, StatusBase
 from ophyd.utils.errors import InvalidState
 
 from ophyd_devices.tests.utils import get_mock_scan_info
-from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler
+from ophyd_devices.utils.psi_device_base_utils import FileHandler, TaskHandler, destroy_subdevices
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.devicemanager import DeviceManagerBase, ScanInfo
@@ -174,6 +174,7 @@ class PSIDeviceBase(Device):
         self.on_destroy()  # Call the on_destroy method
         self._stop_stoppable_status_objects()
         self.task_handler.shutdown()
+        destroy_subdevices(self)
         return super().destroy()
 
     ########################################
