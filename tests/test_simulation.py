@@ -464,6 +464,38 @@ def test_linear_traj(initial_position, final_position, max_velocity, acceleratio
     assert trajectory.ended
 
 
+def test_sim_camera_stop_after_task_shutdown_timeout(camera):
+    """A blocked task must not prevent the camera from completing stop cleanup."""
+    started = threading.Event()
+    release = threading.Event()
+
+    def blocked_task():
+        started.set()
+        release.wait()
+
+    status = camera.task_handler.submit_task(blocked_task)
+    worker = camera.task_handler._tasks[status.task_id][1]
+    assert started.wait(1)
+    real_shutdown = camera.task_handler.shutdown
+    try:
+        with mock.patch.object(
+            camera.task_handler, "shutdown", side_effect=lambda: real_shutdown(timeout=0.01)
+        ):
+            with mock.patch(
+                "ophyd_devices.utils.psi_device_base_utils.set_async_exc", return_value=1
+            ):
+                with mock.patch(
+                    "ophyd_devices.utils.psi_device_base_utils.logger.warning"
+                ) as warning:
+                    camera.stop()
+        assert camera.stopped
+        assert any(status.task_id in str(call) for call in warning.call_args_list)
+    finally:
+        release.set()
+        worker.join(timeout=1)
+    assert not worker.is_alive()
+
+
 @pytest.mark.parametrize("proxy_active", [True, False])
 def test_sim_camera_proxies(camera, proxy_active):
     """Test mocking compute_method with framework class"""
