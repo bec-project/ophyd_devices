@@ -35,6 +35,11 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
 
       - name: Run Pytest
+        env:
+          EPICS_CA_ADDR_LIST: 127.0.0.1
+          EPICS_CA_AUTO_ADDR_LIST: "NO"
+          EPICS_CAS_AUTO_BEACON_ADDR_LIST: "NO"
+          EPICS_CAS_BEACON_ADDR_LIST: 127.0.0.1
         run: |
           cd ./ophyd_devices
           pip install pytest pytest-random-order
