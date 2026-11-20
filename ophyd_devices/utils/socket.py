@@ -1,8 +1,10 @@
 import abc
 import functools
+import math
 import socket
 import time
 import typing
+from enum import Enum, auto
 
 import numpy as np
 from bec_lib import bec_logger
@@ -11,6 +13,23 @@ from ophyd.utils.errors import DisconnectedError
 
 logger = bec_logger.logger
 # logger = bec_logger.logger("socket")
+
+DEFAULT_SOCKET_TIMEOUT = 2.0
+DEFAULT_CONNECT_TIMEOUT = 10.0
+
+
+class _TimeoutDefault(Enum):
+    USE_DEFAULT = auto()
+
+
+USE_DEFAULT_TIMEOUT = _TimeoutDefault.USE_DEFAULT
+Timeout = float | None | typing.Literal[_TimeoutDefault.USE_DEFAULT]
+
+
+def _validate_timeout(timeout: Timeout, name: str = "timeout") -> None:
+    """Accept a finite, nonnegative duration, None, or the default sentinel."""
+    if timeout is not USE_DEFAULT_TIMEOUT and timeout is not None and not 0 <= timeout < math.inf:
+        raise ValueError(f"{name} must be finite and greater than or equal to 0")
 
 
 def raise_if_disconnected(fcn):
@@ -198,65 +217,118 @@ class SocketSignal(abc.ABC, Signal):
 class SocketIO:
     """SocketIO helper class for TCP IP connections"""
 
-    def __init__(self, host: str, port: int, socket_timeout: int = 2):
+    def __init__(self, host: str, port: int, socket_timeout: float | None = DEFAULT_SOCKET_TIMEOUT):
+        _validate_timeout(socket_timeout, "socket_timeout")
         self.host = host
         self.port = port
         self.is_open = False
         self.socket_timeout = socket_timeout
         self._initialize_socket()
 
-    def connect(self, timeout: int = 10):
+    def connect(self, timeout: float | None = DEFAULT_CONNECT_TIMEOUT):
         """
         Establish socket connection to host:port within timeout period
 
         Args:
-            timeout (int): Time in seconds to wait for connection
+            timeout: Total connection budget in seconds, including retries. None
+                allows retries without a deadline. The socket's operation timeout
+                applies after the connection opens.
+
+        Raises:
+            ValueError: The timeout is negative or nonfinite.
         """
+        _validate_timeout(timeout)
         logger.info(f"Connecting to {self.host}:{self.port}.")
-        start_time = time.time()
-        while time.time() - start_time < timeout:
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise ConnectionError(
+                    f"Could not connect to {self.host}:{self.port} within {timeout} seconds"
+                )
             try:
                 if self.sock is None:
                     self._initialize_socket()
+                self.sock.settimeout(remaining)
                 self.sock.connect((self.host, self.port))
-                break
+                self.sock.settimeout(self.socket_timeout)
+                return
             except Exception as exc:
                 self.sock = None
-                logger.warning(
-                    f"Connection to {self.host}:{self.port} failed after {time.time()-start_time:.2f} seconds"
-                    f" with exception: {exc}. Retrying after 1 second..."
-                )
-                time.sleep(1)
-        else:
+                logger.warning(f"Connection to {self.host}:{self.port} failed: {exc}")
+                retry_delay = 1 if deadline is None else min(1, deadline - time.monotonic())
+                if retry_delay > 0:
+                    time.sleep(retry_delay)
+
+    def put(self, msg: bytes) -> None:
+        """Send all bytes to the socket, raising if the send fails."""
+        logger.debug(f"put message: {msg}")
+        if self.sock is None:
             raise ConnectionError(
-                f"Could not connect to {self.host}:{self.port} within {time.time()-start_time:.2f} seconds"
+                "Socket is not connected. Call 'connect()' to establish a connection."
             )
-
-    def _put(self, msg_bytes):
-        logger.debug(f"put message: {msg_bytes}")
-        return self.sock.send(msg_bytes)
-
-    def _recv(self, buffer_length=1024):
-        msg = self.sock.recv(buffer_length)
-        logger.debug(f"recv message: {msg}")
-        return msg
+        self.sock.sendall(msg)
 
     def _initialize_socket(self):
+        """Create the TCP socket and apply its configured default timeout."""
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(self.socket_timeout)
 
-    def put(self, msg):
-        return self._put(msg)
+    def receive(self, buffer_length=1024, *, timeout: Timeout = USE_DEFAULT_TIMEOUT):
+        """Read one chunk from the current socket.
 
-    def receive(self, buffer_length=1024):
-        return self._recv(buffer_length=buffer_length)
+        Args:
+            buffer_length: Maximum number of bytes to read.
+            timeout: Override the socket's timeout for this read. Omit to keep the
+                current timeout, pass None to wait indefinitely, or pass zero to
+                read without waiting.
 
-    def open(self, timeout: int = 10):
+        Returns:
+            The bytes received, or empty bytes if the peer has closed its write side.
+
+        Raises:
+            ValueError: The timeout is negative or nonfinite.
+            ConnectionError: No socket is available.
+            TimeoutError: The read times out.
+            OSError: The read or a timeout update fails.
+
+        Notes:
+            Restore the previous timeout if the socket is still current. A
+            restoration error cannot replace an exception from the read.
+        """
+        _validate_timeout(timeout)
+        sock = self.sock
+        if sock is None:
+            raise ConnectionError(
+                "Socket is not connected. Call 'connect()' to establish a connection."
+            )
+
+        if timeout is not USE_DEFAULT_TIMEOUT:
+            previous_timeout = sock.gettimeout()
+            sock.settimeout(timeout)
+
+        read_succeeded = False
+        try:
+            msg = sock.recv(buffer_length)
+            read_succeeded = True
+        finally:
+            if timeout is not USE_DEFAULT_TIMEOUT and self.sock is sock:
+                try:
+                    sock.settimeout(previous_timeout)
+                except OSError:
+                    # Close may race with restoration. Preserve any read error.
+                    if read_succeeded and self.sock is sock and sock.fileno() != -1:
+                        raise
+
+        logger.debug(f"recv message: {msg}")
+        return msg
+
+    def open(self, timeout: float | None = DEFAULT_CONNECT_TIMEOUT):
         """
         Open the socket connection to the host:port
 
         Args:
-            timeout (int): Time in seconds to wait for connection
+            timeout: Connection budget in seconds. None allows retries without a deadline.
         """
         self.connect(timeout=timeout)
         self.is_open = True
@@ -276,11 +348,11 @@ class SocketMock:
         self.is_open = False
         # self.open()
 
-    def connect(self, timeout: int = 10):
+    def connect(self, timeout: float | None = DEFAULT_CONNECT_TIMEOUT):
         print(f"connecting to {self.host} port {self.port}")
 
-    def _put(self, msg_bytes):
-        self.buffer_put = msg_bytes
+    def put(self, msg):
+        self.buffer_put = msg
         print(self.buffer_put)
 
     def _recv(self, buffer_length=1024):
@@ -296,13 +368,10 @@ class SocketMock:
     def _initialize_socket(self):
         pass
 
-    def put(self, msg):
-        return self._put(msg)
-
-    def receive(self, buffer_length=1024):
+    def receive(self, buffer_length=1024, *, timeout: Timeout = USE_DEFAULT_TIMEOUT):
         return self._recv(buffer_length=buffer_length)
 
-    def open(self, timeout: int = 10):
+    def open(self, timeout: float | None = DEFAULT_CONNECT_TIMEOUT):
         self._initialize_socket()
         self.is_open = True
 
