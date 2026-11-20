@@ -1,6 +1,50 @@
 # CHANGELOG
 
 
+## v1.54.0 (2026-11-20)
+
+### Build System
+
+- **adsim**: Add reproducible IOC container and environment setup
+  ([`9d39916`](https://github.com/bec-project/ophyd_devices/commit/9d39916fd5dcd12e533ef5fedc876e74a20072c2))
+
+- **deps**: Require BEC 4.8.1 or newer
+  ([`c6b4077`](https://github.com/bec-project/ophyd_devices/commit/c6b40772942a21832be600039f30449b3ee852bf))
+
+### Continuous Integration
+
+- Run PR line counts on pull_request
+  ([`1835c93`](https://github.com/bec-project/ophyd_devices/commit/1835c93ba9e8a9e90fb31c12900cb88328f8615a))
+
+### Features
+
+- **areadetector**: Add owned HDF5 capture and file events
+  ([`89ad12f`](https://github.com/bec-project/ophyd_devices/commit/89ad12f1c59a54cc7c13f81ac03a010d4ce6bcf0))
+
+- **areadetector**: Integrate simDetector and AlliedVision cameras
+  ([`ef4382f`](https://github.com/bec-project/ophyd_devices/commit/ef4382fe85c4f0ca9899823e17333f53061391e4))
+
+- **camera**: Add backend-neutral lifecycle and live controls
+  ([`5e448c8`](https://github.com/bec-project/ophyd_devices/commit/5e448c848a3dc85bd3957b8bfe1a867f95b1f4ec))
+
+- **roi**: Add fixed-buffer AreaDetector ROI and Stats capture
+  ([`9b051dc`](https://github.com/bec-project/ophyd_devices/commit/9b051dcde4b1e2841c01d5863f7d0d8b3432bb89))
+
+Co-authored-by: appel_c <christian.appel@psi.ch>
+
+Co-authored-by: wyzula-jan <jan.wyzula@psi.ch>
+
+- **roi**: Add typed configuration and generic ROI processing
+  ([`08ed113`](https://github.com/bec-project/ophyd_devices/commit/08ed113b49bab04fdd7b3726e5616bdbba29e419))
+
+Co-authored-by: appel_c <christian.appel@psi.ch>
+
+Co-authored-by: wyzula-jan <jan.wyzula@psi.ch>
+
+- **status**: Add cancellable sequences and cleanup helpers
+  ([`e793453`](https://github.com/bec-project/ophyd_devices/commit/e7934531fe5d02f2ca721459391f3ffef24e4059))
+
+
 ## v1.53.1 (2026-11-13)
 
 ### Bug Fixes
