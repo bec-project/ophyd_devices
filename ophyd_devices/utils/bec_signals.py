@@ -13,6 +13,7 @@ from bec_lib import messages
 from bec_lib.logger import bec_logger
 from bec_lib.messages import SignalInfo
 from ophyd import DeviceStatus, Kind, Signal
+from ophyd.device import do_not_wait_for_lazy_connection
 from pydantic import ValidationError
 from typeguard import typechecked
 
@@ -76,6 +77,7 @@ class BECMessageSignal(Signal):
         correlation_group: Literal["baseline", "monitored"] | str | None = None,
         enabled: bool = True,
         use_alias: bool = False,
+        aliases: dict[str, str] | None = None,
         signals: _SignalsTypes | Callable[[], _SignalsTypes] = None,
         signal_metadata: dict | None = None,
         transports: list[messages.SignalTransport] | None = None,
@@ -110,6 +112,17 @@ class BECMessageSignal(Signal):
             logger.warning("The 'kind' argument is ignored for BECMessageSignal. Please remove it.")
         super().__init__(name=name, value=value, shape=(), dtype=None, kind=Kind.omitted, **kwargs)
 
+        self._verify_aliases(aliases)
+        normalized_signals, renamed_source = self._unify_declared_signals(signals)
+        if (
+            renamed_source is not None
+            and aliases
+            and renamed_source in aliases
+            and self.name not in aliases
+        ):
+            aliases = aliases.copy()
+            aliases[self.name] = aliases.pop(renamed_source)
+
         self._bec_message_type = bec_message_type
         self.signal_info = SignalInfo(
             data_type=data_type,
@@ -119,7 +132,8 @@ class BECMessageSignal(Signal):
             role=role,
             enabled=enabled,
             use_alias=use_alias,
-            signals=self._unify_signals(signals),
+            aliases=aliases,
+            signals=normalized_signals,
             signal_metadata=signal_metadata or {},
             correlation_group=correlation_group,
             transports=transports,
@@ -248,19 +262,18 @@ class BECMessageSignal(Signal):
     def _unify_signals(
         self, signals: _SignalsTypes | Callable[[], _SignalsTypes]
     ) -> list[tuple[str, int]]:
-        """
-        Unify the signals list to a list of tuples with signal name and kind.
+        """Return the normalized signal names and kinds."""
+        normalized_signals, _ = self._unify_declared_signals(signals)
+        return normalized_signals
 
-        Args:
-            signals (list[tuple[str, str | Kind] | str]): The list of signals to unify.
-
-        Returns:
-            list[tuple[str, str]]: The unified list of signals.
-        """
+    def _unify_declared_signals(
+        self, signals: _SignalsTypes | Callable[[], _SignalsTypes]
+    ) -> tuple[list[tuple[str, int]], str | None]:
+        """Return the normalized signals and the original name of a renamed signal."""
         if callable(signals):
             signals = signals()
         if signals is None:
-            return [(self.name, Kind.hinted.value)]  # Default to signal name with hinted kind
+            return [(self.name, Kind.hinted.value)], None
         if isinstance(signals, str):
             out = [(signals, Kind.hinted.value)]
         else:
@@ -287,12 +300,44 @@ class BECMessageSignal(Signal):
             logger.warning(
                 f"Signal {self.name} of class {self.__class__.__name__} has only one sub-signal. Signal name {signal_name} will be renamed to {self.name}."
             )
-            out = [(self.name, signal_kind)]
-        return out
+            return [(self.name, signal_kind)], signal_name
+        return out, None
+
+    def _verify_aliases(self, aliases: dict[str, str] | None) -> None:
+        if not isinstance(aliases, dict):
+            return
+        parent = self.parent
+        for target in aliases.values():
+            if (
+                parent is None
+                or not (isinstance(target, str) and target.isidentifier())
+                or target not in parent.component_names
+                or target == self.attr_name
+            ):
+                raise ValueError(
+                    f"Alias target {target!r} must be a sibling signal of {self.name!r}."
+                )
+
+    def _convert_aliases_to_full_names(self, aliases: dict[str, str]) -> dict[str, str]:
+        self._verify_aliases(aliases)
+        parent = self.parent
+        full_aliases = {}
+        with do_not_wait_for_lazy_connection(parent):
+            for source, name in aliases.items():
+                target = getattr(parent, name)
+                if not isinstance(target, Signal) or target is self or target.parent is not parent:
+                    raise ValueError(
+                        f"Alias target {name!r} must be a sibling signal of {self.name!r}."
+                    )
+                full_aliases[source] = target.name
+        return full_aliases
 
     def describe(self):
         out = super().describe()
-        out[self.name]["signal_info"] = self.signal_info.model_dump()
+        signal_info = self.signal_info.model_dump()
+        if aliases := signal_info.get("aliases"):
+            signal_info["aliases"] = self._convert_aliases_to_full_names(aliases)
+        out[self.name]["signal_info"] = signal_info
         return out
 
     @property
@@ -827,6 +872,7 @@ class DynamicSignal(BECMessageSignal):
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         correlation_group: Literal["baseline", "monitored"] | str | None = None,
         use_alias: bool = False,
+        aliases: str | dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -839,6 +885,7 @@ class DynamicSignal(BECMessageSignal):
             value (DeviceMessage | dict | None): The initial value of the signal. Defaults to None.
             correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
+            aliases (str | dict[str, str] | None): A source-to-target mapping or a target name for a single signal.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -872,6 +919,8 @@ class DynamicSignal(BECMessageSignal):
         self.async_update = async_update
 
         kwargs.pop("kind", None)  # Ignore kind if specified
+        if isinstance(aliases, str):
+            aliases = {name: aliases}
         super().__init__(
             name=name,
             data_type=kwargs.pop("data_type", "raw"),
@@ -880,6 +929,7 @@ class DynamicSignal(BECMessageSignal):
             scope=kwargs.pop("scope", "scan"),
             role=kwargs.pop("role", "main"),
             use_alias=use_alias,
+            aliases=aliases,
             signals=signals,
             value=value,
             bec_message_type=kwargs.pop("bec_message_type", messages.DeviceMessage),
@@ -887,6 +937,47 @@ class DynamicSignal(BECMessageSignal):
             signal_metadata={"max_size": max_size},
             **kwargs,
         )
+
+    def _verify_alias_destinations(self) -> None:
+        """Reject competing saved async sources within the root device."""
+        destinations = {}
+        for _, path, component in self.root.walk_components():
+            if not issubclass(component.cls, DynamicSignal):
+                continue
+            signal = self.root
+            for attribute in path.split("."):
+                with do_not_wait_for_lazy_connection(signal):
+                    signal = getattr(signal, attribute)
+            if not signal.signal_info.saved:
+                continue
+            info = signal.signal_info
+            aliases = (
+                signal._convert_aliases_to_full_names(info.aliases)
+                if info.use_alias and info.aliases
+                else {}
+            )
+            for name, _ in info.signals:
+                source = signal.name if len(info.signals) == 1 else f"{signal.name}_{name}"
+                target = aliases.get(name, source)
+                owner = (signal, source)
+                previous = destinations.get(target)
+                if previous is not None and previous != owner:
+                    raise ValueError(
+                        f"Async signals {previous[1]!r} and {source!r} on device "
+                        f"{self.root.name!r} both write to {target!r}."
+                    )
+                destinations[target] = owner
+
+    def describe(self) -> dict:
+        """Describe the signal after validating active async alias destinations."""
+        if (
+            self.parent is not None
+            and self.signal_info.saved
+            and self.signal_info.use_alias
+            and self.signal_info.aliases
+        ):
+            self._verify_alias_destinations()
+        return super().describe()
 
     @typechecked
     def put(
@@ -1054,6 +1145,7 @@ class AsyncMultiSignal(DynamicSignal):
         correlation_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         use_alias: bool = False,
+        aliases: dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -1067,6 +1159,7 @@ class AsyncMultiSignal(DynamicSignal):
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
             correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
+            aliases (dict[str, str] | None): Aliases for the signal.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -1086,6 +1179,11 @@ class AsyncMultiSignal(DynamicSignal):
                 ndim=1,
                 max_size=1000,
                 signals=["signal1", "signal2"],
+                use_alias=True,
+                aliases={
+                    "signal1": "alias1",
+                    "signal2": "alias2"
+                },
                 async_update={
                     "type": "add",
                     "max_shape": [None, 1000],
@@ -1114,6 +1212,7 @@ class AsyncMultiSignal(DynamicSignal):
             max_size=max_size,
             correlation_group=correlation_group,
             use_alias=use_alias,
+            aliases=aliases,
             signals=signals,
             **kwargs,
         )
@@ -1134,6 +1233,7 @@ class AsyncSignal(DynamicSignal):
         correlation_group: Literal["baseline", "monitored"] | str | None = None,
         async_update: dict[Literal["type", "max_shape", "index"], Any] | None = None,
         use_alias: bool = False,
+        alias: str | None = None,
         **kwargs,
     ):
         """
@@ -1146,6 +1246,7 @@ class AsyncSignal(DynamicSignal):
             value (AsyncMessage | dict | None): The initial value of the signal. Defaults to None.
             correlation_group (Literal["baseline", "monitored"] | str | None): The correlation group of the signal group.
             use_alias (bool): Indicates whether the signal should alias an EPICS signal or list of EPICS signals. Defaults to False.
+            alias (str | None): The alias for the signal. Defaults to None.
             async_update (dict | None): Additional metadata for asynchronous updates.
                                         There are three relevant keys "type", "max_shape" and "index".
                                         "type" (str) : Can be one of "add", "add_slice" or "replace". This defines how the new data is added to the existing dataset.
@@ -1163,6 +1264,8 @@ class AsyncSignal(DynamicSignal):
                 name="async_signal",
                 ndim=1,
                 max_size=1000,
+                use_alias=True,
+                alias="alias_signal",
                 async_update={
                     "type": "add",
                     "max_shape": [None, 1000],
@@ -1188,6 +1291,7 @@ class AsyncSignal(DynamicSignal):
             max_size=max_size,
             correlation_group=correlation_group,
             use_alias=use_alias,
+            aliases=alias,
             signals=None,
             **kwargs,
         )
