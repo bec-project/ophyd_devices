@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from bec_lib import messages
-from ophyd import Device
+from ophyd import Component, Device, Signal
 
-from ophyd_devices.utils.bec_signals import AsyncSignal, PreviewSignal
+from ophyd_devices.utils.bec_signals import AsyncMultiSignal, AsyncSignal, PreviewSignal
 
 
 @pytest.mark.filterwarnings("ignore:BECMessageSignal.* is deprecated:DeprecationWarning")
@@ -161,3 +161,160 @@ def test_invalid_transport_does_not_emit_metadata_event():
     finally:
         signal.destroy()
         signal.parent.destroy()
+
+
+def test_async_signal_stores_string_alias_as_a_mapping():
+    class Analysis(Device):
+        buffered = Component(AsyncSignal, ndim=1, max_size=10, use_alias=True, alias="reading")
+        reading = Component(Signal, value=0)
+
+    class Camera(Device):
+        analysis = Component(Analysis, "")
+
+    camera = Camera(name="cam")
+    try:
+        signal = camera.analysis.buffered
+        assert signal.signal_info.aliases == {signal.name: "reading"}
+        assert signal.describe()[signal.name]["signal_info"]["aliases"] == {
+            signal.name: "cam_analysis_reading"
+        }
+    finally:
+        camera.destroy()
+
+
+def test_async_multi_signal_describes_aliases_by_declared_source():
+    class Camera(Device):
+        buffered = Component(
+            AsyncMultiSignal,
+            ndim=1,
+            max_size=10,
+            signals=["mean", "std"],
+            aliases={"mean": "reading", "std": "deviation"},
+            use_alias=True,
+        )
+        reading = Component(Signal, value=0)
+        deviation = Component(Signal, value=0)
+
+    camera = Camera(name="cam")
+    try:
+        signal = camera.buffered
+        assert signal.describe()[signal.name]["signal_info"]["aliases"] == {
+            "mean": "cam_reading",
+            "std": "cam_deviation",
+        }
+    finally:
+        camera.destroy()
+
+
+def test_async_multi_signal_accepts_the_declared_key_for_one_signal():
+    aliases = {"mean": "reading"}
+
+    class Camera(Device):
+        buffered = Component(
+            AsyncMultiSignal, ndim=1, max_size=10, signals=["mean"], aliases=aliases, use_alias=True
+        )
+        reading = Component(Signal, value=0)
+
+    camera = Camera(name="cam")
+    try:
+        signal = camera.buffered
+        assert [name for name, _ in signal.signal_info.signals] == ["cam_buffered"]
+        assert signal.signal_info.aliases == {"cam_buffered": "reading"}
+        assert signal.describe()[signal.name]["signal_info"]["aliases"] == {
+            "cam_buffered": "cam_reading"
+        }
+        assert aliases == {"mean": "reading"}
+    finally:
+        camera.destroy()
+
+
+def test_unaliased_standalone_async_signal_can_be_described():
+    signal = AsyncSignal(name="buffered", ndim=1, max_size=10)
+    try:
+        assert signal.describe()[signal.name]["signal_info"]["aliases"] is None
+    finally:
+        signal.destroy()
+
+
+@pytest.mark.parametrize("use_alias", [True, False])
+def test_async_multi_signal_rejects_duplicate_active_alias_targets(use_alias):
+    class Camera(Device):
+        buffered = Component(
+            AsyncMultiSignal,
+            ndim=1,
+            max_size=10,
+            signals=["mean", "std"],
+            aliases={"mean": "reading", "std": "reading"},
+            use_alias=use_alias,
+        )
+        reading = Component(Signal, value=0)
+
+    camera = Camera(name="cam")
+    try:
+        if use_alias:
+            with pytest.raises(
+                ValueError, match="cam_buffered_mean.*cam_buffered_std.*cam_reading"
+            ):
+                camera.buffered.describe()
+        else:
+            camera.buffered.describe()
+    finally:
+        camera.destroy()
+
+
+@pytest.mark.parametrize("saved", [True, False])
+@pytest.mark.parametrize("lazy", [True, False])
+def test_separate_async_signals_reject_shared_alias_target(saved, lazy):
+    class Analysis(Device):
+        first = Component(AsyncSignal, ndim=1, max_size=10, alias="reading", use_alias=True)
+        second = Component(
+            AsyncSignal, ndim=1, max_size=10, alias="reading", use_alias=True, lazy=lazy
+        )
+        reading = Component(Signal, value=0)
+
+    class Camera(Device):
+        analysis = Component(Analysis, "")
+
+    camera = Camera(name="cam")
+    try:
+        if saved:
+            with pytest.raises(
+                ValueError, match="cam_analysis_first.*cam_analysis_second.*cam_analysis_reading"
+            ):
+                camera.analysis.first.describe()
+        else:
+            camera.analysis.second.signal_info.saved = False
+            camera.analysis.first.describe()
+    finally:
+        camera.destroy()
+
+
+def test_async_alias_rejects_collision_with_unaliased_producer():
+    class Camera(Device):
+        buffered = Component(AsyncSignal, ndim=1, max_size=10, alias="reading", use_alias=True)
+        reading = Component(AsyncSignal, ndim=1, max_size=10)
+
+    camera = Camera(name="cam")
+    try:
+        with pytest.raises(ValueError, match="cam_buffered.*cam_reading.*cam_reading"):
+            camera.buffered.describe()
+    finally:
+        camera.destroy()
+
+
+def test_async_alias_validation_uses_current_flags():
+    class Camera(Device):
+        first = Component(AsyncSignal, ndim=1, max_size=10, alias="reading", use_alias=True)
+        second = Component(AsyncSignal, ndim=1, max_size=10, alias="reading", use_alias=False)
+        reading = Component(Signal, value=0)
+
+    camera = Camera(name="cam")
+    try:
+        camera.first.describe()
+        camera.second.signal_info.use_alias = True
+        with pytest.raises(ValueError, match="cam_first.*cam_second.*cam_reading"):
+            camera.first.describe()
+        camera.second.signal_info.use_alias = False
+        camera.first.describe()
+    finally:
+        camera.destroy()
