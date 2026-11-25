@@ -5,7 +5,7 @@ AreaDetector ROI/Stats configuration, buffered capture and result publication.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import Event, Lock, RLock
+from threading import Lock, RLock
 from typing import Any, cast
 
 import numpy as np
@@ -24,7 +24,6 @@ from ophyd_devices.utils.bec_roi_signals.roi_processing import (
     LITERAL_ROI_PROCESSING_CONFIG,
     ROIProcessing,
 )
-from ophyd_devices.utils.bec_signals import PreviewSignal
 from ophyd_devices.utils.psi_device_base_utils import (
     CompareStatus,
     SequenceStatus,
@@ -221,8 +220,6 @@ class ADROIProcessing(ROIProcessing, ADBase):
     enablement remain owned by this component.
     """
 
-    preview = Component(PreviewSignal, ndim=1)
-
     roi1 = FormattedComponent(ROIPlugin, "{self.prefix}{self.roi_suffix}", kind=Kind.omitted)
     stats1 = FormattedComponent(
         StatsPluginWithTSControl, "{self.prefix}{self.stats_suffix}", kind=Kind.omitted
@@ -267,6 +264,7 @@ class ADROIProcessing(ROIProcessing, ADBase):
             TypeError: The initial configuration is not a permitted rectangular shape.
             pydantic.ValidationError: The initial configuration fails its shape schema.
         """
+        self._last_live_id: int | None = None
         self._capture_outputs: dict[str, str] = {}
         self._capture_offset = 0
         self._capture_start_count = 0
@@ -755,29 +753,23 @@ class ADROIProcessing(ROIProcessing, ADBase):
             )
         self._capture_offset = stop
 
-    def read_preview_values(
-        self, *, io_timeout: float, stop_event: Event | None = None
-    ) -> tuple[np.ndarray, list[str]]:
-        """
-        Read instantaneous scalar Stats values for the live ROI preview.
+    def publish_live(self, *, camera: Any) -> None:
+        """Publish current scalar Stats results through the normal dynamic result signal.
 
-        Resolve selected operation outputs to their scalar PVs and read them in declared
-        order. These are current plugin values, not samples drained from a scan time-series
-        buffer. A supplied stop event is checked before each bounded PV read.
+        Reads are bounded and cancellable through the camera's live worker. Duplicate
+        frames are skipped, but statistics are sampled independently and may span
+        frames. Each value retains its own PV timestamp; no exact frame correlation
+        is claimed. This does not arm or drain scan time-series buffers. Explicit
+        preview routing keeps these samples out of scan data even if a scan opens
+        during the reads.
 
         Args:
-            io_timeout (float): Timeout in seconds for each individual backend read.
-            stop_event (threading.Event | None): Optional cancellation event. None disables
-                cancellation checks within this read sequence.
-
-        Returns:
-            tuple[numpy.ndarray, list[str]]: Numeric values and their corresponding short
-                result names, in matching order. Both are empty when no outputs are selected.
-
-        Raises:
-            DeviceStoppedError: stop_event is set before a statistic is read.
-            Exception: A backend statistic read fails or times out.
+            camera (Any): Owning camera providing bounded reads and cancellation.
         """
+        read = camera._read_preview_signal
+        identifier = int(read(self.stats1.unique_id))
+        if identifier == self._last_live_id:
+            return
         live_paths = {
             "sigma": "basic_sigma",
             "sigma_x": "sigma.x",
@@ -795,19 +787,32 @@ class ADROIProcessing(ROIProcessing, ADBase):
         }
         names = [
             name
-            for op in cast(list[str], self.selected_operations.get())
-            for name in NDPLUGIN_STATS_CONFIG[op].get("scalar_outputs", [])
+            for operation in cast(list[str], self.selected_operations.get())
+            for name in NDPLUGIN_STATS_CONFIG[operation].get("scalar_outputs", [])
         ]
-        values = []
+        data = {}
         for name in names:
-            if stop_event is not None and stop_event.is_set():
-                raise DeviceStoppedError("Redis preview stopped")
-            value = rgetattr(self.stats1, live_paths.get(name, name)).get(
-                timeout=io_timeout, use_monitor=False
-            )
-            values.append(float(value))
-        values = np.asarray(values)
-        return values, names
+            source = rgetattr(self.stats1, live_paths.get(name, name))
+            value = float(read(source))
+            data[name] = {"value": value, "timestamp": float(source.timestamp)}
+        if not data:
+            return
+        if camera._poll_stop.is_set():
+            raise DeviceStoppedError("Redis preview stopped")
+        signal = self.result_scalar
+        if len(signal.signal_info.signals) == 1 and len(data) == 1:
+            data = {signal.name: next(iter(data.values()))}
+        signal.put(
+            data,
+            async_update={"type": "add", "max_shape": [None]},
+            metadata={
+                "scan_id": "preview",
+                "correlation_group": None,
+                "session_id": camera.session_id,
+                "source": f"{self.dotted_name}.result_scalar",
+            },
+        )
+        self._last_live_id = identifier
 
     def stop_capture(self, *, io_timeout: float) -> None:
         """

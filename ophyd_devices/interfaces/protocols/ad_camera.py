@@ -12,7 +12,7 @@ from ophyd.status import StatusBase
 
 from ophyd_devices.devices.areadetector.cam import CamBase
 from ophyd_devices.devices.areadetector.plugins import HDF5Plugin_V35, ImagePlugin_V35
-from ophyd_devices.utils.bec_signals import FileEventSignal
+from ophyd_devices.utils.bec_signals import FileEventSignal, PreviewSignal
 from ophyd_devices.utils.psi_device_base_utils import FileHandler
 
 
@@ -42,10 +42,12 @@ class ADCamera(Protocol):
     def save_frame_data(self) -> Signal: ...
 
     hdf5: HDF5Plugin_V35 | None
+    preview: PreviewSignal
     file_event: FileEventSignal
     hdf5_path_mapping: dict[str, str] | None
     file_utils: FileHandler
 
+    scan_info: Any
     device_manager: Any
     name: str
     _poll_stop: Event
@@ -108,6 +110,14 @@ class ADCamera(Protocol):
 
     def _redis_preview_due(self) -> bool:
         """Return whether the optional Redis preview interval has elapsed."""
+        ...
+
+    def _redis_roi_due(self) -> bool:
+        """Return whether the independent live ROI publication interval has elapsed."""
+        ...
+
+    def _log_live_preview_error(self, error: Exception, *, source: str = "preview") -> None:
+        """Log a nonfatal live update failure with a shared warning cooldown."""
         ...
 
     def _read_preview_signal(self, signal: Any) -> Any:

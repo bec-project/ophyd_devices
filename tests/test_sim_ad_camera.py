@@ -77,6 +77,11 @@ def test_sim_ad_metadata_has_unique_signal_names():
         try:
             info = get_device_info(camera)
             signals = info["signals"]
+            assert "preview" in signals
+            assert "roi1.preview" not in signals
+            assert "roi2.preview" not in signals
+            assert not hasattr(camera.roi1, "preview")
+            assert not hasattr(camera.roi2, "preview")
             assert "roi1.stats1.sigma.x" in signals
             assert "roi2.stats1.sigma.y" in signals
             assert "roi1.stats1.sigma_x" not in signals

@@ -20,7 +20,6 @@ from ophyd_devices.interfaces.base_classes.camera_base import (
 from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError
 from ophyd_devices.interfaces.protocols.ad_camera import ADCamera
 from ophyd_devices.utils.bec_roi_signals.ad_roi_signal import ADROIProcessing
-from ophyd_devices.utils.camera_preview import CameraPreview
 from ophyd_devices.utils.psi_device_base_utils import (
     CompareStatus,
     DeviceStatus,
@@ -119,9 +118,7 @@ class ADCameraComponents(Generic[CameraT]):
         initializes timing and stops input; the concrete camera starts live acquisition
         from its on_connected hook.
         """
-        self._camera._configure_preview_transports(
-            ["preview", *(f"{roi.dotted_name}.preview" for roi in self.get_rois())]
-        )
+        self._camera._configure_preview_transports(["preview"])
         # Native staging must not overwrite acquisition-owned PVs. Keep gain,
         # transform and other unrelated beamline stage settings intact.
         managed = [
@@ -825,13 +822,21 @@ class ADCameraComponents(Generic[CameraT]):
 
     def publish_previews(self) -> None:
         """
-        Optionally read IOC-oriented values and update preview signals in Redis.
+        Publish live ROI results and the detector image at their independent Redis rates.
         """
         camera = self._camera
-        if not camera._redis_preview_due():
-            return
-        io = camera.io_timeout
-        if camera.image is None:
+        # On-request cameras retain live ownership even while another scan is active.
+        # publish_live explicitly routes their results to the preview stream.
+        if camera.readout_priority == "on_request" and camera._redis_roi_due():
+            for roi in self.get_rois():
+                try:
+                    if roi.active.get():
+                        roi.publish_live(camera=camera)
+                except DeviceStoppedError:
+                    raise
+                except Exception as error:  # noqa: BLE001 - keep other live streams updating.
+                    camera._log_live_preview_error(error, source=roi.dotted_name)
+        if not camera._redis_preview_due() or camera.image is None:
             return
         identifier = int(camera._read_preview_signal(camera.image.unique_id))
         if identifier == self._last_preview_id:
@@ -877,38 +882,16 @@ class ADCameraComponents(Generic[CameraT]):
         if int(camera._read_preview_signal(camera.image.unique_id)) != identifier:
             return
         timestamp = float(camera.image.array_data.timestamp)
-        previews = [CameraPreview("preview", data.copy(), identifier, timestamp, oriented=True)]
-        for roi in self.get_rois():
-            if not roi.active.get():
-                continue
-            values, names = roi.read_preview_values(io_timeout=io, stop_event=camera._poll_stop)
-            previews.append(
-                CameraPreview(
-                    f"{roi.dotted_name}.preview",
-                    values,
-                    identifier,
-                    timestamp,
-                    {"outputs": names},
-                    oriented=True,
-                )
-            )
         self._last_preview_id = identifier
-
-        for preview in previews:
-            if camera._poll_stop.is_set():
-                return
-            signal = rgetattr(camera, preview.signal)
-            message = messages.DevicePreviewMessage(
-                device=camera.name,
-                signal=preview.signal,
-                data=preview.data,
-                metadata={
-                    **preview.metadata,
-                    "timestamp": preview.timestamp,
-                    "frame_id": preview.frame_id,
-                },
-            )
-            signal.put(message, oriented=True)
+        if camera._poll_stop.is_set():
+            return
+        message = messages.DevicePreviewMessage(
+            device=camera.name,
+            signal="preview",
+            data=data.copy(),
+            metadata={"timestamp": timestamp, "frame_id": identifier},
+        )
+        camera.preview.put(message, oriented=True)
 
     ########################################
     #         AD shutdown methods          #

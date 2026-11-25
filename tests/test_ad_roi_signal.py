@@ -170,21 +170,6 @@ def test_roi_configuration_does_not_capture_or_subscribe_results():
             detector.destroy()
 
 
-def test_centroid_preview_uses_structured_sigma_signals():
-    class Detector(PSIDeviceBase):
-        processing = Cpt(ADROIProcessing, "")
-
-    with patched_device(Detector, name="det", prefix="DET:", device_manager=DMMock()) as detector:
-        roi = detector.processing
-        roi.on_connected()
-        roi.selected_operations.put(["centroid"])
-        roi.stats1.sigma.x.get = lambda **_: 2.0
-        roi.stats1.sigma.y.get = lambda **_: 3.0
-        values, names = roi.read_preview_values(io_timeout=1)
-        assert values[names.index("sigma_x")] == 2.0
-        assert values[names.index("sigma_y")] == 3.0
-
-
 def test_ioc_readbacks_update_roi_configuration_without_writing_back():
     from unittest.mock import Mock, patch
 
@@ -302,32 +287,6 @@ def test_owner_destroy_closes_roi_resources_before_signals(nested):
             cb=roi._receive_roi_configuration_message,
         )
         detector.destroy()  # Cleanup is idempotent.
-
-
-def test_roi_preview_cancels_between_statistic_reads():
-    from threading import Event
-
-    from ophyd_devices.interfaces.base_classes.psi_device_base import DeviceStoppedError
-
-    class Detector(PSIDeviceBase):
-        processing = Cpt(ADROIProcessing, "")
-
-    with patched_device(Detector, name="det", prefix="DET:", device_manager=DMMock()) as detector:
-        roi = detector.processing
-        roi.on_connected()
-        roi.selected_operations.put(["centroid"])
-        stopped = Event()
-        calls = []
-
-        def first(**kwargs):
-            calls.append("x")
-            stopped.set()
-            return 1.0
-
-        roi.stats1.centroid.x.get = first
-        with pytest.raises(DeviceStoppedError, match="preview stopped"):
-            roi.read_preview_values(io_timeout=1, stop_event=stopped)
-        assert calls == ["x"]
 
 
 @pytest.mark.parametrize(
@@ -896,3 +855,39 @@ def test_stop_capture_waits_when_cached_idle_disagrees_with_ioc(monkeypatch):
             stopped.result(timeout=2)
         assert not roi._capture_armed
         assert not stats.ts_acquire_status._callbacks[stats.ts_acquire_status.SUB_VALUE]
+
+
+def test_live_centroid_results_use_structured_sigma_signals():
+    """Live analysis resolves nested scalar PVs and preserves named dynamic outputs."""
+    from threading import Event
+    from types import SimpleNamespace
+
+    from bec_lib import messages
+
+    class Detector(PSIDeviceBase):
+        processing = Cpt(ADROIProcessing, "")
+
+    with patched_device(Detector, name="det", prefix="DET:", device_manager=DMMock()) as detector:
+        roi = detector.processing
+        roi.on_connected()
+        roi.selected_operations.put(["centroid"])
+        roi.stats1.sigma.x.get = lambda **_: 2.0
+        roi.stats1.sigma.y.get = lambda **_: 3.0
+        camera = SimpleNamespace(
+            session_id="",
+            _poll_stop=Event(),
+            _read_preview_signal=lambda signal: signal.get(timeout=1, use_monitor=False),
+        )
+        roi.publish_live(camera=camera)
+        result = roi.result_scalar.get()
+        assert isinstance(result, messages.DeviceMessage)
+        assert result.signals[f"{roi.result_scalar.name}_sigma_x"]["value"] == 2.0
+        assert result.signals[f"{roi.result_scalar.name}_sigma_y"]["value"] == 3.0
+        assert (
+            result.signals[f"{roi.result_scalar.name}_sigma_x"]["timestamp"]
+            == roi.stats1.sigma.x.timestamp
+        )
+        assert (
+            result.signals[f"{roi.result_scalar.name}_sigma_y"]["timestamp"]
+            == roi.stats1.sigma.y.timestamp
+        )
