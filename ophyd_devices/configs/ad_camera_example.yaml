@@ -44,7 +44,9 @@ adsim:
     # On return to live: true keeps resolved scan timing; false restores pre-scan
     # controller exposure/period. This flag does not restore burst size.
     live_follows_scan_timing: true
-    # Optional Redis image/ROI previews in live mode. 0 disables the preview timer.
+    # Live ROI statistics always use Redis, independently of image previews.
+    live_roi_update_frequency: 5
+    # Optional Redis image previews. 0 leaves image streaming to IOC ZMQ.
     # IOC ZMQ publication is independent; this does not create a ZMQ publisher.
     redis_update_frequency: 0
     preview_transports:
@@ -130,8 +132,8 @@ adsim:
 #   The camera retains live behavior during scans. Staging does not apply scan
 #   timing or arm scan ROI/HDF5 capture. Completion leaves live mode running.
 #   acquisition_source and acquisition_mode are ignored. With redis_update_frequency 2, the optional timer
-#   samples the image and current scalar ROI statistics at up to 2 Hz; live ROI
-#   previews do not use TS buffers. IOC ZMQ streaming is independent of this timer.
+#   samples the image at up to 2 Hz. Live ROI statistics use their own
+#   live_roi_update_frequency (5 Hz by default), without TS buffers. IOC ZMQ streaming is independent of this timer.
 # deviceConfig:
 #   live_enabled: true
 #   redis_update_frequency: 2

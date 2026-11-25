@@ -84,7 +84,7 @@ class LiveEnabledSignal(Signal):
 
 class CameraBase(PSIDeviceBase):
     """
-    Camera settings, public live control and an optional Redis preview timer.
+    Camera settings, public live control and independently throttled Redis updates.
 
     Stage, trigger, complete and unstage use the ordinary PSIDeviceBase hooks.
     CameraBase stops live input and polling before the backend's on_stop hook.
@@ -139,6 +139,7 @@ class CameraBase(PSIDeviceBase):
         save_frame_data: bool = True,
         save_roi_data: bool = True,
         redis_update_frequency: float = 0,
+        live_roi_update_frequency: float = 5,
         preview_transports: dict[str, list[Any]] | None = None,
         detector_readout_time: float = 0,
         async_frame_limit: int | None = None,
@@ -150,15 +151,21 @@ class CameraBase(PSIDeviceBase):
         self._save_roi_data = bool(save_roi_data)
         acquisition_source = AcquisitionSource(acquisition_source)
         acquisition_mode = AcquisitionMode(acquisition_mode)
-        if not isfinite(redis_update_frequency) or redis_update_frequency < 0:
-            raise ValueError("redis_update_frequency must be finite and nonnegative")
+        for option, frequency in (
+            ("redis_update_frequency", redis_update_frequency),
+            ("live_roi_update_frequency", live_roi_update_frequency),
+        ):
+            self._validate_update_frequency(option, frequency)
         if any(not isfinite(t) or t <= 0 for t in (io_timeout, acquisition_timeout)):
             raise ValueError("Camera timeouts must be finite and positive")
         self.io_timeout, self.acquisition_timeout = io_timeout, acquisition_timeout
         self._redis_update_frequency = float(redis_update_frequency)
+        self._live_roi_update_frequency = float(live_roi_update_frequency)
         self._preview_transports = preview_transports or {}
         self._preview_paths: list[str] = []
         self._next_redis_preview = 0.0
+        self._next_redis_roi = 0.0
+        self._next_live_warning = 0.0
         self.exposure, self.period, self.frames_per_trigger = 0.0, 0.0, 1
         self.detector_readout_time = detector_readout_time
         self.async_frame_limit = async_frame_limit
@@ -520,7 +527,7 @@ class CameraBase(PSIDeviceBase):
     @property
     def redis_update_frequency(self) -> float:
         """
-        Redis preview updates per second; zero disables updates without stopping live.
+        Redis image preview updates per second; zero disables only Redis images.
         """
         return self._redis_update_frequency
 
@@ -531,43 +538,71 @@ class CameraBase(PSIDeviceBase):
 
         Args:
             frequency (float): Finite nonnegative updates per second. Zero disables
-                Redis updates. A positive value starts updates when live is active.
+                Redis image updates. A positive value starts updates when live is active.
 
         Raises:
             ValueError: frequency is not finite and nonnegative.
             TimeoutError: An existing preview read does not finish within the normal
                 timer shutdown bound. Acquisition itself is not stopped by this setter.
         """
+        self._set_update_frequency("redis_update_frequency", frequency)
+
+    @property
+    def live_roi_update_frequency(self) -> float:
+        """Live ROI statistics updates per second over Redis; defaults to 5 Hz.
+
+        Zero disables live ROI updates. Image previews and scan acquisition are
+        controlled independently.
+        """
+        return self._live_roi_update_frequency
+
+    @live_roi_update_frequency.setter
+    def live_roi_update_frequency(self, frequency: float) -> None:
+        """Change the live ROI rate without stopping camera input."""
+        self._set_update_frequency("live_roi_update_frequency", frequency)
+
+    @staticmethod
+    def _validate_update_frequency(option: str, frequency: float) -> None:
         try:
             valid = isfinite(frequency) and frequency >= 0
         except TypeError:
             valid = False
         if not valid:
-            raise ValueError("redis_update_frequency must be finite and nonnegative")
-        if frequency == self._redis_update_frequency:
+            raise ValueError(f"{option} must be finite and nonnegative")
+
+    def _set_update_frequency(self, option: str, frequency: float) -> None:
+        self._validate_update_frequency(option, frequency)
+        attribute = f"_{option}"
+        if frequency == getattr(self, attribute):
             return
         on_timer = self._poll_thread is current_thread()
         if not on_timer:
             self.stop_polling()
-        self._redis_update_frequency = float(frequency)
-        self._next_redis_preview = 0.0
-        self._configure_preview_transports(self._preview_paths)
+        setattr(self, attribute, float(frequency))
+        if option == "redis_update_frequency":
+            self._next_redis_preview = 0.0
+            self._configure_preview_transports(self._preview_paths)
+        else:
+            self._next_redis_roi = 0.0
         if self._live_active and not self.stopped and not on_timer:
             self.start_polling()
 
+    def _polling_frequency(self) -> float:
+        return max(self.redis_update_frequency, self.live_roi_update_frequency)
+
     def start_polling(self) -> None:
         """
-        Start the optional Redis preview timer only for live input not shutting down.
+        Start the Redis update timer only for live input not shutting down.
 
         Serialize timer creation with startup acknowledgement checks. Ignore
         requests after live input has stopped, during shutdown or once destruction begins.
-        ZMQ needs no Python timer.
+        IOC ZMQ image streaming needs no Python timer.
         """
         with self._live_lock:
             if (
                 self._camera_closing
                 or self.destroyed
-                or self.redis_update_frequency <= 0
+                or self._polling_frequency() <= 0
                 or not self.live_enabled.get()
                 or not self._live_active
                 or not self._live_start_acknowledged
@@ -601,19 +636,30 @@ class CameraBase(PSIDeviceBase):
             if thread.is_alive():
                 raise TimeoutError("Redis preview timer did not stop")
 
+    def _log_live_preview_error(self, error: Exception, *, source: str = "preview") -> None:
+        """Warn at most once every 30 seconds per camera for failed live updates."""
+        if self._poll_stop.is_set():
+            return
+        now = monotonic()
+        if now < self._next_live_warning:
+            return
+        self._next_live_warning = now + 30.0
+        bec_logger.logger.warning(
+            f"Camera {self.name} live update failed ({source}): {error!r}. "
+            "Further live-update warnings suppressed for 30 seconds."
+        )
+
     def _poll_loop(self) -> None:
-        try:
-            while not self._poll_stop.is_set():
-                frequency = self.redis_update_frequency
-                if frequency <= 0 or self._poll_stop.wait(1 / frequency):
-                    return
+        while not self._poll_stop.is_set():
+            frequency = self._polling_frequency()
+            if frequency <= 0 or self._poll_stop.wait(1 / frequency):
+                return
+            try:
                 self.on_poll()
-        except DeviceStoppedError:
-            if not self._poll_stop.is_set():
-                self.stop()
-        except Exception as error:  # noqa: BLE001 - report errors through acquisition statuses.
-            bec_logger.logger.error(f"Camera {self.name} preview failed: {error!r}")
-            self.stop()
+            except DeviceStoppedError:
+                return
+            except Exception as error:  # noqa: BLE001 - live monitoring is best effort.
+                self._log_live_preview_error(error)
 
     def stop(self, *, success: bool = False) -> None:
         """Stop live input and previews, then run the normal device stop."""
@@ -726,4 +772,15 @@ class CameraBase(PSIDeviceBase):
         if now < self._next_redis_preview:
             return False
         self._next_redis_preview = now + 1 / frequency
+        return True
+
+    def _redis_roi_due(self) -> bool:
+        """Throttle live ROI reads independently of image preview publication."""
+        frequency = self.live_roi_update_frequency
+        if frequency <= 0:
+            return False
+        now = monotonic()
+        if now < self._next_redis_roi:
+            return False
+        self._next_redis_roi = now + 1 / frequency
         return True

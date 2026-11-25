@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
+from unittest import mock
 
 import pytest
 from ophyd import Component, Device, Kind, Signal
@@ -59,7 +60,9 @@ class SoftCamera(CameraBase):
 
 @pytest.fixture
 def camera():
-    device = SoftCamera(name="camera", live_enabled=False, io_timeout=1)
+    device = SoftCamera(
+        name="camera", live_enabled=False, io_timeout=1, live_roi_update_frequency=0
+    )
     device.on_connected()
     try:
         yield device
@@ -432,3 +435,68 @@ def test_camera_destroy_accepts_committed_native_cancellation(camera, monkeypatc
         release.set()
         pending._callback_thread.join(timeout=1)
         assert not pending._callback_thread.is_alive()
+
+
+@pytest.mark.parametrize("error", [TimeoutError("slow preview"), RuntimeError("bad preview")])
+def test_live_poll_failures_retry_without_stopping_input(camera, error):
+    attempts = 0
+
+    def poll():
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise error
+        camera.polled.set()
+
+    camera.redis_update_frequency = 100
+    with (
+        mock.patch.object(camera, "on_poll", side_effect=poll),
+        mock.patch.object(camera, "stop", wraps=camera.stop) as stop,
+        mock.patch(
+            "ophyd_devices.interfaces.base_classes.camera_base.bec_logger.logger.warning"
+        ) as warning,
+    ):
+        camera.start_live().wait(timeout=1)
+        assert camera.polled.wait(timeout=1)
+        assert camera._poll_thread.is_alive()
+        camera.stop_polling()
+        assert attempts >= 3
+        assert camera.running.get() == 1
+        assert camera._live_active and not camera.stopped
+        stop.assert_not_called()
+        warning.assert_called_once()
+
+
+def test_live_warning_cooldown_is_shared_across_sources(camera):
+    camera._poll_stop.clear()
+    with (
+        mock.patch("ophyd_devices.interfaces.base_classes.camera_base.monotonic") as clock,
+        mock.patch(
+            "ophyd_devices.interfaces.base_classes.camera_base.bec_logger.logger.warning"
+        ) as warning,
+    ):
+        for timestamp in (0, 1, 29.9, 30):
+            clock.return_value = timestamp
+            camera._log_live_preview_error(TimeoutError("offline"), source=f"roi{timestamp}")
+        assert warning.call_count == 2
+        camera._poll_stop.set()
+        clock.return_value = 60
+        camera._log_live_preview_error(TimeoutError("stopping"))
+        assert warning.call_count == 2
+
+
+def test_live_poll_cancellation_exits_without_stopping_input(camera):
+    camera.redis_update_frequency = 100
+    with (
+        mock.patch.object(camera, "on_poll", side_effect=DeviceStoppedError("cancelled")),
+        mock.patch.object(camera, "stop", wraps=camera.stop) as stop,
+        mock.patch(
+            "ophyd_devices.interfaces.base_classes.camera_base.bec_logger.logger.warning"
+        ) as warning,
+    ):
+        camera.start_live().wait(timeout=1)
+        camera._poll_thread.join(timeout=1)
+        assert not camera._poll_thread.is_alive()
+        assert camera.running.get() == 1
+        stop.assert_not_called()
+        warning.assert_not_called()

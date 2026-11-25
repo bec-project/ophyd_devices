@@ -31,7 +31,7 @@ from ophyd_devices.sim.sim_ad_camera import SimADCamera
 from ophyd_devices.tests.utils import patched_device
 from ophyd_devices.utils.bec_roi_signals import ad_roi_signal as roi_implementation
 from ophyd_devices.utils.bec_roi_signals.ad_roi_signal import ADROIProcessing
-from ophyd_devices.utils.bec_signals import DynamicSignal, PreviewSignal
+from ophyd_devices.utils.bec_signals import DynamicSignal
 from ophyd_devices.utils.psi_device_base_utils import (
     DeviceCleanupBlockedError,
     FileHandler,
@@ -112,13 +112,14 @@ class ROI:
     arm_capture = ADROIProcessing.arm_capture
     drain_capture = ADROIProcessing.drain_capture
     publish_capture = ADROIProcessing.publish_capture
-    read_preview_values = ADROIProcessing.read_preview_values
+    publish_live = ADROIProcessing.publish_live
     stop_capture = ADROIProcessing.stop_capture
 
     def on_connected(self):
         """The mock ROI needs no connection setup."""
 
     def __init__(self):
+        self._last_live_id = None
         self._capture_outputs = {}
         self._capture_offset = self._capture_start_count = 0
         self._capture_armed = False
@@ -127,7 +128,6 @@ class ROI:
 
 class CameraUnderTest(CameraBase):
     measurement = Component(DynamicSignal, ndim=0, signals=["sum"], max_size=100)
-    roi_preview = Component(PreviewSignal, ndim=1)
 
     def on_init(self):
         self._init_camera()
@@ -183,7 +183,6 @@ class CameraUnderTest(CameraBase):
         self.roi.selected_operations = pv("operations", ["sum"])
         self.roi.average_frames_per_trigger = pv("average", False)
         self.roi.result_scalar = self.measurement
-        self.roi.preview = self.roi_preview
         self.roi.stage_sigs = {}
         self.roi.update_received = NS(
             block_updates=lambda **_: None, unblock_updates=lambda **_: None
@@ -293,7 +292,11 @@ def camera(monkeypatch, request):
         {"sum": {"scalar_outputs": ["sum"], "source_signals": {"sum": "ts_sum"}}},
     )
     device = request.param(
-        name="camera", device_manager=DMMock(), io_timeout=2, acquisition_timeout=0.3
+        name="camera",
+        device_manager=DMMock(),
+        io_timeout=2,
+        acquisition_timeout=0.3,
+        live_roi_update_frequency=0,
     )
     device.on_connected()
     device.writes.clear()
@@ -487,11 +490,13 @@ def test_async_polling_and_completion_share_a_cursor(camera):
     assert camera.cam.acquire.get() == 0
 
 
-def test_live_preview_uses_preview_signals(camera):
+def test_live_preview_publishes_only_detector_image(camera):
     camera.redis_update_frequency = 2
     camera.on_poll()
     image = camera.preview.get()
-    assert camera.roi_preview.get().metadata["outputs"] == ["sum"]
+    assert camera._preview_paths == ["preview"]
+    assert not hasattr(camera.roi, "preview")
+    assert image.signal == "preview"
     np.testing.assert_array_equal(image.data, np.arange(4).reshape(2, 2))
 
 
@@ -792,7 +797,6 @@ def test_two_rois_publish_independently_and_can_be_disabled_separately(camera):
     second.result_scalar = DynamicSignal(
         name="second_result", ndim=0, max_size=100, signals=["sum"], parent=camera
     )
-    second.preview = PreviewSignal(name="second_preview", ndim=1, parent=camera)
     second.update_received = NS(block_updates=lambda **_: None, unblock_updates=lambda **_: None)
     camera.roi2 = second
 
@@ -2950,7 +2954,7 @@ def test_runtime_redis_preview_enable_disable_preserves_live_acquisition(camera)
             "encoder": "array-1.0",
         }
     ]
-    camera._configure_preview_transports(["preview", "roi.preview"])
+    camera._configure_preview_transports(["preview"])
     with (
         mock.patch.object(camera, "on_poll", side_effect=lambda: polled.set()),
         mock.patch.object(camera, "stop", wraps=camera.stop) as stop,
@@ -2961,21 +2965,18 @@ def test_runtime_redis_preview_enable_disable_preserves_live_acquisition(camera)
         assert polled.wait(timeout=1)
         worker = camera._poll_thread
         assert any(t.transport == "redis" for t in camera.preview.signal_info.transports)
-        assert any(t.transport == "redis" for t in camera.roi.preview.signal_info.transports)
         camera.redis_update_frequency = 0
         assert not worker.is_alive()
         assert camera._live_active
         assert camera.cam.acquire.get() == 1
         stop.assert_not_called()
         assert [t.transport for t in camera.preview.signal_info.transports] == ["zmq"]
-        assert camera.roi.preview.signal_info.transports == []
         polled.clear()
         camera.redis_update_frequency = 100
         assert polled.wait(timeout=1)
         assert camera._poll_thread is not worker
         camera.redis_update_frequency = 50
         assert [t.transport for t in camera.preview.signal_info.transports] == ["zmq", "redis"]
-        assert len(camera.roi.preview.signal_info.transports) == 1
         assert camera.cam.acquire.get() == 1
         stop.assert_not_called()
         camera.redis_update_frequency = 0
@@ -4806,3 +4807,291 @@ def test_roi_setup_write_finishes_before_stop_acknowledges(camera, monkeypatch, 
     wait(camera.stage())
     assert stats.ts_num_points.get() == 10
     assert camera.cam.acquire.get() == 1
+
+
+def test_live_roi_results_use_dynamic_signal_without_image_plugin(camera):
+    camera.image = None
+    camera.live_roi_update_frequency = 2
+    camera.on_poll()
+    result = camera.measurement.get()
+    assert isinstance(result, messages.DeviceMessage)
+    assert result.signals == {
+        camera.measurement.name: {"value": 3.0, "timestamp": camera.roi.stats1.sum.timestamp}
+    }
+    assert result.metadata["scan_id"] == "preview"
+    assert result.metadata["source"] == "roi.result_scalar"
+    assert "frame_ids" not in result.metadata
+    assert result.metadata["async_update"] == {"type": "add", "max_shape": [None]}
+    assert not camera.roi._capture_armed
+    assert camera.roi.stats1.ts_acquire.get() == 0
+
+
+def test_live_roi_results_skip_duplicates_and_inactive_rois(camera):
+    camera._poll_stop.clear()
+    with mock.patch.object(camera.measurement, "put", wraps=camera.measurement.put) as publish:
+        camera.roi.publish_live(camera=camera)
+        camera.roi.publish_live(camera=camera)
+        assert publish.call_count == 1
+        camera.roi.stats1.unique_id.put(1)
+        camera.roi.publish_live(camera=camera)
+        assert publish.call_count == 2
+        camera.roi.active.put(False)
+        camera.live_roi_update_frequency = 2
+        camera.on_poll()
+        assert publish.call_count == 2
+
+
+def test_live_roi_results_cancel_between_statistics_reads(camera):
+    camera._poll_stop.clear()
+    with mock.patch.object(
+        camera.roi.stats1.sum, "get", side_effect=lambda **_: camera._poll_stop.set() or 3.0
+    ):
+        with mock.patch.object(camera.measurement, "put") as publish:
+            with pytest.raises(DeviceStoppedError, match="preview stopped"):
+                camera.roi.publish_live(camera=camera)
+            publish.assert_not_called()
+    camera._poll_stop.clear()
+
+
+def test_live_roi_results_publish_while_frames_advance(camera):
+    """Every sample can span frames without starving the live result stream."""
+    camera._poll_stop.clear()
+    stats = camera.roi.stats1
+    original_get = stats.sum.get
+
+    def advance_frame_during_read(**kwargs):
+        stats.unique_id.put(stats.unique_id.get() + 1)
+        return original_get(**kwargs)
+
+    with (
+        mock.patch.object(stats.sum, "get", side_effect=advance_frame_during_read),
+        mock.patch.object(camera.measurement, "put", wraps=camera.measurement.put) as publish,
+    ):
+        for _ in range(20):
+            camera.roi.publish_live(camera=camera)
+        assert publish.call_count == 20
+    result = camera.measurement.get()
+    assert result.metadata["scan_id"] == "preview"
+    assert "frame_ids" not in result.metadata
+    assert result.signals[camera.measurement.name]["timestamp"] == stats.sum.timestamp
+
+
+def test_live_roi_results_retry_publication_failure(camera):
+    camera._poll_stop.clear()
+    with mock.patch.object(camera.measurement, "put", side_effect=RuntimeError("publish failed")):
+        with pytest.raises(RuntimeError, match="publish failed"):
+            camera.roi.publish_live(camera=camera)
+    assert camera.roi._last_live_id is None
+    camera.roi.publish_live(camera=camera)
+    assert camera.roi._last_live_id == 0
+
+
+@pytest.mark.parametrize("status", ["open", "paused"])
+@pytest.mark.parametrize("priority", ["baseline", "monitored", "async"])
+def test_live_roi_results_remain_suspended_for_scan_participants(camera, status, priority):
+    set_scan(camera, priority)
+    wait(camera.stage())
+    camera.scan_info.msg.status = status
+    camera.live_roi_update_frequency = 2
+    with (
+        mock.patch.object(camera.roi, "publish_live") as publish,
+        mock.patch.object(camera, "_redis_roi_due") as due,
+    ):
+        camera.on_poll()
+        publish.assert_not_called()
+        due.assert_not_called()
+    assert not camera._live_active
+
+
+@pytest.mark.parametrize("status", ["open", "paused"])
+@pytest.mark.parametrize("staged", [False, True])
+@pytest.mark.parametrize("listed", [False, True])
+def test_on_request_roi_results_continue_during_unrelated_scan(camera, status, staged, listed):
+    """On-request and unlisted cameras keep live ROI results on the preview route."""
+    set_scan(camera, "on_request", software_trigger=False)
+    if not listed:
+        camera.scan_info.msg.readout_priority = {"monitored": ["other_detector"]}
+    if staged:
+        wait(camera.stage())
+    camera.scan_info.msg.status = status
+    with mock.patch.object(camera, "start_polling"):
+        camera.live_roi_update_frequency = 5
+    camera._poll_stop.clear()
+    camera.roi.stats1.unique_id.put(1)
+    with mock.patch.object(
+        camera.image.array_data, "get", side_effect=AssertionError("Redis images are disabled")
+    ):
+        camera.on_poll()
+    result = camera.measurement.get()
+    assert isinstance(result, messages.DeviceMessage)
+    assert result.metadata["scan_id"] == "preview"
+    assert "frame_ids" not in result.metadata
+    assert not camera.roi._capture_armed
+    assert camera.roi.stats1.ts_acquire.get() == 0
+    assert camera._live_active
+    assert camera.cam.acquire.get() == 1
+    assert camera.readout_priority == "on_request"
+    assert "async_indices" not in result.metadata
+
+
+def test_live_roi_defaults_to_five_hz_without_redis_images(camera):
+    device = type(camera)(name="roi_defaults", device_manager=DMMock(), live_enabled=False)
+    try:
+        assert device.live_roi_update_frequency == 5
+        assert device.redis_update_frequency == 0
+        device.on_connected()
+        published = threading.Event()
+        device.measurement.subscribe(lambda **_: published.set(), run=False)
+        with mock.patch.object(
+            device.image.array_data, "get", side_effect=AssertionError("No Redis image reads")
+        ):
+            device.start_live().wait(timeout=2)
+            assert published.wait(timeout=2)
+            assert device._poll_thread.is_alive()
+            assert isinstance(device.measurement.get(), messages.DeviceMessage)
+            assert device.preview.get() is None
+            assert device.preview.signal_info.transports == []
+    finally:
+        device.destroy()
+
+
+def test_live_roi_and_image_updates_have_independent_rates(camera):
+    camera.stop_polling()
+    with mock.patch.object(camera, "start_polling"):
+        camera.live_roi_update_frequency = 5
+        camera.redis_update_frequency = 1
+    camera._poll_stop.clear()
+    with (
+        mock.patch(f"{CameraBase.__module__}.monotonic") as clock,
+        mock.patch.object(camera.measurement, "put", wraps=camera.measurement.put) as roi_put,
+        mock.patch.object(camera.preview, "put", wraps=camera.preview.put) as image_put,
+    ):
+        for identifier, timestamp in enumerate([0, 0.1, 0.2, 0.4, 1.0], start=1):
+            clock.return_value = timestamp
+            camera.roi.stats1.unique_id.put(identifier)
+            camera.image.unique_id.put(identifier)
+            camera.on_poll()
+        assert roi_put.call_count == 4
+        assert image_put.call_count == 2
+
+
+def test_disabling_redis_images_keeps_live_roi_timer_running(camera):
+    camera.live_roi_update_frequency = 50
+    camera.redis_update_frequency = 100
+    camera.redis_update_frequency = 0
+    worker = camera._poll_thread
+    polled = threading.Event()
+    with mock.patch.object(camera, "on_poll", side_effect=polled.set):
+        assert polled.wait(timeout=1)
+        assert worker.is_alive()
+    assert camera.preview.signal_info.transports == []
+    camera.live_roi_update_frequency = 0
+    assert not worker.is_alive()
+    assert camera._live_active
+    assert camera.cam.acquire.get() == 1
+
+
+@pytest.mark.parametrize("frequency", [-1, float("nan"), float("inf"), None])
+def test_invalid_live_roi_rate_preserves_running_timer(camera, frequency):
+    camera.live_roi_update_frequency = 50
+    worker = camera._poll_thread
+    with pytest.raises(ValueError, match="live_roi_update_frequency"):
+        camera.live_roi_update_frequency = frequency
+    assert camera.live_roi_update_frequency == 50
+    assert camera._poll_thread is worker and worker.is_alive()
+    with pytest.raises(ValueError, match="live_roi_update_frequency"):
+        type(camera)(
+            name="invalid_roi_rate", device_manager=DMMock(), live_roi_update_frequency=frequency
+        )
+
+
+def test_live_roi_sample_stays_in_preview_when_scan_opens_during_read(camera):
+    """A live frame keeps its routing when the scan opens before its publication."""
+    camera.scan_info.msg = None
+    with mock.patch.object(camera, "start_polling"):
+        camera.live_roi_update_frequency = 5
+    camera._poll_stop.clear()
+    published = mock.Mock()
+    original_get = camera.roi.stats1.sum.get
+
+    def open_scan_during_read(**kwargs):
+        camera.scan_info.msg = messages.ScanStatusMessage(
+            scan_id="next-scan", status="open", info={}
+        )
+        return original_get(**kwargs)
+
+    token = camera.measurement.subscribe(published, run=False)
+    try:
+        with mock.patch.object(camera.roi.stats1.sum, "get", side_effect=open_scan_during_read):
+            camera.on_poll()
+        published.assert_called_once()
+        result = published.call_args.kwargs["value"]
+        assert camera.scan_info.msg.scan_id == "next-scan"
+        assert isinstance(result, messages.DeviceMessage)
+        assert result.metadata["scan_id"] == "preview"
+        assert "async_indices" not in result.metadata
+    finally:
+        camera.measurement.unsubscribe(token)
+
+
+def test_live_roi_failures_do_not_block_other_rois_or_images(camera):
+    camera.stop_polling()
+    with mock.patch.object(camera, "start_polling"):
+        camera.live_roi_update_frequency = 5
+        camera.redis_update_frequency = 5
+    camera._poll_stop.clear()
+    second = NS(dotted_name="roi2", active=camera.roi.active, publish_live=mock.Mock())
+    with (
+        mock.patch.object(camera.components, "get_rois", return_value=[camera.roi, second]),
+        mock.patch.object(camera, "_redis_roi_due", return_value=True),
+        mock.patch.object(camera, "_redis_preview_due", return_value=True),
+        mock.patch.object(
+            camera.roi,
+            "publish_live",
+            wraps=camera.roi.publish_live,
+            side_effect=[TimeoutError("ROI offline"), TimeoutError("ROI offline"), mock.DEFAULT],
+        ) as publish,
+        mock.patch.object(camera.measurement, "put", wraps=camera.measurement.put) as result,
+        mock.patch.object(camera.preview, "put", wraps=camera.preview.put) as image,
+        mock.patch(f"{CameraBase.__module__}.bec_logger.logger.warning") as warning,
+        mock.patch.object(camera, "stop", wraps=camera.stop) as stop,
+    ):
+        for identifier in range(1, 4):
+            camera.image.unique_id.put(identifier)
+            camera.roi.stats1.unique_id.put(identifier)
+            camera.on_poll()
+        assert publish.call_count == 3
+        assert second.publish_live.call_count == 3
+        assert image.call_count == 3
+        assert result.call_count == 1
+        warning.assert_called_once()
+        assert "roi" in warning.call_args.args[0]
+        assert camera.cam.acquire.get() == 1
+        assert camera._live_active and not camera.stopped
+        stop.assert_not_called()
+
+
+def test_live_image_failure_is_retried_without_stopping_camera(camera):
+    published = threading.Event()
+    token = camera.preview.subscribe(lambda **_: published.set(), run=False)
+    try:
+        with (
+            mock.patch.object(
+                camera.image.array_data,
+                "get",
+                wraps=camera.image.array_data.get,
+                side_effect=[TimeoutError("image offline"), mock.DEFAULT],
+            ) as read,
+            mock.patch(f"{CameraBase.__module__}.bec_logger.logger.warning") as warning,
+            mock.patch.object(camera, "stop", wraps=camera.stop) as stop,
+        ):
+            camera.redis_update_frequency = 50
+            assert published.wait(timeout=1)
+            camera.stop_polling()
+            assert read.call_count == 2
+            warning.assert_called_once()
+            stop.assert_not_called()
+            assert camera.cam.acquire.get() == 1
+            assert camera._live_active and not camera.stopped
+    finally:
+        camera.preview.unsubscribe(token)

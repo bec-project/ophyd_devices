@@ -273,9 +273,9 @@ class SimADCamera(  # pyright: ignore[reportIncompatibleMethodOverride]
 
     def on_poll(self) -> None:
         """
-        Publish an optional Redis preview on the live preview timer.
+        Publish live ROI statistics and optional Redis image previews.
 
-        No timer runs when redis_update_frequency is zero. Async ROI publication
-        uses Stats subscription statuses; IOC ZMQ publication is independent.
+        live_roi_update_frequency controls Redis ROI statistics independently of
+        redis_update_frequency for images. IOC ZMQ image streaming is independent.
         """
         self.components.publish_previews()
