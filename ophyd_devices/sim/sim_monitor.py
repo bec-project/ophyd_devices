@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 from bec_lib.logger import bec_logger
 from ophyd import Component as Cpt
-from ophyd import Device, Kind, StatusBase
+from ophyd import Device, Kind, Staged, StatusBase
 
 from ophyd_devices.interfaces.base_classes.psi_device_base import PSIDeviceBase
 from ophyd_devices.sim.sim_data import SimulatedDataMonitor
@@ -120,9 +120,9 @@ class SimMonitor(ReadOnlySignal):
 
 
 class SimMonitorAsyncControl(Device):
-    """SimMonitor Sync Control Device"""
+    """Simulated asynchronous monitor control with optional readback aliasing."""
 
-    USER_ACCESS = ["sim", "registered_proxies", "async_update"]
+    USER_ACCESS = ["sim", "registered_proxies", "async_update", "set_use_alias"]
 
     sim_cls = SimulatedDataMonitor
     BIT_DEPTH = np.uint32
@@ -130,7 +130,14 @@ class SimMonitorAsyncControl(Device):
     readback = Cpt(ReadOnlySignal, value=BIT_DEPTH(0), kind=Kind.hinted, compute_readback=True)
     current_trigger = Cpt(SetableSignal, value=BIT_DEPTH(0), kind=Kind.config)
     async_update = Cpt(AsyncUpdateSignal, value="add", kind=Kind.config)
-    data = Cpt(AsyncSignal, ndim=1, max_size=1000, doc="Buffered asynchronous readings")
+    data = Cpt(
+        AsyncSignal,
+        ndim=1,
+        max_size=1000,
+        alias="readback",
+        use_alias=False,
+        doc="Buffered asynchronous readings",
+    )
     progress = Cpt(ProgressSignal, doc="Scan progress")
 
     SUB_READBACK = "readback"
@@ -162,6 +169,22 @@ class SimMonitorAsyncControl(Device):
         """Dictionary of registered signal_names and proxies."""
         return self._registered_proxies
 
+    def set_use_alias(self, enabled: bool) -> None:
+        """Enable or disable aliasing buffered data to readback between scans.
+
+        Raises:
+            TypeError: If enabled is not a bool.
+            RuntimeError: If the device is staged or partially staged.
+        """
+        if not isinstance(enabled, bool):
+            raise TypeError("enabled must be a bool")
+        if self._staged != Staged.no:
+            raise RuntimeError("Unstage the device before changing alias mode")
+        if self.data.signal_info.use_alias == enabled:
+            return
+        self.data.signal_info.use_alias = enabled
+        self.data.notify_signal_info_changed()
+
 
 class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
     """
@@ -174,6 +197,10 @@ class SimMonitorAsync(PSIDeviceBase, SimMonitorAsyncControl):
     flat stream, ``add_slice`` assembles the chunks into row zero of the scan's
     dataset, and ``replace`` retains the latest chunk. All modes preserve the
     timestamp of each reading.
+
+    Call ``set_use_alias(True)`` between scans to store buffered readings under
+    the readback name. Aliasing is disabled by default; ``set_use_alias(False)``
+    restores the separate data stream.
     """
 
     def __init__(

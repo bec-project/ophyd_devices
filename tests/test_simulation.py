@@ -14,7 +14,7 @@ from bec_lib.devicemanager import ScanInfo
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import compile_file_components
 from bec_server.device_server.tests.utils import DMMock
-from ophyd import Device, Signal
+from ophyd import Device, Signal, Staged
 from ophyd.status import wait as status_wait
 
 from ophyd_devices.interfaces.protocols.bec_protocols import (
@@ -29,7 +29,7 @@ from ophyd_devices.sim.sim_flyer import SimFlyer
 from ophyd_devices.sim.sim_frameworks.h5_image_replay_proxy import H5ImageReplayProxy
 from ophyd_devices.sim.sim_frameworks.slit_proxy import SlitProxy
 from ophyd_devices.sim.sim_frameworks.stage_camera_proxy import StageCameraProxy
-from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync
+from ophyd_devices.sim.sim_monitor import SimMonitor, SimMonitorAsync, SimMonitorAsyncControl
 from ophyd_devices.sim.sim_positioner import SimLinearTrajectoryPositioner, SimPositioner
 from ophyd_devices.sim.sim_signals import ReadOnlySignal
 from ophyd_devices.sim.sim_test_devices import SimCameraWithPSIComponents, SimDeviceWithSignalDelay
@@ -252,6 +252,60 @@ def test_init_async_monitor(async_monitor):
     assert isinstance(async_monitor, SimMonitorAsync)
     assert isinstance(async_monitor, BECDeviceProtocol)
     assert async_monitor.data.describe()[async_monitor.data.name]["signal_info"]["ndim"] == 1
+
+
+@pytest.mark.parametrize("device_cls", [SimMonitorAsyncControl, SimMonitorAsync])
+def test_async_monitor_alias_mode(device_cls):
+    """Alias metadata resolves the renamed readback and notifies only on changes."""
+    device = device_cls(name="monitor")
+    events = []
+    device.data.subscribe(
+        lambda **event: events.append(event),
+        event_type=device.data.SUB_SIGNAL_INFO_CHANGED,
+        run=False,
+    )
+    try:
+        assert "set_use_alias" in device.USER_ACCESS
+        assert device.readback.name == device.name
+        assert device.data.signal_info.use_alias is False
+        for enabled in [False, True, True, False]:
+            device.set_use_alias(enabled)
+            info = device.data.describe()[device.data.name]["signal_info"]
+            assert info["use_alias"] is enabled
+            assert info["aliases"] == {device.data.name: device.readback.name}
+        assert [event["value"].use_alias for event in events] == [True, False]
+    finally:
+        device.destroy()
+
+
+@pytest.mark.parametrize("staged", [Staged.yes, Staged.partially])
+@pytest.mark.parametrize("enabled", [False, True])
+def test_async_monitor_alias_mode_requires_unstaged(async_monitor, staged, enabled):
+    """Reject destination changes during staging without changing metadata."""
+    async_monitor.set_use_alias(enabled)
+    events = []
+    async_monitor.data.subscribe(
+        lambda **event: events.append(event),
+        event_type=async_monitor.data.SUB_SIGNAL_INFO_CHANGED,
+        run=False,
+    )
+    async_monitor._staged = staged
+    try:
+        with pytest.raises(RuntimeError, match="Unstage"):
+            async_monitor.set_use_alias(not enabled)
+        assert async_monitor.data.signal_info.use_alias is enabled
+        assert not events
+    finally:
+        async_monitor._staged = Staged.no
+    async_monitor.set_use_alias(not enabled)
+    assert async_monitor.data.signal_info.use_alias is not enabled
+
+
+@pytest.mark.parametrize("enabled", [None, 0, 1, "False", "True"])
+def test_async_monitor_alias_mode_requires_bool(async_monitor, enabled):
+    with pytest.raises(TypeError, match="bool"):
+        async_monitor.set_use_alias(enabled)
+    assert async_monitor.data.signal_info.use_alias is False
 
 
 def test_signal_delay_device_start_resets_trigger_and_reaches_max(signal_delay_device):
@@ -794,9 +848,11 @@ def test_async_mon_on_trigger(async_monitor):
         ("replace", {"type": "replace"}),
     ],
 )
-def test_async_mon_send_data_to_bec(async_monitor, mode, expected_update):
+@pytest.mark.parametrize("use_alias", [False, True])
+def test_async_mon_send_data_to_bec(async_monitor, mode, expected_update, use_alias):
     """Buffered readings are emitted through a BEC message signal."""
     async_monitor.scan_info = get_mock_scan_info(device=async_monitor)
+    async_monitor.set_use_alias(use_alias)
     async_monitor.async_update.put(mode)
     async_monitor.data_buffer.update({"value": [0, 5], "timestamp": [1, 2]})
     updates = []
